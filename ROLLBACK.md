@@ -101,3 +101,9 @@
 本次让 AI 输出方式记住上次选择，并在 AI 分析按钮上显示当前输出模式前的备份在：
 
 `I:\奇门起盘分析_回滚备份\backup-before-ai-mode-reminder-20260703`
+
+## Mobile layout spacing backup
+
+Backup before adjusting mobile board/control spacing and action button wrapping:
+
+`I:\奇门起盘分析_回滚备份\backup-before-mobile-layout-20260703-231237`

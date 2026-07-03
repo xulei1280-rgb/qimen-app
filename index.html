@@ -475,7 +475,7 @@ h1{
   .main-area{min-width:auto;width:100%}
   h1{font-size:22px;letter-spacing:2px}
   .subtitle{margin-bottom:12px}
-  .board-wrap{width:340px;height:340px;margin:2px auto}
+  .board-wrap{width:340px;height:340px;margin:2px auto 18px}
   .board-wrap:before{inset:-8px}
   .palace{width:107px;height:107px;border-radius:5px;border-width:1px}
   .palace-dir{font-size:36px}
@@ -511,10 +511,10 @@ h1{
   .solar-preview{flex:1 0 100%;text-align:center}
   .status-strip{width:100%;max-width:340px;margin:4px auto 10px}
   .status-chip{font-size:10px;padding:3px 6px}
-  .tool-row{width:100%;max-width:340px;grid-template-columns:1fr;gap:6px}
-  .question-bar{width:100%;max-width:340px;gap:6px}
-  .question-bar input{flex:1 0 100%;font-size:12px;padding:8px 10px;min-height:38px}
-  .question-bar button{min-width:96px;min-height:36px}
+  .tool-row{width:100%;max-width:340px;grid-template-columns:1fr;gap:8px;margin-bottom:10px}
+  .question-bar{width:100%;max-width:340px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .question-bar input{grid-column:1/-1;width:100%;font-size:13px;padding:10px 12px;min-height:44px}
+  .question-bar button{min-width:0;width:100%;min-height:44px;padding:9px 8px;font-size:13px;white-space:normal;line-height:1.25}
   .quick-questions{width:100%;max-width:340px;gap:5px}
   .quick-questions button{font-size:11px;padding:3px 7px}
   .info-panel{width:100%;font-size:11px}
