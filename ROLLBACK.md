@@ -107,3 +107,9 @@
 Backup before adjusting mobile board/control spacing and action button wrapping:
 
 `I:\奇门起盘分析_回滚备份\backup-before-mobile-layout-20260703-231237`
+
+## Palace direction font and AI prompt backup
+
+Backup before enlarging palace background direction characters and removing fixed AI response sections:
+
+`I:\奇门起盘分析_回滚备份\backup-before-dir-font-ai-prompt-20260703-233701`

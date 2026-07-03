@@ -478,7 +478,7 @@ h1{
   .board-wrap{width:340px;height:340px;margin:2px auto 18px}
   .board-wrap:before{inset:-8px}
   .palace{width:107px;height:107px;border-radius:5px;border-width:1px}
-  .palace-dir{font-size:36px}
+  .palace-dir{font-size:72px}
   #p4{top:4px;left:4px}#p9{top:4px;left:116px}#p2{top:4px;left:228px}
   #p3{top:116px;left:4px}#p5{top:116px;left:116px}#p7{top:116px;left:228px}
   #p8{top:228px;left:4px}#p1{top:228px;left:116px}#p6{top:228px;left:228px}
@@ -1253,12 +1253,12 @@ async function analyzeWithAI(){
   var modeGuide={
     brief:'请用简断方式，500字以内，先给结论，再列依据。',
     detail:'请详断，1000字以内，结构清楚，重点说理由。',
-    conclusion:'只看结论和行动建议，300字以内。',
+    conclusion:'只看结论和行动建议，300字以内，不展开固定分段。',
     palaces:'请逐宫细断，重点分析相关用神宫、日主宫、值符值使宫。',
     timing:'请重点看应期、时间窗口、动象和触发条件。'
   };
   var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n本盘原始问事：'+originalQuestion+'\n本次问题：'+question+'\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
-  var systemPrompt='你是专业的奇门遁甲分析师。一个奇门盘只回答同一件事的连续追问。若“本次问题”不是围绕“本盘原始问事”的同一人、同一事、同一决策、同一关系或同一问题延伸，只回复：一个盘只能问同一件事。请重新起盘或回到原问题继续问。\n若属于同一件事，用以下结构回答：\n【用神落宫】日主落哪宫及含义\n【全盘格局】整体吉凶判断\n【关键宫位】逐宫分析重点标记\n【综合建议】针对问题的结论\n每段之间空一行，不用markdown符号。';
+  var systemPrompt='你是专业的奇门遁甲分析师。一个奇门盘只回答同一件事的连续追问。若“本次问题”不是围绕“本盘原始问事”的同一人、同一事、同一决策、同一关系或同一问题延伸，只回复：一个盘只能问同一件事。请重新起盘或回到原问题继续问。\n若属于同一件事，请根据问事类型、用户问题和所选分析模式自然组织回答，不要套用固定四段模板，也不要强制使用“用神落宫、全盘格局、关键宫位、综合建议”这些标题。需要详断时可以分段，需要简断或只看结论时直接给结论和关键依据。每段之间空一行，不用markdown符号。';
   var messages=[{role:'system',content:systemPrompt}];
   for(var i=0;i<aiHistory.length;i++){
     messages.push({role:'user',content:'追问：'+aiHistory[i].q});
