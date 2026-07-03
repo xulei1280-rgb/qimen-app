@@ -1,0 +1,1331 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
+<title>奇门遁甲 - 时家转盘排盘</title>
+<style>
+:root{
+  --bg:#eef1ea;
+  --paper:#fffdf7;
+  --paper-2:#f8f2e6;
+  --ink:#27221b;
+  --muted:#736b60;
+  --line:#d3bd91;
+  --line-strong:#b88849;
+  --cinnabar:#9b2f22;
+  --jade:#236b58;
+  --lapis:#2d557c;
+  --violet:#7a45a3;
+  --gold:#a96f28;
+  --shadow:0 18px 45px rgba(61,42,18,.14);
+  --soft-shadow:0 8px 22px rgba(61,42,18,.09);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
+  color:var(--ink);
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(700px,760px) 310px;
+  justify-content:center;
+  align-items:start;
+  gap:28px;
+  padding:28px 24px 42px;
+  background:
+    radial-gradient(circle at 12% 10%,rgba(35,107,88,.14),transparent 28%),
+    radial-gradient(circle at 88% 18%,rgba(155,47,34,.10),transparent 26%),
+    linear-gradient(135deg,rgba(45,85,124,.08),transparent 38%),
+    var(--bg);
+}
+body:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    repeating-linear-gradient(90deg,rgba(39,34,27,.028),rgba(39,34,27,.028) 1px,transparent 1px,transparent 5px),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.35),rgba(255,255,255,.35) 1px,transparent 1px,transparent 7px);
+  mix-blend-mode:multiply;
+  opacity:.45;
+}
+.main-area{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-width:452px;
+  width:100%;
+  padding:2px 0 0;
+}
+h1{
+  font-size:34px;
+  margin-bottom:1px;
+  color:var(--cinnabar);
+  letter-spacing:8px;
+  text-shadow:0 1px 0 rgba(255,255,255,.8);
+}
+.subtitle{
+  color:var(--muted);
+  font-size:12px;
+  letter-spacing:2px;
+  margin-bottom:18px;
+}
+
+.time-bar{
+  width:min(100%,720px);
+  display:flex;
+  gap:7px;
+  align-items:center;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-bottom:16px;
+  background:linear-gradient(180deg,rgba(255,253,247,.96),rgba(248,242,230,.96));
+  padding:12px 16px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  box-shadow:var(--soft-shadow);
+}
+.time-bar button{
+  background:#fffaf0;
+  color:var(--ink);
+  border:1px solid var(--line);
+  min-height:30px;
+  padding:5px 9px;
+  border-radius:5px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:12px;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.time-bar button:hover{background:#f4ead8;border-color:var(--line-strong);transform:translateY(-1px)}
+.time-bar button.primary{
+  background:linear-gradient(180deg,#9f3a27,#74301f);
+  color:#fffdf7;
+  border-color:#74301f;
+  padding:6px 15px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
+}
+.time-bar button.primary:hover{background:linear-gradient(180deg,#b5432d,#7b311f)}
+.time-bar select,.time-bar input{
+  background:#fffdf8;
+  color:var(--ink);
+  border:1px solid var(--line);
+  min-height:30px;
+  padding:5px 7px;
+  border-radius:5px;
+  font-size:13px;
+  outline:none;
+}
+.time-bar select:focus,.time-bar input:focus,.question-bar input:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.14)}
+.cal-tabs{display:flex;gap:0}
+.cal-tab{
+  padding:6px 14px;
+  cursor:pointer;
+  font-size:12px;
+  background:#ece3d1;
+  color:#6f5840;
+  border:1px solid var(--line);
+  transition:background .16s ease,color .16s ease;
+}
+.cal-tab:first-child{border-radius:5px 0 0 5px}
+.cal-tab:last-child{border-radius:0 5px 5px 0}
+.cal-tab.active{background:var(--cinnabar);color:#fffdf7;font-weight:bold;border-color:var(--cinnabar)}
+
+.solar-bar{
+  width:min(100%,720px);
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  margin:-8px auto 14px;
+  padding:8px 12px;
+  border:1px solid rgba(169,111,40,.25);
+  border-radius:6px;
+  background:rgba(255,253,247,.58);
+  color:#51483d;
+  font-size:12px;
+}
+.solar-bar label{display:inline-flex;align-items:center;gap:5px;font-weight:bold;color:var(--jade)}
+.solar-bar input[type="checkbox"]{accent-color:var(--jade)}
+.solar-bar input[type="number"],.solar-bar select{
+  min-height:28px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:#fffdf8;
+  color:var(--ink);
+  padding:4px 7px;
+  font-size:12px;
+}
+.solar-bar input[type="number"]{width:92px}
+.solar-bar button{
+  min-height:28px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:#fffaf0;
+  color:#5c4731;
+  padding:4px 8px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:bold;
+}
+.solar-bar button:hover{background:#f4ead8;border-color:var(--line-strong)}
+.solar-preview{color:#735f4a}
+
+.status-strip{
+  width:444px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:-4px auto 14px;
+  justify-content:center;
+}
+.status-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  min-height:26px;
+  padding:4px 8px;
+  background:rgba(255,253,247,.82);
+  border:1px solid rgba(169,111,40,.26);
+  border-radius:5px;
+  color:#51483d;
+  font-size:11px;
+  box-shadow:0 4px 12px rgba(61,42,18,.06);
+}
+.status-chip strong{color:var(--cinnabar)}
+.status-chip.warn{color:#855e16;background:#fff8df;border-color:#d8b35c}
+
+.board-wrap{
+  position:relative;
+  width:444px;
+  height:444px;
+  margin:0 auto 14px;
+  padding:0;
+  filter:drop-shadow(0 18px 28px rgba(61,42,18,.10));
+}
+.board-wrap:before{
+  content:"";
+  position:absolute;
+  inset:-13px;
+  border:1px solid rgba(169,111,40,.34);
+  background:rgba(255,253,247,.34);
+  border-radius:8px;
+  z-index:-1;
+}
+.palace{
+  position:absolute;
+  width:140px;
+  height:140px;
+  background:
+    linear-gradient(180deg,rgba(255,253,247,.98),rgba(247,241,229,.95)),
+    radial-gradient(circle at 50% 45%,rgba(35,107,88,.04),transparent 58%);
+  border:2px solid var(--line);
+  border-radius:5px;
+  cursor:pointer;
+  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease,background .16s ease;
+  overflow:hidden;
+}
+.palace:hover{border-color:var(--gold);box-shadow:0 10px 22px rgba(112,72,26,.17);transform:translateY(-2px);z-index:2}
+.palace.selected{border-color:var(--cinnabar);box-shadow:0 0 0 3px rgba(155,47,34,.13),0 14px 28px rgba(155,47,34,.16);background:#fff8f2}
+
+.palace-dir{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:70px;font-weight:bold;pointer-events:none;z-index:0;line-height:1}
+#p1 .palace-dir{color:rgba(50,120,220,0.10)}  /* 坎·水·蓝 */
+#p2 .palace-dir{color:rgba(140,90,40,0.10)}   /* 坤·土·棕 */
+#p3 .palace-dir{color:rgba(40,140,60,0.10)}   /* 震·木·绿 */
+#p4 .palace-dir{color:rgba(40,140,60,0.10)}   /* 巽·木·绿 */
+#p5 .palace-dir{color:rgba(140,90,40,0.10)}   /* 中·土·棕 */
+#p6 .palace-dir{color:rgba(190,150,30,0.10)}  /* 乾·金·金 */
+#p7 .palace-dir{color:rgba(190,150,30,0.10)}  /* 兑·金·金 */
+#p8 .palace-dir{color:rgba(140,90,40,0.10)}   /* 艮·土·棕 */
+#p9 .palace-dir{color:rgba(200,50,50,0.10)}   /* 离·火·红 */
+
+.p-ma{position:absolute;top:8px;left:10px;font-size:16px;z-index:2;line-height:1}
+.p-spirit{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:13px;color:#9c27b0;font-weight:bold;z-index:2;line-height:1}
+.p-kong{position:absolute;top:4px;right:10px;font-size:26px;color:#c0392b;font-weight:900;z-index:2;line-height:1}
+.p-jigan{display:none}
+.p-star{position:absolute;top:46%;left:48%;transform:translate(-50%,-50%);font-size:16px;color:#6d4c41;font-weight:bold;z-index:2;line-height:1;white-space:nowrap}
+.p-heaven{position:absolute;top:46%;right:11px;transform:translateY(-55%);display:flex;flex-direction:column;align-items:center;z-index:2;line-height:1.1}
+.p-yingan{position:absolute;top:46%;left:10px;font-size:11px;color:#888;z-index:2;line-height:1}
+.p-heaven .cs{font-size:10px;color:rgba(58,47,31,0.4);margin-bottom:1px}
+.p-heaven .stem{font-size:22px;font-weight:bold;color:#8b0000;line-height:1.15}
+.p-heaven.double-stem{right:8px}
+.p-heaven .stem.double-stem{display:flex;gap:3px;align-items:center;justify-content:center;white-space:nowrap}
+.p-heaven .stem.double-stem>.stem{font-size:19px;line-height:1}
+.p-num{position:absolute;bottom:8px;left:10px;font-size:14px;color:#8b4513;font-weight:bold;z-index:2;line-height:1}
+.p-door{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:15px;font-weight:bold;color:#5d4037;z-index:2;line-height:1}
+.p-earth{position:absolute;bottom:8px;right:11px;display:flex;flex-direction:column;align-items:center;z-index:2;line-height:1.1}
+.p-earth .cs{font-size:10px;color:rgba(58,47,31,0.4);margin-bottom:1px}
+.p-earth .stem{font-size:19px;font-weight:bold;color:#2e5c4e;line-height:1.15}
+.p-earth .stem.double-stem{display:flex;gap:3px;align-items:center;white-space:nowrap}
+.p-earth .stem.double-stem>.stem{font-size:18px;line-height:1}
+
+.rizhu-box{border:2px solid #8b4513;border-radius:3px;padding:0 3px}
+.jixing{color:#2563eb!important}
+.rumu{color:#16a34a!important}
+.jixing-rumu{color:#7c3aed!important}
+.menpo{color:#dc2626!important}
+
+#p4{top:6px;left:6px}#p9{top:6px;left:152px}#p2{top:6px;left:298px}
+#p3{top:152px;left:6px}#p5{top:152px;left:152px}#p7{top:152px;left:298px}
+#p8{top:298px;left:6px}#p1{top:298px;left:152px}#p6{top:298px;left:298px}
+
+.question-bar{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:0;width:444px;flex-wrap:wrap}
+.question-bar input{
+  flex:1 0 100%;
+  min-width:0;
+  background:#fffdf8;
+  color:var(--ink);
+  border:1px solid var(--line);
+  padding:12px 14px;
+  border-radius:6px;
+  font-size:13px;
+  min-height:44px;
+  outline:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
+}
+.question-bar button{
+  flex:1 1 0;
+  background:linear-gradient(180deg,#2c725f,#215746);
+  color:#fff;
+  border:1px solid #1f4d40;
+  min-height:40px;
+  padding:9px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:bold;
+  white-space:nowrap;
+  box-shadow:var(--soft-shadow);
+  transition:transform .16s ease,filter .16s ease;
+}
+.question-bar button:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.question-bar button:disabled{background:#9b9a92;border-color:#8a8982;cursor:not-allowed;box-shadow:none;transform:none}
+.tool-row{
+  width:444px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin:0 auto 8px;
+}
+.tool-row select,.tool-row button{
+  min-height:34px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#fffdf8;
+  color:var(--ink);
+  padding:6px 8px;
+  font-size:12px;
+  font-weight:bold;
+}
+.tool-row button{cursor:pointer;color:#5c4731;background:#fffaf0}
+.tool-row button:hover{background:#f4ead8;border-color:var(--line-strong)}
+.quick-questions{
+  width:444px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:0 auto 8px;
+}
+.quick-questions button{
+  border:1px solid rgba(169,111,40,.34);
+  background:rgba(255,253,247,.78);
+  color:#5c4731;
+  min-height:28px;
+  padding:4px 9px;
+  border-radius:5px;
+  font-size:12px;
+  cursor:pointer;
+}
+.quick-questions button:hover{background:#f4ead8;border-color:var(--line-strong)}
+
+.info-panel{
+  width:444px;
+  min-height:68px;
+  background:linear-gradient(180deg,#fffdf8,#faf3e7);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:14px 16px;
+  margin-top:12px;
+  font-size:12px;
+  line-height:1.75;
+  box-shadow:var(--soft-shadow);
+}
+.info-panel .title{color:var(--cinnabar);font-weight:bold;margin-bottom:4px;font-size:13px}
+.info-panel .detail{color:#5b5147}
+.info-panel .ai{color:var(--jade);margin-top:9px;padding-top:9px;border-top:1px dashed rgba(169,111,40,.38);white-space:pre-wrap;line-height:1.8}
+.mini-section{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(169,111,40,.28)}
+.mini-section strong{color:var(--cinnabar)}
+.hint-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.hint-tag{font-size:11px;color:#70481a;background:#fffaf0;border:1px solid rgba(169,111,40,.25);border-radius:4px;padding:2px 6px}
+.followups{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.followups button{border:1px solid rgba(169,111,40,.34);background:#fffdf8;color:#5c4731;border-radius:5px;padding:4px 8px;font-size:12px;cursor:pointer}
+.followups button:hover{background:#f4ead8;border-color:var(--line-strong)}
+
+.side-panel{
+  position:sticky;
+  top:24px;
+  z-index:1;
+  width:310px;
+  flex-shrink:0;
+  background:linear-gradient(180deg,rgba(255,253,247,.98),rgba(249,244,235,.98));
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:18px;
+  box-shadow:var(--shadow);
+  max-height:calc(100vh - 48px);
+  overflow-y:auto;
+}
+.side-panel h3{
+  color:var(--cinnabar);
+  font-size:16px;
+  margin-bottom:14px;
+  padding-bottom:9px;
+  border-bottom:1px solid rgba(169,111,40,.25);
+  letter-spacing:1px;
+}
+.info-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid rgba(169,111,40,.18);font-size:12px}
+.info-label{color:var(--muted)}
+.info-value{font-weight:bold;color:var(--ink);text-align:right}
+.legend{margin-top:14px}
+.legend h4{font-size:12px;color:var(--cinnabar);margin-bottom:8px}
+.legend-item{font-size:11px;color:#51483d;margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.side-focus{
+  margin-bottom:12px;
+  padding:10px 11px;
+  background:#fff8ed;
+  border:1px solid rgba(155,47,34,.28);
+  border-radius:6px;
+}
+.side-focus .focus-title{font-weight:bold;color:var(--cinnabar);font-size:13px;margin-bottom:7px}
+.side-focus .focus-line{font-size:11px;color:#51483d;line-height:1.7}
+.mark-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.mark-tag{font-size:10px;color:#70481a;background:#fffdf8;border:1px solid rgba(169,111,40,.28);border-radius:4px;padding:2px 5px}
+
+.gz-table{width:100%;text-align:center;border-collapse:separate;border-spacing:3px;font-size:12px;margin:10px 0}
+.gz-table th{color:var(--muted);font-size:10px;padding:2px 4px;font-weight:700}
+.gz-table td{background:rgba(255,255,255,.58);border:1px solid rgba(169,111,40,.20);border-radius:4px}
+.gz-table .gz-t{font-weight:bold;color:#8b1111;padding:4px 6px}
+.gz-table .gz-d{font-weight:bold;color:var(--jade);padding:4px 6px}
+.gz-table .rizhu-td{border:2px solid var(--cinnabar)!important;border-radius:4px}
+.hist-item{
+  padding:7px 8px;
+  margin-bottom:6px;
+  background:#fffaf0;
+  border-radius:5px;
+  font-size:11px;
+  cursor:pointer;
+  border:1px solid rgba(169,111,40,.24);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+}
+.hist-item:hover{background:#f4ead8;border-color:var(--line-strong)}
+.hist-item .hi-name{flex:1;color:var(--ink);font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-item .hi-date{font-size:9px;color:var(--muted);margin-right:2px}
+.hist-item .hi-btns{display:flex;gap:3px;margin-left:4px}
+.hist-item .hi-btns button{font-size:10px;padding:2px 5px;border:1px solid var(--line);background:#fffdf8;border-radius:4px;cursor:pointer;color:#5d4037}
+.hist-item .hi-btns button:hover{background:var(--cinnabar);color:#fff;border-color:var(--cinnabar)}
+.hist-item .hi-btns .del:hover{background:#a82424;border-color:#a82424}
+.history-search{
+  width:100%;
+  margin-bottom:8px;
+  padding:7px 9px;
+  border:1px solid rgba(169,111,40,.28);
+  border-radius:5px;
+  background:#fffdf8;
+  color:var(--ink);
+  font-size:12px;
+  outline:none;
+}
+.history-search:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.12)}
+
+@media(max-width:900px){
+  body{display:flex;flex-direction:column;align-items:center;padding:16px 10px 28px;gap:18px}
+  .main-area{min-width:auto;width:100%}
+  h1{font-size:22px;letter-spacing:2px}
+  .subtitle{margin-bottom:12px}
+  .board-wrap{width:340px;height:340px;margin:2px auto}
+  .board-wrap:before{inset:-8px}
+  .palace{width:107px;height:107px;border-radius:5px;border-width:1px}
+  .palace-dir{font-size:36px}
+  #p4{top:4px;left:4px}#p9{top:4px;left:116px}#p2{top:4px;left:228px}
+  #p3{top:116px;left:4px}#p5{top:116px;left:116px}#p7{top:116px;left:228px}
+  #p8{top:228px;left:4px}#p1{top:228px;left:116px}#p6{top:228px;left:228px}
+  .p-ma{top:5px;left:5px;font-size:13px}
+  .p-spirit{top:5px;font-size:10px}
+  .p-kong{top:2px;right:5px;font-size:18px}
+  .p-heaven.double-stem{right:4px}
+  .p-heaven .stem.double-stem{gap:2px}
+  .p-heaven .stem.double-stem>.stem{font-size:15px}
+  .p-earth .stem.double-stem{gap:1px}
+  .p-earth .stem.double-stem>.stem{font-size:14px}
+  .p-star{top:46%;font-size:13px}
+  .p-heaven{top:46%;right:5px}
+  .p-heaven .stem{font-size:17px}
+  .p-heaven .cs{font-size:8px}
+  .p-num{bottom:5px;left:5px;font-size:10px}
+  .p-door{bottom:5px;font-size:11px}
+  .p-earth{bottom:5px;right:5px}
+  .p-earth .stem{font-size:15px}
+  .p-earth .cs{font-size:8px}
+  .p-yingan{top:46%;left:5px;font-size:8px}
+  .time-bar{padding:5px 6px;gap:3px;flex-wrap:wrap}
+  .time-bar input{font-size:11px!important;padding:3px 4px!important;width:54px!important}
+  .time-bar select{font-size:11px;padding:3px 4px}
+  .time-bar button{font-size:11px!important;padding:4px 8px!important}
+  .solar-bar{width:100%;max-width:340px;margin:-6px auto 10px;padding:7px;gap:5px;font-size:11px}
+  .solar-bar input[type="number"]{width:82px;font-size:11px}
+  .solar-bar select,.solar-bar button{font-size:11px}
+  .solar-preview{flex:1 0 100%;text-align:center}
+  .status-strip{width:100%;max-width:340px;margin:4px auto 10px}
+  .status-chip{font-size:10px;padding:3px 6px}
+  .tool-row{width:100%;max-width:340px;grid-template-columns:1fr;gap:6px}
+  .question-bar{width:100%;max-width:340px;gap:6px}
+  .question-bar input{flex:1 0 100%;font-size:12px;padding:8px 10px;min-height:38px}
+  .question-bar button{min-width:96px;min-height:36px}
+  .quick-questions{width:100%;max-width:340px;gap:5px}
+  .quick-questions button{font-size:11px;padding:3px 7px}
+  .info-panel{width:100%;font-size:11px}
+  .side-panel{width:100%;position:static;padding:14px;max-height:none}
+}
+@media print{
+  body{display:block;background:#fff;padding:0}
+  body:before,.time-bar,.solar-bar,.status-strip,.quick-questions,.tool-row,.question-bar,.side-panel{display:none!important}
+  .main-area{width:100%;min-width:0}
+  h1,.subtitle{display:block}
+  .board-wrap,.info-panel{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="main-area">
+  <h1>奇门遁甲</h1>
+  <div class="subtitle">时家转盘 · 拆补法</div>
+  <div class="time-bar">
+    <div class="cal-tabs">
+      <span class="cal-tab active" id="tabSolar" onclick="switchCal('solar')">公历</span>
+      <span class="cal-tab" id="tabLunar" onclick="switchCal('lunar')">农历</span>
+    </div>
+    <input type="number" id="year" style="width:60px" placeholder="年">
+    <select id="month"></select>
+    <select id="day"></select>
+    <select id="hour"></select>
+    <select id="minute"></select>
+    <select id="gender"><option value="男">男</option><option value="女">女</option></select>
+    <button onclick="useCurrentTime()">🕐 当前</button>
+    <button onclick="shiftHour(-2)" title="切换到上一个时辰">← 时辰</button>
+    <button onclick="shiftHour(2)" title="切换到下一个时辰">时辰 →</button>
+    <button onclick="manageApiKey()" title="设置或清除本机保存的 DeepSeek API Key">🔑 Key</button>
+    <button class="primary" onclick="doPaiPan()">🔮 起盘</button>
+  </div>
+  <div class="solar-bar">
+    <label><input type="checkbox" id="useTrueSolar" onchange="saveSolarSettings();refreshSolarPreview()">真太阳时</label>
+    <select id="locationPreset" onchange="applyLocationPreset(this.value)" title="选择常用地点经度">
+      <option value="">自定义经度</option>
+      <option value="103.99505">云南师宗</option>
+      <option value="102.83289">昆明</option>
+      <option value="116.4074">北京</option>
+    </select>
+    <input type="number" id="longitude" step="0.0001" value="103.9951" onchange="saveSolarSettings();refreshSolarPreview()" title="经度，东经为正；中国标准时区按东经120度计算">
+    <button onclick="useBrowserLocation()" title="使用浏览器定位读取经度，只保存在本机">📍 定位</button>
+    <span class="solar-preview" id="solarPreview">未启用真太阳时</span>
+  </div>
+  <div class="status-strip" id="statusStrip" aria-live="polite"></div>
+  <div class="board-wrap" id="board"></div>
+  <div class="tool-row">
+    <select id="questionType" title="选择问事类型，会影响用神提示和 AI 分析侧重点" onchange="refreshAssistInfo()">
+      <option value="general">综合</option>
+      <option value="career">事业工作</option>
+      <option value="love">感情关系</option>
+      <option value="wealth">财运投资</option>
+      <option value="cooperation">合作谈判</option>
+      <option value="travel">出行迁动</option>
+      <option value="health">健康疾病</option>
+      <option value="lost">找失物</option>
+      <option value="exam">考试竞聘</option>
+      <option value="choice">选择决策</option>
+    </select>
+    <select id="aiMode" title="选择 AI 输出方式">
+      <option value="brief">简断</option>
+      <option value="detail">详断</option>
+      <option value="conclusion">只看结论</option>
+      <option value="palaces">逐宫细断</option>
+      <option value="timing">应期重点</option>
+    </select>
+    <button type="button" onclick="compareHours()" title="对比上一时辰、当前、下一时辰">↔ 对比时辰</button>
+  </div>
+  <div class="quick-questions" aria-label="常用问事">
+    <button type="button" onclick="useQuestionTemplate('career')">事业</button>
+    <button type="button" onclick="useQuestionTemplate('love')">感情复合</button>
+    <button type="button" onclick="useQuestionTemplate('wealth')">财运投资</button>
+    <button type="button" onclick="useQuestionTemplate('cooperation')">合作谈判</button>
+    <button type="button" onclick="useQuestionTemplate('travel')">出行</button>
+    <button type="button" onclick="useQuestionTemplate('health')">健康</button>
+    <button type="button" onclick="useQuestionTemplate('lost')">找失物</button>
+    <button type="button" onclick="useQuestionTemplate('exam')">考试竞聘</button>
+    <button type="button" onclick="useQuestionTemplate('choice')">选择</button>
+  </div>
+  <div class="question-bar">
+    <input type="text" placeholder="输入你想问的事情..." id="question">
+    <button onclick="analyzeWithAI()" id="btnAI" disabled>🤖 AI 分析</button>
+    <button onclick="copyPlateText()" id="btnCopy" disabled title="复制当前盘面文字">📋 复制</button>
+    <button onclick="exportPlate()" id="btnExport" disabled title="打印当前盘面，可保存为 PDF">🖨 导出</button>
+    <button onclick="saveToHistory()" id="btnSave" disabled>💾 保存</button>
+  </div>
+  <div class="info-panel" id="infoPanel">
+    <div class="title">👆 点击「起盘」生成盘面，再点击宫位查看详情</div>
+    <div class="detail">支持公历时间起盘，也可手动选择年月日时。</div>
+  </div>
+</div>
+<div class="side-panel" id="sidePanel">
+  <h3>📋 盘面信息</h3>
+  <div id="sideContent"><div style="text-align:center;color:#999;padding:20px 0">点击「起盘」显示</div></div>
+  <div id="historySection" style="margin-top:16px;padding-top:12px;border-top:2px solid #d4c5a9;display:none">
+    <h3 style="font-size:14px;margin-bottom:8px">📜 历史起盘</h3>
+    <input class="history-search" id="historySearch" type="search" placeholder="搜索历史..." oninput="renderHistory()">
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<script src="qimen.js?v=20260703-jieqi1"></script>
+<script>
+var currentCal='solar',selectedPalace=null,plateData=null;
+var aiHistory=[];
+var API_KEY_STORAGE='qimen_deepseek_api_key';
+var TRUE_SOLAR_STORAGE='qimen_true_solar_enabled';
+var LONGITUDE_STORAGE='qimen_longitude';
+
+(function init(){
+  var m=document.getElementById('month'),d=document.getElementById('day'),h=document.getElementById('hour');
+  for(var i=1;i<=12;i++) m.appendChild(new Option(i,i));
+  for(var i=0;i<=23;i++) h.appendChild(new Option(i+'时',i));
+  for(var i=0;i<60;i++) document.getElementById('minute').appendChild(new Option(i+'分',i));
+  document.getElementById('year').addEventListener('change',function(){updateDayOptions();refreshSolarPreview()});
+  document.getElementById('month').addEventListener('change',function(){updateDayOptions();refreshSolarPreview()});
+  ['day','hour','minute'].forEach(function(id){document.getElementById(id).addEventListener('change',refreshSolarPreview)});
+  document.getElementById('question').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();analyzeWithAI()}});
+  setControlTitles();
+  loadSolarSettings();
+  useCurrentTime();
+  buildBoard();
+  setTimeout(function(){doPaiPan()},100);
+})();
+
+function setControlTitles(){
+  var titles={year:'公历年份',month:'公历月份',day:'公历日期',hour:'时辰小时',minute:'分钟',gender:'求测人性别'};
+  for(var id in titles){var el=document.getElementById(id);if(el)el.title=titles[id]}
+}
+
+function useCurrentTime(){
+  setControlsFromDate(new Date());
+}
+function daysInMonth(year,month){return new Date(year,month,0).getDate()}
+function updateDayOptions(preferredDay){
+  var y=parseInt(document.getElementById('year').value)||new Date().getFullYear();
+  var m=parseInt(document.getElementById('month').value)||1;
+  var d=document.getElementById('day');
+  var keep=preferredDay||parseInt(d.value)||1;
+  var max=daysInMonth(y,m);
+  d.innerHTML='';
+  for(var i=1;i<=max;i++)d.appendChild(new Option(i,i));
+  d.value=Math.min(keep,max);
+}
+function switchCal(t){
+  if(t==='lunar'){
+    alert('农历转换暂未接入。为避免误用，目前仍按公历起盘。');
+    t='solar';
+  }
+  currentCal=t;
+  document.getElementById('tabSolar').classList.toggle('active',t==='solar');
+  document.getElementById('tabLunar').classList.toggle('active',t==='lunar');
+}
+function getTimeInput(){
+  var y=parseInt(document.getElementById('year').value),m=parseInt(document.getElementById('month').value),d=parseInt(document.getElementById('day').value),h=parseInt(document.getElementById('hour').value),mi=parseInt(document.getElementById('minute').value);
+  y=isNaN(y)?2026:y;m=isNaN(m)?5:m;d=isNaN(d)?21:d;
+  var max=daysInMonth(y,m);
+  if(d>max)d=max;
+  updateDayOptions(d);
+  return{year:y,month:m,day:d,hour:isNaN(h)?12:h,minute:isNaN(mi)?0:mi};
+}
+function setControlsFromDate(dt){
+  document.getElementById('year').value=dt.getFullYear();
+  document.getElementById('month').value=dt.getMonth()+1;
+  updateDayOptions(dt.getDate());
+  document.getElementById('day').value=dt.getDate();
+  document.getElementById('hour').value=dt.getHours();
+  document.getElementById('minute').value=dt.getMinutes();
+  refreshSolarPreview();
+}
+function setControlsFromTime(t){
+  document.getElementById('year').value=t.year;
+  document.getElementById('month').value=t.month;
+  updateDayOptions(t.day);
+  document.getElementById('day').value=t.day;
+  document.getElementById('hour').value=t.hour;
+  document.getElementById('minute').value=t.minute||0;
+  refreshSolarPreview();
+}
+function shiftHour(delta){
+  var t=getTimeInput();
+  var dt=new Date(t.year,t.month-1,t.day,t.hour+(delta||0),t.minute||0);
+  setControlsFromDate(dt);
+  doPaiPan();
+}
+
+function dayOfYear(y,m,d){
+  return Math.floor((new Date(y,m-1,d)-new Date(y,0,0))/(1000*60*60*24));
+}
+function equationOfTimeMinutes(y,m,d){
+  var n=dayOfYear(y,m,d);
+  var b=2*Math.PI*(n-81)/364;
+  return 9.87*Math.sin(2*b)-7.53*Math.cos(b)-1.5*Math.sin(b);
+}
+function getLongitude(){
+  var lon=parseFloat(document.getElementById('longitude').value);
+  return isNaN(lon)?103.99505:lon;
+}
+function formatOffset(mins){
+  var n=Math.round(mins),abs=Math.abs(n),h=Math.floor(abs/60),m=abs%60;
+  return (n<0?'往回 ':'往后 ')+(h?h+'小时':'')+(m||!h?m+'分钟':'');
+}
+function addMinutesToInput(t,mins){
+  var dt=new Date(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(mins));
+  return {year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()};
+}
+function getTrueSolarCorrection(t){
+  if(!document.getElementById('useTrueSolar').checked)return 0;
+  return (getLongitude()-120)*4+equationOfTimeMinutes(t.year,t.month,t.day);
+}
+function getPaiPanTime(t){
+  var correction=getTrueSolarCorrection(t);
+  var used=addMinutesToInput(t,correction);
+  return {input:t,used:used,correction:correction,enabled:document.getElementById('useTrueSolar').checked,longitude:getLongitude()};
+}
+function formatTimeObj(t){
+  return t.year+'-'+pad(t.month)+'-'+pad(t.day)+' '+pad(t.hour)+':'+pad(t.minute||0);
+}
+function refreshSolarPreview(){
+  var el=document.getElementById('solarPreview');
+  if(!el)return;
+  var t=getTimeInput();
+  if(!document.getElementById('useTrueSolar').checked){
+    el.textContent='未启用真太阳时';
+    return;
+  }
+  var pp=getPaiPanTime(t);
+  el.textContent='校正 '+formatOffset(pp.correction)+'，起盘用 '+pad(pp.used.hour)+':'+pad(pp.used.minute);
+}
+function loadSolarSettings(){
+  var lon=localStorage.getItem(LONGITUDE_STORAGE)||'103.99505';
+  document.getElementById('useTrueSolar').checked=false;
+  document.getElementById('longitude').value=lon;
+}
+function saveSolarSettings(){
+  localStorage.setItem(TRUE_SOLAR_STORAGE,document.getElementById('useTrueSolar').checked?'1':'0');
+  localStorage.setItem(LONGITUDE_STORAGE,String(getLongitude()));
+}
+function applyLocationPreset(v){
+  if(v){
+    document.getElementById('longitude').value=v;
+    saveSolarSettings();
+  }
+  refreshSolarPreview();
+}
+function useBrowserLocation(){
+  if(!navigator.geolocation){alert('当前浏览器不支持定位。');return}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    document.getElementById('longitude').value=pos.coords.longitude.toFixed(5);
+    document.getElementById('locationPreset').value='';
+    saveSolarSettings();
+    refreshSolarPreview();
+  },function(err){alert('定位失败：'+err.message+'。也可以手动填写经度。')},{enableHighAccuracy:true,timeout:8000,maximumAge:600000});
+}
+
+function esc(v){
+  return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function br(v){return esc(v).replace(/\n/g,'<br>')}
+function getApiKey(){
+  var key=localStorage.getItem(API_KEY_STORAGE)||'';
+  if(!key){
+    key=prompt('请输入 DeepSeek API Key（只保存在本机浏览器 localStorage）：','')||'';
+    key=key.trim();
+    if(key)localStorage.setItem(API_KEY_STORAGE,key);
+  }
+  return key;
+}
+function manageApiKey(){
+  var old=localStorage.getItem(API_KEY_STORAGE)||'';
+  var msg=old?'已保存 Key。输入新 Key 可替换；留空并确定则清除。':'请输入 DeepSeek API Key（只保存在本机浏览器）：';
+  var key=prompt(msg,old)||'';
+  key=key.trim();
+  if(key){localStorage.setItem(API_KEY_STORAGE,key);alert('DeepSeek API Key 已保存到本机浏览器。')}
+  else if(old&&confirm('清除本机保存的 DeepSeek API Key？')){localStorage.removeItem(API_KEY_STORAGE);alert('已清除。')}
+}
+
+function getJieQiNote(t){
+  if(typeof JIE_QI_DATA==='undefined')return '';
+  for(var i=0;i<JIE_QI_DATA.length;i++){
+    var jq=JIE_QI_DATA[i];
+    if(jq.month===t.month&&Math.abs(t.day-jq.approx[0])<=1){
+      return '⚠ 当前日期接近「'+jq.name+'」交节，本工具按日期近似处理；交节当天请以准确节气时刻复核。';
+    }
+  }
+  return '';
+}
+
+function getPalaceMarks(o){
+  var marks=[];
+  if(o.kongWang)marks.push('旬空');
+  if(o.maXing)marks.push('马星');
+  if(o.menPo)marks.push('门迫');
+  if(o.jiXingTian)marks.push('天盘击刑');
+  if(o.jiXingDi)marks.push('地盘击刑');
+  if(o.ruMuTian)marks.push('天盘入墓');
+  if(o.ruMuDi)marks.push('地盘入墓');
+  if(o.isRiZhuTian)marks.push('日主在天盘');
+  else if(o.isRiZhuDi)marks.push('日主在地盘');
+  return marks;
+}
+function palaceStemText(g,o){return g===2&&o.jigan?o.jigan+o.diPan:(o.diPan||'')}
+function palaceTitle(g,o){
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+  var marks=getPalaceMarks(o);
+  return '第'+g+'宫（'+dirs[g]+'·'+o.wuxing+'）：'+(o.spirit||'')+' '+(o.star||'')+' '+(o.door?o.door+'门':'')+'，天盘'+(o.tianPan||'空')+'，地盘'+palaceStemText(g,o)+(marks.length?'，'+marks.join('、'):'');
+}
+function renderStatus(data,note){
+  var el=document.getElementById('statusStrip');
+  if(!el||!data){if(el)el.innerHTML='';return}
+  var t=data.solarTime,ji=data.juInfo;
+  var chips=[
+    '时间 <strong>'+pad(t.month)+'/'+pad(t.day)+' '+pad(t.hour)+':'+pad(t.minute||0)+'</strong>',
+    '局 <strong>'+ji.dun+ji.ju+'局</strong>',
+    '节气 <strong>'+ji.jieQi+' '+ji.yuan+'</strong>',
+    '值符 <strong>'+ji.zhiFu+'</strong>',
+    '值使 <strong>'+ji.zhiShi+'门</strong>',
+    '空 <strong>'+data.kongWang.join(' ')+'</strong>',
+    '马 <strong>'+data.maXing+'</strong>'
+  ];
+  if(data.trueSolar&&data.trueSolar.enabled)chips.splice(1,0,'真太阳 <strong>'+formatOffset(data.trueSolar.correction)+'</strong>');
+  if(selectedPalace)chips.push('当前 <strong>第'+selectedPalace+'宫</strong>');
+  el.innerHTML=chips.map(function(x){return '<span class="status-chip">'+x+'</span>'}).join('')+(note?'<span class="status-chip warn">'+esc(note)+'</span>':'');
+}
+function getQuestionType(){
+  return (document.getElementById('questionType')&&document.getElementById('questionType').value)||'general';
+}
+function getQuestionTypeLabel(type){
+  var labels={general:'综合',career:'事业工作',love:'感情关系',wealth:'财运投资',cooperation:'合作谈判',travel:'出行迁动',health:'健康疾病',lost:'找失物',exam:'考试竞聘',choice:'选择决策'};
+  return labels[type]||'综合';
+}
+function getAiModeLabel(mode){
+  var labels={brief:'简断',detail:'详断',conclusion:'只看结论',palaces:'逐宫细断',timing:'应期重点'};
+  return labels[mode]||'简断';
+}
+function findDayMasterPalace(data){
+  for(var g=1;g<=9;g++){if(data.gongs[g].isRiZhuTian)return g}
+  return null;
+}
+function getPalaceLabel(g){
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+  return g?'第'+g+'宫（'+dirs[g]+'）':'未见';
+}
+function getUseGodHints(type){
+  var map={
+    general:['日主落宫','值符值使','旬空马星','门迫击刑入墓'],
+    career:['日主落宫','开门/值使门','值符','时干与日干关系'],
+    love:['日主与时干','六合','庚乙关系','空亡与入墓'],
+    wealth:['生门','日主落宫','值符','门迫/入墓'],
+    cooperation:['日主与对方时干','六合','开门','值使门'],
+    travel:['马星','开门','景门','空亡'],
+    health:['天芮/病符','死门','日主状态','入墓击刑'],
+    lost:['时干','值使门','空亡','马星动象'],
+    exam:['景门','值符','日主旺衰','开门'],
+    choice:['日主','值使门','两方案落宫','空亡冲克']
+  };
+  return map[type]||map.general;
+}
+function getRiskWarnings(data,note){
+  var risks=[];
+  if(note)risks.push(note);
+  var input=data.inputTime||data.solarTime;
+  if(input.hour>=23)risks.push('23点后按子初换日，已用次日日柱起盘。');
+  if(data.trueSolar&&data.trueSolar.enabled){
+    var inHour=input.hour,usedHour=data.solarTime.hour;
+    if(inHour!==usedHour)risks.push('真太阳时校正后跨时辰，请按“起盘用时”判断。');
+  }
+  var dm=findDayMasterPalace(data);
+  if(dm&&data.gongs[dm].kongWang)risks.push('日主落宫逢空亡。');
+  for(var g=1;g<=9;g++){
+    var o=data.gongs[g];
+    if(o.menPo)risks.push(getPalaceLabel(g)+'门迫');
+    if(o.jiXingTian||o.jiXingDi)risks.push(getPalaceLabel(g)+'击刑');
+    if(o.ruMuTian||o.ruMuDi)risks.push(getPalaceLabel(g)+'入墓');
+  }
+  var seen={};
+  return risks.filter(function(x){if(seen[x])return false;seen[x]=1;return true}).slice(0,8);
+}
+function renderAssistInfo(data,note){
+  if(!data)return '';
+  var type=getQuestionType(),dm=findDayMasterPalace(data),risks=getRiskWarnings(data,note);
+  var hints=getUseGodHints(type);
+  return '<div class="mini-section"><strong>盘面摘要</strong><div class="detail">日主 '+data.riZhu+' 落 '+getPalaceLabel(dm)+'；值符 '+data.juInfo.zhiFu+'；值使 '+data.juInfo.zhiShi+'门；旬空 '+data.kongWang.join(' ')+'；马星 '+data.maXing+'。</div></div>'+
+    '<div class="mini-section"><strong>'+getQuestionTypeLabel(type)+'用神提示</strong><div class="hint-tags">'+hints.map(function(x){return '<span class="hint-tag">'+x+'</span>'}).join('')+'</div></div>'+
+    (risks.length?'<div class="mini-section"><strong>风险提醒</strong><div class="detail">'+risks.join('；')+'。</div></div>':'');
+}
+function refreshAssistInfo(){
+  if(!plateData)return;
+  var note=getJieQiNote(plateData.solarTime);
+  document.getElementById('infoPanel').innerHTML='<div class="title">✅ 排盘完成 — 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+}
+function useQuestionTemplate(type){
+  var map={
+    career:['career','事业/工作：我想看这件工作/事业的发展和建议。'],
+    love:['love','感情关系：我想看对方状态、关系走向和是否适合推进。'],
+    wealth:['wealth','财运投资：我想看这笔钱/项目的得失风险和建议。'],
+    cooperation:['cooperation','合作谈判：我想看对方诚意、合作风险和结果。'],
+    travel:['travel','出行安排：我想看此行是否顺利、注意什么。'],
+    health:['health','健康疾病：我想看恢复趋势和需要注意的地方。'],
+    lost:['lost','找失物：我想看东西大概在哪里、还能不能找到。'],
+    exam:['exam','考试竞聘：我想看结果趋势、发挥和准备重点。'],
+    choice:['choice','选择决策：A 和 B 怎么选，哪个更稳？']
+  };
+  var input=document.getElementById('question');
+  var item=map[type]||['general',''];
+  document.getElementById('questionType').value=item[0];
+  refreshAssistInfo();
+  var prefix=item[1];
+  var cur=input.value.trim();
+  input.value=cur?prefix+cur:prefix;
+  input.focus();
+  input.setSelectionRange(input.value.length,input.value.length);
+}
+
+function buildBoard(){
+  var board=document.getElementById('board');board.innerHTML='';
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+  var nums=['','①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
+  for(var g=1;g<=9;g++){
+    var div=document.createElement('div');
+    div.className='palace';div.id='p'+g;
+    div.onclick=(function(n){return function(){selectPalace(n)}})(g);
+    div.innerHTML=
+      '<span class="palace-dir">'+dirs[g]+'</span>'+
+      '<span class="p-ma"></span>'+
+      '<span class="p-spirit"></span>'+
+      '<span class="p-kong"></span>'+
+      '<span class="p-jigan"></span>'+
+      '<span class="p-star"></span>'+
+      '<span class="p-yingan"></span>'+
+      '<span class="p-heaven"><span class="cs"></span><span class="stem"></span></span>'+
+      '<span class="p-num">'+nums[g]+'</span>'+
+      '<span class="p-door"></span>'+
+      '<span class="p-earth"><span class="cs"></span><span class="stem"></span></span>';
+    board.appendChild(div);
+  }
+}
+
+function doPaiPan(){
+  var t=getTimeInput();
+  var pt=getPaiPanTime(t);
+  plateData=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
+  plateData.inputTime=pt.input;
+  plateData.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction};
+  selectedPalace=null;
+  document.querySelectorAll('.palace').forEach(function(p){p.classList.remove('selected')});
+  renderPlate(plateData);
+  renderSidePanel(plateData);
+  aiHistory=[];
+  document.getElementById('btnAI').disabled=false;
+  document.getElementById('btnCopy').disabled=false;
+  document.getElementById('btnExport').disabled=false;
+  document.getElementById('btnSave').disabled=false;
+  var note=getJieQiNote(pt.used);
+  var solarNote=pt.enabled?'真太阳时：输入 '+formatTimeObj(pt.input)+'，校正 '+formatOffset(pt.correction)+'，起盘用 '+formatTimeObj(pt.used)+'。':'';
+  renderStatus(plateData,note);
+  document.getElementById('infoPanel').innerHTML='<div class="title">✅ 排盘完成 — 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+}
+
+function renderPlate(data){
+  for(var g=1;g<=9;g++){
+    var o=data.gongs[g],p=document.getElementById('p'+g);
+    if(!p)continue;
+    p.title=palaceTitle(g,o);
+    p.setAttribute('role','button');
+    p.setAttribute('aria-label',palaceTitle(g,o));
+    p.querySelector('.p-ma').textContent=o.maXing?'🐴':'';
+    p.querySelector('.p-spirit').textContent=o.spirit||'';
+    p.querySelector('.p-kong').textContent=o.kongWang?'○':'';
+    p.querySelector('.p-jigan').textContent='';
+    p.querySelector('.p-star').textContent=o.star==='天芮,天禽'?'芮禽':(o.star||'');
+    p.querySelector('.p-yingan').textContent=o.yinGan||'';
+    p.querySelector('.p-num').textContent=['','①','②','③','④','⑤','⑥','⑦','⑧','⑨'][g];
+    var hs=p.querySelector('.p-heaven .cs');
+    var st=p.querySelector('.p-heaven .stem');
+    var heavenBox=p.querySelector('.p-heaven');
+    hs.textContent=o.changShengTian||'';
+    var tp=o.tianPan||'';
+    heavenBox.className='p-heaven';
+    if(tp.length===2){
+      var jxT=o.jxTianStems||[];
+      var rmT=o.rmTianStems||[];
+      var h='';
+      for(var si=0;si<2;si++){
+        var cls='stem';
+        if(o.isRiZhuTian && tp[si]===data.riZhu)cls+=' rizhu-box';
+        if(jxT[si]&&rmT[si])cls+=' jixing-rumu';
+        else if(jxT[si])cls+=' jixing';
+        else if(rmT[si])cls+=' rumu';
+        h+='<span class="'+cls+'">'+tp[si]+'</span>';
+      }
+      heavenBox.classList.add('double-stem');
+      st.className='stem double-stem';
+      st.innerHTML=h;
+    }else{
+      st.textContent=tp;
+      st.className='stem';
+      if(o.isRiZhuTian)st.classList.add('rizhu-box');
+      if(o.jiXingTian&&o.ruMuTian)st.classList.add('jixing-rumu');
+      else if(o.jiXingTian)st.classList.add('jixing');
+      else if(o.ruMuTian)st.classList.add('rumu');
+    }
+    var doorEl=p.querySelector('.p-door');
+    doorEl.textContent=o.door?o.door+'门':'';
+    doorEl.className='p-door'+(o.menPo?' menpo':'');
+    var eds=p.querySelector('.p-earth .cs');
+    var edt=p.querySelector('.p-earth .stem');
+    eds.textContent=o.changShengDi||'';
+    var ep=palaceStemText(g,o);
+    if(g===2&&o.jigan&&o.jxDiStems&&o.jxDiStems.length===2){
+      var eh='';
+      for(var ei=0;ei<2;ei++){
+        var ecls='stem';
+        if(o.jxDiStems[ei]&&o.rmDiStems[ei])ecls+=' jixing-rumu';
+        else if(o.jxDiStems[ei])ecls+=' jixing';
+        else if(o.rmDiStems[ei])ecls+=' rumu';
+        eh+='<span class="'+ecls+'">'+ep[ei]+'</span>';
+      }
+      edt.className='stem double-stem';
+      edt.innerHTML=eh;
+    }else{
+      edt.textContent=ep;
+      edt.className='stem';
+            if(o.jiXingDi&&o.ruMuDi)edt.classList.add('jixing-rumu');
+      else if(o.jiXingDi)edt.classList.add('jixing');
+      else if(o.ruMuDi)edt.classList.add('rumu');
+    }
+    if(g===5)p.style.opacity='0.72';
+  }
+}
+
+function renderPalaceFocus(data,num){
+  if(!data||!num)return '';
+  var o=data.gongs[num];
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+  var marks=getPalaceMarks(o);
+  return '<div class="side-focus">'+
+    '<div class="focus-title">第'+num+'宫（'+dirs[num]+'·'+o.wuxing+'） '+(o.door?o.door+'门':'')+' · '+(o.star==='天芮,天禽'?'芮禽':(o.star||''))+' · '+(o.spirit||'')+'</div>'+
+    '<div class="focus-line">天盘：<strong style="color:#8b0000">'+(o.tianPan||'空')+'</strong>　地盘：<strong style="color:#2e5c4e">'+palaceStemText(num,o)+'</strong>'+(o.yinGan?'　隐干：'+o.yinGan:'')+'</div>'+
+    '<div class="focus-line">长生：天盘 '+(o.changShengTian||'-')+' / 地盘 '+(o.changShengDi||'-')+'</div>'+
+    (marks.length?'<div class="mark-tags">'+marks.map(function(m){return '<span class="mark-tag">'+m+'</span>'}).join('')+'</div>':'')+
+  '</div>';
+}
+
+function renderSidePanel(data,focusNum){
+  var gz=data.ganzhi,ji=data.juInfo;
+  var sc=document.getElementById('sideContent');
+  sc.innerHTML=renderPalaceFocus(data,focusNum)+
+    '<div class="info-row"><span class="info-label">性别</span><span class="info-value">'+document.getElementById('gender').value+'</span></div>'+
+    (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">输入时间</span><span class="info-value">'+formatTimeObj(data.inputTime)+'</span></div>':'')+
+    '<div class="info-row"><span class="info-label">'+(data.trueSolar&&data.trueSolar.enabled?'起盘用时':'阳历时间')+'</span><span class="info-value">'+data.solarTime.year+'-'+pad(data.solarTime.month)+'-'+pad(data.solarTime.day)+' '+pad(data.solarTime.hour)+':'+pad(data.solarTime.minute||0)+'</span></div>'+
+    (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">真太阳时</span><span class="info-value">东经 '+Number(data.trueSolar.longitude).toFixed(3)+'° · '+formatOffset(data.trueSolar.correction)+'</span></div>':'')+
+    '<div class="info-row"><span class="info-label">阴历时间</span><span class="info-value">'+gz.year+'年 '+gz.month+'月 '+gz.day+'日 '+gz.hour+'时</span></div>'+
+    '<table class="gz-table"><tr><th>年柱</th><th>月柱</th><th>日柱</th><th>时柱</th></tr>'+
+      '<tr class="gz-t"><td>'+gz.year[0]+'</td><td>'+gz.month[0]+'</td><td class="rizhu-td">'+gz.day[0]+'</td><td>'+gz.hour[0]+'</td></tr>'+
+      '<tr class="gz-d"><td>'+gz.year[1]+'</td><td>'+gz.month[1]+'</td><td>'+gz.day[1]+'</td><td>'+gz.hour[1]+'</td></tr></table>'+
+    '<div style="font-size:9px;color:#999;margin-bottom:8px;text-align:center">（方框 = 日主 '+data.riZhu+'）</div>'+
+    '<div class="info-row"><span class="info-label">选局</span><span class="info-value">'+ji.dun+'遁'+ji.ju+'局</span></div>'+
+    '<div class="info-row"><span class="info-label">节气</span><span class="info-value">'+ji.jieQi+' '+ji.yuan+'</span></div>'+
+    '<div class="info-row"><span class="info-label">旬首</span><span class="info-value">'+ji.xunShou+ji.xunShouYi+'</span></div>'+
+    '<div class="info-row"><span class="info-label">值符</span><span class="info-value">'+ji.zhiFu+'</span></div>'+
+    '<div class="info-row"><span class="info-label">值使</span><span class="info-value">'+ji.zhiShi+'门</span></div>'+
+    '<div class="info-row"><span class="info-label">局式</span><span class="info-value">'+ji.juShi+'</span></div>'+
+    '<div class="info-row"><span class="info-label">旬空</span><span class="info-value">'+data.kongWang.join(' ')+'</span></div>'+
+    '<div class="info-row"><span class="info-label">马星</span><span class="info-value">'+data.maXing+'</span></div>'+
+    '<div class="legend"><h4>📖 颜色图例</h4>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> 门迫 — 八门受制</div>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span> 击刑 — 地支相刑</div>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#16a34a"></span> 入墓 — 天干入墓</div>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span> 击刑+入墓</div>'+
+      '<div class="legend-item"><span style="color:#c0392b">○</span> 空亡</div>'+
+      '<div class="legend-item"><span>🐴</span> 马星</div>'+
+      '<div class="legend-item"><span style="border:2px solid #8b4513;padding:0 2px;border-radius:2px">干</span> 日主方框</div></div>';
+}
+
+function pad(n){var m=n||0;return(m<10?'0':'')+m}
+
+function buildPlateText(data){
+  if(!data)return '';
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+  var lines=[];
+  lines.push('奇门遁甲排盘');
+  if(data.trueSolar&&data.trueSolar.enabled){
+    lines.push('输入时间：'+formatTimeObj(data.inputTime));
+    lines.push('真太阳时：东经 '+Number(data.trueSolar.longitude).toFixed(5)+'°，校正 '+formatOffset(data.trueSolar.correction));
+    lines.push('起盘用时：'+formatTimeObj(data.solarTime));
+  }else{
+    lines.push('时间：'+data.solarTime.year+'-'+pad(data.solarTime.month)+'-'+pad(data.solarTime.day)+' '+pad(data.solarTime.hour)+':'+pad(data.solarTime.minute||0));
+  }
+  lines.push('四柱：'+data.ganzhi.year+'年 '+data.ganzhi.month+'月 '+data.ganzhi.day+'日 '+data.ganzhi.hour+'时');
+  lines.push('局式：'+data.juInfo.juShi+'，'+data.juInfo.jieQi+' '+data.juInfo.yuan+'，'+data.juInfo.dun+'遁'+data.juInfo.ju+'局');
+  lines.push('旬首：'+data.juInfo.xunShou+data.juInfo.xunShouYi+'；值符：'+data.juInfo.zhiFu+'；值使：'+data.juInfo.zhiShi+'门');
+  lines.push('旬空：'+data.kongWang.join(' ')+'；马星：'+data.maXing+'；日主：'+data.riZhu);
+  lines.push('问事类型：'+getQuestionTypeLabel(getQuestionType())+'；AI模式：'+getAiModeLabel(document.getElementById('aiMode').value));
+  lines.push('用神提示：'+getUseGodHints(getQuestionType()).join('、'));
+  var risks=getRiskWarnings(data,getJieQiNote(data.solarTime));
+  if(risks.length)lines.push('风险提醒：'+risks.join('；'));
+  lines.push('');
+  for(var g=1;g<=9;g++){
+    var o=data.gongs[g],marks=getPalaceMarks(o);
+    var dp=palaceStemText(g,o);
+    lines.push('第'+g+'宫（'+dirs[g]+'·'+o.wuxing+'）：'+(o.spirit||'')+' '+(o.star||'')+' '+(o.door?o.door+'门':'')+' | 天盘'+(o.tianPan||'空')+' | 地盘'+dp+(o.yinGan?' | 隐干'+o.yinGan:'')+(marks.length?' | '+marks.join('、'):''));
+  }
+  var q=document.getElementById('question').value.trim();
+  if(q)lines.push('\\n问题：'+q);
+  return lines.join('\\n');
+}
+
+function copyFallback(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+}
+
+async function copyPlateText(){
+  if(!plateData)return;
+  var text=buildPlateText(plateData);
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(text);
+    else copyFallback(text);
+    var btn=document.getElementById('btnCopy'),old=btn.textContent;
+    btn.textContent='✅ 已复制';
+    setTimeout(function(){btn.textContent=old},1200);
+  }catch(e){copyFallback(text);alert('盘面文字已复制。')}
+}
+
+function exportPlate(){
+  if(!plateData){alert('请先起盘');return}
+  window.print();
+}
+
+function summarizeForCompare(data,label){
+  var dm=findDayMasterPalace(data);
+  return label+'：'+formatTimeObj(data.solarTime)+'｜'+data.ganzhi.day+'日 '+data.ganzhi.hour+'时｜'+data.juInfo.dun+'遁'+data.juInfo.ju+'局｜值符'+data.juInfo.zhiFu+'｜值使'+data.juInfo.zhiShi+'门｜日主'+getPalaceLabel(dm);
+}
+function compareHours(){
+  var t=getTimeInput();
+  var rows=[];
+  [-2,0,2].forEach(function(delta){
+    var dt=new Date(t.year,t.month-1,t.day,t.hour+delta,t.minute||0);
+    var base={year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()};
+    var pt=getPaiPanTime(base);
+    var d=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
+    d.inputTime=pt.input;d.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction};
+    rows.push(summarizeForCompare(d,delta<0?'上一时辰':(delta>0?'下一时辰':'当前')));
+  });
+  alert(rows.join('\n'));
+}
+
+function selectPalace(num){
+  // 再次点击已选宫位 → 取消选中
+  if(selectedPalace===num){
+    document.getElementById('p'+num).classList.remove('selected');
+    selectedPalace=null;
+    if(plateData){
+      renderSidePanel(plateData);
+      renderStatus(plateData);
+      refreshAssistInfo();
+    }
+    return;
+  }
+  document.querySelectorAll('.palace').forEach(function(p){p.classList.remove('selected')});
+  document.getElementById('p'+num).classList.add('selected');
+  selectedPalace=num;
+  if(!plateData)return;
+  var o=plateData.gongs[num];
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+  var marks=getPalaceMarks(o);
+  var dp=palaceStemText(num,o);
+  renderSidePanel(plateData,num);
+  renderStatus(plateData);
+  var panel=document.getElementById('infoPanel');
+  panel.innerHTML=
+    '<div class="title">📍 第'+num+'宫（'+dirs[num]+'·'+o.wuxing+'）— '+(o.door?o.door+'门':'')+' | '+(o.star==='天芮,天禽'?'芮禽':(o.star||''))+' | '+o.spirit+'</div>'+
+    '<div class="detail"><span>天盘干：</span><span style="color:#8b0000;font-weight:bold">'+o.tianPan+'</span> <span style="font-size:11px;color:#999">长生：'+o.changShengTian+'</span> <span style="margin-left:12px">地盘干：</span><span style="color:#2e5c4e;font-weight:bold">'+dp+'</span> <span style="font-size:11px;color:#999">长生：'+o.changShengDi+'</span></div>'+
+    (o.yinGan?'<div class="detail">隐干：<span style="color:#888">'+o.yinGan+'</span></div>':'')+
+    (o.jigan?'<div class="detail">寄干：<span style="color:#b8860b">'+o.jigan+'</span></div>':'')+
+    (marks.length?'<div class="detail">标记：'+marks.join(' · ')+'</div>':'')+
+    renderAssistInfo(plateData,getJieQiNote(plateData.solarTime))+
+    '<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+}
+
+async function analyzeWithAI(){
+  if(!plateData){alert('请先起盘');return}
+  var question=document.getElementById('question').value.trim();
+  if(!question){alert('请输入你想问的事情');return}
+  var apiKey=getApiKey();
+  if(!apiKey){alert('未填写 DeepSeek API Key');return}
+  var gender=document.getElementById('gender').value;
+  var qType=getQuestionType();
+  var aiMode=document.getElementById('aiMode').value;
+  var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
+
+  // 组装全盘信息
+  var gongs=plateData.gongs;
+  var plateInfo='';
+  for(var g=1;g<=9;g++){
+    var o=gongs[g];
+    var marks=getPalaceMarks(o);
+    plateInfo+='第'+g+'宫('+dirs[g]+'·'+o.wuxing+'): 天盘'+(o.tianPan||'空')+'('+(o.changShengTian||'')+') 地盘'+palaceStemText(g,o)+'('+(o.changShengDi||'')+') '+(o.star||'')+' '+(o.door||'')+' '+(o.spirit||'')+(o.yinGan?' 隐干'+o.yinGan:'')+(o.jigan?' 寄干'+o.jigan:'')+(marks.length?' ['+marks.join(',')+']':'')+'\n';
+  }
+
+  var modeGuide={
+    brief:'请用简断方式，500字以内，先给结论，再列依据。',
+    detail:'请详断，1000字以内，结构清楚，重点说理由。',
+    conclusion:'只看结论和行动建议，300字以内。',
+    palaces:'请逐宫细断，重点分析相关用神宫、日主宫、值符值使宫。',
+    timing:'请重点看应期、时间窗口、动象和触发条件。'
+  };
+  var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n用户问题：'+question+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
+  document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>⏳ AI 分析中…</div>';
+  document.getElementById('btnAI').disabled=true;
+  try{
+    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:'你是专业的奇门遁甲分析师。用以下结构回答：\n【用神落宫】日主落哪宫及含义\n【全盘格局】整体吉凶判断\n【关键宫位】逐宫分析重点标记\n【综合建议】针对问题的结论\n每段之间空一行，不用markdown符号。'},{role:'user',content:prompt}],max_tokens:1500,temperature:0.7})});
+    var d=await resp.json();
+    if(d.choices&&d.choices[0]){
+      aiHistory.push({q:question,a:d.choices[0].message.content.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
+      document.getElementById('aiResult').innerHTML=renderAIHistory();
+    }else{
+      document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ AI 返回异常: '+esc(JSON.stringify(d))+'</div>';
+    }
+  }catch(e){document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>'}
+  document.getElementById('btnAI').disabled=false;
+}
+
+function renderAIHistory(){
+  if(!aiHistory.length)return '💡 输入问题后点击「AI 分析」获取全盘解读…';
+  var h='';
+  for(var i=0;i<aiHistory.length;i++){
+    h+='<div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed #d4c5a9">'+
+      '<div style="font-size:10px;color:#8b7355;margin-bottom:4px">❓ '+esc(aiHistory[i].q)+' ('+esc(aiHistory[i].t)+')</div>'+
+      '<div style="color:#2e5c4e">🤖 '+br(aiHistory[i].a)+'</div></div>';
+  }
+  return h+'<div class="followups">'+
+    '<button type="button" onclick="setFollowupQuestion(\'继续细看用神落宫和旺衰。\')">细看用神</button>'+
+    '<button type="button" onclick="setFollowupQuestion(\'重点看应期，大概什么时候有变化？\')">看应期</button>'+
+    '<button type="button" onclick="setFollowupQuestion(\'对方或外部环境现在是什么状态？\')">看对方状态</button>'+
+    '<button type="button" onclick="setFollowupQuestion(\'给我具体行动建议和避坑点。\')">行动建议</button>'+
+  '</div>';
+}
+
+function setFollowupQuestion(text){
+  var input=document.getElementById('question');
+  input.value=text;
+  input.focus();
+}
+
+// ===== 历史起盘 =====
+function saveToHistory(){
+  if(!plateData)return;
+  var gz=plateData.ganzhi;
+  var t=plateData.solarTime;
+  var tag=getQuestionTypeLabel(getQuestionType());
+  var name=prompt('为这个盘取名：','['+tag+'] '+t.year+'-'+pad(t.month)+'-'+pad(t.day)+' '+gz.month+'月 '+gz.day+'日 '+gz.hour+'时');
+  if(!name)return;
+  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+  var id=Date.now();
+  hist.push({id:id,name:name,tag:tag,solarTime:t,data:JSON.parse(JSON.stringify(plateData)),aiHistory:JSON.parse(JSON.stringify(aiHistory))});
+  localStorage.setItem('qimen_history',JSON.stringify(hist));
+  renderHistory();
+}
+
+function loadHistory(id){
+  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+  var item=hist.find(function(h){return h.id===id});
+  if(!item)return;
+  plateData=item.data;
+  aiHistory=item.aiHistory?JSON.parse(JSON.stringify(item.aiHistory)):[];
+  selectedPalace=null;
+  setControlsFromTime(plateData.inputTime||plateData.solarTime);
+  var ts=plateData.trueSolar||{enabled:false,longitude:getLongitude()};
+  document.getElementById('useTrueSolar').checked=!!ts.enabled;
+  document.getElementById('longitude').value=ts.longitude||getLongitude();
+  saveSolarSettings();
+  refreshSolarPreview();
+  renderPlate(plateData);
+  renderSidePanel(plateData);
+  renderStatus(plateData);
+  document.getElementById('btnAI').disabled=false;
+  document.getElementById('btnCopy').disabled=false;
+  document.getElementById('btnExport').disabled=false;
+  document.getElementById('btnSave').disabled=false;
+  var solarNote=plateData.trueSolar&&plateData.trueSolar.enabled?'真太阳时：输入 '+formatTimeObj(plateData.inputTime)+'，校正 '+formatOffset(plateData.trueSolar.correction)+'，起盘用 '+formatTimeObj(plateData.solarTime)+'。':'';
+  document.getElementById('infoPanel').innerHTML='<div class="title">📜 已加载历史盘 — '+esc(item.name)+'</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+}
+
+function renameHistory(id){
+  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+  var item=hist.find(function(h){return h.id===id});
+  if(!item)return;
+  var name=prompt('重命名：',item.name);
+  if(!name)return;
+  item.name=name;
+  localStorage.setItem('qimen_history',JSON.stringify(hist));
+  renderHistory();
+}
+
+function deleteHistory(id){
+  if(!confirm('确定删除这条记录？'))return;
+  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+  hist=hist.filter(function(h){return h.id!==id});
+  localStorage.setItem('qimen_history',JSON.stringify(hist));
+  renderHistory();
+}
+
+function renderHistory(){
+  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+  var section=document.getElementById('historySection');
+  var list=document.getElementById('historyList');
+  if(!hist.length){section.style.display='none';list.innerHTML='';return}
+  section.style.display='block';
+  var kw=(document.getElementById('historySearch')&&document.getElementById('historySearch').value||'').trim().toLowerCase();
+  var html='';
+  for(var i=hist.length-1;i>=0;i--){
+    var h=hist[i];
+    var hid=Number(h.id)||0;
+    var text=(h.name+' '+(h.tag||'')+' '+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)).toLowerCase();
+    if(kw&&text.indexOf(kw)<0)continue;
+    html+='<div class="hist-item">'+
+      '<span class="hi-date">'+(h.tag?'['+esc(h.tag)+'] ':'')+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)+'</span>'+
+      '<span class="hi-name" title="'+esc(h.name)+'" onclick="loadHistory('+hid+')">'+esc(h.name)+'</span>'+
+      '<span class="hi-btns">'+
+        '<button onclick="event.stopPropagation();renameHistory('+hid+')">✏</button>'+
+        '<button class="del" onclick="event.stopPropagation();deleteHistory('+hid+')">✕</button>'+
+      '</span></div>';
+  }
+  list.innerHTML=html||'<div style="font-size:11px;color:#999;padding:8px;text-align:center">没有匹配的历史盘</div>';
+}
+
+// 初始化
+(function initHistory(){
+  renderHistory();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+.codex/
+.claude/
+jizhun/
+
+node_modules/
+dist/
+build/
+.DS_Store
+Thumbs.db
+*.log
+
+# Local backup folders should stay outside the repository.
+*_回滚备份/
+backup-*/
