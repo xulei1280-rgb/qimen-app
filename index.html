@@ -119,6 +119,7 @@ h1{
   font-size:13px;
   outline:none;
 }
+.person-input{width:88px}
 .time-bar select:focus,.time-bar input:focus,.question-bar input:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.14)}
 .cal-tabs{display:flex;gap:0}
 .cal-tab{
@@ -307,7 +308,7 @@ h1{
 .tool-row{
   width:444px;
   display:grid;
-  grid-template-columns:1fr 1fr 1fr;
+  grid-template-columns:1fr 1fr;
   gap:8px;
   margin:0 auto 8px;
 }
@@ -364,6 +365,11 @@ h1{
 .followups{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .followups button{border:1px solid rgba(169,111,40,.34);background:#fffdf8;color:#5c4731;border-radius:5px;padding:4px 8px;font-size:12px;cursor:pointer}
 .followups button:hover{background:#f4ead8;border-color:var(--line-strong)}
+.ai-chat{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed rgba(169,111,40,.28);white-space:normal}
+.ai-chat input{min-width:0;border:1px solid rgba(169,111,40,.34);border-radius:6px;background:#fffdf8;color:var(--ink);padding:8px 10px;font-size:13px;outline:none}
+.ai-chat input:focus{border-color:var(--jade);box-shadow:0 0 0 3px rgba(46,92,78,.12)}
+.ai-chat button{border:1px solid var(--jade);background:var(--jade);color:#fffdf7;border-radius:6px;padding:0 14px;font-size:13px;font-weight:bold;cursor:pointer}
+.ai-chat button:hover{filter:brightness(1.05)}
 
 .side-panel{
   position:sticky;
@@ -387,6 +393,25 @@ h1{
   border-bottom:1px solid rgba(169,111,40,.25);
   letter-spacing:1px;
 }
+.side-tabs{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:5px;
+  margin-bottom:12px;
+}
+.side-tab{
+  border:1px solid rgba(169,111,40,.30);
+  background:#fffaf0;
+  color:#5c4731;
+  border-radius:5px;
+  padding:6px 4px;
+  font-size:12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.side-tab.active{background:var(--cinnabar);border-color:var(--cinnabar);color:#fffdf7}
+.side-tab-panel{display:none}
+.side-tab-panel.active{display:block}
 .info-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid rgba(169,111,40,.18);font-size:12px}
 .info-label{color:var(--muted)}
 .info-value{font-weight:bold;color:var(--ink);text-align:right}
@@ -477,6 +502,7 @@ h1{
   .p-yingan{top:46%;left:5px;font-size:8px}
   .time-bar{padding:5px 6px;gap:3px;flex-wrap:wrap}
   .time-bar input{font-size:11px!important;padding:3px 4px!important;width:54px!important}
+  .time-bar .person-input{width:82px!important}
   .time-bar select{font-size:11px;padding:3px 4px}
   .time-bar button{font-size:11px!important;padding:4px 8px!important}
   .solar-bar{width:100%;max-width:340px;margin:-6px auto 10px;padding:7px;gap:5px;font-size:11px}
@@ -518,6 +544,7 @@ h1{
     <select id="hour"></select>
     <select id="minute"></select>
     <select id="gender"><option value="男">男</option><option value="女">女</option></select>
+    <input class="person-input" type="text" id="personName" placeholder="姓名/标记" title="可选，用于保存和起盘记录">
     <button onclick="useCurrentTime()">🕐 当前</button>
     <button onclick="shiftHour(-2)" title="切换到上一个时辰">← 时辰</button>
     <button onclick="shiftHour(2)" title="切换到下一个时辰">时辰 →</button>
@@ -550,15 +577,15 @@ h1{
       <option value="lost">找失物</option>
       <option value="exam">考试竞聘</option>
       <option value="choice">选择决策</option>
+      <option value="birth">命盘分析</option>
     </select>
-    <select id="aiMode" title="选择 AI 输出方式">
+    <select id="aiMode" title="选择 AI 输出方式" onchange="saveAiMode();updateAiButtonLabel()">
       <option value="brief">简断</option>
       <option value="detail">详断</option>
       <option value="conclusion">只看结论</option>
       <option value="palaces">逐宫细断</option>
       <option value="timing">应期重点</option>
     </select>
-    <button type="button" onclick="compareHours()" title="对比上一时辰、当前、下一时辰">↔ 对比时辰</button>
   </div>
   <div class="quick-questions" aria-label="常用问事">
     <button type="button" onclick="useQuestionTemplate('career')">事业</button>
@@ -570,6 +597,7 @@ h1{
     <button type="button" onclick="useQuestionTemplate('lost')">找失物</button>
     <button type="button" onclick="useQuestionTemplate('exam')">考试竞聘</button>
     <button type="button" onclick="useQuestionTemplate('choice')">选择</button>
+    <button type="button" onclick="useQuestionTemplate('birth')">命盘分析</button>
   </div>
   <div class="question-bar">
     <input type="text" placeholder="输入你想问的事情..." id="question">
@@ -585,10 +613,18 @@ h1{
 </div>
 <div class="side-panel" id="sidePanel">
   <h3>📋 盘面信息</h3>
-  <div id="sideContent"><div style="text-align:center;color:#999;padding:20px 0">点击「起盘」显示</div></div>
-  <div id="historySection" style="margin-top:16px;padding-top:12px;border-top:2px solid #d4c5a9;display:none">
-    <h3 style="font-size:14px;margin-bottom:8px">📜 历史起盘</h3>
-    <input class="history-search" id="historySearch" type="search" placeholder="搜索历史..." oninput="renderHistory()">
+  <div class="side-tabs" role="tablist" aria-label="右侧信息切换">
+    <button class="side-tab active" type="button" id="tabInfoPanel" onclick="setSideTab('info')">盘面</button>
+    <button class="side-tab" type="button" id="tabAutoHistory" onclick="setSideTab('auto')">起盘记录</button>
+    <button class="side-tab" type="button" id="tabSavedHistory" onclick="setSideTab('saved')">保存起盘</button>
+  </div>
+  <div id="sideContent" class="side-tab-panel active"><div style="text-align:center;color:#999;padding:20px 0">点击「起盘」显示</div></div>
+  <div id="autoHistorySection" class="side-tab-panel">
+    <input class="history-search" id="autoHistorySearch" type="search" placeholder="搜索起盘记录..." oninput="renderAutoHistory()">
+    <div id="autoHistoryList"></div>
+  </div>
+  <div id="historySection" class="side-tab-panel">
+    <input class="history-search" id="historySearch" type="search" placeholder="搜索保存起盘..." oninput="renderHistory()">
     <div id="historyList"></div>
   </div>
 </div>
@@ -597,7 +633,12 @@ h1{
 <script>
 var currentCal='solar',selectedPalace=null,plateData=null;
 var aiHistory=[];
+var aiTopic=null;
+var currentAutoHistoryId=null;
 var API_KEY_STORAGE='qimen_deepseek_api_key';
+var AUTO_HISTORY_STORAGE='qimen_auto_history';
+var SAVED_HISTORY_STORAGE='qimen_history';
+var AI_MODE_STORAGE='qimen_ai_mode';
 var TRUE_SOLAR_STORAGE='qimen_true_solar_enabled';
 var LONGITUDE_STORAGE='qimen_longitude';
 
@@ -611,10 +652,11 @@ var LONGITUDE_STORAGE='qimen_longitude';
   ['day','hour','minute'].forEach(function(id){document.getElementById(id).addEventListener('change',refreshSolarPreview)});
   document.getElementById('question').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();analyzeWithAI()}});
   setControlTitles();
+  loadAiMode();
   loadSolarSettings();
   useCurrentTime();
   buildBoard();
-  setTimeout(function(){doPaiPan()},100);
+  setTimeout(function(){doPaiPan({skipRecord:true})},100);
 })();
 
 function setControlTitles(){
@@ -675,7 +717,7 @@ function shiftHour(delta){
   var t=getTimeInput();
   var dt=new Date(t.year,t.month-1,t.day,t.hour+(delta||0),t.minute||0);
   setControlsFromDate(dt);
-  doPaiPan();
+  doPaiPan({skipRecord:true});
 }
 
 function dayOfYear(y,m,d){
@@ -822,12 +864,31 @@ function getQuestionType(){
   return (document.getElementById('questionType')&&document.getElementById('questionType').value)||'general';
 }
 function getQuestionTypeLabel(type){
-  var labels={general:'综合',career:'事业工作',love:'感情关系',wealth:'财运投资',cooperation:'合作谈判',travel:'出行迁动',health:'健康疾病',lost:'找失物',exam:'考试竞聘',choice:'选择决策'};
+  var labels={general:'综合',career:'事业工作',love:'感情关系',wealth:'财运投资',cooperation:'合作谈判',travel:'出行迁动',health:'健康疾病',lost:'找失物',exam:'考试竞聘',choice:'选择决策',birth:'命盘分析'};
   return labels[type]||'综合';
+}
+function getPersonName(){
+  var el=document.getElementById('personName');
+  return el?el.value.trim():'';
 }
 function getAiModeLabel(mode){
   var labels={brief:'简断',detail:'详断',conclusion:'只看结论',palaces:'逐宫细断',timing:'应期重点'};
   return labels[mode]||'简断';
+}
+function loadAiMode(){
+  var el=document.getElementById('aiMode');
+  if(!el)return;
+  var saved=localStorage.getItem(AI_MODE_STORAGE);
+  if(saved&&Array.from(el.options).some(function(o){return o.value===saved}))el.value=saved;
+  updateAiButtonLabel();
+}
+function saveAiMode(){
+  var el=document.getElementById('aiMode');
+  if(el)localStorage.setItem(AI_MODE_STORAGE,el.value);
+}
+function updateAiButtonLabel(){
+  var btn=document.getElementById('btnAI'),el=document.getElementById('aiMode');
+  if(btn&&el)btn.textContent='🤖 AI 分析 · '+getAiModeLabel(el.value);
 }
 function findDayMasterPalace(data){
   for(var g=1;g<=9;g++){if(data.gongs[g].isRiZhuTian)return g}
@@ -848,7 +909,8 @@ function getUseGodHints(type){
     health:['天芮/病符','死门','日主状态','入墓击刑'],
     lost:['时干','值使门','空亡','马星动象'],
     exam:['景门','值符','日主旺衰','开门'],
-    choice:['日主','值使门','两方案落宫','空亡冲克']
+    choice:['日主','值使门','两方案落宫','空亡冲克'],
+    birth:['日主落宫','年命/性别','格局旺衰','值符值使']
   };
   return map[type]||map.general;
 }
@@ -895,7 +957,8 @@ function useQuestionTemplate(type){
     health:['health','健康疾病：我想看恢复趋势和需要注意的地方。'],
     lost:['lost','找失物：我想看东西大概在哪里、还能不能找到。'],
     exam:['exam','考试竞聘：我想看结果趋势、发挥和准备重点。'],
-    choice:['choice','选择决策：A 和 B 怎么选，哪个更稳？']
+    choice:['choice','选择决策：A 和 B 怎么选，哪个更稳？'],
+    birth:['birth','命盘分析：我想看这个人的整体状态、优势短板和近期趋势。']
   };
   var input=document.getElementById('question');
   var item=map[type]||['general',''];
@@ -932,17 +995,21 @@ function buildBoard(){
   }
 }
 
-function doPaiPan(){
+function doPaiPan(opts){
+  opts=opts||{};
   var t=getTimeInput();
   var pt=getPaiPanTime(t);
   plateData=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
   plateData.inputTime=pt.input;
   plateData.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction};
+  plateData.personName=getPersonName();
   selectedPalace=null;
   document.querySelectorAll('.palace').forEach(function(p){p.classList.remove('selected')});
   renderPlate(plateData);
   renderSidePanel(plateData);
   aiHistory=[];
+  aiTopic=null;
+  currentAutoHistoryId=null;
   document.getElementById('btnAI').disabled=false;
   document.getElementById('btnCopy').disabled=false;
   document.getElementById('btnExport').disabled=false;
@@ -951,6 +1018,7 @@ function doPaiPan(){
   var solarNote=pt.enabled?'真太阳时：输入 '+formatTimeObj(pt.input)+'，校正 '+formatOffset(pt.correction)+'，起盘用 '+formatTimeObj(pt.used)+'。':'';
   renderStatus(plateData,note);
   document.getElementById('infoPanel').innerHTML='<div class="title">✅ 排盘完成 — 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+  if(!opts.skipRecord)addAutoHistory();
 }
 
 function renderPlate(data){
@@ -1042,6 +1110,7 @@ function renderSidePanel(data,focusNum){
   var gz=data.ganzhi,ji=data.juInfo;
   var sc=document.getElementById('sideContent');
   sc.innerHTML=renderPalaceFocus(data,focusNum)+
+    (data.personName?'<div class="info-row"><span class="info-label">姓名/标记</span><span class="info-value">'+esc(data.personName)+'</span></div>':'')+
     '<div class="info-row"><span class="info-label">性别</span><span class="info-value">'+document.getElementById('gender').value+'</span></div>'+
     (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">输入时间</span><span class="info-value">'+formatTimeObj(data.inputTime)+'</span></div>':'')+
     '<div class="info-row"><span class="info-label">'+(data.trueSolar&&data.trueSolar.enabled?'起盘用时':'阳历时间')+'</span><span class="info-value">'+data.solarTime.year+'-'+pad(data.solarTime.month)+'-'+pad(data.solarTime.day)+' '+pad(data.solarTime.hour)+':'+pad(data.solarTime.minute||0)+'</span></div>'+
@@ -1076,6 +1145,8 @@ function buildPlateText(data){
   var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
   var lines=[];
   lines.push('奇门遁甲排盘');
+  var person=(data.personName||getPersonName());
+  if(person)lines.push('姓名/标记：'+person);
   if(data.trueSolar&&data.trueSolar.enabled){
     lines.push('输入时间：'+formatTimeObj(data.inputTime));
     lines.push('真太阳时：东经 '+Number(data.trueSolar.longitude).toFixed(5)+'°，校正 '+formatOffset(data.trueSolar.correction));
@@ -1124,24 +1195,6 @@ function exportPlate(){
   window.print();
 }
 
-function summarizeForCompare(data,label){
-  var dm=findDayMasterPalace(data);
-  return label+'：'+formatTimeObj(data.solarTime)+'｜'+data.ganzhi.day+'日 '+data.ganzhi.hour+'时｜'+data.juInfo.dun+'遁'+data.juInfo.ju+'局｜值符'+data.juInfo.zhiFu+'｜值使'+data.juInfo.zhiShi+'门｜日主'+getPalaceLabel(dm);
-}
-function compareHours(){
-  var t=getTimeInput();
-  var rows=[];
-  [-2,0,2].forEach(function(delta){
-    var dt=new Date(t.year,t.month-1,t.day,t.hour+delta,t.minute||0);
-    var base={year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()};
-    var pt=getPaiPanTime(base);
-    var d=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
-    d.inputTime=pt.input;d.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction};
-    rows.push(summarizeForCompare(d,delta<0?'上一时辰':(delta>0?'下一时辰':'当前')));
-  });
-  alert(rows.join('\n'));
-}
-
 function selectPalace(num){
   // 再次点击已选宫位 → 取消选中
   if(selectedPalace===num){
@@ -1184,6 +1237,8 @@ async function analyzeWithAI(){
   var gender=document.getElementById('gender').value;
   var qType=getQuestionType();
   var aiMode=document.getElementById('aiMode').value;
+  var pendingTopic=aiTopic||{question:question,type:qType,person:getPersonName(),createdAt:new Date().toISOString()};
+  var originalQuestion=pendingTopic.question||question;
   var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
 
   // 组装全盘信息
@@ -1202,25 +1257,38 @@ async function analyzeWithAI(){
     palaces:'请逐宫细断，重点分析相关用神宫、日主宫、值符值使宫。',
     timing:'请重点看应期、时间窗口、动象和触发条件。'
   };
-  var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n用户问题：'+question+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
+  var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n本盘原始问事：'+originalQuestion+'\n本次问题：'+question+'\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
+  var systemPrompt='你是专业的奇门遁甲分析师。一个奇门盘只回答同一件事的连续追问。若“本次问题”不是围绕“本盘原始问事”的同一人、同一事、同一决策、同一关系或同一问题延伸，只回复：一个盘只能问同一件事。请重新起盘或回到原问题继续问。\n若属于同一件事，用以下结构回答：\n【用神落宫】日主落哪宫及含义\n【全盘格局】整体吉凶判断\n【关键宫位】逐宫分析重点标记\n【综合建议】针对问题的结论\n每段之间空一行，不用markdown符号。';
+  var messages=[{role:'system',content:systemPrompt}];
+  for(var i=0;i<aiHistory.length;i++){
+    messages.push({role:'user',content:'追问：'+aiHistory[i].q});
+    messages.push({role:'assistant',content:aiHistory[i].a});
+  }
+  messages.push({role:'user',content:prompt});
   document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>⏳ AI 分析中…</div>';
-  document.getElementById('btnAI').disabled=true;
+  var aiBtn=document.getElementById('btnAI');
+  aiBtn.disabled=true;
+  aiBtn.textContent='⏳ 分析中 · '+getAiModeLabel(aiMode);
   try{
-    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-chat',messages:[{role:'system',content:'你是专业的奇门遁甲分析师。用以下结构回答：\n【用神落宫】日主落哪宫及含义\n【全盘格局】整体吉凶判断\n【关键宫位】逐宫分析重点标记\n【综合建议】针对问题的结论\n每段之间空一行，不用markdown符号。'},{role:'user',content:prompt}],max_tokens:1500,temperature:0.7})});
+    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-chat',messages:messages,max_tokens:1500,temperature:0.7})});
     var d=await resp.json();
     if(d.choices&&d.choices[0]){
+      if(!aiTopic)aiTopic=pendingTopic;
       aiHistory.push({q:question,a:d.choices[0].message.content.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
+      updateCurrentAutoHistory();
       document.getElementById('aiResult').innerHTML=renderAIHistory();
     }else{
       document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ AI 返回异常: '+esc(JSON.stringify(d))+'</div>';
     }
   }catch(e){document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>'}
-  document.getElementById('btnAI').disabled=false;
+  aiBtn.disabled=false;
+  updateAiButtonLabel();
 }
 
 function renderAIHistory(){
   if(!aiHistory.length)return '💡 输入问题后点击「AI 分析」获取全盘解读…';
   var h='';
+  if(aiTopic&&aiTopic.question)h+='<div style="font-size:11px;color:#8b7355;margin-bottom:10px">本盘问事：'+esc(aiTopic.question)+'</div>';
   for(var i=0;i<aiHistory.length;i++){
     h+='<div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed #d4c5a9">'+
       '<div style="font-size:10px;color:#8b7355;margin-bottom:4px">❓ '+esc(aiHistory[i].q)+' ('+esc(aiHistory[i].t)+')</div>'+
@@ -1231,36 +1299,137 @@ function renderAIHistory(){
     '<button type="button" onclick="setFollowupQuestion(\'重点看应期，大概什么时候有变化？\')">看应期</button>'+
     '<button type="button" onclick="setFollowupQuestion(\'对方或外部环境现在是什么状态？\')">看对方状态</button>'+
     '<button type="button" onclick="setFollowupQuestion(\'给我具体行动建议和避坑点。\')">行动建议</button>'+
+  '</div><div class="ai-chat">'+
+    '<input id="followupQuestion" type="text" placeholder="继续追问这个盘里的同一件事..." onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();askFollowupFromChat()}">'+
+    '<button type="button" onclick="askFollowupFromChat()">发送</button>'+
   '</div>';
 }
 
 function setFollowupQuestion(text){
-  var input=document.getElementById('question');
+  var input=document.getElementById('followupQuestion')||document.getElementById('question');
   input.value=text;
   input.focus();
 }
 
-// ===== 历史起盘 =====
-function saveToHistory(){
-  if(!plateData)return;
-  var gz=plateData.ganzhi;
-  var t=plateData.solarTime;
-  var tag=getQuestionTypeLabel(getQuestionType());
-  var name=prompt('为这个盘取名：','['+tag+'] '+t.year+'-'+pad(t.month)+'-'+pad(t.day)+' '+gz.month+'月 '+gz.day+'日 '+gz.hour+'时');
-  if(!name)return;
-  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
-  var id=Date.now();
-  hist.push({id:id,name:name,tag:tag,solarTime:t,data:JSON.parse(JSON.stringify(plateData)),aiHistory:JSON.parse(JSON.stringify(aiHistory))});
-  localStorage.setItem('qimen_history',JSON.stringify(hist));
-  renderHistory();
+function askFollowupFromChat(){
+  var chat=document.getElementById('followupQuestion');
+  var main=document.getElementById('question');
+  var text=(chat&&chat.value.trim())||'';
+  if(!text){if(chat)chat.focus();return}
+  main.value=text;
+  if(chat)chat.value='';
+  analyzeWithAI();
 }
 
-function loadHistory(id){
-  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+// ===== 记录与保存 =====
+function setSideTab(tab){
+  var map={info:'sideContent',auto:'autoHistorySection',saved:'historySection'};
+  var btns={info:'tabInfoPanel',auto:'tabAutoHistory',saved:'tabSavedHistory'};
+  Object.keys(map).forEach(function(k){
+    var panel=document.getElementById(map[k]),btn=document.getElementById(btns[k]);
+    if(panel)panel.classList.toggle('active',k===tab);
+    if(btn)btn.classList.toggle('active',k===tab);
+  });
+}
+function makeRecordName(data,question){
+  var person=data.personName||getPersonName();
+  var tag=getQuestionTypeLabel(getQuestionType());
+  var t=data.solarTime;
+  var q=(question||'').trim();
+  if(q.length>24)q=q.slice(0,24)+'...';
+  return (person?person+' ':'')+'['+tag+'] '+(q||t.year+'-'+pad(t.month)+'-'+pad(t.day)+' '+data.ganzhi.day+'日 '+data.ganzhi.hour+'时');
+}
+function getRecords(key){
+  try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(e){return []}
+}
+function setRecords(key,items){
+  localStorage.setItem(key,JSON.stringify(items));
+}
+function currentQuestionText(){
+  var el=document.getElementById('question');
+  return el?el.value.trim():'';
+}
+function addAutoHistory(){
+  if(!plateData)return;
+  var hist=getRecords(AUTO_HISTORY_STORAGE);
+  var id=Date.now();
+  var q=currentQuestionText();
+  hist.push({
+    id:id,
+    name:makeRecordName(plateData,q),
+    person:plateData.personName||'',
+    tag:getQuestionTypeLabel(getQuestionType()),
+    questionType:getQuestionType(),
+    question:q,
+    solarTime:plateData.solarTime,
+    data:JSON.parse(JSON.stringify(plateData)),
+    aiTopic:aiTopic?JSON.parse(JSON.stringify(aiTopic)):null,
+    aiHistory:JSON.parse(JSON.stringify(aiHistory)),
+    createdAt:new Date().toISOString()
+  });
+  if(hist.length>60)hist=hist.slice(hist.length-60);
+  setRecords(AUTO_HISTORY_STORAGE,hist);
+  currentAutoHistoryId=id;
+  renderAutoHistory();
+}
+function updateCurrentAutoHistory(){
+  if(!plateData)return;
+  if(!currentAutoHistoryId){addAutoHistory();return}
+  var hist=getRecords(AUTO_HISTORY_STORAGE);
+  var item=hist.find(function(h){return h.id===currentAutoHistoryId});
+  if(!item){addAutoHistory();return}
+  var recordQuestion=(aiTopic&&aiTopic.question)||currentQuestionText();
+  item.name=makeRecordName(plateData,recordQuestion);
+  item.person=plateData.personName||getPersonName();
+  item.tag=getQuestionTypeLabel(getQuestionType());
+  item.questionType=getQuestionType();
+  item.question=recordQuestion;
+  item.solarTime=plateData.solarTime;
+  item.data=JSON.parse(JSON.stringify(plateData));
+  item.aiTopic=aiTopic?JSON.parse(JSON.stringify(aiTopic)):null;
+  item.aiHistory=JSON.parse(JSON.stringify(aiHistory));
+  item.updatedAt=new Date().toISOString();
+  setRecords(AUTO_HISTORY_STORAGE,hist);
+  renderAutoHistory();
+}
+function saveToHistory(){
+  if(!plateData)return;
+  plateData.personName=getPersonName();
+  var tag=getQuestionTypeLabel(getQuestionType());
+  var q=currentQuestionText();
+  var name=prompt('为这个盘取名：',makeRecordName(plateData,q));
+  if(!name)return;
+  var hist=getRecords(SAVED_HISTORY_STORAGE);
+  var id=Date.now();
+  hist.push({
+    id:id,
+    name:name,
+    tag:tag,
+    person:plateData.personName||'',
+    questionType:getQuestionType(),
+    question:q,
+    solarTime:plateData.solarTime,
+    data:JSON.parse(JSON.stringify(plateData)),
+    aiTopic:aiTopic?JSON.parse(JSON.stringify(aiTopic)):null,
+    aiHistory:JSON.parse(JSON.stringify(aiHistory)),
+    createdAt:new Date().toISOString()
+  });
+  setRecords(SAVED_HISTORY_STORAGE,hist);
+  renderHistory();
+  setSideTab('saved');
+}
+
+function loadHistory(id,kind){
+  var hist=getRecords(kind==='auto'?AUTO_HISTORY_STORAGE:SAVED_HISTORY_STORAGE);
   var item=hist.find(function(h){return h.id===id});
   if(!item)return;
   plateData=item.data;
   aiHistory=item.aiHistory?JSON.parse(JSON.stringify(item.aiHistory)):[];
+  aiTopic=item.aiTopic?JSON.parse(JSON.stringify(item.aiTopic)):(aiHistory[0]?{question:aiHistory[0].q,type:item.questionType||'general',person:item.person||'',createdAt:item.createdAt||''}:null);
+  currentAutoHistoryId=kind==='auto'?item.id:null;
+  if(item.questionType&&document.getElementById('questionType'))document.getElementById('questionType').value=item.questionType;
+  if(document.getElementById('question'))document.getElementById('question').value=item.question||'';
+  if(document.getElementById('personName'))document.getElementById('personName').value=item.person||plateData.personName||'';
   selectedPalace=null;
   setControlsFromTime(plateData.inputTime||plateData.solarTime);
   var ts=plateData.trueSolar||{enabled:false,longitude:getLongitude()};
@@ -1276,54 +1445,68 @@ function loadHistory(id){
   document.getElementById('btnExport').disabled=false;
   document.getElementById('btnSave').disabled=false;
   var solarNote=plateData.trueSolar&&plateData.trueSolar.enabled?'真太阳时：输入 '+formatTimeObj(plateData.inputTime)+'，校正 '+formatOffset(plateData.trueSolar.correction)+'，起盘用 '+formatTimeObj(plateData.solarTime)+'。':'';
-  document.getElementById('infoPanel').innerHTML='<div class="title">📜 已加载历史盘 — '+esc(item.name)+'</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+  setSideTab('info');
+  document.getElementById('infoPanel').innerHTML='<div class="title">📜 已加载'+(kind==='auto'?'起盘记录':'保存起盘')+' — '+esc(item.name)+'</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,getJieQiNote(plateData.solarTime))+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
 }
 
-function renameHistory(id){
-  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+function renameHistory(id,kind){
+  var key=kind==='auto'?AUTO_HISTORY_STORAGE:SAVED_HISTORY_STORAGE;
+  var hist=getRecords(key);
   var item=hist.find(function(h){return h.id===id});
   if(!item)return;
   var name=prompt('重命名：',item.name);
   if(!name)return;
   item.name=name;
-  localStorage.setItem('qimen_history',JSON.stringify(hist));
-  renderHistory();
+  setRecords(key,hist);
+  kind==='auto'?renderAutoHistory():renderHistory();
 }
 
-function deleteHistory(id){
+function deleteHistory(id,kind){
   if(!confirm('确定删除这条记录？'))return;
-  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
+  var key=kind==='auto'?AUTO_HISTORY_STORAGE:SAVED_HISTORY_STORAGE;
+  var hist=getRecords(key);
   hist=hist.filter(function(h){return h.id!==id});
-  localStorage.setItem('qimen_history',JSON.stringify(hist));
-  renderHistory();
+  setRecords(key,hist);
+  kind==='auto'?renderAutoHistory():renderHistory();
 }
 
-function renderHistory(){
-  var hist=JSON.parse(localStorage.getItem('qimen_history')||'[]');
-  var section=document.getElementById('historySection');
-  var list=document.getElementById('historyList');
-  if(!hist.length){section.style.display='none';list.innerHTML='';return}
-  section.style.display='block';
-  var kw=(document.getElementById('historySearch')&&document.getElementById('historySearch').value||'').trim().toLowerCase();
+function renderRecordList(kind){
+  var key=kind==='auto'?AUTO_HISTORY_STORAGE:SAVED_HISTORY_STORAGE;
+  var list=document.getElementById(kind==='auto'?'autoHistoryList':'historyList');
+  var search=document.getElementById(kind==='auto'?'autoHistorySearch':'historySearch');
+  var hist=getRecords(key);
+  if(!list)return;
+  if(!hist.length){
+    list.innerHTML='<div style="font-size:11px;color:#999;padding:10px;text-align:center">'+(kind==='auto'?'暂无起盘记录':'暂无保存起盘')+'</div>';
+    return;
+  }
+  var kw=(search&&search.value||'').trim().toLowerCase();
   var html='';
   for(var i=hist.length-1;i>=0;i--){
     var h=hist[i];
     var hid=Number(h.id)||0;
-    var text=(h.name+' '+(h.tag||'')+' '+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)).toLowerCase();
+    var text=(h.name+' '+(h.tag||'')+' '+(h.person||'')+' '+(h.question||'')+' '+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)).toLowerCase();
     if(kw&&text.indexOf(kw)<0)continue;
     html+='<div class="hist-item">'+
       '<span class="hi-date">'+(h.tag?'['+esc(h.tag)+'] ':'')+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)+'</span>'+
-      '<span class="hi-name" title="'+esc(h.name)+'" onclick="loadHistory('+hid+')">'+esc(h.name)+'</span>'+
+      '<span class="hi-name" title="'+esc(h.name)+'" onclick="loadHistory('+hid+',\''+kind+'\')">'+esc(h.name)+'</span>'+
       '<span class="hi-btns">'+
-        '<button onclick="event.stopPropagation();renameHistory('+hid+')">✏</button>'+
-        '<button class="del" onclick="event.stopPropagation();deleteHistory('+hid+')">✕</button>'+
+        '<button onclick="event.stopPropagation();renameHistory('+hid+',\''+kind+'\')">✏</button>'+
+        '<button class="del" onclick="event.stopPropagation();deleteHistory('+hid+',\''+kind+'\')">✕</button>'+
       '</span></div>';
   }
-  list.innerHTML=html||'<div style="font-size:11px;color:#999;padding:8px;text-align:center">没有匹配的历史盘</div>';
+  list.innerHTML=html||'<div style="font-size:11px;color:#999;padding:8px;text-align:center">没有匹配的记录</div>';
+}
+function renderHistory(){
+  renderRecordList('saved');
+}
+function renderAutoHistory(){
+  renderRecordList('auto');
 }
 
 // 初始化
 (function initHistory(){
+  renderAutoHistory();
   renderHistory();
 })();
 </script>
