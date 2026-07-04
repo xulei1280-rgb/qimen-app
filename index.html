@@ -312,6 +312,17 @@ h1{
   gap:8px;
   margin:0 auto 8px;
 }
+.tool-field{
+  display:grid;
+  gap:4px;
+}
+.tool-label{
+  color:#806742;
+  font-size:11px;
+  font-weight:bold;
+  line-height:1.2;
+  padding-left:2px;
+}
 .tool-row select,.tool-row button{
   min-height:34px;
   border:1px solid var(--line);
@@ -566,26 +577,32 @@ h1{
   <div class="status-strip" id="statusStrip" aria-live="polite"></div>
   <div class="board-wrap" id="board"></div>
   <div class="tool-row">
-    <select id="questionType" title="选择问事类型，会影响用神提示和 AI 分析侧重点" onchange="refreshAssistInfo()">
-      <option value="general">综合</option>
-      <option value="career">事业工作</option>
-      <option value="love">感情关系</option>
-      <option value="wealth">财运投资</option>
-      <option value="cooperation">合作谈判</option>
-      <option value="travel">出行迁动</option>
-      <option value="health">健康疾病</option>
-      <option value="lost">找失物</option>
-      <option value="exam">考试竞聘</option>
-      <option value="choice">选择决策</option>
-      <option value="birth">命盘分析</option>
-    </select>
-    <select id="aiMode" title="选择 AI 输出方式" onchange="saveAiMode();updateAiButtonLabel()">
-      <option value="brief">简断</option>
-      <option value="detail">详断</option>
-      <option value="conclusion">只看结论</option>
-      <option value="palaces">逐宫细断</option>
-      <option value="timing">应期重点</option>
-    </select>
+    <label class="tool-field">
+      <span class="tool-label">断事类型 / 方向</span>
+      <select id="questionType" title="选择问事类型，会影响用神提示和 AI 分析侧重点" onchange="refreshAssistInfo()">
+        <option value="general">综合</option>
+        <option value="career">事业工作</option>
+        <option value="love">感情关系</option>
+        <option value="wealth">财运投资</option>
+        <option value="cooperation">合作谈判</option>
+        <option value="travel">出行迁动</option>
+        <option value="health">健康疾病</option>
+        <option value="lost">找失物</option>
+        <option value="exam">考试竞聘</option>
+        <option value="choice">选择决策</option>
+        <option value="birth">命盘分析</option>
+      </select>
+    </label>
+    <label class="tool-field">
+      <span class="tool-label">断事方式</span>
+      <select id="aiMode" title="选择 AI 输出方式" onchange="saveAiMode();updateAiButtonLabel()">
+        <option value="brief">简断</option>
+        <option value="detail">详断</option>
+        <option value="conclusion">只看结论</option>
+        <option value="palaces">逐宫细断</option>
+        <option value="timing">应期重点</option>
+      </select>
+    </label>
   </div>
   <div class="quick-questions" aria-label="常用问事">
     <button type="button" onclick="useQuestionTemplate('career')">事业</button>
