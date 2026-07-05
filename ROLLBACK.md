@@ -113,3 +113,15 @@ Backup before adjusting mobile board/control spacing and action button wrapping:
 Backup before enlarging palace background direction characters and removing fixed AI response sections:
 
 `I:\奇门起盘分析_回滚备份\backup-before-dir-font-ai-prompt-20260703-233701`
+
+## Bazi page first version backup
+
+Backup before adding independent bazi analysis page and qimen-to-bazi navigation:
+
+`I:\奇门起盘分析_回滚备份\backup-before-bazi-page-20260704-000649`
+
+## Bazi Wenzhen-style redesign backup
+
+Backup before rebuilding the independent bazi page with Wenzhen-style entry:
+
+`I:\奇门起盘分析_回滚备份\backup-before-bazi-redesign-20260704-010316`

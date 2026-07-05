@@ -73,6 +73,22 @@ h1{
   letter-spacing:2px;
   margin-bottom:18px;
 }
+.page-switch{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:12px;
+  padding:6px 12px;
+  border:1px solid rgba(169,111,40,.34);
+  border-radius:999px;
+  background:rgba(255,253,247,.76);
+  color:#70481a;
+  text-decoration:none;
+  font-size:12px;
+  font-weight:bold;
+  box-shadow:0 6px 16px rgba(61,42,18,.07);
+}
+.page-switch:hover{background:#fffaf0;border-color:var(--line-strong)}
 
 .time-bar{
   width:min(100%,720px);
@@ -544,6 +560,7 @@ h1{
 <div class="main-area">
   <h1>奇门遁甲</h1>
   <div class="subtitle">时家转盘 · 拆补法</div>
+  <a class="page-switch" href="bazi.html">八字分析 →</a>
   <div class="time-bar">
     <div class="cal-tabs">
       <span class="cal-tab active" id="tabSolar" onclick="switchCal('solar')">公历</span>
