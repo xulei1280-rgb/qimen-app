@@ -157,6 +157,8 @@ assert(/function buildBazi\(\)[\s\S]*entryPanel[\s\S]*open=false/.test(html), 'b
 assert(/function buildBazi\(\)[\s\S]*autoSaveBuild[\s\S]*saveBaziRecord/.test(html), 'buildBazi should auto-save when the checkbox is enabled');
 const aiPanelMatch = html.match(/function renderAiPanel\(\)[\s\S]*?function renderQuickAiQuestions/);
 assert(aiPanelMatch && !aiPanelMatch[0].includes('historyList'), 'save records should not live inside AI panel');
+assert(/@media\(max-width:520px\)[\s\S]*pillar-table-wrap \.pillar-table\{min-width:0;table-layout:fixed\}/.test(html), 'mobile pillar table should fit viewport instead of forcing horizontal scroll');
+assert(/@media\(max-width:520px\)[\s\S]*origin-strip\{grid-template-columns:repeat\(4,1fr\)\}/.test(html), 'mobile origin comparison should stay compact in one row');
 
 const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
 const scriptContext = {

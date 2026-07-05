@@ -462,26 +462,44 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   .ai-followup{grid-template-columns:1fr}
 }
 @media(max-width:520px){
+  .page{padding:10px 8px 28px}
+  .top{margin-bottom:10px}
   .bazi-tabs{grid-template-columns:repeat(2,1fr)}
   .core-cards{grid-template-columns:1fr}
-  .result-card{padding:12px}
-  .pillar-table{font-size:13px}
-  .pillar-table th,.pillar-table td{padding:8px 4px}
-  .pillar-table .row-label{width:54px}
-  .stem,.branch{font-size:30px}
+  .result-card{padding:10px;border-radius:16px}
+  .section-title{font-size:15px}
+  .pillar-table-wrap{overflow:visible;margin:0 -5px}
+  .pillar-table-wrap .pillar-table{min-width:0;table-layout:fixed}
+  .pillar-table{font-size:11px}
+  .pillar-table th,.pillar-table td{padding:5px 1px}
+  .pillar-table th{font-size:11px}
+  .pillar-table .row-label{width:30px;font-size:10px}
+  .pillar-table small{font-size:9px;margin-top:1px}
+  .stem,.branch{font-size:22px}
+  .hidden-stems{font-size:10px;line-height:1.35}
+  .pillar-table tr:last-child td{font-size:10px;line-height:1.3}
   .location-option{display:block}
   .location-option span{display:block;margin-top:4px}
   .custom-row{grid-template-columns:1fr}
   .custom-row button{min-height:38px}
   .pillar-stack b{font-size:30px}
-  .origin-strip{grid-template-columns:1fr}
-  .origin-col,.origin-col:nth-child(2){border-right:0;border-bottom:1px solid #f0e3cb}
-  .origin-col:last-child{border-bottom:0}
+  .origin-strip{grid-template-columns:repeat(4,1fr)}
+  .origin-col,.origin-col:nth-child(2){border-right:1px solid #f0e3cb;border-bottom:0;padding:8px 3px}
+  .origin-col:last-child{border-right:0}
+  .origin-col small{font-size:10px}
+  .origin-col .origin-gz{gap:3px;margin:5px 0}
+  .origin-col .origin-gz b{font-size:24px}
+  .origin-col .origin-meta{font-size:10px;line-height:1.45}
+  .luck-block-title{padding:9px 10px}
+  .luck-block-title span{font-size:11px}
+  .fortune-row{padding:9px 8px}
   .year-grid,.month-grid{gap:3px}
-  .year-grid .fortune-item,.month-grid .fortune-item{padding:6px 1px}
-  .year-grid .fortune-item b,.month-grid .fortune-item b{font-size:14px}
-  .year-grid .fortune-item span:first-child,.month-grid .fortune-item span:first-child{font-size:9px;white-space:nowrap}
+  .year-grid .fortune-item,.month-grid .fortune-item{border-radius:8px;padding:5px 1px}
+  .year-grid .fortune-item b,.month-grid .fortune-item b{font-size:13px}
+  .year-grid .fortune-item span:first-child,.month-grid .fortune-item span:first-child{font-size:8px;white-space:nowrap}
   .year-grid .fortune-item span:last-child,.month-grid .fortune-item span:last-child{display:none}
+  .selected-stack{padding:0 8px 10px}
+  .analysis-box{padding:10px}
 }
 </style>
 </head>
