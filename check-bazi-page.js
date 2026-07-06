@@ -20,6 +20,8 @@ function assert(condition, message) {
   '经度',
   '均时差',
   'id="autoSaveBuild"',
+  'id="homeTabs"',
+  'id="historyPanel"',
   'id="resultArea"',
   'class="pillar-stack-summary"',
   'class="bazi-tabs"',
@@ -27,8 +29,8 @@ function assert(condition, message) {
   'data-view="structure"',
   'data-view="luck"',
   'data-view="ai"',
-  'data-view="history"',
-  'data-view-panel="history"',
+  'data-home-view="form"',
+  'data-home-view="history"',
   'function switchBaziView',
   'function renderLuckPanel',
   'function renderLuckCard',
@@ -80,6 +82,15 @@ function assert(condition, message) {
   '结论 -> 依据 -> 反证 -> 不确定处 -> 可验证点',
 ].forEach((needle) => assert(html.includes(needle), `missing ${needle}`));
 
+assert(!html.includes('sample-btn'), 'sample button should be removed');
+assert(!html.includes('载入问真样本'), 'WenZhen sample loader button should be removed');
+assert(!/DOMContentLoaded[\s\S]*loadSample\(\)/.test(html), 'opening bazi page should not auto-chart');
+assert(!html.includes('data-view="history"'), 'save records should be a top-level tab, not a result tab');
+assert(!html.includes('data-view-panel="history"'), 'save records should not live inside result detail panels');
+assert(/function showBaziHome\(name\)[\s\S]*data-home-panel/.test(html), 'top-level form/history navigation should exist');
+assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'building a chart should enter the result layer');
+assert(/function loadBaziRecord\(id\)[\s\S]*showBaziResult\(\)/.test(html), 'loading a saved record should enter the result layer');
+
 [
   '基础排盘',
   '格局喜用',
@@ -127,8 +138,9 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
 assert(html.includes('<script src="bazi-engine.js"></script>'), 'bazi page should load bazi-engine.js');
-assert(/function loadSample\(\)[\s\S]*var now=new Date\(\)/.test(html), 'bazi default should use open-time date');
-assert(!/function loadSample\(\)[\s\S]*personName'\)\.value='测试'/.test(html), 'bazi should not load the old sample name by default');
+const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
+assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
+assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
 [
   'window.BaziEngine',
   'function analyzePattern',
@@ -151,8 +163,8 @@ assert(result.used.hour === 5 && Math.abs(result.used.minute - 59) <= 1, `sample
 assert(JSON.stringify(result.pillars) === JSON.stringify({ year: '庚午', month: '辛巳', day: '壬申', hour: '癸卯' }), `sample pillars mismatch: ${JSON.stringify(result.pillars)}`);
 assert(html.indexOf('class="entry-card"') < html.indexOf('id="resultArea"'), 'input form should sit above the always-visible result area as a collapsed editor');
 assert(html.includes('<details id="entryPanel"'), 'input editor should be a collapsible details panel');
-assert(!html.includes('data-view="basic"'), 'basic chart should not be hidden behind a tab');
-assert(/function buildBazi\(\)[\s\S]*entryPanel[\s\S]*open=false/.test(html), 'buildBazi should collapse the input editor after charting');
+assert(html.includes('data-view="basic"'), 'result layer should expose a basic information tab');
+assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'buildBazi should enter the result layer after charting');
 assert(/function buildBazi\(\)[\s\S]*autoSaveBuild[\s\S]*saveBaziRecord/.test(html), 'buildBazi should auto-save when the checkbox is enabled');
 const aiPanelMatch = html.match(/function renderAiPanel\(\)[\s\S]*?function renderQuickAiQuestions/);
 assert(aiPanelMatch && !aiPanelMatch[0].includes('historyList'), 'save records should not live inside AI panel');

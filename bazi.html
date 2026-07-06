@@ -39,7 +39,7 @@ button,input,select{font:inherit}
 .page{max-width:1020px;margin:0 auto;padding:28px 16px 48px}
 .top{text-align:center;margin-bottom:18px}
 .top-row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-.back,.sample-btn{
+.back{
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -169,14 +169,26 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   cursor:pointer;
 }
 .build-btn:hover{filter:brightness(1.12)}
+.home-tabs{
+  max-width:690px;
+  margin:0 auto 12px;
+}
+.history-home{
+  max-width:690px;
+  margin:0 auto 18px;
+}
+.home-panel{display:none}
+.home-panel.active{display:block}
 .result-area{max-width:960px;margin:0 auto}
-.bazi-tabs{
+.result-area[hidden]{display:none}
+.home-tabs,.bazi-tabs{
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:8px;
   margin:0 0 14px;
 }
-.bazi-tabs button{
+.home-tabs{grid-template-columns:repeat(2,1fr);margin:0 auto 12px}
+.home-tabs button,.bazi-tabs button{
   border:1px solid #dbcaa9;
   border-radius:999px;
   background:#fffaf0;
@@ -185,7 +197,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   font-weight:800;
   cursor:pointer;
 }
-.bazi-tabs button.active{
+.home-tabs button.active,.bazi-tabs button.active{
   background:#111;
   border-color:#111;
   color:#f6cf84;
@@ -197,6 +209,10 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .core-card span,.section-title{display:block;color:#777;font-size:14px;margin-bottom:8px}
 .core-card strong{display:block;font-size:28px;line-height:1.22;color:var(--red)}
 .core-card em{display:block;margin-top:8px;color:#6f675d;font-style:normal;font-size:13px;line-height:1.45}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.info-grid div{border:1px solid #eadcc0;border-radius:12px;background:#fffaf2;padding:12px 14px}
+.info-grid b{display:block;color:var(--red);font-size:13px;margin-bottom:6px}
+.info-grid span{display:block;color:#253348;line-height:1.45}
 .pillar-stack-summary{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -465,8 +481,9 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 @media(max-width:520px){
   .page{padding:10px 8px 28px}
   .top{margin-bottom:10px}
-  .bazi-tabs{grid-template-columns:repeat(2,1fr)}
+  .home-tabs,.bazi-tabs{grid-template-columns:repeat(2,1fr)}
   .core-cards{grid-template-columns:1fr}
+  .info-grid{grid-template-columns:1fr}
   .result-card{padding:10px;border-radius:16px}
   .section-title{font-size:15px}
   .pillar-table-wrap{overflow:visible;margin:0 -5px}
@@ -509,13 +526,17 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   <header class="top">
     <div class="top-row">
       <a class="back" href="index.html">← 奇门遁甲</a>
-      <button class="sample-btn" type="button" onclick="loadSample()">载入问真样本</button>
     </div>
     <h1>八字分析</h1>
     <div class="sub">四柱排盘 · 格局喜用参考</div>
   </header>
 
-  <details id="entryPanel" class="entry-card" open>
+  <div id="homeTabs" class="home-tabs" role="tablist">
+    <button type="button" class="active" data-home-view="form" onclick="showBaziHome('form')">八字排盘</button>
+    <button type="button" data-home-view="history" onclick="showBaziHome('history')">保存记录</button>
+  </div>
+
+  <details id="entryPanel" class="entry-card home-panel active" data-home-panel="form" open>
     <summary>修改出生信息 / 重新排盘</summary>
     <div class="field">
       <label for="personName">命主姓名</label>
@@ -562,7 +583,12 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
     <button id="btnBuild" class="build-btn" type="button" onclick="buildBazi()">开始排盘</button>
   </details>
 
-  <section id="resultArea" class="result-area"></section>
+  <section id="historyPanel" class="result-card history-home home-panel" data-home-panel="history">
+    <div class="section-title">保存记录</div>
+    <div id="historyList" class="history-list"></div>
+  </section>
+
+  <section id="resultArea" class="result-area" hidden></section>
 </main>
 
 <script src="qimen.js"></script>
@@ -606,7 +632,9 @@ function resetLuckSelection(){luckSelection={luck:null,year:null,month:null}}
 document.addEventListener('DOMContentLoaded',function(){
   initTimeEditor();
   renderLocations();
-  loadSample();
+  resetBaziFormToNow();
+  showBaziHome('form');
+  renderHistory();
 });
 
 function pad(n){n=parseInt(n,10)||0;return(n<10?'0':'')+n}
@@ -723,7 +751,7 @@ function refreshSolarPreview(){
     ? '真太阳时：<strong>'+formatTime(data.used)+'</strong><br>'+formatSolarCorrection(data)+'<br>地址经纬：'+locationCoordText(data.location)
     : '未启用真太阳时，将按输入时间排盘<br>地址经纬：'+locationCoordText(data.location);
 }
-function loadSample(){
+function resetBaziFormToNow(){
   var now=new Date();
   document.getElementById('personName').value='';
   document.getElementById('genderMale').checked=true;
@@ -736,7 +764,6 @@ function loadSample(){
   document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
   document.getElementById('useTrueSolar').checked=true;
   refreshBirthTimeDisplay();
-  buildBazi();
 }
 function stemPolarity(s){return '甲丙戊庚壬'.indexOf(s)>=0?'阳':'阴'}
 function tenGod(dayStem,stem){
@@ -904,24 +931,37 @@ function buildBazi(){
   activeBaziRecordId=null;
   resetLuckSelection();
   renderBazi(currentBazi);
+  showBaziResult();
   if(document.getElementById('autoSaveBuild').checked)saveBaziRecord();
   document.getElementById('entryPanel').open=false;
 }
+function showBaziHome(name){
+  document.querySelectorAll('[data-home-view]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-home-view')===name)});
+  document.querySelectorAll('[data-home-panel]').forEach(function(panel){panel.classList.toggle('active',panel.getAttribute('data-home-panel')===name)});
+  var result=document.getElementById('resultArea');
+  if(result)result.hidden=true;
+  if(name==='history')renderHistory();
+}
+function showBaziResult(){
+  document.querySelectorAll('[data-home-view]').forEach(function(btn){btn.classList.remove('active')});
+  document.querySelectorAll('[data-home-panel]').forEach(function(panel){panel.classList.remove('active')});
+  var result=document.getElementById('resultArea');
+  if(result)result.hidden=false;
+}
 function renderBazi(data){
-  currentBaziView='structure';
+  currentBaziView='basic';
   document.getElementById('resultArea').innerHTML=
     '<section class="basic-dashboard"><div class="section-title">基础排盘</div><div class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
     '<div class="bazi-tabs" role="tablist">'+
-    '<button type="button" class="active" data-view="structure" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
+    '<button type="button" class="active" data-view="basic" onclick="switchBaziView(\'basic\')">基本信息</button>'+
+    '<button type="button" data-view="structure" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
     '<button type="button" data-view="luck" onclick="switchBaziView(\'luck\')">大运流年</button>'+
     '<button type="button" data-view="ai" onclick="switchBaziView(\'ai\')">AI断命</button>'+
-    '<button type="button" data-view="history" onclick="switchBaziView(\'history\')">保存记录</button>'+
     '</div>'+
-    '<div class="bazi-view active" data-view-panel="structure"><section class="result-card">'+renderStructure(data)+'</section></div>'+
+    '<div class="bazi-view active" data-view-panel="basic"><section class="result-card">'+renderBasicInfo(data)+'</section></div>'+
+    '<div class="bazi-view" data-view-panel="structure"><section class="result-card">'+renderStructure(data)+'</section></div>'+
     '<div class="bazi-view" data-view-panel="luck"><section class="result-card">'+renderLuckPanel(data)+'</section></div>'+
-    '<div class="bazi-view" data-view-panel="ai"><section class="result-card">'+renderAiPanel()+'</section></div>'+
-    '<div class="bazi-view" data-view-panel="history"><section class="result-card"><div class="section-title">保存记录</div><div id="historyList" class="history-list"></div></section></div>';
-  renderHistory();
+    '<div class="bazi-view" data-view-panel="ai"><section class="result-card">'+renderAiPanel()+'</section></div>';
 }
 function switchBaziView(name){
   currentBaziView=name;
@@ -973,6 +1013,21 @@ function renderPillarTable(data,includeTransit){
     '<tr><th class="row-label">纳音</th>'+cells(function(gz){return NAYIN[gz]||''})+'</tr>'+
     '<tr><th class="row-label">神煞</th>'+cells(function(gz){return shenShaForPillar(data,gz)})+'</tr>'+
     '</table></div>';
+}
+function renderBasicInfo(data){
+  var p=data.pillars;
+  var solar=data.time.enabled?'启用真太阳时，'+formatSolarCorrection(data.time):'未启用真太阳时';
+  return '<div class="section-title">基本信息</div>'+
+    '<div class="info-grid">'+
+    '<div><b>命主</b><span>'+esc(data.person||'未命名')+' · '+esc(data.gender)+'</span></div>'+
+    '<div><b>输入时间</b><span>'+formatTime(data.time.input)+'</span></div>'+
+    '<div><b>排盘时间</b><span>'+formatTime(data.time.used)+'</span></div>'+
+    '<div><b>出生地址</b><span>'+esc(data.time.location.name)+' · '+locationCoordText(data.time.location)+'</span></div>'+
+    '<div><b>真太阳时</b><span>'+solar+'</span></div>'+
+    '<div><b>四柱</b><span>'+p.year+' '+p.month+' '+p.day+' '+p.hour+'</span></div>'+
+    '<div><b>日主</b><span>'+data.dayStem+data.dayElement+' · '+data.strength+'</span></div>'+
+    '<div><b>喜用</b><span>'+data.useful.use.join('、')+'</span></div>'+
+    '</div>';
 }
 function renderStructure(data){
   var max=Math.max.apply(null,WUXING.map(function(w){return data.scores[w]}));
@@ -1479,6 +1534,7 @@ function loadBaziRecord(id){
   activeBaziRecordId=id;
   resetLuckSelection();
   renderBazi(currentBazi);
+  showBaziResult();
 }
 </script>
 </body>
