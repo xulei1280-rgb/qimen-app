@@ -231,6 +231,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .pillar-table th,.pillar-table td{border-bottom:1px solid #eee7da;padding:10px 8px;vertical-align:middle}
 .pillar-table th{color:#777;background:#faf7f1;font-size:13px}
 .pillar-table .row-label{width:82px}
+.pillar-table tr:last-child th,.pillar-table tr:last-child td{vertical-align:top}
 .pillar-table-wrap{overflow-x:auto}
 .pillar-table-wrap .pillar-table{min-width:860px}
 .pillar-table small{display:block;color:#a8762f;font-size:11px;margin-top:3px}
@@ -477,7 +478,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   .pillar-table small{font-size:9px;margin-top:1px}
   .stem,.branch{font-size:22px}
   .hidden-stems{font-size:10px;line-height:1.35}
-  .pillar-table tr:last-child td{font-size:10px;line-height:1.3}
+  .pillar-table tr:last-child td{font-size:10px;line-height:1.3;text-align:left}
   .location-option{display:block}
   .location-option span{display:block;margin-top:4px}
   .custom-row{grid-template-columns:1fr}
@@ -1199,7 +1200,7 @@ function renderLuckDetail(data,ctx){
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);
-  return '<div class="section-title">大运流年细盘</div><div class="luck-professional">'+renderLuckOrigin(data)+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'</div>'+
+  return '<div class="section-title">大运流年细盘</div><div class="luck-professional">'+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'</div>'+
     '<p class="hint-line">大运起运以节气近似估算，只作本地参考；正式断事仍建议结合具体流派和出生资料校验。</p>';
 }
 function renderLuckPanel(data){

@@ -45,7 +45,6 @@ function assert(condition, message) {
   'class="luck-rail"',
   'class="flow-year-strip"',
   'class="luck-detail"',
-  'class="luck-origin"',
   'class="luck-selector"',
   'class="luck-detail-panel"',
   'function renderQuickAiQuestions',
@@ -158,7 +157,7 @@ assert(/function buildBazi\(\)[\s\S]*autoSaveBuild[\s\S]*saveBaziRecord/.test(ht
 const aiPanelMatch = html.match(/function renderAiPanel\(\)[\s\S]*?function renderQuickAiQuestions/);
 assert(aiPanelMatch && !aiPanelMatch[0].includes('historyList'), 'save records should not live inside AI panel');
 assert(/@media\(max-width:520px\)[\s\S]*pillar-table-wrap \.pillar-table\{min-width:0;table-layout:fixed\}/.test(html), 'mobile pillar table should fit viewport instead of forcing horizontal scroll');
-assert(/@media\(max-width:520px\)[\s\S]*origin-strip\{grid-template-columns:repeat\(4,1fr\)\}/.test(html), 'mobile origin comparison should stay compact in one row');
+assert(/pillar-table tr:last-child th,\.pillar-table tr:last-child td\{vertical-align:top\}/.test(html), 'shensha row should align content to top');
 
 const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
 const scriptContext = {
@@ -214,7 +213,7 @@ assert(luckContext.luckRow && luckContext.flowYear, 'selected luck context shoul
 assert(luckContext.flowMonth == null, 'flow month should be unselected by default');
 assert(luckContext.months[0].term === '立春' && luckContext.months[0].dateLabel.includes('/'), 'flow months should be keyed by solar terms with Gregorian dates');
 assert(scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-selector"'), 'luck panel should render stacked selector');
-assert(scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-origin"'), 'luck panel should render origin comparison');
+assert(!scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-origin"'), 'luck panel should not repeat origin comparison');
 assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-scroll luck-scroll'), 'decade luck can keep horizontal scroll when needed');
 assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-grid year-grid'), 'flow years should use fixed 10-cell grid');
 assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-grid month-grid'), 'flow months should use fixed 12-cell grid');
