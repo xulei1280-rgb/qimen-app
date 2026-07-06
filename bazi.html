@@ -569,6 +569,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 <script src="bazi-engine.js"></script>
 <script>
 var currentBazi=null;
+var currentBaziView='structure';
 var aiHistory=[];
 var aiCollapsed={};
 var luckSelection={luck:null,year:null,month:null};
@@ -907,8 +908,9 @@ function buildBazi(){
   document.getElementById('entryPanel').open=false;
 }
 function renderBazi(data){
+  currentBaziView='structure';
   document.getElementById('resultArea').innerHTML=
-    '<section class="basic-dashboard"><div class="section-title">基础排盘</div><div class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data)+'</section></section>'+
+    '<section class="basic-dashboard"><div class="section-title">基础排盘</div><div class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
     '<div class="bazi-tabs" role="tablist">'+
     '<button type="button" class="active" data-view="structure" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
     '<button type="button" data-view="luck" onclick="switchBaziView(\'luck\')">大运流年</button>'+
@@ -922,8 +924,11 @@ function renderBazi(data){
   renderHistory();
 }
 function switchBaziView(name){
+  currentBaziView=name;
   document.querySelectorAll('.bazi-tabs button').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-view')===name)});
   document.querySelectorAll('.bazi-view').forEach(function(panel){panel.classList.toggle('active',panel.getAttribute('data-view-panel')===name)});
+  var chart=document.querySelector('.basic-dashboard .result-card');
+  if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,name==='luck');
 }
 function renderCoreCards(data){
   var p=data.pillars;
@@ -942,17 +947,19 @@ function renderCoreCards(data){
 function hiddenText(dayStem,branch){
   return (HIDDEN[branch]||[]).map(function(s){return '<span class="wx-'+STEM_WX[s]+'">'+s+tenGod(dayStem,s)+'</span>'}).join('<br>');
 }
-function renderPillarTable(data){
+function renderPillarTable(data,includeTransit){
   var ctx=getSelectedLuckContext(data);
   var order=[
-    ['flowYear','流年',ctx.flowYear.gz,ctx.flowYear.year+'年'],
-    ['luck','大运',ctx.luckRow.gz,luckStartYear(data,ctx.luckRow)+'起'],
     ['year','年柱',data.pillars.year,''],
     ['month','月柱',data.pillars.month,''],
     ['day','日柱',data.pillars.day,''],
     ['hour','时柱',data.pillars.hour,'']
   ];
-  if(ctx.flowMonth)order.unshift(['flowMonth','流月',ctx.flowMonth.gz,ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel]);
+  if(includeTransit){
+    order.unshift(['luck','大运',ctx.luckRow.gz,luckStartYear(data,ctx.luckRow)+'起']);
+    order.unshift(['flowYear','流年',ctx.flowYear.gz,ctx.flowYear.year+'年']);
+    if(ctx.flowMonth)order.unshift(['flowMonth','流月',ctx.flowMonth.gz,ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel]);
+  }
   function cells(fn){return order.map(function(o){return '<td>'+fn(o[2],o[0])+'</td>'}).join('')}
   return '<div class="section-title">四柱排盘</div><div class="pillar-table-wrap"><table class="pillar-table">'+
     '<tr><th class="row-label">日期</th>'+order.map(function(o){return '<th>'+o[1]+(o[3]?'<small>'+o[3]+'</small>':'')+'</th>'}).join('')+'</tr>'+
@@ -1133,7 +1140,7 @@ function selectLuckPart(part,index){
   var panel=document.querySelector('[data-view-panel="luck"] .result-card');
   if(panel&&currentBazi)panel.innerHTML=renderLuckPanel(currentBazi);
   var chart=document.querySelector('.basic-dashboard .result-card');
-  if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi);
+  if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,currentBaziView==='luck');
 }
 function renderLuckOrigin(data){
   var names={year:'年柱',month:'月柱',day:'日柱',hour:'时柱'};

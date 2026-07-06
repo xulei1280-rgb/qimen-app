@@ -218,11 +218,13 @@ assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).
 assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-grid year-grid'), 'flow years should use fixed 10-cell grid');
 assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-grid month-grid'), 'flow months should use fixed 12-cell grid');
 assert(!/class="fortune-item month-item active"/.test(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext)), 'month buttons should not be active by default');
-assert(!scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流月') && scriptContext.renderPillarTable(scriptContext.currentBazi).includes('大运'), 'pillar table should include luck/year by default but not month');
+assert(!scriptContext.renderPillarTable(scriptContext.currentBazi).includes('大运') && !scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流年'), 'pillar table should show only natal pillars by default');
+assert(scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('大运') && scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流年'), 'pillar table should include luck/year only in luck view');
 assert(scriptContext.renderPillarTable(scriptContext.currentBazi).includes('神煞'), 'pillar table should include shensha row');
 scriptContext.luckSelection.month = 0;
 const monthContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);
-assert(monthContext.flowMonth && scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流月'), 'pillar table should include flow month after month selection');
+assert(monthContext.flowMonth && !scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流月'), 'pillar table should still hide flow month outside luck view');
+assert(monthContext.flowMonth && scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流月'), 'pillar table should include flow month in luck view after month selection');
 scriptContext.luckSelection = { luck: 9, year: 9, month: 9 };
 scriptContext.resetLuckSelection();
 const resetContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);
@@ -258,7 +260,7 @@ assert(exactTermLuck.startAge === 6, `exact term gap should be virtual 6 sui, go
 assert(scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0]) === 1999, `exact term gap should start first luck in 1999, got ${scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0])}`);
 scriptContext.currentBazi = referenceBazi;
 scriptContext.resetLuckSelection();
-const referencePillarTable = scriptContext.renderPillarTable(referenceBazi);
+const referencePillarTable = scriptContext.renderPillarTable(referenceBazi, true);
 [
   '红鸾',
   '披麻',
