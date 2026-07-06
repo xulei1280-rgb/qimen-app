@@ -544,7 +544,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
     <summary>修改出生信息 / 重新排盘</summary>
     <div class="field">
       <label for="personName">命主姓名</label>
-      <input id="personName" type="text" value="测试" placeholder="姓名/标记">
+      <input id="personName" type="text" value="" placeholder="姓名/标记">
     </div>
 
     <div class="field gender-field">
@@ -1564,6 +1564,7 @@ function editBaziRecord(id){
   var name=prompt('修改保存标题',item.name);
   if(!name||!name.trim())return;
   item.name=name.trim();
+  if(item.bazi&&!item.bazi.person)item.bazi.person=recordPersonFromTitle(item);
   setBaziRecords(items);
   renderHistory();
 }
@@ -1577,12 +1578,20 @@ function loadBaziRecord(id){
   var item=getBaziRecords().find(function(x){return x.id===id});
   if(!item)return;
   currentBazi=item.bazi;
+  if(currentBazi)currentBazi.person=recordPersonFromTitle(item);
   aiHistory=item.aiHistory||[];
   aiCollapsed={};
   activeBaziRecordId=id;
   resetLuckSelection();
   renderBazi(currentBazi);
   showBaziResult();
+}
+function recordPersonFromTitle(item){
+  var person=item&&item.bazi&&item.bazi.person;
+  if(person&&person!=='测试')return person;
+  var title=(item&&item.name||'').trim();
+  title=title.replace(/\s*[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]日\s*$/,'').trim();
+  return title||person||'';
 }
 </script>
 </body>
