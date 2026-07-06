@@ -213,6 +213,10 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .info-grid div{border:1px solid #eadcc0;border-radius:12px;background:#fffaf2;padding:12px 14px}
 .info-grid b{display:block;color:var(--red);font-size:13px;margin-bottom:6px}
 .info-grid span{display:block;color:#253348;line-height:1.45}
+.section-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px}
+.section-head .section-title{margin-bottom:0}
+.small-action{border:1px solid #dbcaa9;border-radius:999px;background:#fffaf0;color:#72531e;min-height:32px;padding:0 12px;font-size:13px;font-weight:800;cursor:pointer}
+.small-action:hover{background:#fff2d8}
 .pillar-stack-summary{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -600,6 +604,7 @@ var aiHistory=[];
 var aiCollapsed={};
 var luckSelection={luck:null,year:null,month:null};
 var activeBaziRecordId=null;
+var editingActiveRecord=false;
 var API_KEY_STORAGE='qimen_deepseek_api_key';
 var BAZI_RECORDS='bazi_records';
 var WUXING=['木','火','土','金','水'];
@@ -732,8 +737,24 @@ function selectCustomLocation(){
 function dayOfYear(y,m,d){var start=new Date(y,0,0);return Math.floor((new Date(y,m-1,d)-start)/86400000)}
 function equationOfTimeMinutes(y,m,d){var n=dayOfYear(y,m,d);var b=2*Math.PI*(n-81)/364;return 9.87*Math.sin(2*b)-7.53*Math.cos(b)-1.5*Math.sin(b)}
 function addMinutes(t,mins){var dt=new Date(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(mins));return {year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()}}
-function formatOffset(mins){var sign=mins>=0?'+':'-';mins=Math.abs(Math.round(mins));return sign+Math.floor(mins/60)+'小时'+pad(mins%60)+'分'}
+function minutesBetween(a,b){return Math.round((new Date(b.year,b.month-1,b.day,b.hour,b.minute)-new Date(a.year,a.month-1,a.day,a.hour,a.minute))/60000)}
+function normalizeSolarCorrectionData(data){
+  var out=Object.assign({},data||{}),lng=Number(out.location&&out.location.lng);
+  if(!Number.isFinite(Number(out.longitudeCorrection))&&Number.isFinite(lng))out.longitudeCorrection=(lng-120)*4;
+  if(!Number.isFinite(Number(out.equationCorrection))){
+    if(Number.isFinite(Number(out.correction))&&Number.isFinite(Number(out.longitudeCorrection)))out.equationCorrection=Number(out.correction)-Number(out.longitudeCorrection);
+    else if(out.input)out.equationCorrection=equationOfTimeMinutes(out.input.year,out.input.month,out.input.day);
+  }
+  if(!Number.isFinite(Number(out.correction))){
+    if(Number.isFinite(Number(out.longitudeCorrection))&&Number.isFinite(Number(out.equationCorrection)))out.correction=Number(out.longitudeCorrection)+Number(out.equationCorrection);
+    else if(out.input&&out.used)out.correction=minutesBetween(out.input,out.used);
+  }
+  ['correction','longitudeCorrection','equationCorrection'].forEach(function(k){if(!Number.isFinite(Number(out[k])))out[k]=0});
+  return out;
+}
+function formatOffset(mins){mins=Number(mins);if(!Number.isFinite(mins))mins=0;var sign=mins>=0?'+':'-';mins=Math.abs(Math.round(mins));return sign+Math.floor(mins/60)+'小时'+pad(mins%60)+'分'}
 function formatSolarCorrection(data){
+  data=normalizeSolarCorrectionData(data);
   return '校正 '+formatOffset(data.correction)+' = 经度 '+formatOffset(data.longitudeCorrection)+' + 均时差 '+formatOffset(data.equationCorrection);
 }
 function getUsedTime(){
@@ -764,6 +785,31 @@ function resetBaziFormToNow(){
   document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
   document.getElementById('useTrueSolar').checked=true;
   refreshBirthTimeDisplay();
+}
+function fillBaziFormFromData(data){
+  if(!data)return;
+  document.getElementById('personName').value=data.person||'';
+  document.getElementById(data.gender==='女'?'genderFemale':'genderMale').checked=true;
+  var t=(data.time&&data.time.input)||dateToTime(new Date());
+  document.getElementById('birthYear').value=t.year;
+  document.getElementById('birthMonth').value=t.month;
+  updateDays(t.day);
+  document.getElementById('birthHour').value=t.hour;
+  document.getElementById('birthMinute').value=t.minute;
+  if(data.time&&data.time.location){
+    selectedLocation={name:data.time.location.name||'自定义地点',lng:Number(data.time.location.lng)||120,lat:data.time.location.lat==null?null:Number(data.time.location.lat)};
+    document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
+  }
+  document.getElementById('useTrueSolar').checked=!(data.time&&data.time.enabled===false);
+  refreshBirthTimeDisplay();
+}
+function editCurrentBaziInput(){
+  if(!currentBazi)return;
+  fillBaziFormFromData(currentBazi);
+  editingActiveRecord=!!activeBaziRecordId;
+  showBaziHome('form');
+  document.getElementById('entryPanel').open=true;
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function stemPolarity(s){return '甲丙戊庚壬'.indexOf(s)>=0?'阳':'阴'}
 function tenGod(dayStem,stem){
@@ -925,14 +971,16 @@ function calculateBazi(){
   return data;
 }
 function buildBazi(){
+  var editedRecordId=editingActiveRecord?activeBaziRecordId:null;
   currentBazi=calculateBazi();
   aiHistory=[];
   aiCollapsed={};
-  activeBaziRecordId=null;
+  activeBaziRecordId=editedRecordId;
+  editingActiveRecord=false;
   resetLuckSelection();
   renderBazi(currentBazi);
   showBaziResult();
-  if(document.getElementById('autoSaveBuild').checked)saveBaziRecord();
+  if(activeBaziRecordId||document.getElementById('autoSaveBuild').checked)saveBaziRecord();
   document.getElementById('entryPanel').open=false;
 }
 function showBaziHome(name){
@@ -1017,7 +1065,7 @@ function renderPillarTable(data,includeTransit){
 function renderBasicInfo(data){
   var p=data.pillars;
   var solar=data.time.enabled?'启用真太阳时，'+formatSolarCorrection(data.time):'未启用真太阳时';
-  return '<div class="section-title">基本信息</div>'+
+  return '<div class="section-head"><div class="section-title">基本信息</div><button type="button" class="small-action" onclick="editCurrentBaziInput()">修改时间和地址</button></div>'+
     '<div class="info-grid">'+
     '<div><b>命主</b><span>'+esc(data.person||'未命名')+' · '+esc(data.gender)+'</span></div>'+
     '<div><b>输入时间</b><span>'+formatTime(data.time.input)+'</span></div>'+

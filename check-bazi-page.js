@@ -59,6 +59,9 @@ function assert(condition, message) {
   'function deleteBaziAiTurn',
   'function rememberBaziAiFold',
   'function collapseAllBaziAi',
+  'function editCurrentBaziInput',
+  'function fillBaziFormFromData',
+  'function normalizeSolarCorrectionData',
   'var aiCollapsed',
   'function syncActiveBaziRecord',
   'var activeBaziRecordId',
@@ -166,6 +169,8 @@ assert(html.includes('<details id="entryPanel"'), 'input editor should be a coll
 assert(html.includes('data-view="basic"'), 'result layer should expose a basic information tab');
 assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'buildBazi should enter the result layer after charting');
 assert(/function buildBazi\(\)[\s\S]*autoSaveBuild[\s\S]*saveBaziRecord/.test(html), 'buildBazi should auto-save when the checkbox is enabled');
+assert(/function buildBazi\(\)[\s\S]*editingActiveRecord[\s\S]*saveBaziRecord/.test(html), 'editing a saved bazi should sync the saved record after rebuilding');
+assert(html.includes('修改时间和地址') && html.includes('onclick="editCurrentBaziInput()"'), 'basic info should expose an edit time/location action');
 const aiPanelMatch = html.match(/function renderAiPanel\(\)[\s\S]*?function renderQuickAiQuestions/);
 assert(aiPanelMatch && !aiPanelMatch[0].includes('historyList'), 'save records should not live inside AI panel');
 assert(/@media\(max-width:520px\)[\s\S]*pillar-table-wrap \.pillar-table\{min-width:0;table-layout:fixed\}/.test(html), 'mobile pillar table should fit viewport instead of forcing horizontal scroll');
@@ -301,6 +306,14 @@ assert(scriptContext.formatSolarCorrection({
   longitudeCorrection: -64,
   equationCorrection: 1,
 }) === '校正 -1小时03分 = 经度 -1小时04分 + 均时差 +0小时01分', 'solar correction breakdown should be explicit');
+const legacySolarCorrection = scriptContext.formatSolarCorrection({
+  correction: -70,
+  input: { year: 1993, month: 7, day: 14, hour: 8, minute: 40 },
+  used: { year: 1993, month: 7, day: 14, hour: 7, minute: 30 },
+  location: { name: '云南省 曲靖市 师宗县', lng: 103.9936, lat: 24.8222 },
+});
+assert(!legacySolarCorrection.includes('NaN'), `legacy saved solar correction should not show NaN: ${legacySolarCorrection}`);
+assert(legacySolarCorrection.includes('经度 -1小时04分'), `legacy saved solar correction should reconstruct longitude component: ${legacySolarCorrection}`);
 scriptContext.aiHistory = [
   { q: '第一问', a: '答一', t: '10:00' },
   { q: '第二问', a: '答二', t: '10:01' },
