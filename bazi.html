@@ -962,6 +962,9 @@ function calculateBazi(){
     pattern:patternName(dayStem,pillars.month[1]),
     relations:relations(pillars)
   };
+  return refreshPatternAnalysis(data);
+}
+function refreshPatternAnalysis(data){
   if(typeof BaziEngine!=='undefined'&&BaziEngine.analyzePattern){
     data.patternAnalysis=BaziEngine.analyzePattern(data);
     data.strength=data.patternAnalysis.strength;
@@ -997,17 +1000,19 @@ function showBaziResult(){
   if(result)result.hidden=false;
 }
 function renderBazi(data){
-  currentBaziView='basic';
+  data=refreshPatternAnalysis(data);
+  currentBazi=data;
+  currentBaziView='structure';
   document.getElementById('resultArea').innerHTML=
     '<section class="basic-dashboard"><div class="section-title">基础排盘</div><div class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
     '<div class="bazi-tabs" role="tablist">'+
-    '<button type="button" class="active" data-view="basic" onclick="switchBaziView(\'basic\')">基本信息</button>'+
-    '<button type="button" data-view="structure" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
+    '<button type="button" data-view="basic" onclick="switchBaziView(\'basic\')">基本信息</button>'+
+    '<button type="button" class="active" data-view="structure" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
     '<button type="button" data-view="luck" onclick="switchBaziView(\'luck\')">大运流年</button>'+
     '<button type="button" data-view="ai" onclick="switchBaziView(\'ai\')">AI断命</button>'+
     '</div>'+
-    '<div class="bazi-view active" data-view-panel="basic"><section class="result-card">'+renderBasicInfo(data)+'</section></div>'+
-    '<div class="bazi-view" data-view-panel="structure"><section class="result-card">'+renderStructure(data)+'</section></div>'+
+    '<div class="bazi-view" data-view-panel="basic"><section class="result-card">'+renderBasicInfo(data)+'</section></div>'+
+    '<div class="bazi-view active" data-view-panel="structure"><section class="result-card">'+renderStructure(data)+'</section></div>'+
     '<div class="bazi-view" data-view-panel="luck"><section class="result-card">'+renderLuckPanel(data)+'</section></div>'+
     '<div class="bazi-view" data-view-panel="ai"><section class="result-card">'+renderAiPanel()+'</section></div>';
 }
@@ -1085,13 +1090,17 @@ function renderStructure(data){
   }).join('');
   var missing=WUXING.filter(function(w){return data.scores[w]<0.2});
   return '<div class="section-title">格局喜用参考</div><div class="structure-grid"><div>'+bars+'</div><div class="structure-note">'+
-    '<div class="note-line"><strong>命格线索：</strong>'+data.dayStem+data.dayElement+'日主，'+data.strength+'，'+data.pattern+'。</div>'+
+    '<div class="note-line"><strong>命格：</strong>'+data.pattern+'。</div>'+
+    '<div class="note-line"><strong>定格依据：</strong>'+patternBasisText(data)+'</div>'+
     '<div class="note-line"><strong>喜用参考：</strong>喜 '+data.useful.use.join('、')+'；慎 '+data.useful.avoid.join('、')+'。</div>'+
     '<div class="note-line"><strong>五行缺失：</strong>'+(missing.length?missing.join('、'):'五行皆有')+'。</div>'+
     '</div></div><div class="detail-grid">'+
     detailBox('通根',rootInfo(data))+
     detailBox('透干',stemRevealInfo(data))+
-    detailBox('格局候选',patternCandidates(data))+
+    detailBox('主要格局',patternCandidates(data))+
+    detailBox('格局状态',patternStatusText(data))+
+    detailBox('特殊格局',specialPatternText(data.patternAnalysis))+
+    detailBox('格局层次',patternLevelText(data))+
     detailBox('干支提示','<div class="relation-list">'+data.relations.map(function(x){return '<span class="tag">'+x+'</span>'}).join('')+'</div>')+
     '</div>'+renderTenGodSummary(data)+renderRelationPanel(data)+
     '<p class="hint-line">本地算法先给参考线索，格局层次和成败建议可让 AI 结合具体问题继续细断。</p>';
@@ -1154,11 +1163,36 @@ function stemRevealInfo(data){
   return reveals.length?'月令主气透出：'+reveals.join('、'):'月令主气未透，格局多看地支藏干与全盘流通。';
 }
 function patternCandidates(data){
-  var monthStem=(HIDDEN[data.pillars.month[1]]||[])[0];
-  var main=monthStem?tenGod(data.dayStem,monthStem)+'格':'格局待判';
-  var useful='取 '+data.useful.use.join('、')+' 为用神方向';
-  var avoid='忌神参考：'+data.useful.avoid.join('、');
-  return main+'；'+useful+'；'+avoid+'。';
+  data=refreshPatternAnalysis(data);
+  return (data.patternAnalysis&&data.patternAnalysis.mainPattern)||'未见明确成格';
+}
+function patternBasisText(data){
+  data=refreshPatternAnalysis(data);
+  return (data.patternAnalysis&&data.patternAnalysis.patternBasis)||'以月令定命格。';
+}
+function patternStatusText(data){
+  data=refreshPatternAnalysis(data);
+  return (data.patternAnalysis&&data.patternAnalysis.patternState)||'格局状态需结合全盘细断。';
+}
+function specialPatternText(patternAnalysis){
+  var items=patternAnalysis&&patternAnalysis.specialPatterns;
+  return items&&items.length?items.join('、'):'未见明显从格/化格/专旺格';
+}
+function patternLevelText(data){
+  data=refreshPatternAnalysis(data);
+  return (data.patternAnalysis&&data.patternAnalysis.patternLevel)||'普通格局，需结合大运成败细断';
+}
+function buildPatternContextText(data){
+  data=refreshPatternAnalysis(data);
+  return [
+    '本地格局校验：',
+    '命格：'+data.pattern,
+    '定格依据：'+patternBasisText(data),
+    '主要格局：'+patternCandidates(data),
+    '格局状态：'+patternStatusText(data),
+    '特殊格局：'+specialPatternText(data.patternAnalysis),
+    '格局层次：'+patternLevelText(data)
+  ].join('\n');
 }
 function luckDirection(data){
   var yangYear='甲丙戊庚壬'.indexOf(data.pillars.year[0])>=0;
@@ -1418,6 +1452,7 @@ function deleteBaziAiTurn(index){
 }
 function buildAiPrompt(question){
   var d=currentBazi,p=d.pillars,mode=document.getElementById('aiMode').value;
+  d=refreshPatternAnalysis(d);
   var guide={brief:'简断，先给结论，再给关键依据。',detail:'详断，说明命格、格局、层次、用神、忌神和现实取向。',pattern:'重点分析命格格局、成格破格、层次高低和原因。',luck:'重点分析大运流年思路，必须使用下方大运表和流年参考。',conclusion:'只给结论和建议，300字以内。'};
   var luck=getLuckData(d);
   var currentLuck=luck.current?(luck.current.gz+'（'+luck.current.from+'-'+luck.current.to+'岁，天干十神'+luck.current.stemGod+'，地支五行'+luck.current.branchWx+'）'):'当前年龄未落入本地估算表';
@@ -1430,7 +1465,8 @@ function buildAiPrompt(question){
     '输入时间：'+formatTime(d.time.input)+'；排盘时间：'+formatTime(d.time.used)+'；真太阳时：'+(d.time.enabled?'启用，'+formatSolarCorrection(d.time):'未启用')+'\n'+
     '地点：'+d.time.location.name+'，东经'+d.time.location.lng+'，北纬'+d.time.location.lat+'\n'+
     '四柱：年 '+p.year+'，月 '+p.month+'，日 '+p.day+'，时 '+p.hour+'\n'+
-    '日主：'+d.dayStem+d.dayElement+'；旺衰参考：'+d.strength+'；格局参考：'+d.pattern+'\n'+
+    '日主：'+d.dayStem+d.dayElement+'；旺衰参考：'+d.strength+'\n'+
+    buildPatternContextText(d)+'\n'+
     (patternEvidence?'格局依据：'+patternEvidence+'\n':'')+
     '五行分数：'+WUXING.map(function(w){return w+d.scores[w].toFixed(1)}).join('，')+'\n'+
     '本地喜用参考：喜 '+d.useful.use.join('、')+'；慎 '+d.useful.avoid.join('、')+'\n'+
@@ -1443,7 +1479,7 @@ function buildAiPrompt(question){
 }
 function buildBaziReport(){
   if(!currentBazi)buildBazi();
-  var d=currentBazi,p=d.pillars;
+  var d=refreshPatternAnalysis(currentBazi),p=d.pillars;
   var luck=getLuckData(d);
   var currentLuck=luck.current?(luck.current.gz+'（'+luck.current.from+'-'+luck.current.to+'岁）'):'当前年龄未落入本地估算表';
   var patternEvidence=d.patternAnalysis&&d.patternAnalysis.evidence?d.patternAnalysis.evidence.join('；'):'';
@@ -1457,7 +1493,7 @@ function buildBaziReport(){
     '四柱：'+p.year+' '+p.month+' '+p.day+' '+p.hour,
     '日主：'+d.dayStem+d.dayElement,
     '旺衰参考：'+d.strength,
-    '格局参考：'+d.pattern,
+    buildPatternContextText(d),
     patternEvidence?'格局依据：'+patternEvidence:'',
     '喜用参考：喜 '+d.useful.use.join('、')+'；慎 '+d.useful.avoid.join('、'),
     '五行分数：'+WUXING.map(function(w){return w+d.scores[w].toFixed(1)}).join('，'),

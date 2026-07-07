@@ -112,10 +112,91 @@
   }
   function patternName(dayStem,monthBranch){
     var main=(HIDDEN[monthBranch]||[])[0],god=main?tenGod(dayStem,main):'';
-    if(!god)return '格局参考';
-    if(god==='比肩')return '建禄格参考';
-    if(god==='劫财')return '月刃格参考';
-    return god+'格参考';
+    if(!god)return '命格待判';
+    if(god==='比肩')return '建禄格';
+    if(god==='劫财')return '月刃格';
+    return god+'格';
+  }
+  function tenGodCounts(dayStem,pillars){
+    var counts={};
+    function addGod(g){if(g)counts[g]=(counts[g]||0)+1}
+    ['year','month','hour'].forEach(function(k){addGod(tenGod(dayStem,pillars[k][0]))});
+    Object.keys(pillars).forEach(function(k){(HIDDEN[pillars[k][1]]||[]).forEach(function(s){addGod(tenGod(dayStem,s))})});
+    return counts;
+  }
+  function comboPatterns(monthGod,counts){
+    var out=[];
+    function has(name){return (counts[name]||0)>0}
+    function add(name,score){if(!out.some(function(x){return x.name===name}))out.push({name:name,score:score})}
+    if(monthGod==='七杀'&&(has('正印')||has('偏印')))add('杀印相生格',95);
+    if((has('七杀')||monthGod==='七杀')&&has('食神'))add('食神制杀格',90);
+    if((has('伤官')||monthGod==='伤官')&&(has('正印')||has('偏印')))add('伤官配印格',88);
+    if((has('正官')||monthGod==='正官')&&(has('正印')||has('偏印')))add('官印相生格',86);
+    if((has('正财')||has('偏财'))&&(has('正官')||has('七杀'))&&(has('正印')||has('偏印')))add('财官印相生格',84);
+    if((has('伤官')||monthGod==='伤官')&&(has('正财')||has('偏财')))add('伤官生财格',78);
+    if((has('正财')||has('偏财'))&&(has('七杀')||monthGod==='七杀'))add('财滋弱杀格',72);
+    return out.sort(function(a,b){return b.score-a.score}).map(function(x){return x.name});
+  }
+  function specialPatterns(dayStem,pillars,scores,counts,strength,roots){
+    var out=[],dayWx=STEM_WX[dayStem],total=WUXING.reduce(function(sum,w){return sum+(scores[w]||0)},0)||1;
+    var resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
+    var selfPower=((scores[dayWx]||0)+(scores[resource]||0)*0.65)/total;
+    var killing=(counts['正官']||0)+(counts['七杀']||0),wealth=(counts['正财']||0)+(counts['偏财']||0),output=(counts['食神']||0)+(counts['伤官']||0);
+    if(roots.length===0&&selfPower<0.18){
+      if(killing>=4)out.push('从格：从杀格');
+      else if(wealth>=4)out.push('从格：从财格');
+      else if(output>=4)out.push('从格：从儿格');
+    }else if(roots.length===0&&selfPower<0.28){
+      if(killing>=3)out.push('特殊线索参考：假从杀倾向');
+      else if(wealth>=3)out.push('特殊线索参考：假从财倾向');
+      else if(output>=3)out.push('特殊线索参考：假从儿倾向');
+    }
+    var power=(scores[dayWx]||0)+(scores[resource]||0);
+    if(selfPower>0.82&&power>total*0.86)out.push('专旺格：'+({木:'曲直格',火:'炎上格',土:'稼穑格',金:'从革格',水:'润下格'}[dayWx]||'专旺格'));
+    else if(selfPower>0.68&&power>total*0.72)out.push('特殊线索参考：假'+({木:'曲直',火:'炎上',土:'稼穑',金:'从革',水:'润下'}[dayWx]||'专旺')+'格倾向');
+    var transform={甲己:'土',乙庚:'金',丙辛:'水',丁壬:'木',戊癸:'火'};
+    var stems=[pillars.year[0],pillars.month[0],pillars.day[0],pillars.hour[0]];
+    Object.keys(transform).forEach(function(pair){
+      if(stems.indexOf(pair[0])>=0&&stems.indexOf(pair[1])>=0){
+        if(BRANCH_WX[pillars.month[1]]===transform[pair])out.push('化气格：'+pair+'化'+transform[pair]);
+        else out.push('特殊线索参考：'+pair+'化'+transform[pair]+'未成倾向');
+      }
+    });
+    return out;
+  }
+  function patternLevel(mainPattern,monthGod,counts,strength,specials){
+    if(mainPattern==='未见明确成格')return '普通格局，需结合大运成败细断';
+    if(mainPattern==='官印相生格'&&monthGod==='正官'&&(counts['七杀']||0)>0)return '官印相生但官杀混杂，日主'+strength+'，层次需看印比扶身与大运承接';
+    if(/杀印相生|食神制杀|伤官配印|官印相生|财官印相生/.test(mainPattern))return mainPattern.replace('格','')+'，结构闭环，层次偏高';
+    if(/伤官生财|财滋弱杀/.test(mainPattern))return mainPattern.replace('格','')+'，有成事结构，层次中上';
+    if((specials||[]).some(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)}))return '特殊格局成立，层次需看真假与大运承接';
+    return '格局未纯，层次需结合大运细断';
+  }
+  function patternBasis(dayStem,monthBranch,monthGod){
+    var main=(HIDDEN[monthBranch]||[])[0];
+    return main?'月令'+monthBranch+'主气'+main+'为'+dayStem+'日主的'+monthGod+'，以月令定命格。':'月令主气待判，命格需结合全盘。';
+  }
+  function patternState(primary,monthGod,counts,strength,mainPattern,revealed){
+    var out=[];
+    var mixed=(counts['正官']||0)>0&&(counts['七杀']||0)>0;
+    if(mixed)out.push(primary+'不纯，官杀混杂');
+    else out.push(primary+'气较专');
+    if(!revealed.length)out.push('月令主气未透，多看地支藏干与全盘流通');
+    if(strength.indexOf('弱')>=0)out.push('日主'+strength+'，需印比化扶');
+    else if(strength.indexOf('强')>=0)out.push('日主'+strength+'，宜泄耗制化');
+    else out.push('日主'+strength+'，重在流通平衡');
+    if(mainPattern&&mainPattern!=='未见明确成格')out.push('结构可看'+mainPattern);
+    return out.join('，')+'。';
+  }
+  function classifiedClues(data){
+    var noble=[],misc=[];
+    Object.keys(data.pillars).forEach(function(k){
+      shenShaForPillar(data,data.pillars[k]).forEach(function(s){
+        if(/贵人|天德|月德|国印|文昌|福星|太极|德秀|金舆/.test(s)){if(noble.indexOf(s)<0)noble.push(s)}
+        if(/魁罡|金神|羊刃|孤鸾|阴差阳错|十恶大败|童子|空亡|华盖|驿马/.test(s)){if(misc.indexOf(s)<0)misc.push(s)}
+      });
+    });
+    return {noble:noble,misc:misc};
   }
   function shenShaForPillar(data,gz){
     var stem=data.dayStem,yearStem=data.pillars.year[0],branch=gz[1],dayBranch=data.pillars.day[1],yearBranch=data.pillars.year[1],monthBranch=data.pillars.month[1],out=[];
@@ -169,6 +250,7 @@
     var main=(HIDDEN[monthBranch]||[])[0],primary=patternName(dayStem,monthBranch),evidence=[];
     var stems=[pillars.year[0],pillars.month[0],pillars.day[0],pillars.hour[0]];
     var monthGod=main?tenGod(dayStem,main):'';
+    var counts=tenGodCounts(dayStem,pillars);
     var revealed=(HIDDEN[monthBranch]||[]).filter(function(s){return stems.indexOf(s)>=0});
     var roots=Object.keys(pillars).filter(function(k){return (HIDDEN[pillars[k][1]]||[]).indexOf(dayStem)>=0}).map(function(k){return ({year:'年支',month:'月支',day:'日支',hour:'时支'})[k]+pillars[k][1]});
     evidence.push('月令'+monthBranch+'本气'+(main||'无')+(monthGod?'为'+monthGod:'')+'，以月令定主格。');
@@ -177,7 +259,14 @@
     evidence.push('旺衰：'+strength+'；五行计分 '+WUXING.map(function(w){return w+(scores[w]||0).toFixed(1)}).join('、')+'。');
     evidence.push('喜用：'+useful.use.join('、')+'；慎用：'+useful.avoid.join('、')+'；'+useful.why);
     var candidates=(HIDDEN[monthBranch]||[]).map(function(s){return tenGod(dayStem,s)+'格'}).filter(Boolean);
-    return {primary:primary,pattern:primary,candidates:candidates,strength:strength,useful:useful,evidence:evidence};
+    var combos=comboPatterns(monthGod,counts);
+    var specials=specialPatterns(dayStem,pillars,scores,counts,strength,roots);
+    var clues=classifiedClues({pillars:pillars,dayStem:dayStem});
+    var mainPattern=combos[0]||'未见明确成格';
+    var level=patternLevel(mainPattern,monthGod,counts,strength,specials);
+    var basis=patternBasis(dayStem,monthBranch,monthGod);
+    var state=patternState(primary,monthGod,counts,strength,mainPattern,revealed);
+    return {primary:primary,pattern:primary,patternBasis:basis,patternState:state,candidates:candidates,comboPatterns:combos,mainPattern:mainPattern,patternLevel:level,specialPatterns:specials,classifiedClues:clues,strength:strength,useful:useful,evidence:evidence};
   }
 
   var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern};

@@ -93,6 +93,9 @@ assert(!html.includes('data-view-panel="history"'), 'save records should not liv
 assert(/function showBaziHome\(name\)[\s\S]*data-home-panel/.test(html), 'top-level form/history navigation should exist');
 assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'building a chart should enter the result layer');
 assert(/function loadBaziRecord\(id\)[\s\S]*showBaziResult\(\)/.test(html), 'loading a saved record should enter the result layer');
+assert(/function renderBazi\(data\)[\s\S]*currentBaziView='structure'/.test(html), 'newly rendered charts should default to structure view');
+assert(html.includes('<button type="button" class="active" data-view="structure"'), 'structure tab should be active by default');
+assert(html.includes('<div class="bazi-view active" data-view-panel="structure"'), 'structure panel should be visible by default');
 
 [
   '基础排盘',
@@ -101,7 +104,9 @@ assert(/function loadBaziRecord\(id\)[\s\S]*showBaziResult\(\)/.test(html), 'loa
   'AI断命',
   '通根',
   '透干',
-  '格局候选',
+  '主要格局',
+  '特殊格局',
+  '格局层次',
   '当前大运',
   '流年参考',
   '展开明细表',
@@ -265,6 +270,52 @@ assert(referencePattern.evidence.some((x) => x.includes('月令')), 'pattern evi
 assert(referencePattern.evidence.some((x) => x.includes('透干')), 'pattern evidence should include revealed stems');
 assert(referencePattern.evidence.some((x) => x.includes('通根')), 'pattern evidence should include roots');
 assert(referencePattern.useful.use.length > 0, 'pattern analysis should include useful elements');
+const killSealBazi = {
+  person: '格局样本',
+  gender: '男',
+  pillars: { year: '戊寅', month: '戊午', day: '辛丑', hour: '壬辰' },
+  dayStem: '辛',
+  dayElement: '金',
+  time: { used: { year: 1998, month: 6, day: 1, hour: 8, minute: 0 }, input: { year: 1998, month: 6, day: 1, hour: 8, minute: 0 }, enabled: false, correction: 0, location: { name: '参考', lng: 120, lat: 30 } },
+};
+const killSealPattern = scriptContext.BaziEngine.analyzePattern(killSealBazi);
+assert(killSealPattern.primary.includes('七杀'), `month-command line should still be 七杀, got ${killSealPattern.primary}`);
+assert(killSealPattern.comboPatterns.some((x) => x.includes('杀印相生')), `combo pattern should include 杀印相生, got ${killSealPattern.comboPatterns.join(',')}`);
+const killSealCandidates = scriptContext.patternCandidates(killSealBazi);
+assert(killSealCandidates.includes('杀印相生'), `pattern candidate UI should show combo pattern, got ${killSealCandidates}`);
+assert(!killSealCandidates.includes('、'), `pattern candidate UI should show only the main pattern, got ${killSealCandidates}`);
+assert(!killSealCandidates.includes('用神') && !killSealCandidates.includes('忌神'), 'pattern candidates should not repeat useful/avoid elements');
+assert(scriptContext.specialPatternText(killSealPattern).includes('未见明显从格/化格'), 'normal chart should state no obvious follow/transform pattern');
+assert(scriptContext.patternLevelText(killSealBazi).includes('层次偏高'), 'pattern level should describe high-level combo structure');
+assert(!html.includes('贵格杂格'), 'structure view should not classify shensha as noble/misc patterns');
+assert(!html.includes('命格线索'), 'structure view should use direct 命格 label');
+const officerMixedBazi = {
+  person: '正官样本',
+  gender: '女',
+  pillars: { year: '癸酉', month: '癸亥', day: '丁酉', hour: '庚子' },
+  dayStem: '丁',
+  dayElement: '火',
+  time: { used: { year: 1993, month: 11, day: 12, hour: 1, minute: 34 }, input: { year: 1993, month: 11, day: 12, hour: 1, minute: 34 }, enabled: false, correction: 0, location: { name: '参考', lng: 103.9936, lat: 24.8222 } },
+};
+const officerMixedPattern = scriptContext.BaziEngine.analyzePattern(officerMixedBazi);
+assert(officerMixedPattern.primary === '正官格', `month-command pattern should be 正官格, got ${officerMixedPattern.primary}`);
+assert(officerMixedPattern.patternBasis.includes('月令亥') && officerMixedPattern.patternBasis.includes('正官'), `pattern basis should explain month command, got ${officerMixedPattern.patternBasis}`);
+assert(officerMixedPattern.patternState.includes('官杀混杂') && officerMixedPattern.patternState.includes('正官格不纯'), `pattern state should explain mixed official/killing, got ${officerMixedPattern.patternState}`);
+assert(officerMixedPattern.patternLevel.includes('官杀混杂') && !officerMixedPattern.patternLevel.includes('层次偏高'), `mixed official pattern should not be simplified as high level, got ${officerMixedPattern.patternLevel}`);
+assert(scriptContext.patternStatusText(officerMixedBazi).includes('官杀混杂'), 'structure UI should expose pattern state');
+const staleOfficerMixedBazi = {
+  ...officerMixedBazi,
+  pattern: '正官格参考',
+  patternAnalysis: { primary: '正官格参考', mainPattern: '官印相生格', patternLevel: '官印相生，结构闭环，层次偏高' },
+};
+assert(scriptContext.patternBasisText(staleOfficerMixedBazi).includes('月令亥'), 'saved records with stale patternAnalysis should refresh pattern basis');
+assert(scriptContext.patternStatusText(staleOfficerMixedBazi).includes('官杀混杂'), 'saved records with stale patternAnalysis should refresh pattern state');
+assert(!scriptContext.patternLevelText(staleOfficerMixedBazi).includes('层次偏高'), 'saved records with stale patternAnalysis should refresh pattern level');
+const promptPatternContext = scriptContext.buildPatternContextText(staleOfficerMixedBazi);
+assert(promptPatternContext.includes('命格：正官格'), 'AI prompt context should use refreshed primary pattern');
+assert(promptPatternContext.includes('定格依据') && promptPatternContext.includes('月令亥'), 'AI prompt context should include pattern basis');
+assert(promptPatternContext.includes('格局状态') && promptPatternContext.includes('官杀混杂'), 'AI prompt context should include pattern state');
+assert(promptPatternContext.includes('格局层次') && !promptPatternContext.includes('层次偏高'), 'AI prompt context should include corrected pattern level');
 const yiMaoLuck = referenceLuck.rows.find((r) => r.gz === '乙卯');
 assert(referenceLuck.startAge === 3, `reference luck start age should match WenZhen 3 sui, got ${referenceLuck.startAge}`);
 assert(yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck) === 2025, `乙卯 luck should start in 2025, got ${yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck)}`);
