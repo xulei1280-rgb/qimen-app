@@ -311,6 +311,21 @@ assert(killSealPattern.primary.includes('七杀'), `month-command line should st
 assert(killSealPattern.comboPatterns.some((x) => x.includes('杀印相生')), `combo pattern should include 杀印相生, got ${killSealPattern.comboPatterns.join(',')}`);
 assert(killSealPattern.useful.layers.pattern.use.includes('土'), 'kill-seal pattern should use resource/印 as pattern-use anchor');
 assert(killSealPattern.patternLevel.includes('成格条件') || killSealPattern.patternLevel.includes('结构闭环'), 'pattern level should explain why the combo is formed');
+assert(killSealPattern.factors.some((x) => x.text.includes('杀有印化')), `kill-seal chart should expose formation factor, got ${JSON.stringify(killSealPattern.factors)}`);
+assert(killSealPattern.clarity.level === '较清' && killSealPattern.clarity.text.includes('杀印相生'), `kill-seal chart should expose clean structure, got ${JSON.stringify(killSealPattern.clarity)}`);
+assert(killSealPattern.usePriority.text.includes('格局'), `kill-seal chart should expose useful priority, got ${JSON.stringify(killSealPattern.usePriority)}`);
+const foodKillRobbedBazi = {
+  person: '食神制杀兼枭夺食样本',
+  gender: '男',
+  pillars: { year: '庚申', month: '丙寅', day: '甲子', hour: '壬申' },
+  dayStem: '甲',
+  dayElement: '木',
+  time: { used: { year: 1993, month: 2, day: 1, hour: 22, minute: 0 }, input: { year: 1993, month: 2, day: 1, hour: 22, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const foodKillRobbedPattern = scriptContext.BaziEngine.analyzePattern(foodKillRobbedBazi);
+assert(foodKillRobbedPattern.comboPatterns.some((x) => x.includes('食神制杀')), `combo pattern should include 食神制杀, got ${foodKillRobbedPattern.comboPatterns.join(',')}`);
+assert(foodKillRobbedPattern.comboConflicts.some((x) => x.name === '枭神夺食'), `food-kill chart should expose 枭神夺食 conflict, got ${JSON.stringify(foodKillRobbedPattern.comboConflicts)}`);
+assert(foodKillRobbedPattern.comboConflicts.some((x) => x.text.includes('削弱制杀')), `food-kill chart should explain the conflict weakens killing control, got ${JSON.stringify(foodKillRobbedPattern.comboConflicts)}`);
 const killSealCandidates = scriptContext.patternCandidates(killSealBazi);
 assert(killSealCandidates.includes('杀印相生'), `pattern candidate UI should show combo pattern, got ${killSealCandidates}`);
 assert(!killSealCandidates.includes('、'), `pattern candidate UI should show only the main pattern, got ${killSealCandidates}`);
@@ -337,6 +352,9 @@ assert(!officerMixedPattern.specialPatterns.some((x) => x.startsWith('从格：'
 assert(scriptContext.patternStatusText(officerMixedBazi).includes('官杀混杂'), 'structure UI should expose pattern state');
 assert(officerMixedPattern.patternVerdict && officerMixedPattern.patternVerdict.includes('待清'), `mixed official chart should expose a pattern verdict, got ${officerMixedPattern.patternVerdict}`);
 assert(officerMixedPattern.useful.layers.pattern.why.includes('先清'), `mixed official chart pattern-use layer should explain clearing mixed officer/killing, got ${officerMixedPattern.useful.layers.pattern.why}`);
+assert(officerMixedPattern.factors.some((x) => x.text.includes('官杀并见')), `mixed official chart should expose break factor, got ${JSON.stringify(officerMixedPattern.factors)}`);
+assert(officerMixedPattern.clarity.level === '浊' && officerMixedPattern.clarity.text.includes('官杀并见'), `mixed official chart should expose 清浊去留, got ${JSON.stringify(officerMixedPattern.clarity)}`);
+assert(officerMixedPattern.usePriority.text.includes('格局病药为先'), `mixed official chart should prioritize pattern remedy, got ${JSON.stringify(officerMixedPattern.usePriority)}`);
 const hurtOfficerBazi = {
   person: '伤官见官样本',
   gender: '男',
@@ -349,6 +367,7 @@ const hurtOfficerPattern = scriptContext.BaziEngine.analyzePattern(hurtOfficerBa
 assert(hurtOfficerPattern.primary.includes('伤官'), `month-command line should be 伤官, got ${hurtOfficerPattern.primary}`);
 assert(hurtOfficerPattern.mainPattern.includes('伤官见官'), `hurt-officer chart should flag 伤官见官, got ${hurtOfficerPattern.mainPattern}`);
 assert(hurtOfficerPattern.patternVerdict.includes('待制'), `hurt-officer verdict should require 制化, got ${hurtOfficerPattern.patternVerdict}`);
+assert(hurtOfficerPattern.remedy.some((x) => x.text.includes('印制伤') || x.text.includes('财星通关')), `hurt-officer chart should expose 病药通关, got ${JSON.stringify(hurtOfficerPattern.remedy)}`);
 const wealthWeakBazi = {
   person: '财多身弱样本',
   gender: '男',
@@ -360,6 +379,7 @@ const wealthWeakBazi = {
 const wealthWeakPattern = scriptContext.BaziEngine.analyzePattern(wealthWeakBazi);
 assert(wealthWeakPattern.mainPattern.includes('财多身弱'), `weak wealth-heavy chart should flag 财多身弱, got ${wealthWeakPattern.mainPattern}`);
 assert(wealthWeakPattern.useful.layers.pattern.why.includes('印比'), `wealth-heavy weak chart should use 印比 as the pattern anchor, got ${wealthWeakPattern.useful.layers.pattern.why}`);
+assert(wealthWeakPattern.remedy.some((x) => x.text.includes('印比扶身')), `wealth-heavy weak chart should expose 印比扶身 remedy, got ${JSON.stringify(wealthWeakPattern.remedy)}`);
 const mixedOutputBazi = {
   person: '食伤混杂样本',
   gender: '男',
@@ -417,6 +437,16 @@ assert(promptPatternContext.includes('命格：正官格'), 'AI prompt context s
 assert(promptPatternContext.includes('定格依据') && promptPatternContext.includes('月令亥'), 'AI prompt context should include pattern basis');
 assert(promptPatternContext.includes('格局状态') && promptPatternContext.includes('官杀混杂'), 'AI prompt context should include pattern state');
 assert(promptPatternContext.includes('格局层次') && !promptPatternContext.includes('层次偏高'), 'AI prompt context should include corrected pattern level');
+assert(promptPatternContext.includes('病药通关'), 'AI prompt context should include remedy advice');
+assert(promptPatternContext.includes('成败因子'), 'AI prompt context should include pattern formation factors');
+assert(promptPatternContext.includes('清浊去留'), 'AI prompt context should include clarity and removal advice');
+assert(promptPatternContext.includes('用神取舍'), 'AI prompt context should include useful priority');
+assert(promptPatternContext.includes('组合冲突'), 'AI prompt context should include combo conflict analysis');
+assert(html.includes('function remedyText'), 'structure UI should include remedy text helper');
+assert(html.includes('function patternFactorText'), 'structure UI should include pattern factor helper');
+assert(html.includes('function patternClarityText'), 'structure UI should include pattern clarity helper');
+assert(html.includes('function usefulPriorityText'), 'structure UI should include useful priority helper');
+assert(html.includes('function comboConflictText'), 'structure UI should include combo conflict helper');
 const yiMaoLuck = referenceLuck.rows.find((r) => r.gz === '乙卯');
 assert(referenceLuck.startAge === 3, `reference luck start age should match WenZhen 3 sui, got ${referenceLuck.startAge}`);
 assert(yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck) === 2025, `乙卯 luck should start in 2025, got ${yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck)}`);

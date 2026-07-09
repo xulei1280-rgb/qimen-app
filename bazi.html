@@ -1143,9 +1143,14 @@ function renderStructure(data){
     detailBox('扶抑用神',usefulLayerText(data,'fuyi'))+
     detailBox('调候用神',usefulLayerText(data,'tiaohou'))+
     detailBox('格局用神',usefulLayerText(data,'pattern'))+
+    detailBox('用神取舍',usefulPriorityText(data))+
     detailBox('主要格局',patternCandidates(data))+
     detailBox('格局状态',patternStatusText(data))+
     detailBox('格局成败',patternVerdictText(data))+
+    detailBox('成败因子',patternFactorText(data))+
+    detailBox('清浊去留',patternClarityText(data))+
+    detailBox('组合冲突',comboConflictText(data))+
+    detailBox('病药通关',remedyText(data))+
     detailBox('特殊格局',specialPatternText(data.patternAnalysis))+
     detailBox('格局层次',patternLevelText(data))+
     detailBox('干支提示','<div class="relation-list">'+data.relations.map(function(x){return '<span class="tag">'+x+'</span>'}).join('')+'</div>')+
@@ -1219,6 +1224,11 @@ function usefulLayerText(data,key){
   if(!layer)return '未细分';
   return (layer.use&&layer.use.length?'取 '+layer.use.join('、'):'不单独取用')+'；'+layer.why;
 }
+function usefulPriorityText(data){
+  data=refreshPatternAnalysis(data);
+  var item=data.patternAnalysis&&data.patternAnalysis.usePriority;
+  return item?(item.type+'：'+item.text):'用神取舍需结合格局、调候和扶抑。';
+}
 function patternBasisText(data){
   data=refreshPatternAnalysis(data);
   return (data.patternAnalysis&&data.patternAnalysis.patternBasis)||'以月令定命格。';
@@ -1239,6 +1249,26 @@ function patternVerdictText(data){
   data=refreshPatternAnalysis(data);
   return (data.patternAnalysis&&data.patternAnalysis.patternVerdict)||'格局成败需结合全盘细断';
 }
+function patternFactorText(data){
+  data=refreshPatternAnalysis(data);
+  var items=data.patternAnalysis&&data.patternAnalysis.factors;
+  return items&&items.length?items.map(function(x){return x.type+'：'+x.text}).join('<br>'):'成败因子需结合全盘细断。';
+}
+function patternClarityText(data){
+  data=refreshPatternAnalysis(data);
+  var clarity=data.patternAnalysis&&data.patternAnalysis.clarity;
+  return clarity?(clarity.level+'：'+clarity.text):'清浊去留需结合全盘细断。';
+}
+function comboConflictText(data){
+  data=refreshPatternAnalysis(data);
+  var items=data.patternAnalysis&&data.patternAnalysis.comboConflicts;
+  return items&&items.length?items.map(function(x){return x.name+'（'+x.effect+'）：'+x.text}).join('<br>'):'未见明显组合冲突。';
+}
+function remedyText(data){
+  data=refreshPatternAnalysis(data);
+  var items=data.patternAnalysis&&data.patternAnalysis.remedy;
+  return items&&items.length?items.map(function(x){return x.title+'：'+x.text}).join('<br>'):'未见特别突出的病药冲突。';
+}
 function buildPatternContextText(data){
   data=refreshPatternAnalysis(data);
   return [
@@ -1249,8 +1279,13 @@ function buildPatternContextText(data){
     '扶抑用神：'+usefulLayerText(data,'fuyi'),
     '调候用神：'+usefulLayerText(data,'tiaohou'),
     '格局用神：'+usefulLayerText(data,'pattern'),
+    '用神取舍：'+usefulPriorityText(data),
     '格局状态：'+patternStatusText(data),
     '格局成败：'+patternVerdictText(data),
+    '成败因子：'+patternFactorText(data).replace(/<br>/g,'；'),
+    '清浊去留：'+patternClarityText(data),
+    '组合冲突：'+comboConflictText(data).replace(/<br>/g,'；'),
+    '病药通关：'+remedyText(data).replace(/<br>/g,'；'),
     '特殊格局：'+specialPatternText(data.patternAnalysis),
     '格局层次：'+patternLevelText(data)
   ].join('\n');

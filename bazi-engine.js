@@ -281,6 +281,29 @@
     if(mainPattern==='未见明确成格')return '未见明确成格：先按命格、扶抑、调候和大运细断。';
     return '格局状态需结合全盘细断。';
   }
+  function dominantElementConflict(scores){
+    var pairs=[
+      {a:'水',b:'火',bridge:'木',name:'水火相战'},
+      {a:'金',b:'木',bridge:'水',name:'金木相战'},
+      {a:'木',b:'土',bridge:'火',name:'木土相战'},
+      {a:'火',b:'金',bridge:'土',name:'火金相战'},
+      {a:'土',b:'水',bridge:'金',name:'土水相战'}
+    ];
+    var total=WUXING.reduce(function(sum,w){return sum+(scores[w]||0)},0)||1;
+    return pairs.find(function(p){return (scores[p.a]||0)/total>=0.24&&(scores[p.b]||0)/total>=0.24})||null;
+  }
+  function remedyAdvice(dayStem,pillars,scores,counts,mainPattern){
+    var out=[],dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),wealth=ctrl[dayWx];
+    function add(title,text,use){out.push({title:title,text:text,use:use||[]})}
+    if(/官杀混杂/.test(mainPattern))add('官杀混杂','先清官杀，取印化杀，或去杀留官、去官留杀；忌财再生杀。',[resource,dayWx]);
+    if(/伤官见官/.test(mainPattern))add('伤官见官','先看印制伤，或以财星通关，避免食伤直冲官星。',[resource,wealth]);
+    if(/财多身弱/.test(mainPattern))add('财多身弱','先用印比扶身，身能任财后再论财格成败。',[resource,dayWx]);
+    if(/食伤混杂/.test(mainPattern))add('食伤混杂','先清食伤去留，或用财泄秀、印星制化。',[wealth,resource]);
+    var conflict=dominantElementConflict(scores);
+    if(conflict)add(conflict.name,conflict.name+'，取'+conflict.bridge+'作通关参考。',[conflict.bridge]);
+    if(!out.length)add('病药待细分','未见特别突出的病药冲突，仍以扶抑、调候、格局层次为主。',[]);
+    return out;
+  }
   function trueSpecialPattern(specials){
     return ((specials||[]).find(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)})||'');
   }
@@ -299,6 +322,83 @@
     else out.push('日主'+strength+'，重在流通平衡');
     if(mainPattern&&mainPattern!=='未见明确成格')out.push('结构可看'+mainPattern);
     return out.join('，')+'。';
+  }
+  function patternFactors(dayStem,pillars,counts,strength,mainPattern,roots,revealed){
+    var out=[];
+    function has(name){return (counts[name]||0)>0}
+    function add(type,text){out.push({type:type,text:text})}
+    if(revealed.length)add('成','月令主气透出，格局有明线。');
+    else add('待','月令主气未透，重看藏干、透干引动与大运。');
+    if(roots.length)add('成','日主有根：'+roots.join('、')+'。');
+    else add('待','日主未见直接通根，旺衰需看印比与月令。');
+    if(/官杀混杂/.test(mainPattern))add('破','官杀并见，清浊未分，须去留或印化。');
+    if(/伤官见官/.test(mainPattern))add('破','伤官冲官，须印制伤或财星通关。');
+    if(/财多身弱/.test(mainPattern))add('破','财星偏重而身弱，先扶身再任财。');
+    if(/食伤混杂/.test(mainPattern))add('破','食神伤官并杂，先辨去留与泄化。');
+    if(/杀印相生/.test(mainPattern)&&has('七杀')&&(has('正印')||has('偏印')))add('成','杀有印化，形成杀印相生闭环。');
+    if(/官印相生/.test(mainPattern)&&has('正官')&&(has('正印')||has('偏印')))add('成','官有印承，形成官印相生闭环。');
+    if(/伤官配印/.test(mainPattern)&&has('伤官')&&(has('正印')||has('偏印')))add('成','伤官见印，有制化成格条件。');
+    if(/食神制杀/.test(mainPattern)&&has('食神')&&has('七杀'))add('成','食神制杀，有制杀成权条件。');
+    if(/伤官生财/.test(mainPattern)&&has('伤官')&&(has('正财')||has('偏财')))add('成','伤官生财，有泄秀生财路径。');
+    return out;
+  }
+  function patternClarity(mainPattern,counts,strength){
+    function has(name){return (counts[name]||0)>0}
+    if(/官杀混杂|杀重混官/.test(mainPattern)){
+      return {level:'浊',text:'官杀并见，清浊未分；先看去杀留官、去官留杀，或以印化杀。'};
+    }
+    if(/伤官见官/.test(mainPattern)){
+      return {level:'冲战',text:'伤官与官星相见，先看印制伤、财星通关，忌食伤再冲官。'};
+    }
+    if(/食伤混杂/.test(mainPattern)){
+      return {level:'不清',text:'食神伤官并杂，先辨去留，喜财泄秀或印星制化。'};
+    }
+    if(/财多身弱/.test(mainPattern)){
+      return {level:'偏浊',text:'财星偏重而日主'+strength+'，先扶身，身能任财后格局转清。'};
+    }
+    if(/杀印相生/.test(mainPattern)&&has('七杀')&&(has('正印')||has('偏印'))){
+      return {level:'较清',text:'杀印相生有闭环，杀有印化，清处在印能承杀、身能受生。'};
+    }
+    if(/官印相生/.test(mainPattern)&&has('正官')&&(has('正印')||has('偏印'))){
+      return {level:'较清',text:'官印相生有闭环，官有印承，清处在官印顺生。'};
+    }
+    if(/伤官配印/.test(mainPattern)&&has('伤官')&&(has('正印')||has('偏印'))){
+      return {level:'可清',text:'伤官配印以印制伤为清，成败看印是否有力。'};
+    }
+    if(/食神制杀/.test(mainPattern)&&has('食神')&&has('七杀')){
+      return {level:'可清',text:'食神制杀以制杀为清，成败看食神是否有力且不被夺。'};
+    }
+    return {level:'待辨',text:'清浊不取单点结论，需结合月令、透干、通根与大运去留。'};
+  }
+  function comboConflictAnalysis(counts,mainPattern){
+    var out=[];
+    function has(name){return (counts[name]||0)>0}
+    function total(names){return names.reduce(function(sum,name){return sum+(counts[name]||0)},0)}
+    function add(name,effect,text){out.push({name:name,effect:effect,text:text})}
+    if(/食神制杀/.test(mainPattern)&&has('偏印'))add('枭神夺食','制杀受损','食神制杀同时见枭神夺食，食神受制会削弱制杀成格；需看食神根气、枭神远近与财星制枭。');
+    if(/伤官生财/.test(mainPattern)&&(has('正印')||has('偏印')))add('印制食伤','生财受阻','伤官生财同时见印制食伤，泄秀生财受阻；需看印星是护身还是过度夺秀。');
+    if(/官印相生|杀印相生/.test(mainPattern)&&total(['正财','偏财'])>=3)add('财坏印','印星受伤','官印或杀印结构中财星偏重，易坏印；需看财印距离与是否有比劫护印。');
+    if(total(['正财','偏财'])>=3&&total(['比肩','劫财'])>=3)add('比劫夺财','财星受分','财星明显而比劫亦重，财易被分夺；需看官杀制比劫或食伤生财承接。');
+    if(!out.length)add('未见明显组合冲突','待运岁验证','未见直接破坏主格的组合冲突，重点看大运流年是否触发。');
+    return out;
+  }
+  function usefulPriority(mainPattern,strength,monthBranch,specials){
+    if((specials||[]).some(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)})){
+      return {type:'顺势',text:'特殊格局成立时，先顺格局之势取用，再校验真假与行运承接。'};
+    }
+    if(/官杀混杂|伤官见官|财多身弱|食伤混杂/.test(mainPattern)){
+      return {type:'病药',text:'格局病药为先，先处理破格点，再谈扶抑和调候。'};
+    }
+    if(/杀印相生|食神制杀|伤官配印|官印相生|财官印相生|伤官生财/.test(mainPattern)){
+      return {type:'格局',text:'格局闭环为先，先守成格主线，再看调候和扶抑是否配合。'};
+    }
+    if('亥子丑巳午未'.indexOf(monthBranch)>=0){
+      return {type:'调候',text:'寒暖燥湿明显时，调候先行，但不能反伤格局用神。'};
+    }
+    if(/弱|强/.test(strength)){
+      return {type:'扶抑',text:'旺衰偏枯时，扶抑为先，再看格局是否承接。'};
+    }
+    return {type:'流通',text:'日主中和时，重在格局流通、清浊去留与成事路径。'};
   }
   function classifiedClues(data){
     var noble=[],misc=[];
@@ -380,10 +480,15 @@
     var useful=usefulElements(dayStem,strength,{pillars:pillars,monthBranch:monthBranch,monthGod:monthGod,mainPattern:mainPattern,counts:counts,scores:scores});
     evidence.push('喜用：'+useful.use.join('、')+'；慎用：'+useful.avoid.join('、')+'；'+useful.why);
     var level=patternLevel(mainPattern,monthGod,counts,strength,specials);
+    var remedy=remedyAdvice(dayStem,pillars,scores,counts,mainPattern);
     var basis=patternBasis(dayStem,monthBranch,monthGod);
     var state=patternState(primary,monthGod,counts,strength,mainPattern,revealed);
     var verdict=patternVerdict(mainPattern,strength,specials);
-    return {primary:primary,pattern:primary,patternBasis:basis,patternState:state,patternVerdict:verdict,candidates:candidates,comboPatterns:combos,mainPattern:mainPattern,patternLevel:level,specialPatterns:specials,classifiedClues:clues,strength:strength,strengthScore:weightedStrength,useful:useful,evidence:evidence};
+    var factors=patternFactors(dayStem,pillars,counts,strength,mainPattern,roots,revealed);
+    var clarity=patternClarity(mainPattern,counts,strength);
+    var comboConflicts=comboConflictAnalysis(counts,mainPattern);
+    var usePriority=usefulPriority(mainPattern,strength,monthBranch,specials);
+    return {primary:primary,pattern:primary,patternBasis:basis,patternState:state,patternVerdict:verdict,candidates:candidates,comboPatterns:combos,mainPattern:mainPattern,patternLevel:level,remedy:remedy,factors:factors,clarity:clarity,comboConflicts:comboConflicts,usePriority:usePriority,specialPatterns:specials,classifiedClues:clues,strength:strength,strengthScore:weightedStrength,useful:useful,evidence:evidence};
   }
 
   var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern};
