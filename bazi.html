@@ -851,10 +851,53 @@ function scoreWuxing(pillars){
   });
   return scores;
 }
-function assessStrength(dayStem,monthBranch,scores){
+var STRENGTH_WEIGHTS={yearStem:6,monthStem:10,hourStem:9,yearBranch:8,monthBranch:40,dayBranch:15,hourBranch:12};
+function hiddenRatios(count){
+  if(count<=1)return [1];
+  if(count===2)return [0.7,0.3];
+  return [0.7,0.2,0.1];
+}
+function supportRatio(dayStem,stem){
+  var gen={木:'火',火:'土',土:'金',金:'水',水:'木'};
+  var dayWx=STEM_WX[dayStem],wx=STEM_WX[stem],resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
+  if(wx===dayWx)return 1;
+  if(wx===resource)return 0.85;
+  return 0;
+}
+function branchSupportRatio(dayStem,branch){
+  var hidden=HIDDEN[branch]||[],ratios=hiddenRatios(hidden.length);
+  return hidden.reduce(function(sum,s,i){return sum+supportRatio(dayStem,s)*(ratios[i]||0)},0);
+}
+function strengthScore(dayStem,pillars){
+  var parts=[],support=0;
+  function add(label,weight,ratio){
+    var score=weight*ratio;
+    support+=score;
+    parts.push({label:label,weight:weight,score:Math.round(score*10)/10});
+  }
+  add('年干',STRENGTH_WEIGHTS.yearStem,supportRatio(dayStem,pillars.year[0]));
+  add('月干',STRENGTH_WEIGHTS.monthStem,supportRatio(dayStem,pillars.month[0]));
+  add('时干',STRENGTH_WEIGHTS.hourStem,supportRatio(dayStem,pillars.hour[0]));
+  add('年支',STRENGTH_WEIGHTS.yearBranch,branchSupportRatio(dayStem,pillars.year[1]));
+  add('月令',STRENGTH_WEIGHTS.monthBranch,branchSupportRatio(dayStem,pillars.month[1]));
+  add('日支',STRENGTH_WEIGHTS.dayBranch,branchSupportRatio(dayStem,pillars.day[1]));
+  add('时支',STRENGTH_WEIGHTS.hourBranch,branchSupportRatio(dayStem,pillars.hour[1]));
+  return {support:Math.round(support*10)/10,total:100,parts:parts};
+}
+function assessStrength(dayStem,pillarsOrMonthBranch,scores){
+  if(pillarsOrMonthBranch&&typeof pillarsOrMonthBranch==='object'&&pillarsOrMonthBranch.month){
+    var weighted=strengthScore(dayStem,pillarsOrMonthBranch),value=weighted.support;
+    if(value>=65)return '强';
+    if(value>=55)return '偏强';
+    if(value>=42)return '中和';
+    if(value>=30)return '偏弱';
+    return '弱';
+  }
+  var monthBranch=pillarsOrMonthBranch;
   var dayWx=STEM_WX[dayStem],gen={木:'火',火:'土',土:'金',金:'水',水:'木'};
   var resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
   var total=0;WUXING.forEach(function(w){total+=scores[w]});
+  total=total||1;
   var value=(scores[dayWx]+(scores[resource]||0)*0.75)/total;
   if(BRANCH_WX[monthBranch]===dayWx)value+=0.12;
   if(BRANCH_WX[monthBranch]===resource)value+=0.08;
@@ -948,7 +991,7 @@ function shenShaForPillar(data,gz){
   return out.length?out.join('<br>'):'';
 }
 function calculateBazi(){
-  var time=getUsedTime(),pillars=buildPillars(time.used),dayStem=pillars.day[0],scores=scoreWuxing(pillars),strength=assessStrength(dayStem,pillars.month[1],scores);
+  var time=getUsedTime(),pillars=buildPillars(time.used),dayStem=pillars.day[0],scores=scoreWuxing(pillars),strength=assessStrength(dayStem,pillars,scores);
   var data={
     person:document.getElementById('personName').value.trim(),
     gender:document.querySelector('input[name="gender"]:checked').value,
@@ -1097,8 +1140,12 @@ function renderStructure(data){
     '</div></div><div class="detail-grid">'+
     detailBox('通根',rootInfo(data))+
     detailBox('透干',stemRevealInfo(data))+
+    detailBox('扶抑用神',usefulLayerText(data,'fuyi'))+
+    detailBox('调候用神',usefulLayerText(data,'tiaohou'))+
+    detailBox('格局用神',usefulLayerText(data,'pattern'))+
     detailBox('主要格局',patternCandidates(data))+
     detailBox('格局状态',patternStatusText(data))+
+    detailBox('格局成败',patternVerdictText(data))+
     detailBox('特殊格局',specialPatternText(data.patternAnalysis))+
     detailBox('格局层次',patternLevelText(data))+
     detailBox('干支提示','<div class="relation-list">'+data.relations.map(function(x){return '<span class="tag">'+x+'</span>'}).join('')+'</div>')+
@@ -1166,6 +1213,12 @@ function patternCandidates(data){
   data=refreshPatternAnalysis(data);
   return (data.patternAnalysis&&data.patternAnalysis.mainPattern)||'未见明确成格';
 }
+function usefulLayerText(data,key){
+  data=refreshPatternAnalysis(data);
+  var layer=data.useful&&data.useful.layers&&data.useful.layers[key];
+  if(!layer)return '未细分';
+  return (layer.use&&layer.use.length?'取 '+layer.use.join('、'):'不单独取用')+'；'+layer.why;
+}
 function patternBasisText(data){
   data=refreshPatternAnalysis(data);
   return (data.patternAnalysis&&data.patternAnalysis.patternBasis)||'以月令定命格。';
@@ -1182,6 +1235,10 @@ function patternLevelText(data){
   data=refreshPatternAnalysis(data);
   return (data.patternAnalysis&&data.patternAnalysis.patternLevel)||'普通格局，需结合大运成败细断';
 }
+function patternVerdictText(data){
+  data=refreshPatternAnalysis(data);
+  return (data.patternAnalysis&&data.patternAnalysis.patternVerdict)||'格局成败需结合全盘细断';
+}
 function buildPatternContextText(data){
   data=refreshPatternAnalysis(data);
   return [
@@ -1189,7 +1246,11 @@ function buildPatternContextText(data){
     '命格：'+data.pattern,
     '定格依据：'+patternBasisText(data),
     '主要格局：'+patternCandidates(data),
+    '扶抑用神：'+usefulLayerText(data,'fuyi'),
+    '调候用神：'+usefulLayerText(data,'tiaohou'),
+    '格局用神：'+usefulLayerText(data,'pattern'),
     '格局状态：'+patternStatusText(data),
+    '格局成败：'+patternVerdictText(data),
     '特殊格局：'+specialPatternText(data.patternAnalysis),
     '格局层次：'+patternLevelText(data)
   ].join('\n');

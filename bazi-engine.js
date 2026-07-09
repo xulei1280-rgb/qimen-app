@@ -92,7 +92,48 @@
     });
     return scores;
   }
-  function assessStrength(dayStem,monthBranch,scores){
+  var STRENGTH_WEIGHTS={yearStem:6,monthStem:10,hourStem:9,yearBranch:8,monthBranch:40,dayBranch:15,hourBranch:12};
+  function hiddenRatios(count){
+    if(count<=1)return [1];
+    if(count===2)return [0.7,0.3];
+    return [0.7,0.2,0.1];
+  }
+  function supportRatio(dayStem,stem){
+    var dayWx=STEM_WX[dayStem],wx=STEM_WX[stem],resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
+    if(wx===dayWx)return 1;
+    if(wx===resource)return 0.85;
+    return 0;
+  }
+  function branchSupportRatio(dayStem,branch){
+    var hidden=HIDDEN[branch]||[],ratios=hiddenRatios(hidden.length);
+    return hidden.reduce(function(sum,s,i){return sum+supportRatio(dayStem,s)*(ratios[i]||0)},0);
+  }
+  function strengthScore(dayStem,pillars){
+    var parts=[],support=0;
+    function add(label,weight,ratio){
+      var score=weight*ratio;
+      support+=score;
+      parts.push({label:label,weight:weight,score:Math.round(score*10)/10});
+    }
+    add('年干',STRENGTH_WEIGHTS.yearStem,supportRatio(dayStem,pillars.year[0]));
+    add('月干',STRENGTH_WEIGHTS.monthStem,supportRatio(dayStem,pillars.month[0]));
+    add('时干',STRENGTH_WEIGHTS.hourStem,supportRatio(dayStem,pillars.hour[0]));
+    add('年支',STRENGTH_WEIGHTS.yearBranch,branchSupportRatio(dayStem,pillars.year[1]));
+    add('月令',STRENGTH_WEIGHTS.monthBranch,branchSupportRatio(dayStem,pillars.month[1]));
+    add('日支',STRENGTH_WEIGHTS.dayBranch,branchSupportRatio(dayStem,pillars.day[1]));
+    add('时支',STRENGTH_WEIGHTS.hourBranch,branchSupportRatio(dayStem,pillars.hour[1]));
+    return {support:Math.round(support*10)/10,total:100,parts:parts};
+  }
+  function assessStrength(dayStem,pillarsOrMonthBranch,scores){
+    if(pillarsOrMonthBranch&&typeof pillarsOrMonthBranch==='object'&&pillarsOrMonthBranch.month){
+      var weighted=strengthScore(dayStem,pillarsOrMonthBranch),value=weighted.support;
+      if(value>=65)return '强';
+      if(value>=55)return '偏强';
+      if(value>=42)return '中和';
+      if(value>=30)return '偏弱';
+      return '弱';
+    }
+    var monthBranch=pillarsOrMonthBranch;
     var dayWx=STEM_WX[dayStem],resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
     var total=WUXING.reduce(function(sum,w){return sum+(scores[w]||0)},0)||1;
     var value=((scores[dayWx]||0)+(scores[resource]||0)*0.75)/total;
@@ -104,11 +145,56 @@
     if(value>=0.26)return '偏弱';
     return '弱';
   }
-  function usefulElements(dayStem,strength){
-    var dayWx=STEM_WX[dayStem],resource=Object.keys(gen).find(function(k){return gen[k]===dayWx}),officer=Object.keys(ctrl).find(function(k){return ctrl[k]===dayWx});
-    if(strength.indexOf('弱')>=0)return {use:[resource,dayWx],avoid:[gen[dayWx],ctrl[dayWx]],why:'日主偏弱，先看印比扶身。'};
-    if(strength.indexOf('强')>=0)return {use:[gen[dayWx],ctrl[dayWx],officer],avoid:[resource,dayWx],why:'日主偏强，先看泄耗制化。'};
-    return {use:[gen[dayWx],ctrl[dayWx]],avoid:[resource],why:'日主接近中和，取流通与成事之气。'};
+  function unique(arr){
+    return (arr||[]).filter(function(x,i,a){return x&&a.indexOf(x)===i});
+  }
+  function resourceElement(dayWx){return Object.keys(gen).find(function(k){return gen[k]===dayWx})}
+  function officerElement(dayWx){return Object.keys(ctrl).find(function(k){return ctrl[k]===dayWx})}
+  function seasonTune(monthBranch){
+    if('亥子丑'.indexOf(monthBranch)>=0)return {use:['火','木'],avoid:['水'],why:'冬令寒湿，先取火暖局，木助火源。'};
+    if('巳午未'.indexOf(monthBranch)>=0)return {use:['水','金'],avoid:['火'],why:'夏令火燥，先取水润燥，金生水为源。'};
+    if('申酉戌'.indexOf(monthBranch)>=0)return {use:['火','木'],avoid:['金'],why:'秋令金肃偏燥，取火炼金暖局，木引生机。'};
+    if('寅卯辰'.indexOf(monthBranch)>=0)return {use:['火','土'],avoid:['木'],why:'春令木旺，取火泄秀，土承载成事。'};
+    return {use:[],avoid:[],why:'调候不作首要。'};
+  }
+  function patternUseElements(dayWx,mainPattern){
+    var resource=resourceElement(dayWx),output=gen[dayWx],wealth=ctrl[dayWx],officer=officerElement(dayWx);
+    if(/从格：从杀格/.test(mainPattern))return {use:[officer,wealth],avoid:[resource,dayWx],why:'从杀成格，顺从官杀旺势，取财生杀，忌印比扶身破从。'};
+    if(/从格：从财格/.test(mainPattern))return {use:[wealth,output],avoid:[resource,dayWx],why:'从财成格，顺从财势，取食伤生财，忌印比扶身破从。'};
+    if(/从格：从儿格/.test(mainPattern))return {use:[output,wealth],avoid:[resource,dayWx],why:'从儿成格，顺从食伤泄秀，喜财星承接，忌印星回克食伤。'};
+    if(/化气格/.test(mainPattern)){
+      var transformed=(mainPattern.match(/化气格：..化([木火土金水])/)||[])[1];
+      return {use:[transformed,resourceElement(transformed)],avoid:[officerElement(transformed)],why:'化气成格，顺化神旺势，忌克化神之气破化。'};
+    }
+    if(/专旺格/.test(mainPattern))return {use:[dayWx,resource],avoid:[officer,wealth],why:'专旺成格，顺日主一方旺势，忌官杀财星逆势破格。'};
+    if(/伤官见官/.test(mainPattern))return {use:[resource,wealth],avoid:[output],why:'先看印星制伤、财星通关，避免伤官与官星直接相战。'};
+    if(/财多身弱/.test(mainPattern))return {use:[resource,dayWx],avoid:[wealth,output],why:'财星太重而身弱，先取印比扶身承财。'};
+    if(/食伤混杂/.test(mainPattern))return {use:[wealth,resource],avoid:[output],why:'食神伤官混杂，先看财星流通或印星制化，忌再增食伤。'};
+    if(/杀印相生|官印相生/.test(mainPattern))return {use:[resource,dayWx],avoid:[wealth,output],why:'格局以印化官杀、生扶日主为核心。'};
+    if(/食神制杀/.test(mainPattern))return {use:[output,resource],avoid:[wealth],why:'格局以食神制杀为主，兼看印星护身。'};
+    if(/伤官配印/.test(mainPattern))return {use:[resource],avoid:[wealth],why:'格局以印制伤、护身清局为核心。'};
+    if(/伤官生财/.test(mainPattern))return {use:[output,wealth],avoid:[resource],why:'格局以食伤生财、流通成事为核心。'};
+    if(/财官印相生/.test(mainPattern))return {use:[wealth,officer,resource],avoid:[output],why:'格局重财官印顺生，忌食伤破官过重。'};
+    if(/官杀混杂|杀重混官/.test(mainPattern))return {use:[resource,dayWx],avoid:[wealth,output],why:'先清官杀混杂，再取印比化杀扶身。'};
+    return {use:[],avoid:[],why:'未见可单独定用的成格组合，先按扶抑与调候。'};
+  }
+  function usefulElements(dayStem,strength,context){
+    context=context||{};
+    var dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),output=gen[dayWx],wealth=ctrl[dayWx],officer=officerElement(dayWx);
+    var fuyi;
+    if(strength.indexOf('弱')>=0)fuyi={use:[resource,dayWx],avoid:[output,wealth],why:'日主偏弱，先看印比扶身。'};
+    else if(strength.indexOf('强')>=0)fuyi={use:[output,wealth,officer],avoid:[resource,dayWx],why:'日主偏强，先看泄耗制化。'};
+    else fuyi={use:[output,wealth],avoid:[resource],why:'日主接近中和，取流通与成事之气。'};
+    var tiaohou=seasonTune(context.monthBranch||'');
+    var pattern=patternUseElements(dayWx,context.mainPattern||'');
+    var use=unique(pattern.use.concat(fuyi.use));
+    if(strength.indexOf('弱')>=0){
+      use=unique(use.concat(tiaohou.use.filter(function(w){return w===resource||w===dayWx})));
+    }else{
+      use=unique(use.concat(tiaohou.use));
+    }
+    var avoid=unique(pattern.avoid.concat(fuyi.avoid,tiaohou.avoid)).filter(function(w){return use.indexOf(w)<0});
+    return {use:use,avoid:avoid,why:'扶抑：'+fuyi.why+' 调候：'+tiaohou.why+' 格局：'+pattern.why,layers:{fuyi:fuyi,tiaohou:tiaohou,pattern:pattern}};
   }
   function patternName(dayStem,monthBranch){
     var main=(HIDDEN[monthBranch]||[])[0],god=main?tenGod(dayStem,main):'';
@@ -124,40 +210,49 @@
     Object.keys(pillars).forEach(function(k){(HIDDEN[pillars[k][1]]||[]).forEach(function(s){addGod(tenGod(dayStem,s))})});
     return counts;
   }
-  function comboPatterns(monthGod,counts){
+  function comboPatterns(monthGod,counts,context){
     var out=[];
     function has(name){return (counts[name]||0)>0}
     function add(name,score){if(!out.some(function(x){return x.name===name}))out.push({name:name,score:score})}
+    var mixed=context&&context.mixed;
+    var weak=context&&/弱/.test(context.strength||'');
+    var wealth=(counts['正财']||0)+(counts['偏财']||0);
+    var output=(counts['食神']||0)+(counts['伤官']||0);
+    if(mixed&&monthGod==='正官')add('官杀混杂待清',96);
+    if(monthGod==='伤官'&&has('正官'))add('伤官见官待制',94);
+    if(weak&&wealth>=4)add('财多身弱待扶',92);
     if(monthGod==='七杀'&&(has('正印')||has('偏印')))add('杀印相生格',95);
     if((has('七杀')||monthGod==='七杀')&&has('食神'))add('食神制杀格',90);
-    if((has('伤官')||monthGod==='伤官')&&(has('正印')||has('偏印')))add('伤官配印格',88);
-    if((has('正官')||monthGod==='正官')&&(has('正印')||has('偏印')))add('官印相生格',86);
-    if((has('正财')||has('偏财'))&&(has('正官')||has('七杀'))&&(has('正印')||has('偏印')))add('财官印相生格',84);
-    if((has('伤官')||monthGod==='伤官')&&(has('正财')||has('偏财')))add('伤官生财格',78);
+    if(monthGod==='伤官'&&(has('正印')||has('偏印')))add('伤官配印格',88);
+    if(monthGod==='正官'&&(has('正印')||has('偏印'))&&!mixed)add('官印相生格',86);
+    if((has('正财')||has('偏财'))&&(has('正官')||has('七杀'))&&(has('正印')||has('偏印'))&&!mixed)add('财官印相生格',84);
+    if((monthGod==='食神'||monthGod==='伤官')&&has('食神')&&has('伤官')&&output>=3)add('食伤混杂待清',89);
+    if(monthGod==='伤官'&&(has('正财')||has('偏财')))add('伤官生财格',78);
     if((has('正财')||has('偏财'))&&(has('七杀')||monthGod==='七杀'))add('财滋弱杀格',72);
     return out.sort(function(a,b){return b.score-a.score}).map(function(x){return x.name});
   }
   function specialPatterns(dayStem,pillars,scores,counts,strength,roots){
     var out=[],dayWx=STEM_WX[dayStem],total=WUXING.reduce(function(sum,w){return sum+(scores[w]||0)},0)||1;
-    var resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
+    var resource=resourceElement(dayWx),weighted=strengthScore(dayStem,pillars).support;
     var selfPower=((scores[dayWx]||0)+(scores[resource]||0)*0.65)/total;
     var killing=(counts['正官']||0)+(counts['七杀']||0),wealth=(counts['正财']||0)+(counts['偏财']||0),output=(counts['食神']||0)+(counts['伤官']||0);
-    if(roots.length===0&&selfPower<0.18){
+    var supportGods=(counts['比肩']||0)+(counts['劫财']||0)+(counts['正印']||0)+(counts['偏印']||0);
+    if(roots.length===0&&weighted<18&&supportGods===0){
       if(killing>=4)out.push('从格：从杀格');
       else if(wealth>=4)out.push('从格：从财格');
       else if(output>=4)out.push('从格：从儿格');
-    }else if(roots.length===0&&selfPower<0.28){
+    }else if(roots.length===0&&weighted<30&&supportGods<=1){
       if(killing>=3)out.push('特殊线索参考：假从杀倾向');
       else if(wealth>=3)out.push('特殊线索参考：假从财倾向');
       else if(output>=3)out.push('特殊线索参考：假从儿倾向');
     }
-    var power=(scores[dayWx]||0)+(scores[resource]||0);
-    if(selfPower>0.82&&power>total*0.86)out.push('专旺格：'+({木:'曲直格',火:'炎上格',土:'稼穑格',金:'从革格',水:'润下格'}[dayWx]||'专旺格'));
-    else if(selfPower>0.68&&power>total*0.72)out.push('特殊线索参考：假'+({木:'曲直',火:'炎上',土:'稼穑',金:'从革',水:'润下'}[dayWx]||'专旺')+'格倾向');
+    var selfElementPower=(scores[dayWx]||0)/total;
+    if(weighted>=80&&selfElementPower>0.62&&BRANCH_WX[pillars.month[1]]===dayWx)out.push('专旺格：'+({木:'曲直格',火:'炎上格',土:'稼穑格',金:'从革格',水:'润下格'}[dayWx]||'专旺格'));
+    else if(weighted>=68&&selfElementPower>0.5)out.push('特殊线索参考：假'+({木:'曲直',火:'炎上',土:'稼穑',金:'从革',水:'润下'}[dayWx]||'专旺')+'格倾向');
     var transform={甲己:'土',乙庚:'金',丙辛:'水',丁壬:'木',戊癸:'火'};
-    var stems=[pillars.year[0],pillars.month[0],pillars.day[0],pillars.hour[0]];
     Object.keys(transform).forEach(function(pair){
-      if(stems.indexOf(pair[0])>=0&&stems.indexOf(pair[1])>=0){
+      var other=pair[0]===dayStem?pair[1]:(pair[1]===dayStem?pair[0]:'');
+      if(other&&(pillars.month[0]===other||pillars.hour[0]===other)){
         if(BRANCH_WX[pillars.month[1]]===transform[pair])out.push('化气格：'+pair+'化'+transform[pair]);
         else out.push('特殊线索参考：'+pair+'化'+transform[pair]+'未成倾向');
       }
@@ -166,11 +261,28 @@
   }
   function patternLevel(mainPattern,monthGod,counts,strength,specials){
     if(mainPattern==='未见明确成格')return '普通格局，需结合大运成败细断';
-    if(mainPattern==='官印相生格'&&monthGod==='正官'&&(counts['七杀']||0)>0)return '官印相生但官杀混杂，日主'+strength+'，层次需看印比扶身与大运承接';
+    if(/官杀混杂|杀重混官/.test(mainPattern))return mainPattern+'，官杀未清，日主'+strength+'，层次需看印比扶身、去留清浊与大运承接';
+    if(/伤官见官/.test(mainPattern))return mainPattern+'，伤官与官星相战，层次先看印制、财通与行运解法';
+    if(/财多身弱/.test(mainPattern))return mainPattern+'，财旺身弱，层次先看印比扶身与能否承财';
+    if(/食伤混杂/.test(mainPattern))return mainPattern+'，食伤不清，层次先看去留、流通和制化';
     if(/杀印相生|食神制杀|伤官配印|官印相生|财官印相生/.test(mainPattern))return mainPattern.replace('格','')+'，结构闭环，层次偏高';
     if(/伤官生财|财滋弱杀/.test(mainPattern))return mainPattern.replace('格','')+'，有成事结构，层次中上';
     if((specials||[]).some(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)}))return '特殊格局成立，层次需看真假与大运承接';
     return '格局未纯，层次需结合大运细断';
+  }
+  function patternVerdict(mainPattern,strength,specials){
+    if((specials||[]).some(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)}))return '特殊格局成格，需重点校验真假与行运承接。';
+    if(/官杀混杂|杀重混官/.test(mainPattern))return '待清：官杀混杂，先看印化、去杀留官或去官留杀，未清前不按高格直断。';
+    if(/伤官见官/.test(mainPattern))return '待制：伤官见官，先看印星制伤、财星通关或大运化解。';
+    if(/财多身弱/.test(mainPattern))return '待扶：财多身弱，先看印比扶身，身能任财后再论财格成败。';
+    if(/食伤混杂/.test(mainPattern))return '待清：食伤混杂，先看去留、流通和制化，未清前不按食伤成格直断。';
+    if(/杀印相生|食神制杀|伤官配印|官印相生|财官印相生/.test(mainPattern))return '成格有力：结构闭环，但仍需看破格、清浊和大运是否承接。';
+    if(/伤官生财|财滋弱杀/.test(mainPattern))return '有成格线索：可成事，但层次取决于流通、根气与忌神是否被制化。';
+    if(mainPattern==='未见明确成格')return '未见明确成格：先按命格、扶抑、调候和大运细断。';
+    return '格局状态需结合全盘细断。';
+  }
+  function trueSpecialPattern(specials){
+    return ((specials||[]).find(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)})||'');
   }
   function patternBasis(dayStem,monthBranch,monthGod){
     var main=(HIDDEN[monthBranch]||[])[0];
@@ -245,8 +357,8 @@
   function analyzePattern(data){
     var pillars=data.pillars,dayStem=data.dayStem||pillars.day[0],monthBranch=pillars.month[1];
     var scores=data.scores||scoreWuxing(pillars);
-    var strength=assessStrength(dayStem,monthBranch,scores);
-    var useful=usefulElements(dayStem,strength);
+    var weightedStrength=strengthScore(dayStem,pillars);
+    var strength=assessStrength(dayStem,pillars,scores);
     var main=(HIDDEN[monthBranch]||[])[0],primary=patternName(dayStem,monthBranch),evidence=[];
     var stems=[pillars.year[0],pillars.month[0],pillars.day[0],pillars.hour[0]];
     var monthGod=main?tenGod(dayStem,main):'';
@@ -256,20 +368,25 @@
     evidence.push('月令'+monthBranch+'本气'+(main||'无')+(monthGod?'为'+monthGod:'')+'，以月令定主格。');
     evidence.push('透干：'+(revealed.length?revealed.map(function(s){return s+tenGod(dayStem,s)}).join('、'):'月令藏干未明显透出')+'。');
     evidence.push('通根：'+(roots.length?dayStem+'见于'+roots.join('、'):'日主未见直接通根')+'。');
-    evidence.push('旺衰：'+strength+'；五行计分 '+WUXING.map(function(w){return w+(scores[w]||0).toFixed(1)}).join('、')+'。');
-    evidence.push('喜用：'+useful.use.join('、')+'；慎用：'+useful.avoid.join('、')+'；'+useful.why);
+    evidence.push('旺衰：'+strength+'；扶身权重 '+weightedStrength.support+'/100；五行计分 '+WUXING.map(function(w){return w+(scores[w]||0).toFixed(1)}).join('、')+'。');
     var candidates=(HIDDEN[monthBranch]||[]).map(function(s){return tenGod(dayStem,s)+'格'}).filter(Boolean);
-    var combos=comboPatterns(monthGod,counts);
+    var mixed=(counts['正官']||0)>0&&(counts['七杀']||0)>0;
+    var combos=comboPatterns(monthGod,counts,{mixed:mixed,strength:strength});
     var specials=specialPatterns(dayStem,pillars,scores,counts,strength,roots);
     var clues=classifiedClues({pillars:pillars,dayStem:dayStem});
-    var mainPattern=combos[0]||'未见明确成格';
+    var trueSpecial=trueSpecialPattern(specials);
+    var priorityCombo=(combos[0]&&/官杀混杂|伤官见官|财多身弱|食伤混杂/.test(combos[0]))?combos[0]:'';
+    var mainPattern=(/^从格：|^专旺格：/.test(trueSpecial)?trueSpecial:'')||priorityCombo||trueSpecial||combos[0]||'未见明确成格';
+    var useful=usefulElements(dayStem,strength,{pillars:pillars,monthBranch:monthBranch,monthGod:monthGod,mainPattern:mainPattern,counts:counts,scores:scores});
+    evidence.push('喜用：'+useful.use.join('、')+'；慎用：'+useful.avoid.join('、')+'；'+useful.why);
     var level=patternLevel(mainPattern,monthGod,counts,strength,specials);
     var basis=patternBasis(dayStem,monthBranch,monthGod);
     var state=patternState(primary,monthGod,counts,strength,mainPattern,revealed);
-    return {primary:primary,pattern:primary,patternBasis:basis,patternState:state,candidates:candidates,comboPatterns:combos,mainPattern:mainPattern,patternLevel:level,specialPatterns:specials,classifiedClues:clues,strength:strength,useful:useful,evidence:evidence};
+    var verdict=patternVerdict(mainPattern,strength,specials);
+    return {primary:primary,pattern:primary,patternBasis:basis,patternState:state,patternVerdict:verdict,candidates:candidates,comboPatterns:combos,mainPattern:mainPattern,patternLevel:level,specialPatterns:specials,classifiedClues:clues,strength:strength,strengthScore:weightedStrength,useful:useful,evidence:evidence};
   }
 
-  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern};
+  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern};
   root.BaziEngine=api;
   if(root.window)root.window.BaziEngine=api; // window.BaziEngine
 })(typeof globalThis!=='undefined'?globalThis:this);

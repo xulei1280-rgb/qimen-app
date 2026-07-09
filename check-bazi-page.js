@@ -265,6 +265,34 @@ const referenceBazi = {
 };
 const referenceLuck = scriptContext.getLuckData(referenceBazi);
 const referencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
+assert(typeof scriptContext.BaziEngine.strengthScore === 'function', 'BaziEngine should expose weighted strengthScore');
+const referenceStrength = scriptContext.BaziEngine.assessStrength(referenceBazi.dayStem, referenceBazi.pillars, scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars));
+assert(referenceStrength === '\u5f31' || referenceStrength === '\u504f\u5f31', `reference chart should be weak or slightly weak by weighted support model, got ${referenceStrength}`);
+const strongSeasonBazi = {
+  person: 'strong sample',
+  gender: '\u7537',
+  pillars: { year: '\u7678\u536f', month: '\u7532\u5bc5', day: '\u7532\u5bc5', hour: '\u4e59\u4ea5' },
+  dayStem: '\u7532',
+  dayElement: '\u6728',
+  time: { used: { year: 1993, month: 3, day: 1, hour: 22, minute: 0 }, input: { year: 1993, month: 3, day: 1, hour: 22, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const strongScore = scriptContext.BaziEngine.strengthScore(strongSeasonBazi.dayStem, strongSeasonBazi.pillars);
+assert(strongScore.support >= 65, `strong rooted chart should receive high support score, got ${strongScore.support}`);
+assert(scriptContext.BaziEngine.assessStrength(strongSeasonBazi.dayStem, strongSeasonBazi.pillars, scriptContext.BaziEngine.scoreWuxing(strongSeasonBazi.pillars)) === '\u5f3a', 'strong rooted chart should be classified as strong');
+const weakSeasonBazi = {
+  person: 'weak sample',
+  gender: '\u7537',
+  pillars: { year: '\u5e9a\u7533', month: '\u58ec\u5b50', day: '\u4e19\u7533', hour: '\u58ec\u5b50' },
+  dayStem: '\u4e19',
+  dayElement: '\u706b',
+  time: { used: { year: 1993, month: 12, day: 1, hour: 0, minute: 0 }, input: { year: 1993, month: 12, day: 1, hour: 0, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const weakScore = scriptContext.BaziEngine.strengthScore(weakSeasonBazi.dayStem, weakSeasonBazi.pillars);
+assert(weakScore.support < 30, `unsupported winter fire chart should receive low support score, got ${weakScore.support}`);
+assert(scriptContext.BaziEngine.assessStrength(weakSeasonBazi.dayStem, weakSeasonBazi.pillars, scriptContext.BaziEngine.scoreWuxing(weakSeasonBazi.pillars)) === '\u5f31', 'unsupported winter fire chart should be classified as weak');
+const weakWinterPattern = scriptContext.BaziEngine.analyzePattern(weakSeasonBazi);
+assert(weakWinterPattern.useful.layers && weakWinterPattern.useful.layers.fuyi && weakWinterPattern.useful.layers.tiaohou && weakWinterPattern.useful.layers.pattern, 'useful elements should expose fuyi/tiaohou/pattern layers');
+assert(weakWinterPattern.useful.layers.tiaohou.use.includes('\u706b') && weakWinterPattern.useful.layers.tiaohou.use.includes('\u6728'), 'winter chart should carry cold-season tiaohou reference of fire and wood');
 assert(referencePattern.primary.includes('伤官'), `reference pattern should use month command, got ${referencePattern.primary}`);
 assert(referencePattern.evidence.some((x) => x.includes('月令')), 'pattern evidence should include month command');
 assert(referencePattern.evidence.some((x) => x.includes('透干')), 'pattern evidence should include revealed stems');
@@ -281,6 +309,8 @@ const killSealBazi = {
 const killSealPattern = scriptContext.BaziEngine.analyzePattern(killSealBazi);
 assert(killSealPattern.primary.includes('七杀'), `month-command line should still be 七杀, got ${killSealPattern.primary}`);
 assert(killSealPattern.comboPatterns.some((x) => x.includes('杀印相生')), `combo pattern should include 杀印相生, got ${killSealPattern.comboPatterns.join(',')}`);
+assert(killSealPattern.useful.layers.pattern.use.includes('土'), 'kill-seal pattern should use resource/印 as pattern-use anchor');
+assert(killSealPattern.patternLevel.includes('成格条件') || killSealPattern.patternLevel.includes('结构闭环'), 'pattern level should explain why the combo is formed');
 const killSealCandidates = scriptContext.patternCandidates(killSealBazi);
 assert(killSealCandidates.includes('杀印相生'), `pattern candidate UI should show combo pattern, got ${killSealCandidates}`);
 assert(!killSealCandidates.includes('、'), `pattern candidate UI should show only the main pattern, got ${killSealCandidates}`);
@@ -302,7 +332,78 @@ assert(officerMixedPattern.primary === '正官格', `month-command pattern shoul
 assert(officerMixedPattern.patternBasis.includes('月令亥') && officerMixedPattern.patternBasis.includes('正官'), `pattern basis should explain month command, got ${officerMixedPattern.patternBasis}`);
 assert(officerMixedPattern.patternState.includes('官杀混杂') && officerMixedPattern.patternState.includes('正官格不纯'), `pattern state should explain mixed official/killing, got ${officerMixedPattern.patternState}`);
 assert(officerMixedPattern.patternLevel.includes('官杀混杂') && !officerMixedPattern.patternLevel.includes('层次偏高'), `mixed official pattern should not be simplified as high level, got ${officerMixedPattern.patternLevel}`);
+assert(officerMixedPattern.mainPattern.includes('官杀混杂') && !officerMixedPattern.mainPattern.includes('官印相生'), `mixed official/killing should be the main pattern warning, got ${officerMixedPattern.mainPattern}`);
+assert(!officerMixedPattern.specialPatterns.some((x) => x.startsWith('从格：')), `mixed official chart with hidden resource should not be judged as a true follow pattern, got ${officerMixedPattern.specialPatterns.join(',')}`);
 assert(scriptContext.patternStatusText(officerMixedBazi).includes('官杀混杂'), 'structure UI should expose pattern state');
+assert(officerMixedPattern.patternVerdict && officerMixedPattern.patternVerdict.includes('待清'), `mixed official chart should expose a pattern verdict, got ${officerMixedPattern.patternVerdict}`);
+assert(officerMixedPattern.useful.layers.pattern.why.includes('先清'), `mixed official chart pattern-use layer should explain clearing mixed officer/killing, got ${officerMixedPattern.useful.layers.pattern.why}`);
+const hurtOfficerBazi = {
+  person: '伤官见官样本',
+  gender: '男',
+  pillars: { year: '辛酉', month: '丙午', day: '甲辰', hour: '戊辰' },
+  dayStem: '甲',
+  dayElement: '木',
+  time: { used: { year: 1993, month: 6, day: 1, hour: 8, minute: 0 }, input: { year: 1993, month: 6, day: 1, hour: 8, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const hurtOfficerPattern = scriptContext.BaziEngine.analyzePattern(hurtOfficerBazi);
+assert(hurtOfficerPattern.primary.includes('伤官'), `month-command line should be 伤官, got ${hurtOfficerPattern.primary}`);
+assert(hurtOfficerPattern.mainPattern.includes('伤官见官'), `hurt-officer chart should flag 伤官见官, got ${hurtOfficerPattern.mainPattern}`);
+assert(hurtOfficerPattern.patternVerdict.includes('待制'), `hurt-officer verdict should require 制化, got ${hurtOfficerPattern.patternVerdict}`);
+const wealthWeakBazi = {
+  person: '财多身弱样本',
+  gender: '男',
+  pillars: { year: '戊辰', month: '戊辰', day: '甲申', hour: '己巳' },
+  dayStem: '甲',
+  dayElement: '木',
+  time: { used: { year: 1993, month: 4, day: 1, hour: 10, minute: 0 }, input: { year: 1993, month: 4, day: 1, hour: 10, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const wealthWeakPattern = scriptContext.BaziEngine.analyzePattern(wealthWeakBazi);
+assert(wealthWeakPattern.mainPattern.includes('财多身弱'), `weak wealth-heavy chart should flag 财多身弱, got ${wealthWeakPattern.mainPattern}`);
+assert(wealthWeakPattern.useful.layers.pattern.why.includes('印比'), `wealth-heavy weak chart should use 印比 as the pattern anchor, got ${wealthWeakPattern.useful.layers.pattern.why}`);
+const mixedOutputBazi = {
+  person: '食伤混杂样本',
+  gender: '男',
+  pillars: { year: '壬子', month: '癸子', day: '庚申', hour: '甲申' },
+  dayStem: '庚',
+  dayElement: '金',
+  time: { used: { year: 1993, month: 12, day: 1, hour: 12, minute: 0 }, input: { year: 1993, month: 12, day: 1, hour: 12, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const mixedOutputPattern = scriptContext.BaziEngine.analyzePattern(mixedOutputBazi);
+assert(mixedOutputPattern.mainPattern.includes('食伤混杂'), `mixed output chart should flag 食伤混杂, got ${mixedOutputPattern.mainPattern}`);
+assert(mixedOutputPattern.patternVerdict.includes('待清'), `mixed output verdict should require clearing, got ${mixedOutputPattern.patternVerdict}`);
+const followKillBazi = {
+  person: '从杀样本',
+  gender: '男',
+  pillars: { year: '辛酉', month: '庚酉', day: '甲戌', hour: '庚午' },
+  dayStem: '甲',
+  dayElement: '木',
+  time: { used: { year: 1993, month: 9, day: 1, hour: 12, minute: 0 }, input: { year: 1993, month: 9, day: 1, hour: 12, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const followKillPattern = scriptContext.BaziEngine.analyzePattern(followKillBazi);
+assert(followKillPattern.specialPatterns.some((x) => x.includes('从杀格')), `unsupported heavy killing chart should form 从杀格, got ${followKillPattern.specialPatterns.join(',')}`);
+assert(followKillPattern.mainPattern.includes('从杀格'), `true follow pattern should become main pattern, got ${followKillPattern.mainPattern}`);
+assert(followKillPattern.useful.layers.pattern.why.includes('顺从'), `follow pattern use should follow the dominant force, got ${followKillPattern.useful.layers.pattern.why}`);
+const fakeFollowBazi = {
+  person: '假从样本',
+  gender: '男',
+  pillars: { year: '辛酉', month: '庚酉', day: '甲子', hour: '庚午' },
+  dayStem: '甲',
+  dayElement: '木',
+  time: { used: { year: 1993, month: 9, day: 1, hour: 12, minute: 0 }, input: { year: 1993, month: 9, day: 1, hour: 12, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const fakeFollowPattern = scriptContext.BaziEngine.analyzePattern(fakeFollowBazi);
+assert(!fakeFollowPattern.specialPatterns.some((x) => x.startsWith('从格：')), `rooted chart should not be true follow pattern, got ${fakeFollowPattern.specialPatterns.join(',')}`);
+const transformBazi = {
+  person: '化气样本',
+  gender: '女',
+  pillars: { year: '甲寅', month: '壬寅', day: '丁卯', hour: '甲辰' },
+  dayStem: '丁',
+  dayElement: '火',
+  time: { used: { year: 1993, month: 2, day: 10, hour: 8, minute: 0 }, input: { year: 1993, month: 2, day: 10, hour: 8, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } },
+};
+const transformPattern = scriptContext.BaziEngine.analyzePattern(transformBazi);
+assert(transformPattern.specialPatterns.some((x) => x.includes('丁壬化木')), `season-supported transform should form 丁壬化木, got ${transformPattern.specialPatterns.join(',')}`);
+assert(transformPattern.mainPattern.includes('化气格'), `true transform should become main pattern, got ${transformPattern.mainPattern}`);
 const staleOfficerMixedBazi = {
   ...officerMixedBazi,
   pattern: '正官格参考',
