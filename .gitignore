@@ -12,3 +12,5 @@ Thumbs.db
 # Local backup folders should stay outside the repository.
 *_回滚备份/
 backup-*/
+
+.worktrees/
