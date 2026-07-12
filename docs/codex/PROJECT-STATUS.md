@@ -24,11 +24,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P2
 - Working branch: `main`
-- Last shared commit: `9804fad`
+- Last shared commit: `fa853d4`
 - Changed: Qimen AI answers are separated into numbered, independently
-  collapsible turns with a one-click collapse-all action.
+  collapsible turns with collapse-all and per-turn delete actions.
 - Checks: inline script syntax passed; `git diff --check` passed; browser
-  verification passed for individual folding, collapse-all, and zero console
+  verification passed for individual folding, collapse-all, delete
+  confirmation, automatic renumbering, record persistence, and zero console
   errors.
 - Next task: continue with the next requested Qimen optimization.
 - Caution: P1's existing `codex/bazi-local-work` branch remains isolated and
