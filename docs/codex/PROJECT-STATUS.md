@@ -22,12 +22,17 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
-- Owner: P1
-- Working branch: `codex/bazi-local-work`
-- State: Bazi module work is still being integrated locally. Uncommitted files
-  are not available to P2 until P1 commits and pushes the intended state.
-- Before P2 continues: P1 records the last commit, changed modules, checks, and
-  next task below, then pushes `main`.
+- Owner: P2
+- Working branch: `main`
+- Last shared commit: `9804fad`
+- Changed: Qimen AI answers are separated into numbered, independently
+  collapsible turns with a one-click collapse-all action.
+- Checks: inline script syntax passed; `git diff --check` passed; browser
+  verification passed for individual folding, collapse-all, and zero console
+  errors.
+- Next task: continue with the next requested Qimen optimization.
+- Caution: P1's existing `codex/bazi-local-work` branch remains isolated and
+  must pull or rebase the latest `main` before integration.
 
 ## Replace At Each Handoff
 
