@@ -389,6 +389,59 @@ h1{
 .mini-section strong{color:var(--cinnabar)}
 .hint-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 .hint-tag{font-size:11px;color:#70481a;background:#fffaf0;border:1px solid rgba(169,111,40,.25);border-radius:4px;padding:2px 6px}
+.ai-history-topic{margin-bottom:9px;color:#8b7355;font-size:11px;white-space:normal}
+.ai-history-tools{display:flex;justify-content:flex-end;margin-bottom:8px;white-space:normal}
+.ai-history-tools button{
+  border:1px solid rgba(169,111,40,.34);
+  background:#fffdf8;
+  color:#5c4731;
+  border-radius:5px;
+  padding:4px 9px;
+  font-size:11px;
+  cursor:pointer;
+}
+.ai-history-tools button:hover{background:#f4ead8;border-color:var(--line-strong)}
+.ai-turn{
+  margin-bottom:9px;
+  overflow:hidden;
+  border:1px solid rgba(169,111,40,.28);
+  border-radius:6px;
+  background:rgba(255,253,248,.72);
+  white-space:normal;
+}
+.ai-turn[open]{border-color:rgba(35,107,88,.38);box-shadow:0 4px 12px rgba(61,42,18,.06)}
+.ai-turn-question{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:3px 8px;
+  padding:8px 10px;
+  color:#5c4731;
+  cursor:pointer;
+  list-style:none;
+  user-select:none;
+}
+.ai-turn-question::-webkit-details-marker{display:none}
+.ai-turn-question b{color:var(--cinnabar);font-size:12px}
+.ai-turn-question .ai-turn-time{color:#9a8a76;font-size:10px}
+.ai-turn-question strong{
+  grid-column:1/-1;
+  color:var(--ink);
+  font-size:12px;
+  line-height:1.5;
+  word-break:break-word;
+}
+.ai-turn-toggle{color:var(--jade);font-size:10px;white-space:nowrap}
+.ai-turn-toggle:before{content:'展开'}
+.ai-turn[open] .ai-turn-toggle:before{content:'收起'}
+.ai-turn-answer{
+  padding:10px 11px 12px;
+  border-top:1px dashed rgba(169,111,40,.28);
+  color:#2e5c4e;
+  line-height:1.85;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
 .followups{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .followups button{border:1px solid rgba(169,111,40,.34);background:#fffdf8;color:#5c4731;border-radius:5px;padding:4px 8px;font-size:12px;cursor:pointer}
 .followups button:hover{background:#f4ead8;border-color:var(--line-strong)}
@@ -667,6 +720,7 @@ h1{
 <script>
 var currentCal='solar',selectedPalace=null,plateData=null;
 var aiHistory=[];
+var aiCollapsed=[];
 var aiTopic=null;
 var currentAutoHistoryId=null;
 var API_KEY_STORAGE='qimen_deepseek_api_key';
@@ -1042,6 +1096,7 @@ function doPaiPan(opts){
   renderPlate(plateData);
   renderSidePanel(plateData);
   aiHistory=[];
+  aiCollapsed=[];
   aiTopic=null;
   currentAutoHistoryId=null;
   document.getElementById('btnAI').disabled=false;
@@ -1309,6 +1364,7 @@ async function analyzeWithAI(){
     if(d.choices&&d.choices[0]){
       if(!aiTopic)aiTopic=pendingTopic;
       aiHistory.push({q:question,a:d.choices[0].message.content.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
+      aiCollapsed.push(false);
       updateCurrentAutoHistory();
       document.getElementById('aiResult').innerHTML=renderAIHistory();
     }else{
@@ -1322,11 +1378,12 @@ async function analyzeWithAI(){
 function renderAIHistory(){
   if(!aiHistory.length)return '💡 输入问题后点击「AI 分析」获取全盘解读…';
   var h='';
-  if(aiTopic&&aiTopic.question)h+='<div style="font-size:11px;color:#8b7355;margin-bottom:10px">本盘问事：'+esc(aiTopic.question)+'</div>';
+  if(aiTopic&&aiTopic.question)h+='<div class="ai-history-topic">本盘问事：'+esc(aiTopic.question)+'</div>';
+  h+='<div class="ai-history-tools"><button type="button" onclick="collapseAllAI()">一键收起</button></div>';
   for(var i=0;i<aiHistory.length;i++){
-    h+='<div style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed #d4c5a9">'+
-      '<div style="font-size:10px;color:#8b7355;margin-bottom:4px">❓ '+esc(aiHistory[i].q)+' ('+esc(aiHistory[i].t)+')</div>'+
-      '<div style="color:#2e5c4e">🤖 '+br(aiHistory[i].a)+'</div></div>';
+    h+='<details class="ai-turn" '+(aiCollapsed[i]?'':'open')+' ontoggle="rememberAiFold(this,'+i+')">'+
+      '<summary class="ai-turn-question"><b>第'+(i+1)+'问</b><span class="ai-turn-time">'+esc(aiHistory[i].t)+'</span><span class="ai-turn-toggle"></span><strong>'+esc(aiHistory[i].q)+'</strong></summary>'+
+      '<div class="ai-turn-answer">'+br(aiHistory[i].a)+'</div></details>';
   }
   return h+'<div class="followups">'+
     '<button type="button" onclick="setFollowupQuestion(\'继续细看用神落宫和旺衰。\')">细看用神</button>'+
@@ -1337,6 +1394,16 @@ function renderAIHistory(){
     '<input id="followupQuestion" type="text" placeholder="继续追问这个盘里的同一件事..." onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();askFollowupFromChat()}">'+
     '<button type="button" onclick="askFollowupFromChat()">发送</button>'+
   '</div>';
+}
+
+function rememberAiFold(details,index){
+  aiCollapsed[index]=!details.open;
+}
+
+function collapseAllAI(){
+  aiCollapsed=aiHistory.map(function(){return true});
+  var result=document.getElementById('aiResult');
+  if(result)result.innerHTML=renderAIHistory();
 }
 
 function setFollowupQuestion(text){
@@ -1459,6 +1526,7 @@ function loadHistory(id,kind){
   if(!item)return;
   plateData=item.data;
   aiHistory=item.aiHistory?JSON.parse(JSON.stringify(item.aiHistory)):[];
+  aiCollapsed=aiHistory.map(function(){return false});
   aiTopic=item.aiTopic?JSON.parse(JSON.stringify(item.aiTopic)):(aiHistory[0]?{question:aiHistory[0].q,type:item.questionType||'general',person:item.person||'',createdAt:item.createdAt||''}:null);
   currentAutoHistoryId=kind==='auto'?item.id:null;
   if(item.questionType&&document.getElementById('questionType'))document.getElementById('questionType').value=item.questionType;
