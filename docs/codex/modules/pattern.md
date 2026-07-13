@@ -55,16 +55,39 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   `偏低 / 中等 / 偏高 / 高 / 顶级`: theoretical percentile gives only the
   candidate grade, formation and disease-remedy gates set the floor and ceiling,
   and tied raw scores use midpoint rank without random splitting.
-- The current `PAT-208` candidate raw score is a five-dimensional weighted
-  ranking: formation 35%, action flow 20%, clarity 15%, disease-remedy 20%, and
-  elemental phenomena 10%. Pattern names do not add raw points; strict patterns
-  remain distinguished only by quality floors, top eligibility, and tie order.
+- The current `PAT-208` candidate raw score is a six-dimensional weighted
+  ranking: classical pattern potential 20%, formation 25%, action flow 20%,
+  clarity 15%, disease-remedy 15%, and elemental-balance correction 5%.
+  A displayed pattern name never earns points by itself. Only the verified main
+  pattern identified by a stable rule ID receives one classical-potential
+  component; secondary names and compatible combinations do not stack it.
+- Classical potential uses coarse, traceable tiers rather than simulated
+  precision: strict `S` structures score 100, `A` structures score 85, and a
+  formed ordinary month-command pattern scores 70 (`B`). A waiting ordinary
+  pattern receives the base 50, while a broken or unverified pattern receives
+  zero. If a named noble structure fails strict formation—for example, wealth
+  damages the seal in an injury-output-with-seal candidate—it falls back to the
+  ordinary month-command rule instead of retaining the noble-pattern potential.
 - Raw-score evidence uses pre-phenomenon structural clarity, treats a
   disease-owned negative clarity result as neutral in the clarity dimension,
   and gives no extra reward for a disease that is fully solved versus no disease.
-- A strict high-quality combination gains a `偏高` floor, not an automatic top
-  grade. `顶级` additionally requires P95 candidacy, complete and reachable
-  formation, clear purity, and no residual disease or elemental pathology.
+- Strict noble patterns no longer receive an extra `偏高` quality floor after
+  their potential has already entered the raw score. `顶级` still requires P95
+  candidacy plus the independent hard gates: verified complete formation,
+  reachable flow, clear purity, and no residual disease or elemental pathology.
+- True from, transform, and dedicated-strength patterns expose structured
+  qualification evidence (`checks`, `flowChecks`, evidence, and
+  counter-evidence) under their own context. Once a special pattern is strictly
+  verified, ordinary-pattern diseases and phenomena move to
+  `patternDisease.ignored` with numeric ownership assigned to special formation;
+  they do not remain active merely to deduct the same condition a second time.
+  A no-root check means no hidden stem of the day master's element in either
+  polarity; for example, a hidden `丙` is still a fire root that blocks a `丁`
+  day master's transform qualification. Public special-pattern fields use only
+  the verified special context: the ordinary month pattern is marked as
+  background, ordinary combinations and positive phenomena are retained only in
+  `ordinaryContext`, and balance/climate layers remain validation-only rather
+  than emitting advice that contradicts the special pattern.
 - Pattern level covers natal potential and luck activation only. Reality also
   depends on family, education, era, region, industry, and personal choices;
   level is not human value or a guaranteed outcome.
