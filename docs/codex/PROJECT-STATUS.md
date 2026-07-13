@@ -24,25 +24,25 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P2
 - Working branch: `main`
-- Last shared commit: `f2cf809`
-- Changed: implemented the `PAT-208` `v4` Bazi scoring candidate with five
-  weighted dimensions, a reproducible score ledger, independent score-model
-  versioning, friendly percentile endpoints, and a two-pass 23,916-chart
-  theoretical baseline; no Qimen files changed and the pre-optimization backup
-  remains untouched.
+- Last shared commit: `602a8b7`
+- Changed: implemented the `PAT-208` `v5` Bazi authority-scoring candidate with
+  six attributable dimensions, one verified classical-potential award, strict
+  special-pattern qualification and independent natal context, plus a frozen
+  23,916-chart theoretical baseline; no Qimen files changed and the active
+  rollback backup remains untouched.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
   (`18 baselines ok`); `$env:BAZI_FULL_PATTERN_BASELINE='1'; node
   check-bazi-page.js; Remove-Item Env:BAZI_FULL_PATTERN_BASELINE`
-  (`bazi page checks ok`); `git diff --check`; local browser QA at desktop and
-  390px mobile widths (no horizontal overflow or console errors).
-- Next task: let the user review the `v4` output; only after explicit approval
+  (`bazi page checks ok`); `git diff --check`.
+- Next task: let the user review the `v5` output; only after explicit approval
   replace the active scoring backup with this version, otherwise adjust the
   candidate weights and rebuild the frozen baseline.
-- Caution: the active rollback source is still `d95c0fd`; 9.66% of the fixed
-  grid changes final grade in `v4`, including the representative 官杀混杂盘
-  moving from 偏低 to 中等. Caps, diminishing returns, positive/negative
-  balance, and parameter-level calibration remain explicitly deferred.
+- Caution: the active rollback source is still `d95c0fd`; the `v5` standard
+  deviation is 1.369258 times `v4`, slightly above the 1.35 engineering warning
+  while the largest score bucket remains 12.4101%. Special-pattern luck-cycle
+  rechecking remains deferred to the luck module; caps, diminishing returns,
+  positive/negative balance, and parameter calibration also remain deferred.
 
 ## Replace At Each Handoff
 
