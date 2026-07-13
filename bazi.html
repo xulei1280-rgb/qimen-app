@@ -1137,33 +1137,31 @@ function renderStructure(data){
   var missing=WUXING.filter(function(w){return data.scores[w]<0.2});
   var phenomenon=elementPhenomenonText(data);
   var positivePhenomenon=positivePhenomenonText(data);
+  var analysis=data.patternAnalysis||{};
+  var conflicts=(analysis.comboConflicts||[]).filter(function(x){return x.name!=='未见明显组合冲突'});
+  var specials=analysis.specialPatterns||[];
   return '<div class="section-title">格局喜用参考</div><div class="structure-grid"><div>'+bars+'</div><div class="structure-note">'+
     '<div class="note-line"><strong>命格：</strong>'+data.pattern+'。</div>'+
     '<div class="note-line"><strong>定格依据：</strong>'+patternBasisText(data)+'</div>'+
     '<div class="note-line"><strong>喜用参考：</strong>主 '+(data.useful.primaryUse||data.useful.use).join('、')+'；佐 '+((data.useful.secondaryUse||[]).join('、')||'无')+'；慎 '+data.useful.avoid.join('、')+'。</div>'+
     '<div class="note-line"><strong>五行缺失：</strong>'+(missing.length?missing.join('、'):'五行皆有')+'。</div>'+
     '</div></div><div class="detail-grid">'+
-    detailBox('旺衰依据',strengthEvidenceText(data))+
-    detailBox('通根',rootInfo(data))+
-    detailBox('透干',stemRevealInfo(data))+
-    detailBox('扶抑用神',usefulLayerText(data,'fuyi'))+
-    detailBox('调候用神',usefulLayerText(data,'tiaohou'))+
-    detailBox('格局用神',usefulLayerText(data,'pattern'))+
-    detailBox('用神取舍',usefulPriorityText(data))+
     detailBox('主要格局',patternCandidates(data))+
-    detailBox('格局状态',patternStatusText(data))+
+    detailBox('格局层次',patternLevelText(data))+
+    detailBox('成格结论',patternConclusionText(data))+
+    detailBox('用神总论',usefulPriorityText(data))+
+    detailBox('格局用神',usefulLayerText(data,'pattern'))+
+    detailBox('扶抑与调候','扶抑：'+usefulLayerText(data,'fuyi')+'<br>调候：'+usefulLayerText(data,'tiaohou'))+
+    detailBox('旺衰依据',strengthEvidenceText(data))+
+    detailBox('根气与透藏','通根：'+rootInfo(data)+'<br>透干：'+stemRevealInfo(data))+
     (phenomenon?detailBox('气势病象',phenomenon):'')+
     (positivePhenomenon?detailBox('清秀气象',positivePhenomenon):'')+
-    detailBox('格局成败',patternVerdictText(data))+
-    detailBox('成败因子',patternFactorText(data))+
     detailBox('清浊去留',patternClarityText(data))+
-    detailBox('组合冲突',comboConflictText(data))+
+    (conflicts.length?detailBox('组合冲突',comboConflictText(data)):'')+
     detailBox('病药通关',remedyText(data))+
-    detailBox('特殊格局',specialPatternText(data.patternAnalysis))+
-    detailBox('格局层次',patternLevelText(data))+
+    (specials.length?detailBox('特殊格局',specialPatternText(data.patternAnalysis)):'')+
     detailBox('当前大运格局',currentLuckPatternText(data))+
     detailBox('干支作用',interactionText(data))+
-    detailBox('干支提示','<div class="relation-list">'+data.relations.map(function(x){return '<span class="tag">'+x+'</span>'}).join('')+'</div>')+
     '</div>'+renderTenGodSummary(data)+renderRelationPanel(data)+
     '<p class="hint-line">格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就；家庭、教育、时代、行业环境和个人选择仍会影响兑现。</p>';
 }
@@ -1237,18 +1235,16 @@ function patternCandidates(data){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},main=analysis.mainPattern||'未见明确成格';
   var structures=analysis.patternStructures||[];
-  var supporting=structures.filter(function(item){return item.role==='兼格'}).map(function(item){return item.name+(item.relation?'（'+item.relation+'）':'')});
-  var auxiliary=structures.filter(function(item){return item.role==='辅助结构'}).map(function(item){return item.name+(item.relation?'（'+item.relation+'）':'')});
-  var issues=analysis.patternIssues||[];
-  var lead=structures.find(function(item){return item.role==='线索'&&/相生/.test(item.name)});
-  var lines=[main==='未见明确成格'?'未成格':main];
+  var mainStructure=structures.find(function(item){return item.role==='主格'});
+  var supporting=structures.filter(function(item){return (item.role==='兼格'||item.role==='辅助结构')&&item.status!=='待成'}).map(function(item){return item.name});
+  var issues=(analysis.patternIssues||[]).concat(structures.filter(function(item){return item.role==='病点'}).map(function(item){return item.name})).filter(function(x,i,a){return x&&a.indexOf(x)===i});
+  var lead=main==='未见明确成格'&&structures.find(function(item){return item.role==='线索'&&/相生|制杀|配印|生财/.test(item.name)});
+  var lines=[main==='未见明确成格'?'主格：未成，保留月令主线':'主格：'+main+(mainStructure&&mainStructure.status?'（'+mainStructure.status+'）':'')];
   if(analysis.monthCommand&&analysis.monthCommand.ambiguous)lines.push('月令兼用：'+analysis.monthCommand.selectedGods.join('、')+'（待清）');
-  if(analysis.regularPattern&&analysis.regularPattern.name!==main)lines.push('命格主线：'+analysis.regularPattern.name+'（'+analysis.regularPattern.status+'）');
-  if(supporting.length)lines.push('兼格：'+supporting.join('、'));
-  if(auxiliary.length)lines.push('辅助结构：'+auxiliary.join('、'));
+  if(analysis.regularPattern&&analysis.regularPattern.name!==main)lines.push('月令格：'+analysis.regularPattern.name+'（'+analysis.regularPattern.status+'）');
+  if(supporting.length)lines.push('兼见：'+supporting.join('、'));
   if(issues.length)lines.push('主要病点：'+issues.join('、'));
-  if(lead)lines.push('主线：'+lead.name.replace('参考',''));
-  if(analysis.patternArbitration)lines.push('主次依据：'+analysis.patternArbitration.decision);
+  if(lead)lines.push('待成线索：'+lead.name.replace('参考',''));
   return lines.join('<br>');
 }
 function strengthEvidenceText(data){
@@ -1262,7 +1258,7 @@ function usefulLayerText(data,key){
   if(!layer)return '未细分';
   return (layer.use&&layer.use.length?'取 '+layer.use.join('、'):'不单独取用')+'；'+layer.why;
 }
-function usefulPriorityText(data){
+function usefulPriorityText(data,technical){
   data=refreshPatternAnalysis(data);
   var item=data.patternAnalysis&&data.patternAnalysis.usePriority;
   var roles=data.useful&&data.useful.roles;
@@ -1278,6 +1274,12 @@ function usefulPriorityText(data){
     var gods=value.tenGods&&value.tenGods.length?'（'+value.tenGods.join('、')+'）':'';
     return name+'：'+value.elements.join('、')+gods;
   }
+  if(!technical){
+    var primary=(data.useful.primaryUse||data.useful.use||[]).join('、')||'待定';
+    var secondary=(data.useful.secondaryUse||[]).join('、')||'无';
+    var avoid=(data.useful.avoid||[]).join('、')||'无';
+    return (item?item.type+'取用：'+item.text:'综合格局、扶抑与调候取用。')+'<br>结论：主用 '+primary+'；佐用 '+secondary+'；慎用 '+avoid+(conditional.length?'<br>条件用神：'+conditional.map(function(x){return x.element+'（'+x.benefit+'，但'+x.risk+'）'}).join('；'):'');
+  }
   return item?(item.type+'：'+item.text+conflictText+conditionalText+specificText+(roles?'<br>'+[
     role('月令用神（定格）','monthCommandGod'),role('格局用神','patternGod'),role('相神','assistantGod')
   ].join('；')+'<br>'+[
@@ -1286,12 +1288,18 @@ function usefulPriorityText(data){
     role('最终主用','finalUseGod'),role('喜神','joyGod'),role('忌神','avoidGod'),role('仇神','enemyGod')
   ].join('；'):'重在分清月令定格、格局成败、扶抑与调候。')):'用神取舍需结合格局、调候和扶抑。';
 }
-function patternBasisText(data){
+function patternBasisText(data,technical){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},authority=analysis.authorityBasis||(analysis.regularPattern&&analysis.regularPattern.authority);
   var basis=analysis.patternBasis||'以月令定命格。';
   var rule=authority&&authority.ruleId?authority.ruleId+(authority.ruleVersion?'（'+authority.ruleVersion+'）':''):'';
-  return authority?basis+' 判法主线：'+authority.framework+(rule?'；规则：'+rule:'')+'；'+authority.principle+(authority.source?'；来源：'+authority.source:''):basis;
+  if(!authority)return basis;
+  if(!technical){
+    var regularBasis=analysis.regularPattern&&analysis.regularPattern.basis;
+    var concise=(regularBasis||basis).replace(/；[^；，。]+当令$/,'');
+    return concise+'。'+authority.principle;
+  }
+  return basis+' 判法主线：'+authority.framework+(rule?'；规则：'+rule:'')+'；'+authority.principle+(authority.source?'；来源：'+authority.source:'');
 }
 function patternStatusText(data){
   data=refreshPatternAnalysis(data);
@@ -1319,7 +1327,7 @@ function elementPhenomenonText(data){
       '<br>反证：'+item.counterEvidence.join('；')+
       '<br>未判更重：'+(item.degreeBoundary||'仍须结合反证复核')+
       '<br>改善条件：'+item.activation+
-      '<br>判断依据：'+item.authority+'；规则 '+item.ruleId+(item.ruleVersion?'（'+item.ruleVersion+'）':'')+'。</div></details>';
+      '<br>判断依据：'+item.authority+'。</div></details>';
   }).join('<br>');
 }
 function elementPhenomenonContextText(data){
@@ -1346,7 +1354,7 @@ function positivePhenomenonText(data){
   return items.map(function(item){
     return item.name+'（'+item.status+'）<br>解释：'+item.definition+
       '<br>本盘依据：'+item.evidence.join('；')+
-      '<details class="phenomenon-detail"><summary>成立边界与来源</summary><div>边界：'+item.boundary+'<br>判断依据：'+item.authority+'；规则 '+item.ruleId+(item.ruleVersion?'（'+item.ruleVersion+'）':'')+'。</div></details>';
+      '<details class="phenomenon-detail"><summary>成立边界与来源</summary><div>边界：'+item.boundary+'<br>判断依据：'+item.authority+'。</div></details>';
   }).join('<br>');
 }
 function positivePhenomenonContextText(data){
@@ -1361,13 +1369,22 @@ function specialPatternText(patternAnalysis){
 function publicPatternLevel(grade){
   return ({'偏低':'偏低','中下':'中等','中等':'中等','偏高':'偏高','中高':'高','高':'高','顶级':'顶级'})[grade]||grade||'';
 }
-function patternLevelText(data){
+function patternLevelText(data,technical){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},grade=analysis.patternLevelGrade||'',displayGrade=publicPatternLevel(grade),text=analysis.patternLevel||'普通格局，需结合大运成败细断';
   var criteria=analysis.patternLevelCriteria||[];
   var baseline=analysis.analysisMeta||{},percentile=analysis.patternPercentile,baselineText=typeof percentile==='number'?'<br>理论结构位置：原始结构分 '+analysis.patternRawScore+'，P'+percentile+'（'+baseline.baselineVersion+'；仅表示同规则理论网格中的相对位置）':'';
   if(displayGrade)text=text.replace(/^(偏低|中下|中等|偏高|中高|高|顶级)：/,displayGrade+'：');
-  return text+baselineText+(criteria.length?'<br>层次归因：'+criteria.map(function(x){return x.name+'（'+x.result+'）'}).join('；'):'');
+  if(technical)return text+baselineText+(criteria.length?'<br>层次归因：'+criteria.map(function(x){return x.name+'（'+x.result+'）'}).join('；'):'');
+  var structures=analysis.patternStructures||[],main=structures.find(function(item){return item.role==='主格'}),flow=analysis.interactionFlow,gate=analysis.patternLevelHardGate||{},reasons=(gate.reasons||[]).filter(function(x){return /部分化解|未解|清浊|冲战|破格|气势病象/.test(x)}).map(function(x){return x.replace(/仍有(\d+)项部分化解病点，不重复扣已解部分/,'仍有$1项病点仅部分化解')});
+  var lines=[displayGrade||grade||'待定'];
+  var basis=[];
+  if(main)basis.push(main.name+main.status);
+  if(flow&&flow.verdict)basis.push(flow.verdict);
+  if(basis.length)lines[0]+='：'+basis.join('，')+'。';
+  if(reasons.length)lines.push(reasons.join('；')+'。');
+  if(typeof percentile==='number')lines.push('理论位置：P'+percentile);
+  return lines.join('<br>');
 }
 function currentLuckPatternText(data){
   data=refreshPatternAnalysis(data);
@@ -1381,23 +1398,46 @@ function patternVerdictText(data){
   data=refreshPatternAnalysis(data);
   return (data.patternAnalysis&&data.patternAnalysis.patternVerdict)||'格局成败需结合全盘细断';
 }
-function patternFactorText(data){
+function patternConclusionText(data){
+  data=refreshPatternAnalysis(data);
+  var analysis=data.patternAnalysis||{},structures=analysis.patternStructures||[],main=structures.find(function(item){return item.role==='主格'}),disease=analysis.patternDisease,flow=analysis.interactionFlow,lines=[];
+  if(main)lines.push('结论：'+main.name+main.status+'。');
+  else lines.push('结论：'+patternVerdictText(data));
+  if(flow&&flow.verdict)lines.push('作用：'+flow.verdict+'。');
+  if(disease&&disease.items&&disease.items.length){
+    lines.push('病药：'+disease.items.map(function(item){
+      var medicine=(item.medicines||[]).filter(function(x){return x.rank>0}).sort(function(a,b){return b.rank-a.rank})[0];
+      return item.name+item.status+(medicine?'（'+medicine.name+'，'+medicine.state+'）':'');
+    }).join('；')+'。');
+  }
+  return lines.join('<br>');
+}
+function patternFactorText(data,technical){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},chain=analysis.patternReasoning,disease=analysis.patternDisease;
   var checks=analysis.regularPattern&&analysis.regularPattern.checks||[];
   var checkText=checks.length?'<br>条件核验：'+checks.map(function(item){
     var state=item.type==='破格'?(item.active?'已见':'未见'):(item.type==='救应'?(item.active?'可用':'未见'):(item.active?'满足':'待补'));
-    return (item.ruleId?item.ruleId+' ':'')+item.type+'·'+item.label+'（'+state+'）';
+    return (technical&&item.ruleId?item.ruleId+' ':'')+item.type+'·'+item.label+'（'+state+'）';
   }).join('；'):'';
   var diseaseText=disease&&disease.items&&disease.items.length?'<br>病药净结算：'+disease.text:'';
   if(chain)return '成：'+chain.formation.join('、')+'<br>破：'+(chain.damage.join('、')||'未见直接破格点')+'<br>救：'+(chain.rescue.join('、')||'未见明确救应')+diseaseText+'<br>结论：'+chain.conclusion+checkText;
   var items=data.patternAnalysis&&data.patternAnalysis.factors;
   return items&&items.length?items.map(function(x){return x.type+'：'+x.text}).join('<br>'):'成败因子需结合全盘细断。';
 }
-function patternClarityText(data){
+function patternClarityText(data,technical){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},conclusion=analysis.clarityConclusion,clarity=analysis.clarity;
-  if(conclusion)return conclusion.text+(conclusion.ruleIds&&conclusion.ruleIds.length?'；规则：'+conclusion.ruleIds.join('、'): '');
+  if(conclusion&&technical)return conclusion.text+(conclusion.ruleIds&&conclusion.ruleIds.length?'；规则：'+conclusion.ruleIds.join('、'): '');
+  if(conclusion){
+    var lines=['结论：'+conclusion.conclusion+'。'];
+    if(conclusion.terms&&conclusion.terms.length)lines.push('专业判断：'+conclusion.terms.join('、')+'。');
+    if(conclusion.action)lines.push('作用：'+conclusion.action+'。');
+    if(conclusion.blockers&&conclusion.blockers.length)lines.push('受阻：'+conclusion.blockers.join('、')+'。');
+    var remove=conclusion.remove&&!/^未见/.test(conclusion.remove)?conclusion.remove:'';
+    if(conclusion.keep||remove)lines.push('去留：'+(conclusion.keep?'留'+conclusion.keep:'')+(conclusion.keep&&remove?'；':'')+(remove?'去'+remove:'')+'。');
+    return lines.join('<br>');
+  }
   return clarity?(clarity.level+'：'+clarity.text):'清浊去留需结合全盘细断。';
 }
 function comboConflictText(data){
@@ -1405,13 +1445,14 @@ function comboConflictText(data){
   var items=data.patternAnalysis&&data.patternAnalysis.comboConflicts;
   return items&&items.length?items.map(function(x){return (x.displayName||x.name)+(x.aliases&&x.aliases.length?'（又称'+x.aliases.join('、')+'）':'')+'（'+x.effect+'）：'+x.text}).join('<br>'):'未见明显组合冲突。';
 }
-function interactionText(data){
+function interactionText(data,technical){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},value=analysis.interactions,flow=analysis.interactionFlow,items=[];
   if(!value)return '未建立干支作用链。';
   (value.stemCombines||[]).forEach(function(x){items.push('干合：'+x.text)});
   (value.branchPairs||[]).forEach(function(x){items.push(x.type+'：'+x.text)});
   (value.groups||[]).forEach(function(x){items.push(x.text)});
+  if(value.arbitration&&value.arbitration.decisions&&value.arbitration.decisions.length)items.push('合冲裁决：'+value.arbitration.text+(technical?'；规则：'+value.arbitration.ruleIds.join('、'):''));
   if(flow){items.push('作用先后：'+flow.verdict);(flow.steps||[]).forEach(function(x){items.push(x.text)});(flow.sequence||[]).forEach(function(x){items.push(x.text)})}
   return items.length?items.join('<br>'):'未见直接合冲成局。';
 }
@@ -1425,23 +1466,23 @@ function buildPatternContextText(data){
   return [
     '本地格局校验：',
     '命格：'+data.pattern,
-    '定格依据：'+patternBasisText(data),
+    '定格依据：'+patternBasisText(data,true),
     '主要格局：'+patternCandidates(data),
     '扶抑用神：'+usefulLayerText(data,'fuyi'),
     '调候用神：'+usefulLayerText(data,'tiaohou'),
     '格局用神：'+usefulLayerText(data,'pattern'),
-    '用神取舍：'+usefulPriorityText(data),
+    '用神取舍：'+usefulPriorityText(data,true),
     '格局状态：'+patternStatusText(data),
     '气势病象：'+(elementPhenomenonContextText(data)||'未见满足严格条件的五行偏枯病象'),
     '清秀气象：'+(positivePhenomenonContextText(data)||'未见满足严格条件的正向专业气象'),
     '格局成败：'+patternVerdictText(data),
-    '成败因子：'+patternFactorText(data).replace(/<br>/g,'；'),
-    '清浊去留：'+patternClarityText(data),
+    '成败因子：'+patternFactorText(data,true).replace(/<br>/g,'；'),
+    '清浊去留：'+patternClarityText(data,true),
     '组合冲突：'+comboConflictText(data).replace(/<br>/g,'；'),
-    '干支作用：'+interactionText(data).replace(/<br>/g,'；'),
+    '干支作用：'+interactionText(data,true).replace(/<br>/g,'；'),
     '病药通关：'+remedyText(data).replace(/<br>/g,'；'),
     '特殊格局：'+specialPatternText(data.patternAnalysis),
-    '格局层次：'+patternLevelText(data),
+    '格局层次：'+patternLevelText(data,true),
     '当前大运格局：'+currentLuckPatternText(data),
     '现实兑现边界：'+((data.patternAnalysis&&data.patternAnalysis.realizationBoundary&&data.patternAnalysis.realizationBoundary.text)||'格局层次只表示命盘结构与行运承接，不代表人的价值或现实成就保证。')
   ].join('\n');

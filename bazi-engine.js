@@ -12,9 +12,9 @@
   var ctrl={木:'土',土:'水',水:'火',火:'金',金:'木'};
   var combineStem={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
-  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.13.2';
-  var PATTERN_RULE_VERSION='ZP-2026.07.13.6';
-  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v2';
+  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.13.3';
+  var PATTERN_RULE_VERSION='ZP-2026.07.13.7';
+  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v3';
   var PATTERN_LEVELS=['偏低','中等','偏高','高','顶级'];
   var THEORETICAL_LEVEL_BANDS=[
     {grade:'偏低',min:0,max:5},
@@ -24,8 +24,8 @@
     {grade:'顶级',min:95,max:100.1}
   ];
   var THEORETICAL_BASELINE_CONFIG={start:'1984-02-04',endExclusive:'2044-02-04',stepDays:11,hours:[0,2,4,6,8,10,12,14,16,18,20,22],timezone:'Asia/Shanghai',referenceLongitude:120,trueSolarCorrection:false,deduplicate:'fourPillars'};
-  var THEORETICAL_BASELINE_HISTOGRAM={11:2,13:9,16:1,17:15,19:19,20:27,21:36,22:13,23:94,24:10,25:86,26:65,27:304,28:60,29:362,30:66,31:580,32:135,33:954,34:131,35:792,36:365,37:712,38:288,39:479,40:402,41:194,42:822,43:181,44:800,45:60,46:537,47:126,48:842,49:151,50:482,51:616,52:335,53:298,54:452,55:683,56:487,57:1409,58:174,59:1385,60:124,61:697,62:446,63:271,64:468,65:302,66:155,67:173,68:326,69:192,70:1991,71:179,72:1054,73:120,74:369,75:107,76:258,77:4,78:147,79:281,80:52,81:140,82:3,83:14,85:2};
-  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,quantiles:{p5:31,p20:37,p50:55,p80:69,p95:74},candidateGradeCounts:{偏低:1169,中等:3669,偏高:14357,高:3344,顶级:1377},gradeCounts:{偏低:1149,中等:3753,偏高:14532,高:4040,顶级:442},gradePercentages:{偏低:4.8,中等:15.69,偏高:60.76,高:16.89,顶级:1.85},ruleVersion:'ZP-2026.07.13.6',engineVersion:'BAZI-PATTERN-2026.07.13.2'};
+  var THEORETICAL_BASELINE_HISTOGRAM={11:2,13:9,16:1,17:15,19:19,20:27,21:36,22:13,23:93,24:10,25:84,26:66,27:301,28:59,29:355,30:66,31:547,32:137,33:990,34:137,35:787,36:369,37:751,38:294,39:463,40:389,41:198,42:893,43:167,44:798,45:67,46:517,47:137,48:878,49:177,50:493,51:610,52:319,53:324,54:508,55:674,56:484,57:1555,58:169,59:1400,60:132,61:655,62:455,63:253,64:439,65:275,66:140,67:156,68:298,69:161,70:2094,71:171,72:995,73:102,74:346,75:87,76:210,77:5,78:131,79:245,80:43,81:121,82:3,83:10,85:1};
+  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,quantiles:{p5:31,p20:37,p50:54,p80:68,p95:74},candidateGradeCounts:{偏低:1156,中等:3718,偏高:14317,高:3523,顶级:1202},gradeCounts:{偏低:1135,中等:3803,偏高:14552,高:4044,顶级:382},gradePercentages:{偏低:4.75,中等:15.9,偏高:60.85,高:16.91,顶级:1.6},ruleVersion:'ZP-2026.07.13.7',engineVersion:'BAZI-PATTERN-2026.07.13.3'};
   var AUTHORITY_PATTERN_RULES={
     财:{id:'ZP-MG-01',gods:['正财','偏财'],principle:'财星当令，重在身能任财，并见食神生财或财生官护。',success:['身能任财','食伤生财','财生官'],breakers:['比劫夺财','身弱不任财'],rescues:['官星制比护财','印比扶身承财']},
     官:{id:'ZP-MG-02',gods:['正官'],principle:'正官当令，喜财生、印护，忌伤官与官杀混杂。',success:['财生官','官生印'],breakers:['伤官见官','官杀混杂','身弱官重'],rescues:['印制伤护官','去杀留官']},
@@ -181,6 +181,7 @@
   }
   var BRANCH_CLASH={子:'午',午:'子',丑:'未',未:'丑',寅:'申',申:'寅',卯:'酉',酉:'卯',辰:'戌',戌:'辰',巳:'亥',亥:'巳'};
   var BRANCH_HARM={子:'未',未:'子',丑:'午',午:'丑',寅:'巳',巳:'寅',卯:'辰',辰:'卯',申:'亥',亥:'申',酉:'戌',戌:'酉'};
+  var BRANCH_BREAK={子:'酉',酉:'子',丑:'辰',辰:'丑',寅:'亥',亥:'寅',卯:'午',午:'卯',巳:'申',申:'巳',未:'戌',戌:'未'};
   var SIX_COMBINE_TARGET={'子丑':'土','寅亥':'木','卯戌':'火','辰酉':'金','巳申':'水','午未':'土'};
   var THREE_GROUPS=[{members:'申子辰',element:'水',name:'三合水局'},{members:'亥卯未',element:'木',name:'三合木局'},{members:'寅午戌',element:'火',name:'三合火局'},{members:'巳酉丑',element:'金',name:'三合金局'}];
   var THREE_MEETINGS=[{members:'寅卯辰',element:'木',name:'三会木局'},{members:'巳午未',element:'火',name:'三会火局'},{members:'申酉戌',element:'金',name:'三会金局'},{members:'亥子丑',element:'水',name:'三会水局'}];
@@ -194,27 +195,36 @@
     if(a!==b&&'丑未戌'.indexOf(a)>=0&&'丑未戌'.indexOf(b)>=0)return true;
     return false;
   }
-  function branchAttackInfo(branch,pillars,key){
-    var all=Object.keys(pillars).map(function(k){return pillars[k][1]}),reasons=[];
-    Object.keys(pillars).forEach(function(k){
-      if(k===key)return;
-      var other=pillars[k][1];
-      if(BRANCH_CLASH[branch]===other)reasons.push('冲');
-      if(BRANCH_HARM[branch]===other)reasons.push('害');
-      if(branchesPunish(branch,other,all))reasons.push('刑');
-    });
-    reasons=unique(reasons);
-    var penalty=(reasons.indexOf('冲')>=0?0.2:0)+(reasons.indexOf('刑')>=0?0.1:0)+(reasons.indexOf('害')>=0?0.08:0);
-    return {reasons:reasons,penalty:Math.min(0.35,penalty)};
+  function branchAttackInfo(branch,pillars,key,interactions){
+    var keys=['year','month','day','hour'],position=keys.indexOf(key),attackTypes=['冲','刑','害','破'],relations=[],suppressed=[];
+    if(interactions&&interactions.branchPairs){
+      interactions.branchPairs.filter(function(item){return attackTypes.indexOf(item.type)>=0&&(item.left===position||item.right===position)}).forEach(function(item){
+        if(item.active===false)suppressed.push(item.type+'（'+item.status+'）');
+        else relations.push(item);
+      });
+    }else{
+      var all=keys.map(function(k){return pillars[k][1]});
+      keys.forEach(function(k,index){
+        if(k===key)return;
+        var other=pillars[k][1];
+        if(BRANCH_CLASH[branch]===other)relations.push({left:position,right:index,type:'冲',active:true,status:'相冲'});
+        if(BRANCH_HARM[branch]===other)relations.push({left:position,right:index,type:'害',active:true,status:'相害'});
+        if(BRANCH_BREAK[branch]===other)relations.push({left:position,right:index,type:'破',active:true,status:'相破'});
+        if(branchesPunish(branch,other,all))relations.push({left:position,right:index,type:'刑',active:true,status:'相刑'});
+      });
+    }
+    var reasons=unique(relations.map(function(item){return item.type}));
+    var penalty=(reasons.indexOf('冲')>=0?0.2:0)+(reasons.indexOf('刑')>=0?0.1:0)+(reasons.indexOf('害')>=0?0.08:0)+(reasons.indexOf('破')>=0?0.06:0);
+    return {reasons:reasons,relations:relations,suppressed:unique(suppressed),penalty:Math.min(0.35,penalty)};
   }
-  function rootEvidence(dayStem,pillars){
+  function rootEvidence(dayStem,pillars,interactions){
     var dayWx=STEM_WX[dayStem],labels={year:'年支',month:'月令',day:'日支',hour:'时支'},roots=[];
     Object.keys(pillars).forEach(function(k){
       var hidden=HIDDEN[pillars[k][1]]||[],idx=hidden.findIndex(function(s){return STEM_WX[s]===dayWx});
       if(idx<0)return;
       var grade=idx===0?'本气根':(idx===1?'中气根':'余气根');
-      var attack=branchAttackInfo(pillars[k][1],pillars,k);
-      roots.push({position:k,branch:pillars[k][1],grade:grade,attacked:attack.reasons.length>0,attacks:attack.reasons,text:labels[k]+pillars[k][1]+grade+(attack.reasons.length?'，受'+attack.reasons.join('、'):'')});
+      var attack=branchAttackInfo(pillars[k][1],pillars,k,interactions),suppressedText=attack.suppressed.length?'；另见'+attack.suppressed.join('、')+'，未按有效损根计':'';
+      roots.push({position:k,branch:pillars[k][1],grade:grade,attacked:attack.reasons.length>0,attacks:attack.reasons,suppressedAttacks:attack.suppressed,text:labels[k]+pillars[k][1]+grade+(attack.reasons.length?'，受'+attack.reasons.join('、'):'')+suppressedText});
     });
     return roots;
   }
@@ -223,39 +233,91 @@
     var keys=['year','month','day','hour'],stems=keys.map(function(k){return pillars[k][0]}),branches=keys.map(function(k){return pillars[k][1]});
     var total=WUXING.reduce(function(sum,w){return sum+(scores[w]||0)},0)||1,stemCombines=[],branchPairs=[],groups=[];
     function ratio(w){return (scores[w]||0)/total}
+    function targetSupported(target,minRatio){
+      var monthWx=BRANCH_WX[pillars.month[1]],targetRatio=ratio(target);
+      return targetRatio>=minRatio&&(monthWx===target||gen[monthWx]===target||targetRatio>=0.4);
+    }
     for(var i=0;i<4;i++)for(var j=i+1;j<4;j++){
       if(combineStem[stems[i]]===stems[j]){
         var pair=[stems[i],stems[j]].sort(function(a,b){return STEMS.indexOf(a)-STEMS.indexOf(b)}).join('');
         var target=({甲己:'土',乙庚:'金',丙辛:'水',丁壬:'木',戊癸:'火'})[pair]||'';
-        var distance=j-i,status=(i===2||j===2)?'日主合入':(distance===1?'合绊':'遥合');
-        if(target&&BRANCH_WX[pillars.month[1]]===target&&ratio(target)>=0.3)status='合化有据';
-        stemCombines.push({left:i,right:j,pair:pair,target:target,status:status,text:pair+(target?'化'+target:'')+'：'+status});
+        stemCombines.push({left:i,right:j,pair:pair,target:target,distance:j-i,ruleId:'ZP-HC-01'});
       }
-      var bp=[branches[i],branches[j]].sort(function(a,b){return BRANCHES.indexOf(a)-BRANCHES.indexOf(b)}).join('');
-      if(BRANCH_CLASH[branches[i]]===branches[j])branchPairs.push({left:i,right:j,type:'冲',status:'相冲',text:branches[i]+branches[j]+'冲'});
-      if(BRANCH_HARM[branches[i]]===branches[j])branchPairs.push({left:i,right:j,type:'害',status:'相害',text:branches[i]+branches[j]+'害'});
-      if(branchesPunish(branches[i],branches[j],branches))branchPairs.push({left:i,right:j,type:'刑',status:'相刑',text:branches[i]+branches[j]+'刑'});
+      if(BRANCH_CLASH[branches[i]]===branches[j])branchPairs.push({left:i,right:j,type:'冲',active:true,status:'相冲',priority:60,ruleId:'ZP-HC-04'});
+      if(BRANCH_HARM[branches[i]]===branches[j])branchPairs.push({left:i,right:j,type:'害',active:true,status:'相害',priority:30,ruleId:'ZP-HC-05'});
+      if(BRANCH_BREAK[branches[i]]===branches[j])branchPairs.push({left:i,right:j,type:'破',active:true,status:'相破',priority:20,ruleId:'ZP-HC-06'});
+      if(branchesPunish(branches[i],branches[j],branches))branchPairs.push({left:i,right:j,type:'刑',active:true,status:'相刑',priority:40,ruleId:'ZP-HC-05'});
       var sixKey=branches[i]!==branches[j]&&Object.keys(SIX_COMBINE_TARGET).find(function(k){return k.indexOf(branches[i])>=0&&k.indexOf(branches[j])>=0});
       if(sixKey){
-        var sixTarget=SIX_COMBINE_TARGET[sixKey],sixStatus=(BRANCH_WX[pillars.month[1]]===sixTarget&&ratio(sixTarget)>=0.3)?'合化倾向':'合绊';
-        branchPairs.push({left:i,right:j,type:'六合',target:sixTarget,status:sixStatus,text:branches[i]+branches[j]+'合'+sixTarget+'：'+sixStatus});
+        var sixTarget=SIX_COMBINE_TARGET[sixKey];
+        branchPairs.push({left:i,right:j,type:'六合',target:sixTarget,active:true,status:'待裁决',priority:50,ruleId:'ZP-HC-03'});
       }
     }
-    THREE_GROUPS.concat(THREE_MEETINGS).forEach(function(group){
-      var present=group.members.split('').filter(function(b){return branches.indexOf(b)>=0});
+    var stemUse={};
+    stemCombines.forEach(function(item){stemUse[item.left]=(stemUse[item.left]||0)+1;stemUse[item.right]=(stemUse[item.right]||0)+1});
+    stemCombines.forEach(function(item){
+      item.contested=stemUse[item.left]>1||stemUse[item.right]>1;
+      var transform=!!(item.target&&targetSupported(item.target,0.3));
+      if(item.contested){item.status='争合受阻';item.effect='contest';item.active=true}
+      else if(transform){item.status='合化有据';item.effect='transform';item.active=true}
+      else if(item.left===2||item.right===2){item.status='日主合入';item.effect='daymaster-combine';item.active=true}
+      else if(item.distance===1){item.status='合绊';item.effect='bind';item.active=true}
+      else{item.status='遥合';item.effect='clue';item.active=false}
+      item.text=item.pair+(item.target?'化'+item.target:'')+'：'+item.status;
+    });
+    THREE_MEETINGS.concat(THREE_GROUPS).forEach(function(group){
+      var members=group.members.split(''),positions=members.map(function(b){return branches.indexOf(b)}),present=members.filter(function(b){return branches.indexOf(b)>=0});
       if(present.length===3){
         var supported=BRANCH_WX[pillars.month[1]]===group.element||ratio(group.element)>=0.34;
-        groups.push({name:group.name,members:group.members,element:group.element,status:supported?'成局有力':'成局待验',complete:true,text:group.name+'：'+(supported?'成局有力':'成局但化神势力待验')});
+        var externalClashes=branchPairs.filter(function(item){return item.type==='冲'&&((positions.indexOf(item.left)>=0&&positions.indexOf(item.right)<0)||(positions.indexOf(item.right)>=0&&positions.indexOf(item.left)<0))});
+        var status=supported?(externalClashes.length?'成局有瑕':'成局有力'):(externalClashes.length?'成局受冲':'成局待验');
+        groups.push({name:group.name,members:group.members,positions:positions,element:group.element,status:status,complete:true,active:supported,challenged:externalClashes.length>0,clashes:externalClashes.map(function(item){return branches[item.left]+branches[item.right]+'冲'}),priority:/三会/.test(group.name)?80:70,ruleId:/三会/.test(group.name)?'ZP-HC-02A':'ZP-HC-02B',text:group.name+'：'+status+(externalClashes.length?'（'+externalClashes.map(function(item){return branches[item.left]+branches[item.right]+'冲'}).join('、')+'）':'')});
       }else if(present.length===2){
-        groups.push({name:group.name.replace('三','半'),members:group.members,element:group.element,status:'线索',complete:false,text:present.join('')+'见'+group.name.replace('三','半')+'线索'});
+        groups.push({name:group.name.replace('三','半'),members:group.members,positions:present.map(function(b){return branches.indexOf(b)}),element:group.element,status:'线索',complete:false,active:false,priority:10,ruleId:/三会/.test(group.name)?'ZP-HC-02A':'ZP-HC-02B',text:present.join('')+'见'+group.name.replace('三','半')+'线索'});
       }
     });
-    return {natalStems:stems,natalBranches:branches,stemCombines:stemCombines,branchPairs:branchPairs,groups:groups};
+    branchPairs.filter(function(item){return item.type==='六合'}).forEach(function(item){
+      var group=groups.filter(function(groupItem){return groupItem.complete&&groupItem.active&&(groupItem.positions.indexOf(item.left)>=0||groupItem.positions.indexOf(item.right)>=0)}).sort(function(a,b){return b.priority-a.priority})[0];
+      var clash=branchPairs.find(function(other){return other.type==='冲'&&(other.left===item.left||other.right===item.left||other.left===item.right||other.right===item.right)});
+      var supported=targetSupported(item.target,0.3);
+      if(group){item.active=false;item.effect='suppressed';item.status='让位'+group.name;item.suppressedBy=group.name}
+      else if(clash){item.active=true;item.effect='bind';item.status='合中逢冲';item.blockedTransformation=true;item.resolution='冲合并见，合不解冲';clash.resolution='冲合并见，合不解冲'}
+      else if(supported){item.active=true;item.effect='transform';item.status='合化倾向'}
+      else{item.active=true;item.effect='bind';item.status='合绊'}
+    });
+    groups.filter(function(group){return group.complete&&group.active}).sort(function(a,b){return b.priority-a.priority}).forEach(function(group){
+      branchPairs.filter(function(item){
+        if(item.active===false||['刑','害','破'].indexOf(item.type)<0)return false;
+        var leftIn=group.positions.indexOf(item.left)>=0,rightIn=group.positions.indexOf(item.right)>=0;
+        return leftIn!==rightIn;
+      }).forEach(function(item){
+        item.active=false;
+        item.status='受'+group.name+'制约';
+        item.suppressedBy=group.name;
+      });
+    });
+    branchPairs.filter(function(item){return item.type==='破'}).forEach(function(item){
+      if(item.active===false)return;
+      var directCombine=branchPairs.find(function(other){return other.type==='六合'&&((other.left===item.left&&other.right===item.right)||(other.left===item.right&&other.right===item.left))});
+      if(directCombine&&directCombine.active&&directCombine.effect==='transform'){
+        item.active=false;item.status='破受合制';item.suppressedBy=branches[directCombine.left]+branches[directCombine.right]+'六合';
+      }
+    });
+    branchPairs.forEach(function(item){
+      var pairText=branches[item.left]+branches[item.right];
+      item.text=item.type==='六合'?pairText+'合'+item.target+'：'+item.status:pairText+item.type+'：'+item.status+(item.resolution?'（'+item.resolution+'）':'');
+    });
+    var decisions=[];
+    stemCombines.filter(function(item){return item.contested}).forEach(function(item){decisions.push(item.text+'，不作专一合化')});
+    groups.filter(function(item){return item.complete}).forEach(function(item){decisions.push(item.text)});
+    branchPairs.filter(function(item){return item.suppressedBy||item.resolution||item.status==='合中逢冲'}).forEach(function(item){decisions.push(item.text+(item.suppressedBy&&item.status.indexOf(item.suppressedBy)<0?'，让位于'+item.suppressedBy:''))});
+    var arbitration={ruleIds:['ZP-HC-01','ZP-HC-02A','ZP-HC-02B','ZP-HC-03','ZP-HC-04','ZP-HC-05','ZP-HC-06'],principles:['先核天干是否专一合化，再辨争合妒合','完整三会、三合成局优先于单一六合，半会半合只作线索','合中逢冲时保留冲合并见，不以一字之合静默解冲','刑害破只按裁决后仍有效的关系反馈根气'],decisions:unique(decisions),text:decisions.length?unique(decisions).join('；'):'未见需要改变原始关系的合冲先后裁决'};
+    return {natalStems:stems,natalBranches:branches,stemCombines:stemCombines,branchPairs:branchPairs,groups:groups,arbitration:arbitration};
   }
   function strengthScore(dayStem,pillars){
-    var parts=[],support=0;
+    var parts=[],support=0,interactions=interactionAnalysis(pillars);
     function add(label,weight,ratio,key){
-      var attack=key?branchAttackInfo(pillars[key][1],pillars,key):{reasons:[],penalty:0};
+      var attack=key?branchAttackInfo(pillars[key][1],pillars,key,interactions):{reasons:[],penalty:0};
       var adjusted=ratio*(1-attack.penalty);
       var score=weight*adjusted;
       support+=score;
@@ -268,16 +330,17 @@
     add('月令',STRENGTH_WEIGHTS.monthBranch,branchSupportRatio(dayStem,pillars.month[1]),'month');
     add('日支',STRENGTH_WEIGHTS.dayBranch,branchSupportRatio(dayStem,pillars.day[1]),'day');
     add('时支',STRENGTH_WEIGHTS.hourBranch,branchSupportRatio(dayStem,pillars.hour[1]),'hour');
-    var interactions=interactionAnalysis(pillars),dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),interactionAdjustment=0;
-    interactions.groups.filter(function(x){return x.complete&&x.status==='成局有力'}).forEach(function(group){
-      if(group.element===dayWx)interactionAdjustment+=6;
-      else if(group.element===resource)interactionAdjustment+=4;
+    var dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),interactionAdjustment=0;
+    interactions.groups.filter(function(x){return x.complete&&x.active}).forEach(function(group){
+      var factor=group.status==='成局有力'?1:0.5;
+      if(group.element===dayWx)interactionAdjustment+=6*factor;
+      else if(group.element===resource)interactionAdjustment+=4*factor;
     });
     support+=interactionAdjustment;
-    var command=parts.find(function(x){return x.label==='月令'}),roots=rootEvidence(dayStem,pillars);
+    var command=parts.find(function(x){return x.label==='月令'}),roots=rootEvidence(dayStem,pillars,interactions);
     var rootScore=parts.filter(function(x){return /支|月令/.test(x.label)&&x.label!=='月令'}).reduce(function(sum,x){return sum+x.score},0);
     var momentum=parts.filter(function(x){return /干/.test(x.label)}).reduce(function(sum,x){return sum+x.score},0);
-    var rootState=!roots.length?'未见同类根气':(roots.some(function(x){return x.attacked})?'有根但受冲刑害':'根气可用');
+    var rootState=!roots.length?'未见同类根气':(roots.some(function(x){return x.attacked})?'有根但受冲刑害破':'根气可用');
     var momentumState=momentum>=10?'天干印比帮扶有力':(momentum>0?'天干印比有助，但助力有限':'天干未见印比相助');
     var evidence=[
       '得令：'+(command.score>=20?'得令有力':(command.score>0?'月令有生扶':'月令不扶')),
@@ -1342,12 +1405,15 @@
       var left=entries(from),right=entries(to),pairs=[];
       left.forEach(function(a){right.forEach(function(b){
         var distance=Math.abs(a.position-b.position);
-        var bound=(interactions.stemCombines||[]).some(function(x){return /合绊|合化/.test(x.status)&&((a.kind==='干'&&(x.left===a.position||x.right===a.position))||(b.kind==='干'&&(x.left===b.position||x.right===b.position)))});
-        var damaged=(interactions.branchPairs||[]).some(function(x){return /冲|刑|害/.test(x.type)&&((a.kind==='支'&&(x.left===a.position||x.right===a.position))||(b.kind==='支'&&(x.left===b.position||x.right===b.position)))});
+        var boundRelations=(interactions.stemCombines||[]).filter(function(x){return x.active!==false&&/^(bind|transform|contest)$/.test(x.effect)&&((a.kind==='干'&&(x.left===a.position||x.right===a.position))||(b.kind==='干'&&(x.left===b.position||x.right===b.position)))});
+        var damageRelations=(interactions.branchPairs||[]).filter(function(x){return x.active!==false&&/^(冲|刑|害|破)$/.test(x.type)&&((a.kind==='支'&&(x.left===a.position||x.right===a.position))||(b.kind==='支'&&(x.left===b.position||x.right===b.position)))});
+        var bound=boundRelations.length>0,damaged=damageRelations.length>0;
         var remote=distance>2,sameHidden=distance===0&&a.kind==='支'&&b.kind==='支';
-        var status=sameHidden?'同宫藏气待透':(bound?'合绊受阻':(remote?'隔位偏远':(damaged?'根气受损':'作用可达')));
+        var boundStatus=boundRelations.some(function(x){return x.effect==='contest'})?'争合受阻':(boundRelations.some(function(x){return x.effect==='transform'})?'合化改性':'合绊受阻');
+        var damageStatus=damageRelations.length?'根气受'+unique(damageRelations.map(function(x){return x.type})).join('、'):'根气受损';
+        var status=sameHidden?'同宫藏气待透':(bound?boundStatus:(remote?'隔位偏远':(damaged?damageStatus:'作用可达')));
         var active=!sameHidden&&!bound&&!remote&&!damaged;
-        pairs.push({left:a,right:b,distance:distance,bound:bound,damaged:damaged,remote:remote,sameHidden:sameHidden,status:status,active:active});
+        pairs.push({left:a,right:b,distance:distance,bound:bound,damaged:damaged,boundRelations:boundRelations.map(function(x){return x.text}),damageRelations:damageRelations.map(function(x){return x.text}),remote:remote,sameHidden:sameHidden,status:status,active:active});
       })});
       if(!pairs.length)return {from:from,to:to,action:action,status:'未接通',active:false,distance:null,text:from.join('/')+'与'+to.join('/')+'未形成可核验作用'};
       pairs.sort(function(a,b){
@@ -1374,7 +1440,7 @@
     });
     var activeCount=steps.filter(function(x){return x.active}).length;
     var verdict=!steps.length?'未建立固定作用链':(activeCount===steps.length?'主格作用链连贯':(activeCount?'主格部分接通，仍有受阻环节':'主格作用链未直接接通'));
-    return {steps:steps,sequence:sequence,verdict:verdict,text:[verdict].concat(steps.map(function(x){return x.text}),sequence.map(function(x){return x.text})).join('；')+'。'};
+    return {steps:steps,sequence:sequence,verdict:verdict,interactionArbitration:interactions.arbitration,text:[verdict].concat(steps.map(function(x){return x.text}),sequence.map(function(x){return x.text})).join('；')+'。'};
   }
   function conflictsForPattern(name,conflicts){
     return (conflicts||[]).filter(function(item){
@@ -1556,6 +1622,7 @@
     criteria.push({name:'破格程度',met:unresolvedDisease.length===0,total:1,result:diseaseNet&&diseaseNet.items.length?('未解'+unresolvedDisease.length+'项、残留'+partialDisease.length+'项'):(breakers.length?breakers.map(function(x){return x.label}).join('、'):'未见常格破点')});
     criteria.push({name:'救应有效',met:diseaseNet?diseaseNet.solved.length>0:rescues.length>0,total:1,result:diseaseNet&&diseaseNet.items.length?('已解'+diseaseNet.solved.length+'项、部分化解'+partialDisease.length+'项'):(rescues.length?rescues.map(function(x){return x.label}).join('、'):'未见明确救应')});
     if(diseaseNet&&diseaseNet.items.length)criteria.push({name:'病药净结算',met:unresolvedDisease.length===0,total:diseaseNet.items.length,result:'已解'+diseaseNet.solved.length+'、部分化解'+partialDisease.length+'、未解'+unresolvedDisease.length+'；'+diseaseNet.text});
+    if(flow&&flow.interactionArbitration)criteria.push({name:'合冲先后',met:true,total:1,result:flow.interactionArbitration.text+'；规则 '+flow.interactionArbitration.ruleIds.join('、')});
     criteria.push({name:'同分优先级',met:tieTier>=2,total:3,result:tieBreak.label+'：'+tieBreak.reason});
     if(highQualityCombination)criteria.push({name:'严格成格组合',met:strictHighQualityCombination,total:1,result:strictHighQualityCombination?'成格完整、作用可达、清纯可用，未见直接破点':'需同时核验成格完整度、作用链、清浊、破格、救应与气势病象'});
     if(main&&/伤官配印格/.test(main.name))criteria.push({name:'伤官配印严检',met:strictInjurySeal,total:1,result:strictInjurySeal?'伤官当令、印有根透、印伤作用可达，未见财坏印、冲战或气势病象':'需同时核验印伤作用、财坏印、伤官见官、日主承载与气势病象'});
@@ -1859,7 +1926,7 @@
     analysis.patternLevel=grade+'：理论候选'+candidate.grade+'（P'+percentile+'），经子平硬门槛裁定为'+grade+'；'+gateReasons.join('；')+'。 '+structuralText;
     analysis.patternLevelGrade=grade;
     analysis.patternLevelIndex=finalIndex;
-    analysis.patternLevelQualityFloor=floorIndex>0?floor:'';
+    analysis.patternLevelQualityFloor=strictQuality?floor:'';
     analysis.patternLevelHardGate=decision;
     analysis.patternLevelMetrics.candidate=candidate.grade;
     analysis.patternLevelMetrics.hardGate=floor+'至'+ceiling;
@@ -1970,6 +2037,8 @@
     weightedStrength.evidence.forEach(function(item){evidence.push(item+'。')});
     interactions.groups.filter(function(x){return x.complete}).forEach(function(item){evidence.push('合会：'+item.text+'。')});
     interactions.stemCombines.forEach(function(item){evidence.push('天干合：'+item.text+'。')});
+    interactions.branchPairs.forEach(function(item){evidence.push('地支'+item.type+'：'+item.text+(item.active===false?'，此关系已降级':'')+'。')});
+    if(interactions.arbitration)evidence.push('合冲先后：'+interactions.arbitration.text+'；规则 '+interactions.arbitration.ruleIds.join('、')+'。');
     var candidates=monthCommand.selectedStems.map(function(s){return patternName(dayStem,monthBranch,s)}).filter(Boolean);
     var mixed=godClear(profiles,'正官')&&godClear(profiles,'七杀');
     var comboResult=comboPatterns(monthCommand.ambiguous?'':monthGod,counts,{mixed:mixed,strength:strength,profiles:profiles,dayRootCount:roots.length,strengthSupport:weightedStrength.support});

@@ -61,6 +61,20 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
 - Pattern level covers natal potential and luck activation only. Reality also
   depends on family, education, era, region, industry, and personal choices;
   level is not human value or a guaranteed outcome.
+- `ZP-HC-01` to `ZP-HC-06` arbitrate natal interactions before they feed
+  strength and pattern flow: contested stem combines do not transform; complete
+  supported three-meetings and three-harmonies outrank overlapping six-combines
+  and lower-priority punishment/harm/break; a clash sharing the combined branch
+  remains `冲合并见`; partial groups remain clues. Transformation requires the
+  target qi to be seasonally supported or clearly established in the whole chart.
+- Clash remains the primary branch attack. Punishment, harm, and break are
+  conservative secondary evidence; only relations still effective after
+  arbitration may reduce a root or obstruct a pattern chain.
+- The visible structure page is a concise report: show the main pattern,
+  formation result, final useful-element decision, public level, and current
+  luck conclusion without `ZP-*` IDs, engine versions, raw scores, or duplicated
+  status/factor cards. The AI context keeps the complete rule IDs, checks,
+  percentile evidence, and exact ten-god decisions from the same analysis object.
 
 ## Out of Scope
 
