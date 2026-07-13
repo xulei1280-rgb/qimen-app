@@ -24,6 +24,44 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
 - Favorable and damaging combinations may coexist. Preserve main structure, damage,
   rescue, and luck-trigger evidence instead of forcing one good/bad verdict.
 
+## Current Professional-Term Rules
+
+- `ZP-QX-002` to `ZP-QX-005` cover resource-excess phenomena only when the
+  affected element is the day master, the resource clearly dominates, and the
+  day master lacks a usable main root. A visible main root is a direct rejection.
+- `ZP-CG-09` forms 食神生财 only with month-command food, clear rooted wealth,
+  a reachable food-to-wealth link, and day-master capacity. Otherwise it is a clue.
+- `ZP-TS-01` 杀重身轻 requires a weak day master, forceful killing, and no
+  forceful food-control or seal-transform rescue. `ZP-TS-02` 身旺无依 excludes
+  true special patterns and any clear finance, officer/killing, or seal outlet.
+- Positive terms `ZP-ZX-01` to `ZP-ZX-04` require season, proportion, visibility,
+  roots, flow, and counter-evidence checks. They never form from element counts alone.
+- 清浊 conclusions must state professional terms, active actors, obstruction,
+  rescue, keep/remove result, and rule IDs. Natal conclusions come before luck effects.
+- `ZP-NET-01` settles each defect as `disease -> matching medicine -> medicine
+  strength -> residual disease`. The same weak-carrying defect is counted once;
+  rooted but hidden medicine is partial rescue, and a medicine only removes the
+  defect it actually treats.
+- When month-command injury output is primary and hidden food output has a
+  separate reachable killing-control duty, record functional division instead
+  of automatically labeling food and injury output as mixed.
+- An element required by strength support but restricted by pattern or climate
+  is `conditional use`, not a pure favorable or unfavorable element. State both
+  its benefit and its ten-god risk.
+- `natalPatternLevel` is immutable natal structure output. Luck evaluation has
+  a separate current activation status and grade; it may say `运中补格`, but it
+  must not rewrite the natal grade.
+- `ZP-LV-01` to `ZP-LV-03` settle the public five-grade result as
+  `偏低 / 中等 / 偏高 / 高 / 顶级`: theoretical percentile gives only the
+  candidate grade, formation and disease-remedy gates set the floor and ceiling,
+  and tied raw scores use midpoint rank without random splitting.
+- A strict high-quality combination gains a `偏高` floor, not an automatic top
+  grade. `顶级` additionally requires P95 candidacy, complete and reachable
+  formation, clear purity, and no residual disease or elemental pathology.
+- Pattern level covers natal potential and luck activation only. Reality also
+  depends on family, education, era, region, industry, and personal choices;
+  level is not human value or a guaranteed outcome.
+
 ## Out of Scope
 
 - UI layout beyond rendering fields already returned by the engine.
@@ -37,3 +75,26 @@ node --check .\bazi-engine.js
 node .\check-bazi-page.js
 node .\check-baselines.js
 ```
+
+## Optimization Tracking
+
+Before continuing pattern/useful-element optimization, read and update
+[`pattern-optimization-backlog.md`](pattern-optimization-backlog.md). Every item
+has a stable ID and status so completed, deferred, and selected work remains
+visible across module windows.
+
+## Theoretical Baseline
+
+Read [`pattern-theoretical-baseline.md`](pattern-theoretical-baseline.md) before
+changing raw-score weights, percentile boundaries, sampling dates, or the
+five-grade mapping. Any such change requires a new baseline version and matching
+tests; never silently reuse the old histogram.
+
+## Source Library
+
+Before adding or changing a classical rule, read
+[`pattern-sources/README.md`](pattern-sources/README.md), then use
+[`pattern-sources/rule-crosswalk.md`](pattern-sources/rule-crosswalk.md) to locate
+the accepted source layer. Raw texts and scans are archived in the same folder.
+Do not turn an isolated quotation into a default rule without formation
+conditions, counter-evidence, a stable rule ID, and matching tests.
