@@ -22,19 +22,20 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
-- Owner: P1
+- Owner: P2
 - Working branch: `main`
-- Last shared commit: `e00b12a`
-- Changed: Bazi pattern/useful presentation now separates natal pattern,
-  disease-remedy state, useful elements, clarity, hierarchy, and current luck
-  influence; interaction conclusions are refined without changing chart math.
+- Last shared commit: `7b510c1`
+- Changed: recorded the exact pre-`PAT-208` Bazi scoring checkpoint, current
+  weights, file hashes, rollback rules, accepted optimization scope, and the
+  existing disease/hard-gate deduplication boundary; no scoring code changed.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
   (`18 baselines ok`); `git diff --check`.
-- Next task: continue the next requested Bazi or Qimen module in a dedicated
-  worktree, then integrate through a clean coordinator worktree.
-- Caution: P1's existing `codex/bazi-local-work` branch remains isolated and
-  must pull or rebase the latest `main` before any future integration.
+- Next task: continue `PAT-208` by designing multidimensional weights while
+  retaining the candidate-percentile and hard-gate split, then discuss each
+  concrete weight with the user before implementation.
+- Caution: the active rollback source is `d95c0fd`; caps, diminishing returns,
+  positive/negative balance, and calibration details remain explicitly deferred.
 
 ## Replace At Each Handoff
 
