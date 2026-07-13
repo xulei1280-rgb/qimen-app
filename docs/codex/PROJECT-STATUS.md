@@ -22,18 +22,19 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
-- Owner: P2
+- Owner: P1
 - Working branch: `main`
-- Last shared commit: `fa853d4`
-- Changed: Qimen AI answers are separated into numbered, independently
-  collapsible turns with collapse-all and per-turn delete actions.
-- Checks: inline script syntax passed; `git diff --check` passed; browser
-  verification passed for individual folding, collapse-all, delete
-  confirmation, automatic renumbering, record persistence, and zero console
-  errors.
-- Next task: continue with the next requested Qimen optimization.
+- Last shared commit: `e00b12a`
+- Changed: Bazi pattern/useful presentation now separates natal pattern,
+  disease-remedy state, useful elements, clarity, hierarchy, and current luck
+  influence; interaction conclusions are refined without changing chart math.
+- Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
+  `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
+  (`18 baselines ok`); `git diff --check`.
+- Next task: continue the next requested Bazi or Qimen module in a dedicated
+  worktree, then integrate through a clean coordinator worktree.
 - Caution: P1's existing `codex/bazi-local-work` branch remains isolated and
-  must pull or rebase the latest `main` before integration.
+  must pull or rebase the latest `main` before any future integration.
 
 ## Replace At Each Handoff
 
