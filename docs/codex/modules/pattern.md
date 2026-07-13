@@ -55,6 +55,13 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   `偏低 / 中等 / 偏高 / 高 / 顶级`: theoretical percentile gives only the
   candidate grade, formation and disease-remedy gates set the floor and ceiling,
   and tied raw scores use midpoint rank without random splitting.
+- The current `PAT-208` candidate raw score is a five-dimensional weighted
+  ranking: formation 35%, action flow 20%, clarity 15%, disease-remedy 20%, and
+  elemental phenomena 10%. Pattern names do not add raw points; strict patterns
+  remain distinguished only by quality floors, top eligibility, and tie order.
+- Raw-score evidence uses pre-phenomenon structural clarity, treats a
+  disease-owned negative clarity result as neutral in the clarity dimension,
+  and gives no extra reward for a disease that is fully solved versus no disease.
 - A strict high-quality combination gains a `偏高` floor, not an automatic top
   grade. `顶级` additionally requires P95 candidacy, complete and reachable
   formation, clear purity, and no residual disease or elemental pathology.

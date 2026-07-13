@@ -12,10 +12,12 @@
   var ctrl={木:'土',土:'水',水:'火',火:'金',金:'木'};
   var combineStem={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
-  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.13.3';
+  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.14.1';
   var PATTERN_RULE_VERSION='ZP-2026.07.13.7';
-  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v3';
+  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v4';
+  var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.14-v1';
   var PATTERN_LEVELS=['偏低','中等','偏高','高','顶级'];
+  var PATTERN_SCORE_DIMENSION_WEIGHTS={formation:35,flow:20,clarity:15,remedy:20,balance:10};
   var THEORETICAL_LEVEL_BANDS=[
     {grade:'偏低',min:0,max:5},
     {grade:'中等',min:5,max:20},
@@ -24,8 +26,8 @@
     {grade:'顶级',min:95,max:100.1}
   ];
   var THEORETICAL_BASELINE_CONFIG={start:'1984-02-04',endExclusive:'2044-02-04',stepDays:11,hours:[0,2,4,6,8,10,12,14,16,18,20,22],timezone:'Asia/Shanghai',referenceLongitude:120,trueSolarCorrection:false,deduplicate:'fourPillars'};
-  var THEORETICAL_BASELINE_HISTOGRAM={11:2,13:9,16:1,17:15,19:19,20:27,21:36,22:13,23:93,24:10,25:84,26:66,27:301,28:59,29:355,30:66,31:547,32:137,33:990,34:137,35:787,36:369,37:751,38:294,39:463,40:389,41:198,42:893,43:167,44:798,45:67,46:517,47:137,48:878,49:177,50:493,51:610,52:319,53:324,54:508,55:674,56:484,57:1555,58:169,59:1400,60:132,61:655,62:455,63:253,64:439,65:275,66:140,67:156,68:298,69:161,70:2094,71:171,72:995,73:102,74:346,75:87,76:210,77:5,78:131,79:245,80:43,81:121,82:3,83:10,85:1};
-  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,quantiles:{p5:31,p20:37,p50:54,p80:68,p95:74},candidateGradeCounts:{偏低:1156,中等:3718,偏高:14317,高:3523,顶级:1202},gradeCounts:{偏低:1135,中等:3803,偏高:14552,高:4044,顶级:382},gradePercentages:{偏低:4.75,中等:15.9,偏高:60.85,高:16.91,顶级:1.6},ruleVersion:'ZP-2026.07.13.7',engineVersion:'BAZI-PATTERN-2026.07.13.3'};
+  var THEORETICAL_BASELINE_HISTOGRAM={32:1,34:23,36:37,37:1643,38:3,39:363,40:16,41:6,42:553,43:1371,44:388,45:300,46:76,47:195,48:1096,49:133,50:489,51:76,52:170,53:214,54:817,55:683,56:513,57:544,58:667,59:256,60:559,61:1297,62:342,63:438,64:194,65:508,66:2491,67:89,68:852,69:278,70:663,71:500,72:316,73:175,74:104,75:311,76:95,77:2485,78:2,79:686,80:398,81:99,82:324,83:77};
+  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:32,max:83},mean:59.998202,standardDeviation:13.02399,quantiles:{p5:37,p20:47,p50:61,p80:72,p95:79},candidateGradeCounts:{偏低:1704,中等:3076,偏高:14380,高:3858,顶级:898},gradeCounts:{偏低:1704,中等:3076,偏高:14775,高:3984,顶级:377},gradePercentages:{偏低:7.12,中等:12.86,偏高:61.78,高:16.66,顶级:1.58},ruleVersion:'ZP-2026.07.13.7',engineVersion:'BAZI-PATTERN-2026.07.14.1',scoreModelVersion:'ZP-SCORE-2026.07.14-v1'};
   var AUTHORITY_PATTERN_RULES={
     财:{id:'ZP-MG-01',gods:['正财','偏财'],principle:'财星当令，重在身能任财，并见食神生财或财生官护。',success:['身能任财','食伤生财','财生官'],breakers:['比劫夺财','身弱不任财'],rescues:['官星制比护财','印比扶身承财']},
     官:{id:'ZP-MG-02',gods:['正官'],principle:'正官当令，喜财生、印护，忌伤官与官杀混杂。',success:['财生官','官生印'],breakers:['伤官见官','官杀混杂','身弱官重'],rescues:['印制伤护官','去杀留官']},
@@ -1851,36 +1853,67 @@
     return {type:'流通',text:'日主中和时，重在格局流通、清浊去留与成事路径。'};
   }
   function patternStructureRawScore(analysis){
-    var score=50,parts=[],main=(analysis.patternStructures||[]).find(function(item){return item.role==='主格'}),regular=analysis.regularPattern||{};
-    function add(name,value,evidence){score+=value;parts.push({name:name,value:value,evidence:evidence})}
-    var status=(main&&main.status)||regular.status||'待成';
-    if(main&&/^(从格：|化气格：|专旺格：)/.test(main.name)&&status==='已成')add('特殊格局严格成立',12,main.name);
-    else if(analysis.patternLevelTieBreak&&analysis.patternLevelTieBreak.tier>=2)add('严格成格组合',9,analysis.patternLevelTieBreak.label);
-    else if(status==='已成')add('格局成立',6,(main&&main.name)||regular.name);
-    else if(status==='成而有瑕')add('成格有瑕',1,(main&&main.name)||regular.name);
-    else if(status==='已破')add('格局受损',-9,(main&&main.name)||regular.name);
-    else add('格局待成',-5,(main&&main.name)||regular.name);
+    var main=(analysis.patternStructures||[]).find(function(item){return item.role==='主格'}),regular=analysis.regularPattern||{},status=(main&&main.status)||regular.status||'待成';
+    function clamp(value){return Math.max(0,Math.min(100,Math.round(value)))}
+    function component(name,score,evidence,share,causeGroup){return {name:name,score:score,evidence:evidence,share:share==null?100:share,causeGroup:causeGroup}}
+    function dimension(key,name,score,evidence,components){
+      var weight=PATTERN_SCORE_DIMENSION_WEIGHTS[key],value=clamp(score);
+      return {key:key,name:name,weight:weight,score:value,contribution:Math.round(value*weight)/100,evidence:evidence,components:components||[]};
+    }
+
+    var statusScore=status==='已成'?85:(status==='成而有瑕'?65:(status==='已破'?25:45));
+    var statusEvidence=(main&&main.name)||regular.name||'未见明确主格';
     var checks=regular.checks||[],required=checks.filter(function(item){return item.type==='立格'||item.type==='成格'}),met=required.filter(function(item){return item.active}).length;
-    if(required.length){var completion=met/required.length,completionValue=Math.round((completion-0.5)*12);add('成格完整度',completionValue,met+'/'+required.length)}
-    var steps=analysis.interactionFlow&&analysis.interactionFlow.steps||[];
-    if(steps.length){var active=steps.filter(function(item){return item.active}).length;add('作用链',active===steps.length?8:(active?2:-6),active+'/'+steps.length+'环节可达')}
-    var clarity=analysis.clarity&&analysis.clarity.level||'待辨',clarityValue={清:8,较清:6,可清:3,有瑕:0,冲战:-4,不清:-5,偏浊:-5,浊:-8,待清:-3,待辨:-2}[clarity];
-    add('清浊',clarityValue==null?-2:clarityValue,clarity);
-    var disease=analysis.patternDisease||{solved:[],partial:[],unresolved:[]};
-    var diseaseValue=Math.min(4,(disease.solved||[]).length*2)-(disease.partial||[]).length*2-(disease.unresolved||[]).length*6;
-    if((disease.items||[]).length)add('病药残余',diseaseValue,'已解'+disease.solved.length+'、部分'+disease.partial.length+'、未解'+disease.unresolved.length);
-    var phenomenonValue=-(analysis.elementPhenomena||[]).reduce(function(sum,item){return sum+({轻度:2,明显:4,严重:7}[item.severity]||3)},0);
-    if(phenomenonValue)add('气势病象',phenomenonValue,(analysis.elementPhenomena||[]).map(function(item){return item.name+'（'+item.severity+'）'}).join('、'));
-    var positiveValue=Math.min(4,(analysis.positivePhenomena||[]).length*2);
-    if(positiveValue)add('清秀气象',positiveValue,(analysis.positivePhenomena||[]).map(function(item){return item.name}).join('、'));
-    score=Math.max(0,Math.min(100,Math.round(score)));
-    return {score:score,breakdown:parts,method:'只按成格完整度、作用链、清浊、病药残余和气势证据计分；不使用现实人物结果标签'};
+    var useRegularCompletion=(!main||main.name===regular.name)&&status!=='已破',completionScore=required.length?Math.round(met/required.length*100):50;
+    var formationScore=useRegularCompletion?(statusScore*0.65+completionScore*0.35):statusScore;
+
+    var steps=analysis.interactionFlow&&analysis.interactionFlow.steps||[],active=steps.filter(function(item){return item.active}).length;
+    var flowScore=steps.length?30+60*active/steps.length:50,flowEvidence=steps.length?(active+'/'+steps.length+'环节可达'):'未设置独立作用链，按中性值进入排序';
+
+    var disease=analysis.patternDisease||{items:[],solved:[],partial:[],unresolved:[]},solved=(disease.solved||[]).length,partial=(disease.partial||[]).length,unresolved=(disease.unresolved||[]).length;
+    var clarity=analysis.structuralClarity&&analysis.structuralClarity.level||analysis.clarity&&analysis.clarity.level||'待辨';
+    var clarityClaimedByDisease=!!((disease.items||[]).length&&/^(冲战|不清|偏浊|浊)$/.test(clarity));
+    var clarityScore=clarityClaimedByDisease?50:{清:90,较清:80,可清:65,有瑕:50,冲战:30,不清:25,偏浊:25,浊:10,待清:40,待辨:45}[clarity];
+    if(clarityScore==null)clarityScore=45;
+    var clarityEvidence=clarity+(clarityClaimedByDisease?'；负面原因已由病药维度结算，本维按中性值处理':'');
+
+    var remedyScore=unresolved?25:(partial?55:80),remedyEvidence=(disease.items||[]).length?('已解'+solved+'、部分'+partial+'、未解'+unresolved):'未见需要结算的主要病点';
+
+    var phenomena=analysis.elementPhenomena||[],positive=analysis.positivePhenomena||[];
+    var severityRank=phenomena.reduce(function(max,item){return Math.max(max,{轻度:1,明显:2,严重:3}[item.severity]||1)},0);
+    var balanceScore=severityRank===3?10:(severityRank===2?30:(severityRank===1?45:(positive.length?75:60))),balanceEvidence=[];
+    if(phenomena.length)balanceEvidence.push(phenomena.map(function(item){return item.name+'（'+item.severity+'）'}).join('、'));
+    if(positive.length)balanceEvidence.push(positive.map(function(item){return item.name}).join('、'));
+    if(!balanceEvidence.length)balanceEvidence.push('未见严格气势病象或清秀气象');
+
+    var dimensions=[
+      dimension('formation','成格基础',formationScore,statusEvidence+(useRegularCompletion?'；对应常格条件'+met+'/'+required.length:'；组合格或特殊格不套用常格条件'),useRegularCompletion?[component('格局状态',statusScore,statusEvidence,65,'formation-status'),component('成格完整度',completionScore,met+'/'+required.length,35,'formation-checks')]:[component('主格状态',statusScore,statusEvidence,100,'formation-status')]),
+      dimension('flow','作用链',flowScore,flowEvidence,[component('作用链可达度',clamp(flowScore),flowEvidence,100,'interaction-flow')]),
+      dimension('clarity','清浊去留',clarityScore,clarityEvidence,[component('清浊',clarityScore,clarityEvidence,100,'clarity')]),
+      dimension('remedy','病药净结算',remedyScore,remedyEvidence,[component('病药残余',clamp(remedyScore),remedyEvidence,100,'disease-net')]),
+      dimension('balance','气势校正',balanceScore,balanceEvidence.join('；'),[
+        component('气势病象',phenomena.length?balanceScore:60,phenomena.length?phenomena.map(function(item){return item.name+'（'+item.severity+'）'}).join('、'):'无',100,'element-phenomena'),
+        component('清秀气象',!phenomena.length&&positive.length?75:60,positive.length?(positive.map(function(item){return item.name}).join('、')+(phenomena.length?'（有病象时不参与加分）':'')):(phenomena.length?'有病象时不以清秀气象抵消':'无'),100,'positive-phenomena')
+      ])
+    ];
+    var unroundedScore=dimensions.reduce(function(sum,item){return sum+item.contribution},0),score=clamp(unroundedScore);
+    var ledger=[];
+    dimensions.forEach(function(item){
+      (item.components||[]).forEach(function(entry){ledger.push(Object.assign({dimension:item.key,dimensionName:item.name,dimensionWeight:item.weight},entry))});
+    });
+    return {score:score,unroundedScore:Math.round(unroundedScore*100)/100,modelVersion:PATTERN_SCORE_MODEL_VERSION,totalWeight:100,dimensions:dimensions,ledger:ledger,breakdown:ledger,method:'五维线性加权：成格基础35%、作用链20%、清浊去留15%、病药净结算20%、气势校正10%；格名不直接加分，病药与气势同源原因不跨维度重复扣分；子平硬门槛在百分位候选档之后独立裁决；不使用现实人物结果标签'};
   }
   function percentileFromHistogram(score,histogram){
     var keys=Object.keys(histogram||{}).map(Number).sort(function(a,b){return a-b}),total=keys.reduce(function(sum,key){return sum+(histogram[key]||0)},0);
     if(!total)return null;
     var below=keys.filter(function(key){return key<score}).reduce(function(sum,key){return sum+(histogram[key]||0)},0),equal=histogram[score]||0;
     return Math.round((below+equal/2)/total*1000)/10;
+  }
+  function formatPatternPercentile(percentile){
+    if(typeof percentile!=='number'||!isFinite(percentile))return '';
+    if(percentile<=0)return '低于P0.1';
+    if(percentile>=100)return '高于P99.9';
+    return 'P'+percentile;
   }
   function theoreticalGradeFromPercentile(percentile){
     var value=typeof percentile==='number'?percentile:0;
@@ -1923,14 +1956,14 @@
     var finalIndex=Math.max(floorIndex,Math.min(candidateIndex,ceilingIndex)),grade=PATTERN_LEVELS[finalIndex],floor=PATTERN_LEVELS[floorIndex],ceiling=PATTERN_LEVELS[ceilingIndex];
     var decision={candidateGrade:candidate.grade,candidateBand:'P'+candidate.min+'-P'+Math.min(100,candidate.max),candidateIndex:candidateIndex,floorGrade:floor,ceilingGrade:ceiling,finalGrade:grade,finalIndex:finalIndex,topEligible:topEligible,reasons:gateReasons,ruleIds:['ZP-LV-01','ZP-LV-02','ZP-LV-03','ZP-NET-01'],tiePolicy:'同一原始分采用中位秩百分位，不随机拆分；子平硬门槛不同可以产生不同最终档位。'};
     var structuralText=(analysis.patternLevel||'').replace(/^(?:偏低|中等|偏高|高|顶级)：/,'');
-    analysis.patternLevel=grade+'：理论候选'+candidate.grade+'（P'+percentile+'），经子平硬门槛裁定为'+grade+'；'+gateReasons.join('；')+'。 '+structuralText;
+    analysis.patternLevel=grade+'：理论候选'+candidate.grade+'（'+formatPatternPercentile(percentile)+'），经子平硬门槛裁定为'+grade+'；'+gateReasons.join('；')+'。 '+structuralText;
     analysis.patternLevelGrade=grade;
     analysis.patternLevelIndex=finalIndex;
     analysis.patternLevelQualityFloor=strictQuality?floor:'';
     analysis.patternLevelHardGate=decision;
     analysis.patternLevelMetrics.candidate=candidate.grade;
     analysis.patternLevelMetrics.hardGate=floor+'至'+ceiling;
-    analysis.patternLevelCriteria.unshift({name:'理论分档',met:true,total:1,result:'原始结构分'+raw.score+'，P'+percentile+'，候选'+candidate.grade+'（'+decision.candidateBand+'）'});
+    analysis.patternLevelCriteria.unshift({name:'理论分档',met:true,total:1,result:'原始结构分'+raw.score+'，'+formatPatternPercentile(percentile)+'，候选'+candidate.grade+'（'+decision.candidateBand+'）'});
     analysis.patternLevelCriteria.splice(1,0,{name:'子平硬门槛',met:true,total:1,result:'下限'+floor+'、上限'+ceiling+'，最终'+grade+'；'+gateReasons.join('；')});
     analysis.patternLevelCriteria.push({name:'同分边界',met:true,total:1,result:decision.tiePolicy});
     analysis.natalPatternLevel.grade=grade;
@@ -1945,22 +1978,44 @@
     options=options||{};
     if(typeof getYearGZ==='undefined'||typeof getMonthGZ==='undefined'||typeof getDayGZ==='undefined'||typeof getHourGZ==='undefined')throw new Error('理论基准生成需要页面排盘历法函数。');
     var startText=options.start||THEORETICAL_BASELINE_CONFIG.start,endText=options.endExclusive||THEORETICAL_BASELINE_CONFIG.endExclusive,stepDays=options.stepDays||THEORETICAL_BASELINE_CONFIG.stepDays,hours=(options.hours||THEORETICAL_BASELINE_CONFIG.hours).slice(),deduplicate=options.deduplicate||THEORETICAL_BASELINE_CONFIG.deduplicate;
-    var startParts=startText.split('-').map(Number),endParts=endText.split('-').map(Number),dateValue=Date.UTC(startParts[0],startParts[1]-1,startParts[2]),endValue=Date.UTC(endParts[0],endParts[1]-1,endParts[2]),histogram={},gradeCounts={},mainPatternCounts={},seen={},sampleCount=0,duplicateCount=0;
-    while(dateValue<endValue){
-      var date=new Date(dateValue),year=date.getUTCFullYear(),month=date.getUTCMonth()+1,day=date.getUTCDate();
-      hours.forEach(function(hour){
-        var time={year:year,month:month,day:day,hour:hour,minute:0},pillars=buildPillars(time),key=[pillars.year,pillars.month,pillars.day,pillars.hour].join('|');
-        sampleCount++;
-        if(deduplicate==='fourPillars'&&seen[key]){duplicateCount++;return}
-        seen[key]=true;
-        var analysis=analyzePattern({pillars:pillars,dayStem:pillars.day[0],time:{used:time}}),raw=analysis.patternRawScore;
-        histogram[raw]=(histogram[raw]||0)+1;
-        gradeCounts[analysis.patternLevelGrade]=(gradeCounts[analysis.patternLevelGrade]||0)+1;
-        mainPatternCounts[analysis.mainPattern]=(mainPatternCounts[analysis.mainPattern]||0)+1;
-      });
-      dateValue+=stepDays*86400000;
+    var startParts=startText.split('-').map(Number),endParts=endText.split('-').map(Number),startValue=Date.UTC(startParts[0],startParts[1]-1,startParts[2]),endValue=Date.UTC(endParts[0],endParts[1]-1,endParts[2]);
+    function eachUniqueSample(callback){
+      var dateValue=startValue,seen={},sampleCount=0,duplicateCount=0;
+      while(dateValue<endValue){
+        var date=new Date(dateValue),year=date.getUTCFullYear(),month=date.getUTCMonth()+1,day=date.getUTCDate();
+        hours.forEach(function(hour){
+          var time={year:year,month:month,day:day,hour:hour,minute:0},pillars=buildPillars(time),key=[pillars.year,pillars.month,pillars.day,pillars.hour].join('|');
+          sampleCount++;
+          if(deduplicate==='fourPillars'&&seen[key]){duplicateCount++;return}
+          seen[key]=true;
+          callback(pillars,time,key);
+        });
+        dateValue+=stepDays*86400000;
+      }
+      return {sampleCount:sampleCount,uniqueCount:Object.keys(seen).length,duplicateCount:duplicateCount};
     }
-    return {version:options.version||THEORETICAL_BASELINE_VERSION,config:{start:startText,endExclusive:endText,stepDays:stepDays,hours:hours,timezone:THEORETICAL_BASELINE_CONFIG.timezone,referenceLongitude:THEORETICAL_BASELINE_CONFIG.referenceLongitude,trueSolarCorrection:false,deduplicate:deduplicate},sampleCount:sampleCount,uniqueCount:Object.keys(seen).length,duplicateCount:duplicateCount,histogram:histogram,gradeCounts:gradeCounts,mainPatternCounts:mainPatternCounts,ruleVersion:PATTERN_RULE_VERSION,engineVersion:PATTERN_ENGINE_VERSION,scope:'纯理论合法时间网格；不含真人资料与现实成就标签'};
+    var histogram={},mainPatternCounts={};
+    var sampleMeta=eachUniqueSample(function(pillars,time){
+      var analysis=analyzePattern({pillars:pillars,dayStem:pillars.day[0],time:{used:time}}),raw=analysis.patternRawScore;
+      histogram[raw]=(histogram[raw]||0)+1;
+      mainPatternCounts[analysis.mainPattern]=(mainPatternCounts[analysis.mainPattern]||0)+1;
+    });
+    var candidateGradeCounts={},gradeCounts={};
+    eachUniqueSample(function(pillars,time){
+      var analysis=analyzePattern({pillars:pillars,dayStem:pillars.day[0],time:{used:time}}),raw=analysis.patternRawScoreBreakdown,percentile=percentileFromHistogram(raw.score,histogram),candidate=theoreticalGradeFromPercentile(percentile),decision=finalizePatternLevel(analysis,raw,percentile);
+      candidateGradeCounts[candidate.grade]=(candidateGradeCounts[candidate.grade]||0)+1;
+      gradeCounts[decision.finalGrade]=(gradeCounts[decision.finalGrade]||0)+1;
+    });
+    var keys=Object.keys(histogram).map(Number).sort(function(a,b){return a-b}),total=sampleMeta.uniqueCount;
+    function quantileScore(ratio){
+      var threshold=total*ratio,cumulative=0;
+      for(var i=0;i<keys.length;i++){cumulative+=histogram[keys[i]]||0;if(cumulative>=threshold)return keys[i]}
+      return keys.length?keys[keys.length-1]:null;
+    }
+    var mean=keys.reduce(function(sum,key){return sum+key*(histogram[key]||0)},0)/(total||1);
+    var variance=keys.reduce(function(sum,key){return sum+Math.pow(key-mean,2)*(histogram[key]||0)},0)/(total||1),gradePercentages={};
+    PATTERN_LEVELS.forEach(function(grade){gradePercentages[grade]=Math.round(((gradeCounts[grade]||0)/(total||1))*10000)/100});
+    return {version:options.version||THEORETICAL_BASELINE_VERSION,config:{start:startText,endExclusive:endText,stepDays:stepDays,hours:hours,timezone:THEORETICAL_BASELINE_CONFIG.timezone,referenceLongitude:THEORETICAL_BASELINE_CONFIG.referenceLongitude,trueSolarCorrection:false,deduplicate:deduplicate},sampleCount:sampleMeta.sampleCount,uniqueCount:sampleMeta.uniqueCount,duplicateCount:sampleMeta.duplicateCount,histogram:histogram,scoreRange:{min:keys[0],max:keys[keys.length-1]},mean:Math.round(mean*1000000)/1000000,standardDeviation:Math.round(Math.sqrt(variance)*1000000)/1000000,quantiles:{p5:quantileScore(0.05),p20:quantileScore(0.20),p50:quantileScore(0.50),p80:quantileScore(0.80),p95:quantileScore(0.95)},candidateGradeCounts:candidateGradeCounts,gradeCounts:gradeCounts,gradePercentages:gradePercentages,mainPatternCounts:mainPatternCounts,ruleVersion:PATTERN_RULE_VERSION,engineVersion:PATTERN_ENGINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,scope:'纯理论合法时间网格；不含真人资料与现实成就标签'};
   }
   function classifiedClues(data){
     var noble=[],misc=[];
@@ -2071,25 +2126,28 @@
     structures=applyPhenomenaToStructures(structures,elementPhenomena);
     var verdict=overallPatternVerdict(mainPattern,regular,structures,patternIssues);
     var reasoningChain=patternReasoningChain(mainPattern,regular,structures,patternIssues,comboConflicts,verdict,patternDisease);
-    var clarity=applyPhenomenaToClarity(directClarity(mainPattern,regular,patternClarity(diagnosticPattern,counts,strength)),elementPhenomena);
+    var structuralClarity=directClarity(mainPattern,regular,patternClarity(diagnosticPattern,counts,strength));
+    var clarity=applyPhenomenaToClarity(structuralClarity,elementPhenomena);
     var clarityConclusion=patternClarityConclusion(mainPattern,regular,structures,clarity,interactionFlow,comboConflicts,patternDisease);
     var positivePhenomena=positivePhenomenaAnalysis(pillars,scores,strength,profiles,clarityConclusion,interactionFlow,comboConflicts,elementPhenomena);
     var confidence=patternConfidence(regular,structures,patternIssues,comboClues,clarity,specials);
     var levelResult=levelAssessment(mainPattern,regular,structures,patternIssues,clarity,interactionFlow,comboConflicts,elementPhenomena,patternDisease);
     var level=levelResult.text;
     var usePriority=useful.arbitration||usefulPriority(diagnosticPattern,strength,monthBranch,specials);
-    var result={analysisMeta:{engineVersion:PATTERN_ENGINE_VERSION,ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,baselineScope:'固定理论时间网格，只比较同规则下结构相对位置，不使用真人结果标签'},realizationBoundary:{model:['原局潜力','行运激活','现实兑现'],localScope:['原局潜力','行运激活'],externalFactors:['家庭','教育','时代','国家与地区','行业环境','个人选择'],text:'格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就。'},natalPatternLevel:{grade:levelResult.grade,index:levelResult.index,text:levelResult.text,scope:'原局结构固定结论',ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION},primary:primary,pattern:primary,pillars:pillars,monthCommand:monthCommand,patternBasis:basis,authorityBasis:regular.authority,patternState:state,patternConfidence:confidence,patternVerdict:verdict,patternReasoning:reasoningChain,patternDisease:patternDisease,patternArbitration:arbitration,candidates:candidates,regularPattern:regular,comboPatterns:combos,comboClues:comboClues,patternStructures:structures,mainPattern:mainPattern,patternIssues:patternIssues,diagnosticPattern:diagnosticPattern,patternLevel:level,patternLevelGrade:levelResult.grade,patternLevelIndex:levelResult.index,patternLevelQualityFloor:levelResult.qualityFloor,patternLevelTieBreak:levelResult.tieBreak,patternLevelMetrics:levelResult.metrics,patternLevelCriteria:levelResult.criteria,remedy:remedy,factors:factors,clarity:clarity,clarityConclusion:clarityConclusion,comboConflicts:comboConflicts,tenGodTerms:tenGodTerms,usePriority:usePriority,specialPatterns:specials,classifiedClues:clues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,interactions:interactions,interactionFlow:interactionFlow,strength:strength,strengthScore:weightedStrength,tenGodCounts:counts,tenGodProfiles:profiles,useful:useful,evidence:evidence};
+    var result={analysisMeta:{engineVersion:PATTERN_ENGINE_VERSION,ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,baselineScope:'固定理论时间网格，只比较同规则下结构相对位置，不使用真人结果标签'},realizationBoundary:{model:['原局潜力','行运激活','现实兑现'],localScope:['原局潜力','行运激活'],externalFactors:['家庭','教育','时代','国家与地区','行业环境','个人选择'],text:'格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就。'},natalPatternLevel:{grade:levelResult.grade,index:levelResult.index,text:levelResult.text,scope:'原局结构固定结论',ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION},primary:primary,pattern:primary,pillars:pillars,monthCommand:monthCommand,patternBasis:basis,authorityBasis:regular.authority,patternState:state,patternConfidence:confidence,patternVerdict:verdict,patternReasoning:reasoningChain,patternDisease:patternDisease,patternArbitration:arbitration,candidates:candidates,regularPattern:regular,comboPatterns:combos,comboClues:comboClues,patternStructures:structures,mainPattern:mainPattern,patternIssues:patternIssues,diagnosticPattern:diagnosticPattern,patternLevel:level,patternLevelGrade:levelResult.grade,patternLevelIndex:levelResult.index,patternLevelQualityFloor:levelResult.qualityFloor,patternLevelTieBreak:levelResult.tieBreak,patternLevelMetrics:levelResult.metrics,patternLevelCriteria:levelResult.criteria,remedy:remedy,factors:factors,clarity:clarity,structuralClarity:structuralClarity,clarityConclusion:clarityConclusion,comboConflicts:comboConflicts,tenGodTerms:tenGodTerms,usePriority:usePriority,specialPatterns:specials,classifiedClues:clues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,interactions:interactions,interactionFlow:interactionFlow,strength:strength,strengthScore:weightedStrength,tenGodCounts:counts,tenGodProfiles:profiles,useful:useful,evidence:evidence};
     var raw=patternStructureRawScore(result),percentile=percentileFromHistogram(raw.score,THEORETICAL_BASELINE_HISTOGRAM);
     result.patternRawScore=raw.score;
     result.patternRawScoreBreakdown=raw;
     result.patternPercentile=percentile;
+    result.patternPercentileText=formatPatternPercentile(percentile);
     result.natalPatternLevel.rawScore=raw.score;
     result.natalPatternLevel.percentile=percentile;
+    result.natalPatternLevel.percentileText=result.patternPercentileText;
     finalizePatternLevel(result,raw,percentile);
     return result;
   }
 
-  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,evaluateLuckImpact:evaluateLuckImpact,patternStructureRawScore:patternStructureRawScore,percentileFromHistogram:percentileFromHistogram,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
+  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,evaluateLuckImpact:evaluateLuckImpact,patternStructureRawScore:patternStructureRawScore,percentileFromHistogram:percentileFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
   root.BaziEngine=api;
   if(root.window)root.window.BaziEngine=api; // window.BaziEngine
 })(typeof globalThis!=='undefined'?globalThis:this);
