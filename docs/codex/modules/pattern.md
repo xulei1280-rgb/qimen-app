@@ -104,6 +104,10 @@ changing raw-score weights, percentile boundaries, sampling dates, or the
 five-grade mapping. Any such change requires a new baseline version and matching
 tests; never silently reuse the old histogram.
 
+For `PAT-208`, also read [`pattern-score-backup.md`](pattern-score-backup.md).
+It is the single active rollback checkpoint and may be overwritten only after the
+user explicitly approves a new scoring version.
+
 ## Source Library
 
 Before adding or changing a classical rule, read
