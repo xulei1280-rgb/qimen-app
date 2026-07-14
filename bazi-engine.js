@@ -12,9 +12,9 @@
   var ctrl={木:'土',土:'水',水:'火',火:'金',金:'木'};
   var combineStem={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
-  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.14.2';
-  var PATTERN_RULE_VERSION='ZP-2026.07.14.1';
-  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v5';
+  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.14.3';
+  var PATTERN_RULE_VERSION='ZP-2026.07.14.2';
+  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v6';
   var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.14-v2';
   var PATTERN_LEVELS=['偏低','中等','偏高','高','顶级'];
   var PATTERN_SCORE_DIMENSION_WEIGHTS={potential:20,formation:25,flow:20,clarity:15,remedy:15,balance:5};
@@ -36,8 +36,8 @@
     {grade:'顶级',min:95,max:100.1}
   ];
   var THEORETICAL_BASELINE_CONFIG={start:'1984-02-04',endExclusive:'2044-02-04',stepDays:11,hours:[0,2,4,6,8,10,12,14,16,18,20,22],timezone:'Asia/Shanghai',referenceLongitude:120,trueSolarCorrection:false,deduplicate:'fourPillars'};
-  var THEORETICAL_BASELINE_HISTOGRAM={23:9,24:18,25:1074,28:16,29:818,30:195,31:920,32:1,33:1356,34:654,35:541,36:110,37:2,38:5,39:434,40:76,41:84,42:17,43:184,44:27,45:12,46:75,47:149,48:58,49:167,50:47,51:177,52:44,53:906,54:636,55:505,56:63,57:513,58:657,59:296,60:94,61:368,62:1010,63:377,64:373,65:235,66:2253,67:614,68:188,69:206,70:41,71:513,72:788,73:199,74:253,75:2968,76:1001,77:66,78:84,79:17,80:182,81:27,83:133,84:18,86:756,87:183,89:123};
-  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:23,max:89},mean:57.538133,standardDeviation:17.8332,quantiles:{p5:29,p20:34,p50:62,p80:75,p95:83},candidateGradeCounts:{偏低:1117,中等:3944,偏高:13297,高:4345,顶级:1213},gradeCounts:{偏低:1117,中等:3944,偏高:13869,高:3791,顶级:1195},gradePercentages:{偏低:4.67,中等:16.49,偏高:57.99,高:15.85,顶级:5},ruleVersion:'ZP-2026.07.14.1',engineVersion:'BAZI-PATTERN-2026.07.14.2',scoreModelVersion:'ZP-SCORE-2026.07.14-v2'};
+  var THEORETICAL_BASELINE_HISTOGRAM={23:9,24:18,25:1019,28:17,29:1022,30:221,31:2028,32:1,33:1646,34:705,35:676,36:159,37:1,38:5,39:406,40:91,41:95,42:14,43:12,45:19,46:112,47:11,48:113,49:190,50:71,51:111,52:45,53:1038,54:744,55:423,56:59,57:500,58:724,59:287,60:84,61:320,62:978,63:432,64:38,65:168,66:2260,67:790,68:98,69:154,70:30,71:493,72:362,73:131,74:277,75:2900,76:757,77:12,78:78,79:16,80:76,81:5,83:145,84:18,86:452,87:127,89:123};
+  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:23,max:89},mean:54.469769,standardDeviation:18.217011,quantiles:{p5:29,p20:33,p50:58,p80:74,p95:76},candidateGradeCounts:{偏低:1063,中等:3272,偏高:14872,高:3657,顶级:1052},gradeCounts:{偏低:1063,中等:4222,偏高:14173,高:3623,顶级:835},gradePercentages:{偏低:4.44,中等:17.65,偏高:59.26,高:15.15,顶级:3.49},ruleVersion:'ZP-2026.07.14.2',engineVersion:'BAZI-PATTERN-2026.07.14.3',scoreModelVersion:'ZP-SCORE-2026.07.14-v2'};
   var AUTHORITY_PATTERN_RULES={
     财:{id:'ZP-MG-01',gods:['正财','偏财'],principle:'财星当令，重在身能任财，并见食神生财或财生官护。',success:['身能任财','食伤生财','财生官'],breakers:['比劫夺财','身弱不任财'],rescues:['官星制比护财','印比扶身承财']},
     官:{id:'ZP-MG-02',gods:['正官'],principle:'正官当令，喜财生、印护，忌伤官与官杀混杂。',success:['财生官','官生印'],breakers:['伤官见官','官杀混杂','身弱官重'],rescues:['印制伤护官','去杀留官']},
@@ -862,7 +862,7 @@
     var conditionalUse=[];
     var conflicts=allUse.filter(function(w){return avoidCandidates.indexOf(w)>=0}).map(function(w){
       var conditional=w===dayWx&&strength.indexOf('弱')>=0&&fuyi.use.indexOf(w)>=0&&primary.indexOf(w)<0;
-      if(conditional)conditionalUse.push({element:w,benefit:'可扶助日主并增强行动承载',risk:'同类比劫同时可能分财，合作、朋友往来与现金边界须清楚'});
+      if(conditional)conditionalUse.push({element:w,benefit:'可扶助日主并增强行动承载',risk:'同类比劫也可能牵动格局所忌；是否分财须另见比劫夺财的实际作用链，不能由同类五行直接推断'});
       return {element:w,decision:primary.indexOf(w)>=0?'取':(conditional?'条件取':'不取'),why:primary.indexOf(w)>=0?source+'层优先，保留为主用':(conditional?'扶抑层可助身发用，但格局或调候层同时见忌，属于喜中带忌，不作纯喜或纯忌':'非优先层虽提出喜用，但同时触及忌神，降为不取')};
     });
     if(earthBuriedMetal){
@@ -1166,18 +1166,34 @@
     var foodActive=profiles['食神']&&profiles['食神'].count;
     var sevenActive=profiles['七杀']&&profiles['七杀'].count;
     var foodKillClose=godsConnected(profiles,['食神'],['七杀'],2);
+    var foodWealthClose=godsConnected(profiles,['食神'],['正财','偏财'],2);
+    var wealthKillClose=godsConnected(profiles,['正财','偏财'],['七杀'],2);
+    var wealthDivertsFood=wealthForce&&wealthClear&&foodWealthClose&&wealthKillClose;
+    var foodKillFormed=sevenForce&&foodForce&&sevenClear&&foodClear&&foodKillClose&&canCarry&&!mixed&&!wealthDivertsFood;
     var hurtSealClose=godsConnected(profiles,['伤官'],['正印','偏印'],2);
     var bladeKillClose=godsConnected(profiles,['劫财'],['七杀'],2);
-    if(mixed&&godForce(profiles,'正官')&&godForce(profiles,'七杀')&&monthGod==='正官')addCombo(out,'官杀混杂待清',96);
-    else if(mixed&&monthGod==='正官')addComboClue(clues,'官杀混杂线索参考','官杀并见但一方根透不足，先作清浊线索，不直接按官杀混杂定格。');
+    if(mixed&&officerForce&&sevenForce)addCombo(out,'官杀混杂待清',96,'正官、七杀同时透出或得月令且各有根气，须先辨清浊与去留。');
+    else if(mixed)addComboClue(clues,'官杀混杂线索参考','正官、七杀同时显现，但一方根气不足，先作清浊线索，不直接按官杀混杂定论。');
     if(monthGod==='伤官'&&godClear(profiles,'正官'))addCombo(out,'伤官见官待制',94);
     else if(monthGod==='伤官'&&has('正官'))addComboClue(clues,'伤官见官线索参考','伤官当令而官星根透不足，先作见官线索，待岁运引动再论成败。');
     if(weak&&wealth>=4&&wealthForce)addCombo(out,'财多身弱待扶',92);
     else if(weak&&wealth>=3)addComboClue(clues,'财多身弱线索参考','财星数量偏多但根透条件不足，先作身财失衡线索。');
     if(monthGod==='七杀'&&sealForce&&sealClear)addCombo(out,'杀印相生格',95,'七杀当令，印星透出或得月令，杀有印化并能回生日主。');
     else if(monthGod==='七杀'&&(has('正印')||has('偏印')))addComboClue(clues,'杀印相生线索参考','七杀当令但印星未透且未得月令，不按杀印相生成格。');
-    if(sevenForce&&foodForce&&(sevenClear||foodClear)&&foodKillClose)addCombo(out,'食神制杀格',90,'食神与七杀皆有根气，至少一方透出或得月令，且位置能够直接发生制杀关系。');
-    else if(sevenActive&&foodActive)addComboClue(clues,'食神制杀线索参考','食神与七杀虽见，但根气、显现或位置承接不足，不按食神制杀成格。');
+    if(foodKillFormed)addCombo(out,'食神制杀格',90,'食神、七杀俱有根气并透出或得月令，日主能够承泄任杀，官杀不混，食杀位置可直接承接，且未见财星承食生杀。');
+    else if(sevenActive&&foodActive){
+      var foodKillGaps=[];
+      if(!foodForce)foodKillGaps.push('食神根气不足');
+      if(!sevenForce)foodKillGaps.push('七杀根气不足');
+      if(!foodClear)foodKillGaps.push('食神未透且未得月令');
+      if(!sevenClear)foodKillGaps.push('七杀未透且未得月令');
+      if(!canCarry)foodKillGaps.push('日主承泄任杀不足');
+      if(mixed)foodKillGaps.push('官杀混杂未清');
+      if(wealthDivertsFood)foodKillGaps.push('财星承食生杀，食神有贪生忘克风险');
+      if(!foodKillClose)foodKillGaps.push('食杀位置承接不足');
+      if(!foodKillGaps.length)foodKillGaps.push('制杀条件未完整闭合');
+      addComboClue(clues,'食神制杀线索参考','食神与七杀虽见，但'+foodKillGaps.join('、')+'，不按食神制杀成格。');
+    }
     if(monthGod==='伤官'&&sealForce&&sealClear&&hurtSealClose)addCombo(out,'伤官配印格',88,'伤官当令，印星有根透且与伤官位置可承接，形成印制伤、护身之用。');
     else if(monthGod==='伤官'&&(has('正印')||has('偏印'))){
       var hurtSealGaps=[];
@@ -1204,9 +1220,9 @@
     }else if((has('正财')||has('偏财'))&&(has('正官')||has('七杀'))&&(has('正印')||has('偏印'))&&!mixed){
       addComboClue(clues,'财官印相生线索参考','财、官杀、印俱见，但月令不以财为主线，只作顺生结构线索。');
     }
-    var outputHasSeparateDuty=monthGod==='伤官'&&hurtClear&&foodForce&&sevenForce&&(sevenClear||foodClear)&&foodKillClose&&!foodClear;
+    var outputHasSeparateDuty=monthGod==='伤官'&&hurtClear&&foodKillFormed;
     if((monthGod==='食神'||monthGod==='伤官')&&foodForce&&hurtForce&&output>=3&&!outputHasSeparateDuty)addCombo(out,'食伤混杂待清',89);
-    else if(outputHasSeparateDuty)addComboClue(clues,'食伤分工参考','伤官当令承担月令主线，食神藏支另有制杀职责；主辅作用可分，不按食伤混杂重复扣分。');
+    else if(outputHasSeparateDuty)addComboClue(clues,'食伤分工参考','伤官当令承担月令主线，另有透出或得令的食神严格成立制杀作用；主辅职责可分，不按食伤混杂重复扣分。');
     else if((monthGod==='食神'||monthGod==='伤官')&&has('食神')&&has('伤官'))addComboClue(clues,'食伤混杂线索参考','食神伤官俱见但根透或数量不足，先作混杂线索。');
     if(monthGod==='食神'&&foodForce&&foodClear&&wealthForce&&wealthClear&&canCarry&&godsConnected(profiles,['食神'],['正财','偏财'],2))addCombo(out,'食神生财格',82,'食神当令且有根透，财星有根透并与食神位置承接，日主有根或印比承接，泄秀生财链条可用。');
     else if(monthGod==='食神'&&(has('正财')||has('偏财'))){

@@ -42,9 +42,9 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   strength -> residual disease`. The same weak-carrying defect is counted once;
   rooted but hidden medicine is partial rescue, and a medicine only removes the
   defect it actually treats.
-- When month-command injury output is primary and hidden food output has a
-  separate reachable killing-control duty, record functional division instead
-  of automatically labeling food and injury output as mixed.
+- 食神制杀必须同时核验食杀根透、日主承载、官杀清纯、作用距离和
+  财星是否使食神贪生忘克。藏支食神只能作药意或线索，不能因为
+  真人反馈而放宽成格；食伤分工也只能建立在食神制杀已经严格成立之后。
 - An element required by strength support but restricted by pattern or climate
   is `conditional use`, not a pure favorable or unfavorable element. State both
   its benefit and its ten-god risk.
@@ -146,3 +146,9 @@ Before adding or changing a classical rule, read
 the accepted source layer. Raw texts and scans are archived in the same folder.
 Do not turn an isolated quotation into a default rule without formation
 conditions, counter-evidence, a stable rule ID, and matching tests.
+
+Before using any user, friend, practitioner, or public-person chart during rule
+development, read
+[`pattern-confirmation-bias-postmortem.md`](pattern-confirmation-bias-postmortem.md).
+Such feedback may open a hypothesis, but it cannot define the expected pattern,
+useful element, level, score, or behavior.
