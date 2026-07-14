@@ -12,10 +12,10 @@
   var ctrl={木:'土',土:'水',水:'火',火:'金',金:'木'};
   var combineStem={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
-  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.14.4';
+  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.15.1';
   var PATTERN_RULE_VERSION='ZP-2026.07.14.3';
-  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v7';
-  var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.14-v2';
+  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v8';
+  var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.15-v3';
   var LUCK_RECHECK_VERSION='ZP-LUCK-2026.07.14-v1';
   var PATTERN_LEVELS=['偏低','中等','偏高','高','顶级'];
   var PATTERN_SCORE_DIMENSION_WEIGHTS={potential:20,formation:25,flow:20,clarity:15,remedy:15,balance:5};
@@ -43,8 +43,8 @@
     {grade:'顶级',min:95,max:100.1}
   ];
   var THEORETICAL_BASELINE_CONFIG={start:'1984-02-04',endExclusive:'2044-02-04',stepDays:11,hours:[0,2,4,6,8,10,12,14,16,18,20,22],timezone:'Asia/Shanghai',referenceLongitude:120,trueSolarCorrection:false,deduplicate:'fourPillars'};
-  var THEORETICAL_BASELINE_HISTOGRAM={23:12,24:30,25:1386,28:6,29:690,30:176,31:2328,32:3,33:1843,34:719,35:451,36:91,37:1,38:5,39:440,40:106,41:57,42:13,43:1,45:31,46:132,47:10,48:131,49:161,50:66,51:69,52:25,53:1009,54:780,55:433,56:52,57:484,58:1031,59:312,60:54,61:224,62:631,63:354,64:32,65:191,66:2109,67:811,68:101,69:84,70:25,71:527,72:368,73:125,74:286,75:3017,76:766,77:12,78:92,79:21,80:89,81:6,83:181,84:21,86:520,87:152,89:33};
-  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:23,max:89},mean:54.15036,standardDeviation:18.543917,quantiles:{p5:25,p20:33,p50:58,p80:75,p95:76},candidateGradeCounts:{偏低:1428,中等:3203,偏高:14375,高:3783,顶级:1127},gradeCounts:{偏低:1428,中等:4208,偏高:13600,高:3790,顶级:890},gradePercentages:{偏低:5.97,中等:17.59,偏高:56.87,高:15.85,顶级:3.72},ruleVersion:'ZP-2026.07.14.3',engineVersion:'BAZI-PATTERN-2026.07.14.4',scoreModelVersion:'ZP-SCORE-2026.07.14-v2'};
+  var THEORETICAL_BASELINE_HISTOGRAM={40:1,42:38,43:7,44:28,45:16,46:209,47:89,48:881,49:216,50:1185,51:643,52:1821,53:485,54:995,55:358,56:811,57:1348,58:1305,59:636,60:249,61:727,62:1023,63:458,64:663,65:79,66:2093,67:505,68:69,69:235,70:64,71:705,72:386,73:242,74:307,75:3086,76:760,77:60,78:88,79:27,80:92,81:7,82:18,83:166,84:27,85:3,86:520,87:152,89:33};
+  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:40,max:89},mean:62.553144,standardDeviation:10.115352,quantiles:{p5:48,p20:52,p50:61,p80:75,p95:76},candidateGradeCounts:{偏低:1269,中等:3865,偏高:13743,高:3846,顶级:1193},gradeCounts:{偏低:1269,中等:4534,偏高:13307,高:3916,顶级:890},gradePercentages:{偏低:5.31,中等:18.96,偏高:55.64,高:16.37,顶级:3.72},ruleVersion:'ZP-2026.07.14.3',engineVersion:'BAZI-PATTERN-2026.07.15.1',scoreModelVersion:'ZP-SCORE-2026.07.15-v3'};
   var AUTHORITY_PATTERN_RULES={
     财:{id:'ZP-MG-01',gods:['正财','偏财'],principle:'财星当令，重在身能任财，并见食神生财或财生官护。',success:['身能任财','食伤生财','财生官'],breakers:['比劫夺财','身弱不任财'],rescues:['官星制比护财','印比扶身承财']},
     官:{id:'ZP-MG-02',gods:['正官'],principle:'正官当令，喜财生、印护，忌伤官与官杀混杂。',success:['财生官','官生印'],breakers:['伤官见官','官杀混杂','身弱官重'],rescues:['印制伤护官','去杀留官']},
@@ -1868,8 +1868,9 @@
         var rootPower=usableBranches.reduce(function(sum,entry){return sum+(entry.rootPower||0)},0),clear=usableStems.length>0||monthCommandClear,force=clear||rootPower>=1.2;
         return {name:label,state:clear?'当前运可透达':(force?'当前运有根未透':(usableBranches.length?'当前运仅余弱根':'当前运受合冲或无根')),rank:clear?2:(force||usableBranches.length?1:0)};
       }
-      var clear=anyGodClear(profiles,names),force=anyGodForce(profiles,names);
-      return {name:label,state:clear?'已透或得令':(force?'有根未透':'原局未见'),rank:clear?2:(force?1:0)};
+      var clear=anyGodClear(profiles,names);
+      var rooted=(names||[]).some(function(name){var profile=profiles[name]||{};return (profile.rootPower==null?(profile.roots||0):profile.rootPower)>0});
+      return {name:label,state:clear?'已透或得令':(rooted?'有根未透':'原局未见'),rank:clear?2:(rooted?1:0)};
     }
     function flowMedicine(pattern,label){
       var active=/食神制杀/.test(pattern)&&(flow&&flow.steps||[]).some(function(step){return step.active&&step.action==='制'&&step.from.indexOf('食神')>=0&&step.to.indexOf('七杀')>=0});
@@ -2307,8 +2308,9 @@
     var regularRuleId=regular.authority&&regular.authority.ruleId||(/^ZP-MG-/.test(ruleId)?ruleId:'ZP-MG-00');
     if(/^ZP-MG-/.test(regularRuleId)){
       var regularStatus=regular.status||status,regularPattern=regular.name||pattern;
-      var regularScore=regularStatus==='已成'||regularStatus==='成而有瑕'?70:(regularStatus==='待成'?50:0);
-      return {score:regularScore,tier:regularScore===70?'B':(regularScore===50?'基础':'未成立'),ruleId:regularRuleId,pattern:regularPattern,sourceSystem:'主流子平月令格局',source:[regular.authority&&regular.authority.source||'《子平真诠》月令立格与成败救应主线'],evidence:(entry?pattern+'未通过严格成立条件，退回':'')+regularPattern+regularStatus+'的月令常格基础层级'};
+      var monthPatternEstablished=!/命格待判|未见明确/.test(regularPattern)&&(regular.checks||[]).some(function(item){return item.type==='立格'&&item.active});
+      var regularScore=monthPatternEstablished?70:0;
+      return {score:regularScore,tier:regularScore===70?'B':'未成立',ruleId:regularRuleId,pattern:regularPattern,sourceSystem:'主流子平月令格局',source:[regular.authority&&regular.authority.source||'《子平真诠》月令立格与成败救应主线'],evidence:(entry?pattern+'未通过严格成立条件，退回':'')+(monthPatternEstablished?(regularPattern+'已由月令立格；本维只表达常格理论上限，当前'+regularStatus+'另由成格与病药维度结算'):(regularPattern+'未通过月令立格，不取得常格潜力'))};
     }
     return {score:0,tier:'未成立',ruleId:ruleId,pattern:pattern,sourceSystem:'主流子平月令格局',source:[],evidence:'未见通过稳定规则验真的主格，不因显示名称取得古籍潜力'};
   }
@@ -2362,8 +2364,9 @@
     }
     if(specialQualification)(specialQualification.checks||[]).forEach(function(item){specialOwnedChecks[specialCheckOwner(item)].push(item)});
     var required=specialQualification?specialOwnedChecks.formation.map(function(item){return {active:item.met,label:item.label,ruleId:item.ruleId,id:item.id,evidence:item.evidence}}):(qualificationChecks.length?qualificationChecks.map(function(item){return {active:item.met,label:item.label,ruleId:item.ruleId,id:item.id,evidence:item.evidence}}):checks.filter(function(item){return item.type==='立格'||item.type==='成格'})),met=required.filter(function(item){return item.active}).length;
-    var useCompletion=(qualificationChecks.length||(!main||main.name===regular.name))&&scoringStatus!=='已破',completionScore=required.length?Math.round(met/required.length*100):50;
-    var formationScore=useCompletion?(statusScore*0.65+completionScore*0.35):statusScore;
+    var useCompletion=qualificationChecks.length||(!main||main.name===regular.name),completionScore=required.length?Math.round(met/required.length*100):50;
+    var statusShare=scoringStatus==='已破'?0.5:0.65;
+    var formationScore=useCompletion?(statusScore*statusShare+completionScore*(1-statusShare)):statusScore;
 
     var steps=analysis.interactionFlow&&analysis.interactionFlow.steps||[],active=steps.filter(function(item){return item.active}).length;
     var flowScore=steps.length?30+60*active/steps.length:50,flowEvidence=steps.length?(active+'/'+steps.length+'环节可达'):'未设置独立作用链，按中性值进入排序';
@@ -2385,7 +2388,8 @@
     if(clarityScore==null)clarityScore=45;
     var clarityEvidence=clarity+(clarityClaimedByDisease?'；负面原因已由病药维度结算，本维按中性值处理':(specialQualification?'；只结算独立反从、反化与逆局检查，成立资格和顺势环节由各自维度结算':(strictDerivedClarity?'；较清增益来自成格、作用链与残病结果，审计中退回独立可清锚点':'')));
 
-    var remedyScore=unresolved?25:(partial?55:80),remedyEvidence=(disease.items||[]).length?('已解'+solved+'、部分'+partial+'、未解'+unresolved):'未见需要结算的主要病点';
+    var diseaseCount=(disease.items||[]).length,maxResidual=diseaseCount*2,residualSeverity=unresolved*2+partial;
+    var remedyScore=diseaseCount?Math.round(80-55*residualSeverity/maxResidual):80,remedyEvidence=diseaseCount?('已解'+solved+'、部分'+partial+'、未解'+unresolved+'；残病强度'+residualSeverity+'/'+maxResidual):'未见需要结算的主要病点';
 
     var phenomena=analysis.elementPhenomena||[],positive=analysis.positivePhenomena||[];
     var severityRank=phenomena.reduce(function(max,item){return Math.max(max,{轻度:1,明显:2,严重:3}[item.severity]||1)},0);

@@ -69,11 +69,19 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   component; secondary names and compatible combinations do not stack it.
 - Classical potential uses coarse, traceable tiers rather than simulated
   precision: strict `S` structures score 100, `A` structures score 85, and a
-  formed ordinary month-command pattern scores 70 (`B`). A waiting ordinary
-  pattern receives the base 50, while a broken or unverified pattern receives
-  zero. If a named noble structure fails strict formation—for example, wealth
-  damages the seal in an injury-output-with-seal candidate—it falls back to the
+  verified ordinary month-command pattern scores 70 (`B`). Its theoretical
+  potential remains distinct from current success or failure: a broken ordinary
+  pattern keeps that ceiling, while formation, remedy, and hard gates settle the
+  actual defects. An unverified or pending month-command pattern receives zero.
+  If a named noble structure fails strict formation—for example, wealth damages
+  the seal in an injury-output-with-seal candidate—it falls back to the verified
   ordinary month-command rule instead of retaining the noble-pattern potential.
+- Broken formation preserves its satisfied positive checks instead of replacing
+  the whole dimension with one status anchor. Disease-remedy scoring is
+  proportional to unresolved and partial residual severity; rooted hidden
+  medicine is partial rescue, while medicine with neither visibility nor root is
+  absent. These rules prevent potential, formation, and remedy from repeatedly
+  charging the same defect as if it were three independent failures.
 - Raw-score evidence uses pre-phenomenon structural clarity, treats a
   disease-owned negative clarity result as neutral in the clarity dimension,
   and gives no extra reward for a disease that is fully solved versus no disease.
