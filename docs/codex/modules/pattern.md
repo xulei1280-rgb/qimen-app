@@ -5,7 +5,7 @@
 Produce evidence-based strength, main pattern, pattern condition, special-pattern
 status, useful elements, and favorable/unfavorable interaction conclusions.
 
-The normative level-score, theoretical-percentile, hard-gate, and output contract
+The normative level-score, audit-percentile, high-grade qualification, and output contract
 is `pattern-percentile-design.md`.
 
 ## Primary File
@@ -54,10 +54,10 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
 - `natalPatternLevel` is immutable natal structure output. Luck evaluation has
   a separate current activation status and grade; it may say `运中补格`, but it
   must not rewrite the natal grade.
-- `ZP-LV-01` to `ZP-LV-03` settle the public five-grade result as
-  `偏低 / 中等 / 偏高 / 高 / 顶级`: theoretical percentile gives only the
-  candidate grade, formation and disease-remedy gates set the floor and ceiling,
-  and tied raw scores use midpoint rank without random splitting.
+- `ZP-LV-03` to `ZP-LV-05` settle the public five-grade result as
+  `偏低 / 中等 / 偏高 / 高 / 顶级`: the one-decimal structure score directly
+  gives the candidate grade; high requires a formed structure or effective rescue,
+  and top requires the complete strict qualification set. Percentiles are audit-only.
 - The active `PAT-208` implementation below is the reproducible comparison
   baseline, not the approved target weight set. The formal design audits
   `10/25/25/15/20/5` before any replacement or freeze. The current baseline is
@@ -116,9 +116,10 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   arbitration may reduce a root or obstruct a pattern chain.
 - The visible structure page is a concise report: show the main pattern,
   formation result, final useful-element decision, public level, and current
-  luck conclusion without `ZP-*` IDs, engine versions, raw scores, or duplicated
+  luck conclusion with the one-decimal structure score, but without `ZP-*` IDs,
+  engine versions, weights, percentile positions, or duplicated
   status/factor cards. The AI context keeps the complete rule IDs, checks,
-  percentile evidence, and exact ten-god decisions from the same analysis object.
+  structure-score evidence and exact ten-god decisions from the same analysis object.
 
 ## Out of Scope
 

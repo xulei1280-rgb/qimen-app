@@ -599,7 +599,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20260715.1"></script>
+<script src="bazi-engine.js?v=20260715.2"></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1375,12 +1375,11 @@ function patternLevelText(data,technical){
   data=refreshPatternAnalysis(data);
   var analysis=data.patternAnalysis||{},grade=analysis.patternLevelGrade||'',displayGrade=publicPatternLevel(grade),text=analysis.patternLevel||'普通格局，需结合大运成败细断';
   var criteria=analysis.patternLevelCriteria||[];
-  var baseline=analysis.analysisMeta||{},percentile=analysis.patternPercentile,percentileText=analysis.patternPercentileText||(typeof percentile==='number'?'P'+percentile:'');
-  var scoreDetail=analysis.patternRawScoreBreakdown||{},dimensions=scoreDetail.dimensions||[];
-  var baselineText=typeof percentile==='number'?'<br>理论结构位置：原始结构分 '+analysis.patternRawScore+'，'+percentileText+'（'+baseline.baselineVersion+'；仅表示同规则理论网格中的相对位置）':'';
+  var scoreDetail=analysis.patternRawScoreBreakdown||{},dimensions=scoreDetail.dimensions||[],structureScore=typeof analysis.patternStructureScore==='number'?analysis.patternStructureScore:(typeof scoreDetail.unroundedScore==='number'?Math.round(scoreDetail.unroundedScore*10)/10:null);
+  var scoreText=typeof structureScore==='number'?'<br>结构分：'+structureScore.toFixed(1):'';
   var dimensionText=dimensions.length?'<br>评分维度：'+dimensions.map(function(item){return item.name+item.weight+'%：'+item.score+'（加权贡献 '+item.contribution+'）'}).join('；')+'；模型 '+scoreDetail.modelVersion:'';
   if(displayGrade)text=text.replace(/^(偏低|中下|中等|偏高|中高|高|顶级)：/,displayGrade+'：');
-  if(technical)return text+baselineText+dimensionText+(criteria.length?'<br>层次归因：'+criteria.map(function(x){return x.name+'（'+x.result+'）'}).join('；'):'');
+  if(technical)return text+scoreText+dimensionText+(criteria.length?'<br>层次归因：'+criteria.map(function(x){return x.name+'（'+x.result+'）'}).join('；'):'');
   var structures=analysis.patternStructures||[],main=structures.find(function(item){return item.role==='主格'}),flow=analysis.interactionFlow,gate=analysis.patternLevelHardGate||{},reasons=(gate.reasons||[]).filter(function(x){return /部分化解|未解|清浊|冲战|破格|气势病象/.test(x)}).map(function(x){return x.replace(/仍有(\d+)项部分化解病点，不重复扣已解部分/,'仍有$1项病点仅部分化解')});
   var lines=[displayGrade||grade||'待定'];
   var basis=[];
@@ -1388,7 +1387,7 @@ function patternLevelText(data,technical){
   if(flow&&flow.verdict)basis.push(flow.verdict);
   if(basis.length)lines[0]+='：'+basis.join('，')+'。';
   if(reasons.length)lines.push(reasons.join('；')+'。');
-  if(typeof percentile==='number')lines.push('理论位置：'+percentileText);
+  if(typeof structureScore==='number')lines.push('结构分：'+structureScore.toFixed(1));
   return lines.join('<br>');
 }
 function currentLuckPatternText(data){
