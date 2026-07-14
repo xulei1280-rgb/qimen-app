@@ -12,9 +12,9 @@
   var ctrl={木:'土',土:'水',水:'火',火:'金',金:'木'};
   var combineStem={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
-  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.14.3';
-  var PATTERN_RULE_VERSION='ZP-2026.07.14.2';
-  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v6';
+  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.14.4';
+  var PATTERN_RULE_VERSION='ZP-2026.07.14.3';
+  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v7';
   var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.14-v2';
   var PATTERN_LEVELS=['偏低','中等','偏高','高','顶级'];
   var PATTERN_SCORE_DIMENSION_WEIGHTS={potential:20,formation:25,flow:20,clarity:15,remedy:15,balance:5};
@@ -36,8 +36,8 @@
     {grade:'顶级',min:95,max:100.1}
   ];
   var THEORETICAL_BASELINE_CONFIG={start:'1984-02-04',endExclusive:'2044-02-04',stepDays:11,hours:[0,2,4,6,8,10,12,14,16,18,20,22],timezone:'Asia/Shanghai',referenceLongitude:120,trueSolarCorrection:false,deduplicate:'fourPillars'};
-  var THEORETICAL_BASELINE_HISTOGRAM={23:9,24:18,25:1019,28:17,29:1022,30:221,31:2028,32:1,33:1646,34:705,35:676,36:159,37:1,38:5,39:406,40:91,41:95,42:14,43:12,45:19,46:112,47:11,48:113,49:190,50:71,51:111,52:45,53:1038,54:744,55:423,56:59,57:500,58:724,59:287,60:84,61:320,62:978,63:432,64:38,65:168,66:2260,67:790,68:98,69:154,70:30,71:493,72:362,73:131,74:277,75:2900,76:757,77:12,78:78,79:16,80:76,81:5,83:145,84:18,86:452,87:127,89:123};
-  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:23,max:89},mean:54.469769,standardDeviation:18.217011,quantiles:{p5:29,p20:33,p50:58,p80:74,p95:76},candidateGradeCounts:{偏低:1063,中等:3272,偏高:14872,高:3657,顶级:1052},gradeCounts:{偏低:1063,中等:4222,偏高:14173,高:3623,顶级:835},gradePercentages:{偏低:4.44,中等:17.65,偏高:59.26,高:15.15,顶级:3.49},ruleVersion:'ZP-2026.07.14.2',engineVersion:'BAZI-PATTERN-2026.07.14.3',scoreModelVersion:'ZP-SCORE-2026.07.14-v2'};
+  var THEORETICAL_BASELINE_HISTOGRAM={23:12,24:30,25:1386,28:6,29:690,30:176,31:2328,32:3,33:1843,34:719,35:451,36:91,37:1,38:5,39:440,40:106,41:57,42:13,43:1,45:31,46:132,47:10,48:131,49:161,50:66,51:69,52:25,53:1009,54:780,55:433,56:52,57:484,58:1031,59:312,60:54,61:224,62:631,63:354,64:32,65:191,66:2109,67:811,68:101,69:84,70:25,71:527,72:368,73:125,74:286,75:3017,76:766,77:12,78:92,79:21,80:89,81:6,83:181,84:21,86:520,87:152,89:33};
+  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:23,max:89},mean:54.15036,standardDeviation:18.543917,quantiles:{p5:25,p20:33,p50:58,p80:75,p95:76},candidateGradeCounts:{偏低:1428,中等:3203,偏高:14375,高:3783,顶级:1127},gradeCounts:{偏低:1428,中等:4208,偏高:13600,高:3790,顶级:890},gradePercentages:{偏低:5.97,中等:17.59,偏高:56.87,高:15.85,顶级:3.72},ruleVersion:'ZP-2026.07.14.3',engineVersion:'BAZI-PATTERN-2026.07.14.4',scoreModelVersion:'ZP-SCORE-2026.07.14-v2'};
   var AUTHORITY_PATTERN_RULES={
     财:{id:'ZP-MG-01',gods:['正财','偏财'],principle:'财星当令，重在身能任财，并见食神生财或财生官护。',success:['身能任财','食伤生财','财生官'],breakers:['比劫夺财','身弱不任财'],rescues:['官星制比护财','印比扶身承财']},
     官:{id:'ZP-MG-02',gods:['正官'],principle:'正官当令，喜财生、印护，忌伤官与官杀混杂。',success:['财生官','官生印'],breakers:['伤官见官','官杀混杂','身弱官重'],rescues:['印制伤护官','去杀留官']},
@@ -244,14 +244,23 @@
     var penalty=(reasons.indexOf('冲')>=0?0.2:0)+(reasons.indexOf('刑')>=0?0.1:0)+(reasons.indexOf('害')>=0?0.08:0)+(reasons.indexOf('破')>=0?0.06:0);
     return {reasons:reasons,relations:relations,suppressed:unique(suppressed),penalty:Math.min(0.35,penalty)};
   }
+  function branchGroupChange(key,interactions){
+    var position=['year','month','day','hour'].indexOf(key);
+    if(position<0||!interactions)return null;
+    return (interactions.groups||[]).filter(function(item){return item.complete&&item.active&&item.positions.indexOf(position)>=0}).sort(function(a,b){return b.priority-a.priority})[0]||null;
+  }
   function rootEvidence(dayStem,pillars,interactions){
     var dayWx=STEM_WX[dayStem],labels={year:'年支',month:'月令',day:'日支',hour:'时支'},roots=[];
     Object.keys(pillars).forEach(function(k){
       var hidden=HIDDEN[pillars[k][1]]||[],idx=hidden.findIndex(function(s){return STEM_WX[s]===dayWx});
       if(idx<0)return;
       var grade=idx===0?'本气根':(idx===1?'中气根':'余气根');
-      var attack=branchAttackInfo(pillars[k][1],pillars,k,interactions),suppressedText=attack.suppressed.length?'；另见'+attack.suppressed.join('、')+'，未按有效损根计':'';
-      roots.push({position:k,branch:pillars[k][1],grade:grade,attacked:attack.reasons.length>0,attacks:attack.reasons,suppressedAttacks:attack.suppressed,text:labels[k]+pillars[k][1]+grade+(attack.reasons.length?'，受'+attack.reasons.join('、'):'')+suppressedText});
+      var attack=branchAttackInfo(pillars[k][1],pillars,k,interactions),group=branchGroupChange(k,interactions),changedByGroup=!!(group&&group.element!==dayWx),transformedAway=!!(changedByGroup&&!group.challenged);
+      var suppressedText=attack.suppressed.length?'；另见'+attack.suppressed.join('、')+'，未按有效损根计':'';
+      var groupText=changedByGroup?'；随'+group.name+(group.challenged?'成局有瑕，原根减力':'变为'+group.element+'气，原根不再直接计用'):'';
+      var attacked=attack.reasons.length>0;
+      var rootPower=(idx===0?1:(idx===1?0.6:0.3))*(1-attack.penalty)*(transformedAway?0:(changedByGroup?0.5:1));
+      roots.push({position:k,branch:pillars[k][1],grade:grade,rootPower:Math.round(rootPower*100)/100,exactStem:hidden[idx]===dayStem,attacked:attacked,attacks:attack.reasons,suppressedAttacks:attack.suppressed,changedByGroup:changedByGroup,transformedAway:transformedAway,group:group&&group.name||'',usable:rootPower>0,text:labels[k]+pillars[k][1]+grade+(attack.reasons.length?'，受'+attack.reasons.join('、'):'')+groupText+suppressedText});
     });
     return roots;
   }
@@ -342,13 +351,19 @@
     return {natalStems:stems,natalBranches:branches,stemCombines:stemCombines,branchPairs:branchPairs,groups:groups,arbitration:arbitration};
   }
   function strengthScore(dayStem,pillars){
-    var parts=[],support=0,interactions=interactionAnalysis(pillars);
+    var parts=[],support=0,interactions=interactionAnalysis(pillars),dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),interactionAdjustment=0;
     function add(label,weight,ratio,key){
+      var originalRatio=ratio,group=key?branchGroupChange(key,interactions):null;
+      if(group){
+        var transformedRatio=group.element===dayWx?1:(group.element===resource?0.85:0),factor=group.challenged?0.5:1;
+        ratio=ratio*(1-factor)+transformedRatio*factor;
+        interactionAdjustment+=weight*(ratio-originalRatio);
+      }
       var attack=key?branchAttackInfo(pillars[key][1],pillars,key,interactions):{reasons:[],penalty:0};
       var adjusted=ratio*(1-attack.penalty);
       var score=weight*adjusted;
       support+=score;
-      parts.push({label:label,weight:weight,score:Math.round(score*10)/10,ratio:Math.round(adjusted*100)/100,attacked:attack.reasons.length>0,attacks:attack.reasons});
+      parts.push({label:label,weight:weight,score:Math.round(score*10)/10,ratio:Math.round(adjusted*100)/100,attacked:attack.reasons.length>0,attacks:attack.reasons,groupChange:group?{name:group.name,element:group.element,status:group.status,delta:Math.round(weight*(ratio-originalRatio)*10)/10}:null});
     }
     add('年干',STRENGTH_WEIGHTS.yearStem,supportRatio(dayStem,pillars.year[0]));
     add('月干',STRENGTH_WEIGHTS.monthStem,supportRatio(dayStem,pillars.month[0]));
@@ -357,25 +372,18 @@
     add('月令',STRENGTH_WEIGHTS.monthBranch,branchSupportRatio(dayStem,pillars.month[1]),'month');
     add('日支',STRENGTH_WEIGHTS.dayBranch,branchSupportRatio(dayStem,pillars.day[1]),'day');
     add('时支',STRENGTH_WEIGHTS.hourBranch,branchSupportRatio(dayStem,pillars.hour[1]),'hour');
-    var dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),interactionAdjustment=0;
-    interactions.groups.filter(function(x){return x.complete&&x.active}).forEach(function(group){
-      var factor=group.status==='成局有力'?1:0.5;
-      if(group.element===dayWx)interactionAdjustment+=6*factor;
-      else if(group.element===resource)interactionAdjustment+=4*factor;
-    });
-    support+=interactionAdjustment;
     var command=parts.find(function(x){return x.label==='月令'}),roots=rootEvidence(dayStem,pillars,interactions);
     var rootScore=parts.filter(function(x){return /支|月令/.test(x.label)&&x.label!=='月令'}).reduce(function(sum,x){return sum+x.score},0);
     var momentum=parts.filter(function(x){return /干/.test(x.label)}).reduce(function(sum,x){return sum+x.score},0);
-    var rootState=!roots.length?'未见同类根气':(roots.some(function(x){return x.attacked})?'有根但受冲刑害破':'根气可用');
+    var rootState=!roots.length?'未见同类根气':(roots.some(function(x){return x.transformedAway})?'原根随合会变气':(roots.some(function(x){return x.attacked})?'有根但受冲刑害破':'根气可用'));
     var momentumState=momentum>=10?'天干印比帮扶有力':(momentum>0?'天干印比有助，但助力有限':'天干未见印比相助');
     var evidence=[
       '得令：'+(command.score>=20?'得令有力':(command.score>0?'月令有生扶':'月令不扶')),
       '得地：'+rootState+(roots.length?'（'+roots.map(function(x){return x.text}).join('、')+'）':''),
-      '得势：'+momentumState+(interactionAdjustment?'，另有合会成局助势':'')
+      '得势：'+momentumState+(interactionAdjustment?'；合会变气反馈'+(interactionAdjustment>0?'+':'')+Math.round(interactionAdjustment*10)/10:'')
     ];
     var confidence=roots.some(function(x){return x.attacked})?'中':'高';
-    return {support:Math.round(Math.min(100,support)*10)/10,total:100,parts:parts,dimensions:{command:{score:command.score,max:40},roots:{score:Math.round(rootScore*10)/10,items:roots},momentum:{score:Math.round(momentum*10)/10,interactionAdjustment:interactionAdjustment}},interactions:interactions,confidence:confidence,evidence:evidence};
+    return {support:Math.round(Math.max(0,Math.min(100,support))*10)/10,total:100,parts:parts,dimensions:{command:{score:command.score,max:40},roots:{score:Math.round(rootScore*10)/10,items:roots},momentum:{score:Math.round(momentum*10)/10,interactionAdjustment:Math.round(interactionAdjustment*10)/10}},interactions:interactions,confidence:confidence,evidence:evidence};
   }
   function assessStrength(dayStem,pillarsOrMonthBranch,scores){
     if(pillarsOrMonthBranch&&typeof pillarsOrMonthBranch==='object'&&pillarsOrMonthBranch.month){
@@ -397,6 +405,20 @@
     if(value>=0.34)return '中和';
     if(value>=0.26)return '偏弱';
     return '弱';
+  }
+  function carryingCapacityFeedback(strength,weightedStrength){
+    var roots=weightedStrength&&weightedStrength.dimensions&&weightedStrength.dimensions.roots.items||[];
+    var usableRoots=roots.filter(function(item){return item.usable!==false&&!item.transformedAway}),cleanRoots=usableRoots.filter(function(item){return !item.attacked&&!item.changedByGroup}),partialRoots=usableRoots.filter(function(item){return item.attacked||item.changedByGroup}),rootPower=usableRoots.reduce(function(sum,item){return sum+(item.rootPower||0)},0),exactRootPower=usableRoots.filter(function(item){return item.exactStem}).reduce(function(sum,item){return sum+(item.rootPower||0)},0);
+    var damagedRoots=roots.filter(function(item){return item.usable===false||item.transformedAway||item.attacked});
+    var support=weightedStrength&&weightedStrength.support||0,weak=/弱/.test(strength),canCarry=!weak||exactRootPower>=1.4||(rootPower>=1.4&&support>=30);
+    var reasons=[];
+    if(cleanRoots.length)reasons.push('可用根气'+cleanRoots.map(function(item){return item.text}).join('、'));
+    if(partialRoots.length)reasons.push('折损后尚存根力'+partialRoots.map(function(item){return item.text}).join('、'));
+    if(!usableRoots.length)reasons.push('未见可直接承载的日主根气');
+    var lostRoots=damagedRoots.filter(function(item){return item.usable===false||item.transformedAway});
+    if(lostRoots.length)reasons.push('失用根气'+lostRoots.map(function(item){return item.text}).join('、'));
+    reasons.push('扶身权重'+support);
+    return {ruleId:'ZP-FB-01',ruleVersion:PATTERN_RULE_VERSION,canCarryWealth:canCarry,canCarryOutputKill:canCarry,usableRootCount:usableRoots.length,usableRootPower:Math.round(rootPower*100)/100,exactRootPower:Math.round(exactRootPower*100)/100,damagedRootCount:damagedRoots.length,support:support,status:canCarry?'承载可用':'承载不足',text:(canCarry?'日主仍具任财、承泄或任杀的基础':'日主根气受损、同干根力不足或随合会变气，暂不足以单凭财、食杀组合认定承载成立')+'；'+reasons.join('；')};
   }
   function unique(arr){
     return (arr||[]).filter(function(x,i,a){return x&&a.indexOf(x)===i});
@@ -754,7 +776,7 @@
     else if(/伤官配印/.test(main))preferred=['正印','偏印'];
     else if(/伤官生财/.test(main))preferred=['伤官','正财','偏财'];
     preferred=unique((pattern.specificUse||[]).concat(preferred));
-    function active(god){var item=profiles[god]||{};return !!(item.revealed||item.monthCommand||item.roots)}
+    function active(god){var item=profiles[god]||{};return !!(item.revealed||item.monthCommand||(item.rootPower==null?item.roots:item.rootPower)>0)}
     function items(elements,preferredGods,role){
       return unique(elements).map(function(element){
         var possible=godNamesForElement(dayStem,element),chosen=preferredGods.filter(function(god){return possible.indexOf(god)>=0&&active(god)});
@@ -764,7 +786,7 @@
         if(!chosen.length)chosen=preferredGods.filter(function(god){return possible.indexOf(god)>=0});
         if(!chosen.length)chosen=possible;
         var present=chosen.some(active),clear=chosen.some(function(god){var item=profiles[god]||{};return item.revealed||item.monthCommand});
-        var rooted=chosen.some(function(god){return ((profiles[god]||{}).roots||0)>0});
+        var rooted=chosen.some(function(god){var item=profiles[god]||{};return (item.rootPower==null?(item.roots||0):item.rootPower)>0});
         return {element:element,tenGods:unique(chosen),stems:unique(STEMS.filter(function(stem){return chosen.indexOf(tenGod(dayStem,stem))>=0})),present:present,state:clear?'透清或得令':(rooted?'有根未透':(present?'原局有据':'待运补入')),role:role,reason:role==='主用'?'承接当前最高优先层':'结合原局根透与主格关系'};
       });
     }
@@ -1072,11 +1094,11 @@
     Object.keys(pillars).forEach(function(k){(HIDDEN[pillars[k][1]]||[]).forEach(function(s){addGod(tenGod(dayStem,s))})});
     return counts;
   }
-  function tenGodProfiles(dayStem,pillars,monthCommand){
+  function tenGodProfiles(dayStem,pillars,monthCommand,interactions){
     var profiles={};
     var order={year:0,month:1,day:2,hour:3};
     function ensure(g){
-      if(!profiles[g])profiles[g]={count:0,revealed:0,roots:0,monthCommand:false,monthHidden:false,stemPositions:[],branchPositions:[],stemEntries:[],branchEntries:[]};
+      if(!profiles[g])profiles[g]={count:0,revealed:0,roots:0,rootPower:0,monthCommand:false,monthHidden:false,stemPositions:[],branchPositions:[],stemEntries:[],branchEntries:[]};
       return profiles[g];
     }
     ['year','month','hour'].forEach(function(k){
@@ -1088,10 +1110,13 @@
         var g=tenGod(dayStem,s);
         if(!g)return;
         var item=ensure(g);
+        var attack=branchAttackInfo(pillars[k][1],pillars,k,interactions),group=branchGroupChange(k,interactions),originalElement=STEM_WX[s],changedByGroup=!!(group&&group.element!==originalElement),retention=changedByGroup?(group.challenged?0.5:0):1;
+        var rootWeight=(i===0?1:(i===1?0.6:0.3))*(1-attack.penalty)*retention;
         item.count++;
         item.roots++;
+        item.rootPower+=rootWeight;
         item.branchPositions.push(order[k]);
-        item.branchEntries.push({position:order[k],stem:s,branch:pillars[k][1],pillar:k,hiddenIndex:i});
+        item.branchEntries.push({position:order[k],stem:s,branch:pillars[k][1],pillar:k,hiddenIndex:i,rootPower:Math.round(rootWeight*100)/100,attacks:attack.reasons,groupChange:group&&group.name||'',transformedAway:changedByGroup&&!group.challenged});
         if(k==='month'){
           item.monthHidden=true;
         }
@@ -1118,7 +1143,8 @@
   }
   function godForce(profiles,name){
     var item=profiles[name]||{};
-    return !!(item.revealed||item.monthCommand||item.roots>=2);
+    var rootPower=item.rootPower==null?(item.roots||0):item.rootPower;
+    return !!(item.revealed||item.monthCommand||rootPower>=1.2);
   }
   function godClear(profiles,name){
     var item=profiles[name]||{};
@@ -1148,7 +1174,7 @@
     var mixed=godClear(profiles,'正官')&&godClear(profiles,'七杀');
     var weak=context&&/弱/.test(context.strength||'');
     var strong=context&&/强/.test(context.strength||'');
-    var canCarry=!weak||((context&&context.dayRootCount)||0)>=2||((context&&context.strengthSupport)||0)>=30;
+    var canCarry=context&&context.carryingCapacity?context.carryingCapacity.canCarryOutputKill:(!weak||((context&&context.dayRootCount)||0)>=2||((context&&context.strengthSupport)||0)>=30);
     var wealth=(counts['正财']||0)+(counts['偏财']||0);
     var output=(counts['食神']||0)+(counts['伤官']||0);
     var sealForce=anyGodForce(profiles,['正印','偏印']);
@@ -1279,12 +1305,7 @@
     out.details=[];
     var resource=resourceElement(dayWx),weighted=strengthScore(dayStem,pillars).support;
     var rootLabels={year:'年支',month:'月支',day:'日支',hour:'时支'};
-    var sameElementRoots=Object.keys(pillars).filter(function(k){
-      return (HIDDEN[pillars[k][1]]||[]).some(function(stem){return STEM_WX[stem]===dayWx});
-    }).map(function(k){
-      var hidden=(HIDDEN[pillars[k][1]]||[]).filter(function(stem){return STEM_WX[stem]===dayWx});
-      return rootLabels[k]+pillars[k][1]+'藏'+hidden.join('、');
-    });
+    var sameElementRoots=(roots||[]).filter(function(item){return typeof item==='string'||item.usable!==false&&!item.transformedAway}).map(function(item){return typeof item==='string'?item:item.text});
     var killing=(counts['正官']||0)+(counts['七杀']||0);
     var wealth=(counts['正财']||0)+(counts['偏财']||0),output=(counts['食神']||0)+(counts['伤官']||0),sealGods=(counts['正印']||0)+(counts['偏印']||0);
     var supportGods=(counts['比肩']||0)+(counts['劫财']||0)+sealGods;
@@ -1327,12 +1348,14 @@
       var outputElement=gen[dayWx],wealthElement=ctrl[dayWx],outputPower=(scores[outputElement]||0)/total,wealthPower=(scores[wealthElement]||0)/total;
       var sealForce=anyGodForce(profiles||{},['正印','偏印']);
       var childChecks=[
+        check('no-root','日主无同类根气',sameElementRoots.length===0,sameElementRoots.length?'日主仍见同五行根气'+sameElementRoots.join('、'):'日主未见同五行根气'),
+        check('weak-support','扶身不逆势',weighted<18&&supportGods===0,'扶身权重'+Math.round(weighted)+'，印比计数'+supportGods),
         check('output-force','食伤成势',output>=4&&outputPower>=0.45,'食伤计数'+output+'，'+outputElement+'约占全局'+Math.round(outputPower*100)+'%'),
         check('output-month','食伤得令',BRANCH_WX[pillars.month[1]]===outputElement,pillars.month[1]+'月以'+BRANCH_WX[pillars.month[1]]+'为月令气'),
         check('no-seal-reversal','无有力印星逆制',!sealForce,'印星计数'+sealGods+(sealForce?'，已透、得令或成强根':'，未达有力反制')),
         check('child-has-child','食伤继续生财',wealth>=1&&wealthPower>=0.06,'财星计数'+wealth+'，'+wealthElement+'约占全局'+Math.round(wealthPower*100)+'%')
       ];
-      if(allMet(childChecks))addTrue('从格：','从儿格',childChecks,[childChecks[0],childChecks[3]],outputElement);
+      if(allMet(childChecks))addTrue('从格：','从儿格',childChecks,[childChecks[2],childChecks[5]],outputElement);
       else if(output>=3&&outputPower>=0.35&&sealGods<=1)out.push('特殊线索参考：假从儿倾向（食伤势力、财星承接或印星反制条件未全合）。');
     }
 
@@ -1929,10 +1952,10 @@
   function luckRecheck(dayStem,luckGz,analysis){
     if(!analysis.pillars||!analysis.tenGodProfiles||!analysis.tenGodCounts)return null;
     var profiles=JSON.parse(JSON.stringify(analysis.tenGodProfiles)),counts=Object.assign({},analysis.tenGodCounts),position=4;
-    function ensure(god){if(!profiles[god])profiles[god]={count:0,revealed:0,roots:0,monthCommand:false,monthHidden:false,stemPositions:[],branchPositions:[],stemEntries:[],branchEntries:[]};return profiles[god]}
+    function ensure(god){if(!profiles[god])profiles[god]={count:0,revealed:0,roots:0,rootPower:0,monthCommand:false,monthHidden:false,stemPositions:[],branchPositions:[],stemEntries:[],branchEntries:[]};return profiles[god]}
     var stem=luckGz[0],branch=luckGz[1],stemGod=tenGod(dayStem,stem),hidden=HIDDEN[branch]||[];
     if(stemGod){var stemItem=ensure(stemGod);stemItem.count++;stemItem.revealed++;stemItem.stemPositions.push(position);stemItem.stemEntries.push({position:position,stem:stem,pillar:'luck'});counts[stemGod]=(counts[stemGod]||0)+1}
-    hidden.forEach(function(hiddenStem,index){var god=tenGod(dayStem,hiddenStem);if(!god)return;var item=ensure(god);item.count++;item.roots++;item.branchPositions.push(position);item.branchEntries.push({position:position,stem:hiddenStem,branch:branch,pillar:'luck',hiddenIndex:index});counts[god]=(counts[god]||0)+1});
+    hidden.forEach(function(hiddenStem,index){var god=tenGod(dayStem,hiddenStem);if(!god)return;var item=ensure(god);item.count++;item.roots++;item.rootPower=(item.rootPower||0)+(index===0?1:(index===1?0.6:0.3));item.branchPositions.push(position);item.branchEntries.push({position:position,stem:hiddenStem,branch:branch,pillar:'luck',hiddenIndex:index});counts[god]=(counts[god]||0)+1});
     var dayWx=STEM_WX[dayStem],support=[dayWx,resourceElement(dayWx)],drain=[gen[dayWx],ctrl[dayWx],officerElement(dayWx)],luckElements=unique([STEM_WX[stem],BRANCH_WX[branch]]),strength=analysis.strength;
     if(/弱/.test(strength)&&luckElements.every(function(w){return support.indexOf(w)>=0}))strength='中和';
     else if(/强/.test(strength)&&luckElements.every(function(w){return drain.indexOf(w)>=0}))strength='中和';
@@ -2289,26 +2312,28 @@
     var monthCommand=monthCommandAnalysis(dayStem,pillars,interactions,data.time&&data.time.used);
     var main=monthCommand.primaryStem,monthGod=monthCommand.primaryGod,primary=patternName(dayStem,monthBranch,main),evidence=[];
     var counts=tenGodCounts(dayStem,pillars);
-    var profiles=tenGodProfiles(dayStem,pillars,monthCommand);
+    var profiles=tenGodProfiles(dayStem,pillars,monthCommand,interactions);
     var elementPhenomena=[];
     var regular=regularPatternAssessment(dayStem,pillars,monthGod,profiles,strength,monthCommand);
     var revealed=monthCommand.revealedStems;
-    var roots=Object.keys(pillars).filter(function(k){return (HIDDEN[pillars[k][1]]||[]).indexOf(dayStem)>=0}).map(function(k){return ({year:'年支',month:'月支',day:'日支',hour:'时支'})[k]+pillars[k][1]});
+    var rootDetails=weightedStrength.dimensions.roots.items||[],roots=rootDetails.filter(function(item){return item.usable!==false&&!item.transformedAway}).map(function(item){return item.text});
+    var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength);
     evidence.push(monthCommand.basis);
     evidence.push('透干：'+(revealed.length?revealed.map(function(s){return s+tenGod(dayStem,s)}).join('、'):'月令藏干未明显透出')+'。');
     evidence.push('通根：'+(roots.length?dayStem+'见于'+roots.join('、'):'日主未见直接通根')+'。');
     evidence.push('旺衰：'+strength+'；以得令、得地、得势的分项证据综合校准。');
     weightedStrength.evidence.forEach(function(item){evidence.push(item+'。')});
+    evidence.push('承载复核：'+carryingCapacity.text+'。');
     interactions.groups.filter(function(x){return x.complete}).forEach(function(item){evidence.push('合会：'+item.text+'。')});
     interactions.stemCombines.forEach(function(item){evidence.push('天干合：'+item.text+'。')});
     interactions.branchPairs.forEach(function(item){evidence.push('地支'+item.type+'：'+item.text+(item.active===false?'，此关系已降级':'')+'。')});
     if(interactions.arbitration)evidence.push('合冲先后：'+interactions.arbitration.text+'；规则 '+interactions.arbitration.ruleIds.join('、')+'。');
     var candidates=monthCommand.selectedStems.map(function(s){return patternName(dayStem,monthBranch,s)}).filter(Boolean);
     var mixed=godClear(profiles,'正官')&&godClear(profiles,'七杀');
-    var comboResult=comboPatterns(monthCommand.ambiguous?'':monthGod,counts,{mixed:mixed,strength:strength,profiles:profiles,dayRootCount:roots.length,strengthSupport:weightedStrength.support});
+    var comboResult=comboPatterns(monthCommand.ambiguous?'':monthGod,counts,{mixed:mixed,strength:strength,profiles:profiles,dayRootCount:roots.length,strengthSupport:weightedStrength.support,carryingCapacity:carryingCapacity});
     if(monthCommand.ambiguous)comboResult.clues.unshift({name:'杂气兼用线索参考',text:monthCommand.basis+' 条件未取清前不以其中一神强定成格。'});
     var combos=comboResult.formed,comboClues=comboResult.clues;
-    var specials=specialPatterns(dayStem,pillars,scores,counts,strength,roots,interactions,profiles);
+    var specials=specialPatterns(dayStem,pillars,scores,counts,strength,rootDetails,interactions,profiles);
     elementPhenomena=elementPhenomenaAnalysis(dayStem,pillars,scores,strength,weightedStrength,specials);
     var clues=classifiedClues({pillars:pillars,dayStem:dayStem});
     var trueSpecial=trueSpecialPattern(specials);
@@ -2353,7 +2378,7 @@
     var authorityBasis=specialDetail?specialContextAuthority(specialDetail):regular.authority;
     var publicPrimary=specialDetail?mainPattern:primary;
     var ordinaryContext=specialDetail?{primary:primary,regularPattern:regular,comboPatterns:combos,comboClues:comboClues,comboConflicts:comboConflicts,positivePhenomena:positivePhenomenaAnalysis(pillars,scores,strength,profiles,clarityConclusion,interactionFlow,comboConflicts,elementPhenomena)}:null;
-    var result={analysisMeta:{engineVersion:PATTERN_ENGINE_VERSION,ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,baselineScope:'固定理论时间网格，只比较同规则下结构相对位置，不使用真人结果标签'},realizationBoundary:{model:['原局潜力','行运激活','现实兑现'],localScope:['原局潜力','行运激活'],externalFactors:['家庭','教育','时代','国家与地区','行业环境','个人选择'],text:'格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就。'},natalPatternLevel:{grade:levelResult.grade,index:levelResult.index,text:levelResult.text,scope:'原局结构固定结论',ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION},primary:publicPrimary,pattern:publicPrimary,regularPrimary:specialDetail?primary:null,pillars:pillars,monthCommand:monthCommand,patternBasis:basis,authorityBasis:authorityBasis,patternState:state,patternConfidence:confidence,patternVerdict:verdict,patternReasoning:reasoningChain,patternDisease:patternDisease,patternArbitration:arbitration,candidates:candidates,regularPattern:regularOutput,regularPatternBackground:specialDetail?regular:null,ordinaryContext:ordinaryContext,comboPatterns:specialDetail?[]:combos,comboClues:specialDetail?[]:comboClues,patternStructures:structures,mainPattern:mainPattern,patternIssues:patternIssues,diagnosticPattern:diagnosticPattern,patternLevel:level,patternLevelGrade:levelResult.grade,patternLevelIndex:levelResult.index,patternLevelQualityFloor:levelResult.qualityFloor,patternLevelTieBreak:levelResult.tieBreak,patternLevelMetrics:levelResult.metrics,patternLevelCriteria:levelResult.criteria,remedy:remedy,factors:factors,clarity:clarity,structuralClarity:structuralClarity,clarityConclusion:clarityConclusion,comboConflicts:specialDetail?[]:comboConflicts,tenGodTerms:tenGodTerms,usePriority:usePriority,specialPatterns:specials,specialPatternDetails:(specials.details||[]),specialPatternQualification:specialDetail,classifiedClues:clues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,interactions:interactions,interactionFlow:interactionFlow,strength:strength,strengthScore:weightedStrength,tenGodCounts:counts,tenGodProfiles:profiles,useful:useful,evidence:evidence};
+    var result={analysisMeta:{engineVersion:PATTERN_ENGINE_VERSION,ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,baselineScope:'固定理论时间网格，只比较同规则下结构相对位置，不使用真人结果标签'},realizationBoundary:{model:['原局潜力','行运激活','现实兑现'],localScope:['原局潜力','行运激活'],externalFactors:['家庭','教育','时代','国家与地区','行业环境','个人选择'],text:'格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就。'},natalPatternLevel:{grade:levelResult.grade,index:levelResult.index,text:levelResult.text,scope:'原局结构固定结论',ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION},primary:publicPrimary,pattern:publicPrimary,regularPrimary:specialDetail?primary:null,pillars:pillars,monthCommand:monthCommand,patternBasis:basis,authorityBasis:authorityBasis,patternState:state,patternConfidence:confidence,patternVerdict:verdict,patternReasoning:reasoningChain,patternDisease:patternDisease,patternArbitration:arbitration,candidates:candidates,regularPattern:regularOutput,regularPatternBackground:specialDetail?regular:null,ordinaryContext:ordinaryContext,comboPatterns:specialDetail?[]:combos,comboClues:specialDetail?[]:comboClues,patternStructures:structures,mainPattern:mainPattern,patternIssues:patternIssues,diagnosticPattern:diagnosticPattern,patternLevel:level,patternLevelGrade:levelResult.grade,patternLevelIndex:levelResult.index,patternLevelQualityFloor:levelResult.qualityFloor,patternLevelTieBreak:levelResult.tieBreak,patternLevelMetrics:levelResult.metrics,patternLevelCriteria:levelResult.criteria,remedy:remedy,factors:factors,clarity:clarity,structuralClarity:structuralClarity,clarityConclusion:clarityConclusion,comboConflicts:specialDetail?[]:comboConflicts,tenGodTerms:tenGodTerms,usePriority:usePriority,specialPatterns:specials,specialPatternDetails:(specials.details||[]),specialPatternQualification:specialDetail,classifiedClues:clues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,interactions:interactions,interactionFlow:interactionFlow,strength:strength,strengthScore:weightedStrength,carryingCapacity:carryingCapacity,tenGodCounts:counts,tenGodProfiles:profiles,useful:useful,evidence:evidence};
     var raw=patternStructureRawScore(result),percentile=percentileFromHistogram(raw.score,THEORETICAL_BASELINE_HISTOGRAM);
     result.patternRawScore=raw.score;
     result.patternRawScoreBreakdown=raw;

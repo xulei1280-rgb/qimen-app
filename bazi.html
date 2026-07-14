@@ -599,7 +599,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js"></script>
+<script src="bazi-engine.js?v=20260714.4"></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1249,8 +1249,10 @@ function patternCandidates(data){
 }
 function strengthEvidenceText(data){
   data=refreshPatternAnalysis(data);
-  var score=data.patternAnalysis&&data.patternAnalysis.strengthScore;
-  return score&&score.evidence?score.evidence.join('<br>'):'旺衰依据待判。';
+  var analysis=data.patternAnalysis||{},score=analysis.strengthScore,capacity=analysis.carryingCapacity;
+  var text=score&&score.evidence?score.evidence.join('<br>'):'旺衰依据待判。';
+  if(capacity)text+='<br>承载复核：'+capacity.status+(capacity.damagedRootCount?'；'+capacity.damagedRootCount+'处根气受损或随合会变气':'；根气未见有效损变');
+  return text;
 }
 function usefulLayerText(data,key){
   data=refreshPatternAnalysis(data);
@@ -1476,6 +1478,7 @@ function buildPatternContextText(data){
     '格局用神：'+usefulLayerText(data,'pattern'),
     '用神取舍：'+usefulPriorityText(data,true),
     '格局状态：'+patternStatusText(data),
+    '旺衰承载复核：'+((data.patternAnalysis&&data.patternAnalysis.carryingCapacity&&data.patternAnalysis.carryingCapacity.text)||'未建立二次反馈'),
     '气势病象：'+(elementPhenomenonContextText(data)||'未见满足严格条件的五行偏枯病象'),
     '清秀气象：'+(positivePhenomenonContextText(data)||'未见满足严格条件的正向专业气象'),
     '格局成败：'+patternVerdictText(data),
