@@ -791,16 +791,127 @@ const wealthWeakNatalSnapshot = JSON.stringify({ grade: wealthWeakPattern.patter
 const helpfulLuckImpact = scriptContext.BaziEngine.evaluateLuckImpact(wealthWeakBazi.dayStem, '壬寅', wealthWeakPattern);
 const harmfulLuckImpact = scriptContext.BaziEngine.evaluateLuckImpact(wealthWeakBazi.dayStem, '丙辰', wealthWeakPattern);
 assert(JSON.stringify({ grade: wealthWeakPattern.patternLevelGrade, index: wealthWeakPattern.patternLevelIndex, main: wealthWeakPattern.mainPattern, disease: wealthWeakPattern.patternDisease }) === wealthWeakNatalSnapshot, 'evaluating helpful or harmful luck must not mutate the natal pattern level');
-assert(helpfulLuckImpact.natalGrade === wealthWeakPattern.patternLevelGrade && helpfulLuckImpact.scope.includes('不改写原局') && ['运中补格', '发挥提升'].includes(helpfulLuckImpact.activationStatus), `luck output should separate natal grade from current activation, got ${JSON.stringify(helpfulLuckImpact)}`);
-assert(helpfulLuckImpact.action === '提升' && helpfulLuckImpact.text.includes('当前大运壬寅'), `印比 current luck should raise a wealth-heavy weak chart, got ${JSON.stringify(helpfulLuckImpact)}`);
+assert(helpfulLuckImpact.natalGrade === wealthWeakPattern.patternLevelGrade && helpfulLuckImpact.scope.includes('不改写原局') && helpfulLuckImpact.activationStatus === '条件改善', `luck output should separate natal grade from a partial current-condition improvement, got ${JSON.stringify(helpfulLuckImpact)}`);
+assert(helpfulLuckImpact.action === '维持' && helpfulLuckImpact.score === 1 && helpfulLuckImpact.scoreLedger.numericOwner === '格局条件改善' && !helpfulLuckImpact.scoreLedger.elementCounted && helpfulLuckImpact.text.includes('当前大运壬寅'), `one seal/root remedy chain may improve a failed wealth pattern without being counted again as two useful elements or raising the natal grade, got ${JSON.stringify(helpfulLuckImpact)}`);
 assert(harmfulLuckImpact.action === '下降' && harmfulLuckImpact.text.includes('当前大运丙辰'), `食财 current luck should lower a wealth-heavy weak chart, got ${JSON.stringify(harmfulLuckImpact)}`);
 assert(helpfulLuckImpact.fromStatus !== helpfulLuckImpact.toStatus && helpfulLuckImpact.text.includes('格局状态由'), `helpful current luck should expose a direct formation-status transition, got ${JSON.stringify(helpfulLuckImpact)}`);
 assert(harmfulLuckImpact.fromStatus === '已破' && harmfulLuckImpact.toStatus === '已破' && harmfulLuckImpact.text.includes('格局状态维持已破'), `a harmful current luck should retain a direct failed status when the natal pattern is already broken, got ${JSON.stringify(harmfulLuckImpact)}`);
-assert(helpfulLuckImpact.conditionReview && helpfulLuckImpact.conditionReview.completed.some((x) => x.label.includes('身能任财')) && helpfulLuckImpact.toMain === '偏财格', `helpful luck should rerun the same formation checklist and state which missing condition it completes, got ${JSON.stringify(helpfulLuckImpact)}`);
+assert(helpfulLuckImpact.conditionReview && helpfulLuckImpact.conditionReview.regularPattern.checks.some((x) => x.label.includes('身能任财') && !x.active) && helpfulLuckImpact.conditionReview.patternDisease.partial.some((x) => x.family === '承载不足') && helpfulLuckImpact.toMain === helpfulLuckImpact.fromMain && helpfulLuckImpact.toStatus === '待成', `a helpful seal/root luck that remains damaged by the full fifth-pillar interaction graph must improve the disease without being promoted to a formed wealth pattern, got ${JSON.stringify(helpfulLuckImpact)}`);
 assert(!harmfulLuckImpact.conditionReview.formedAdded.includes('食神制杀格') && harmfulLuckImpact.conditionReview.effectiveAdded.length === 0 && harmfulLuckImpact.toMain === harmfulLuckImpact.fromMain, `luck must not promote a food-control structure that still fails the strict natal gates, got ${JSON.stringify(harmfulLuckImpact)}`);
 const halfWaterPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '庚申', month: '壬子', day: '甲午', hour: '戊戌' }, dayStem: '甲' });
 const completedWaterLuck = scriptContext.BaziEngine.evaluateLuckImpact('甲', '壬辰', halfWaterPattern);
-assert(completedWaterLuck.text.includes('补成三合水局'), `current luck should explain when it completes a natal harmony group, got ${JSON.stringify(completedWaterLuck)}`);
+assert(completedWaterLuck.text.includes('补成三合水局') && completedWaterLuck.conditionReview.interactions.groups.some((x) => x.name === '三合水局' && x.active && x.challenged && x.status === '成局有瑕'), `current luck should explain a completed but externally clashed harmony group without calling it pure, got ${JSON.stringify(completedWaterLuck)}`);
+
+const fifthPillarCombineBazi = { pillars: { year: '辛酉', month: '己丑', day: '丙申', hour: '乙未' }, dayStem: '丙' };
+const fifthPillarCombinePattern = scriptContext.BaziEngine.analyzePattern(fifthPillarCombineBazi);
+const fifthPillarCombineImpact = scriptContext.BaziEngine.evaluateLuckImpact('丙', '庚辰', fifthPillarCombinePattern);
+const fifthPillarCombineReview = fifthPillarCombineImpact.conditionReview;
+assert(fifthPillarCombineReview.ruleVersion === 'ZP-LUCK-2026.07.14-v1' && fifthPillarCombineReview.currentPillars.luck === '庚辰' && fifthPillarCombineReview.interactions.dynamicPosition === 4 && JSON.stringify(fifthPillarCombineReview.interactions.pillarKeys) === JSON.stringify(['year', 'month', 'day', 'hour', 'luck']), `PAT-202 should expose one ordered five-pillar review context, got ${JSON.stringify(fifthPillarCombineReview.interactions)}`);
+assert(fifthPillarCombineReview.interactions.stemCombines.some((x) => x.pair === '乙庚' && x.left === 3 && x.right === 4 && x.involvesLuck && x.effect === 'transform' && x.target === '金') && fifthPillarCombineReview.interactions.branchPairs.some((x) => x.type === '六合' && x.left === 0 && x.right === 4 && x.involvesLuck && x.effect === 'transform' && x.target === '金'), `luck stem and branch must participate in the same combine/transformation arbitration as the natal pillars, got ${JSON.stringify(fifthPillarCombineReview.interactions)}`);
+
+const transformedLuckSealBazi = { pillars: { year: '戊午', month: '丙午', day: '甲子', hour: '丁巳' }, dayStem: '甲' };
+const transformedLuckSealImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '癸酉', scriptContext.BaziEngine.analyzePattern(transformedLuckSealBazi));
+const transformedLuckSealReview = transformedLuckSealImpact.conditionReview;
+const transformedLuckStemPart = transformedLuckSealReview.strengthScore.parts.find((x) => x.label === '运干');
+const transformedSealEntry = transformedLuckSealReview.profiles.正印 && transformedLuckSealReview.profiles.正印.stemEntries.find((x) => x.pillar === 'luck');
+const transformedNatalWealthEntry = transformedLuckSealReview.profiles.偏财 && transformedLuckSealReview.profiles.偏财.stemEntries.find((x) => x.pillar === 'year');
+assert(transformedLuckSealReview.interactions.stemCombines.some((x) => x.pair === '戊癸' && x.effect === 'transform' && x.target === '火' && x.involvesLuck) && transformedLuckStemPart.stemChange.effect === 'transform' && transformedLuckStemPart.stemChange.target === '火' && transformedLuckStemPart.originalRatio === 0.85 && transformedLuckStemPart.score === 0 && transformedSealEntry && !transformedSealEntry.usable && transformedNatalWealthEntry && !transformedNatalWealthEntry.usable && transformedLuckSealReview.profiles.正印.revealed === 0 && transformedLuckSealReview.profiles.偏财.revealed === 0 && transformedLuckSealReview.scores.水 < transformedLuckSealReview.rawScores.水 && transformedLuckSealReview.scores.土 < transformedLuckSealReview.rawScores.土 && transformedLuckSealReview.scores.火 > transformedLuckSealReview.rawScores.火, `both sides of a luck-triggered stem transformation must stop acting as their original revealed ten gods and must feed the effective element ledger, got ${JSON.stringify({ part: transformedLuckStemPart, seal: transformedLuckSealReview.profiles.正印, wealth: transformedLuckSealReview.profiles.偏财, raw: transformedLuckSealReview.rawScores, effective: transformedLuckSealReview.scores })}`);
+
+const boundVisibleStemBazi = { pillars: { year: '甲寅', month: '丙寅', day: '丙午', hour: '丁巳' }, dayStem: '丙' };
+const boundVisibleStemPattern = scriptContext.BaziEngine.analyzePattern(boundVisibleStemBazi);
+const boundVisibleStemSnapshot = JSON.stringify(boundVisibleStemPattern);
+const boundVisibleStemReview = scriptContext.BaziEngine.evaluateLuckImpact('丙', '己丑', boundVisibleStemPattern).conditionReview;
+const boundNatalWoodEntry = boundVisibleStemReview.profiles.偏印 && boundVisibleStemReview.profiles.偏印.stemEntries.find((x) => x.pillar === 'year');
+assert(boundVisibleStemPattern.positivePhenomena.some((x) => x.name === '木火通明') && boundVisibleStemReview.interactions.stemCombines.some((x) => x.pair === '甲己' && x.involvesLuck && x.effect === 'bind') && boundNatalWoodEntry && !boundNatalWoodEntry.usable && !boundVisibleStemReview.positivePhenomena.some((x) => x.name === '木火通明') && JSON.stringify(boundVisibleStemPattern) === boundVisibleStemSnapshot, `a natal visible stem caught in a luck-pillar bind must stop supporting a current clear-phenomenon conclusion without rewriting the natal conclusion, got ${JSON.stringify({ natal: boundVisibleStemPattern.positivePhenomena, current: boundVisibleStemReview.positivePhenomena, entry: boundNatalWoodEntry })}`);
+
+const contestedLuckWealthBazi = { pillars: { year: '壬子', month: '甲寅', day: '甲卯', hour: '癸亥' }, dayStem: '甲' };
+const contestedLuckWealthPattern = scriptContext.BaziEngine.analyzePattern(contestedLuckWealthBazi);
+const contestedLuckWealthImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '己亥', contestedLuckWealthPattern);
+const contestedLuckWealthEntry = contestedLuckWealthImpact.conditionReview.profiles.正财 && contestedLuckWealthImpact.conditionReview.profiles.正财.stemEntries.find((x) => x.pillar === 'luck');
+assert(contestedLuckWealthImpact.conditionReview.interactions.stemCombines.filter((x) => x.involvesLuck && x.effect === 'contest').length === 2 && contestedLuckWealthEntry && !contestedLuckWealthEntry.usable && contestedLuckWealthEntry.effect === 'contest' && !contestedLuckWealthImpact.conditionReview.strictFormation && contestedLuckWealthImpact.toMain === contestedLuckWealthPattern.mainPattern, `a luck wealth stem caught in two competing combinations may remain a clue but cannot serve as clear outward use or create a formed pattern, got ${JSON.stringify(contestedLuckWealthImpact)}`);
+
+const transformedLuckBranchBazi = { pillars: { year: '甲酉', month: '戊辰', day: '丙寅', hour: '己未' }, dayStem: '丙' };
+const transformedLuckBranchImpact = scriptContext.BaziEngine.evaluateLuckImpact('丙', '庚午', scriptContext.BaziEngine.analyzePattern(transformedLuckBranchBazi));
+const transformedLuckBranchReview = transformedLuckBranchImpact.conditionReview;
+const transformedLuckBranchRoot = transformedLuckBranchReview.strengthScore.dimensions.roots.items.find((x) => x.position === 'luck');
+const transformedLuckBranchProfile = transformedLuckBranchReview.profiles.劫财 && transformedLuckBranchReview.profiles.劫财.branchEntries.find((x) => x.pillar === 'luck');
+assert(transformedLuckBranchReview.interactions.branchPairs.some((x) => x.type === '六合' && x.effect === 'transform' && x.target === '土' && x.involvesLuck) && transformedLuckBranchRoot && transformedLuckBranchRoot.transformedAway && transformedLuckBranchRoot.rootPower === 0 && transformedLuckBranchRoot.branchChange.kind === 'six-combine' && transformedLuckBranchProfile && transformedLuckBranchProfile.transformedAway && transformedLuckBranchProfile.rootPower === 0 && !transformedLuckBranchProfile.usable && transformedLuckBranchReview.scores.火 < transformedLuckBranchReview.rawScores.火 && transformedLuckBranchReview.scores.土 > transformedLuckBranchReview.rawScores.土, `a supported luck-branch six-combination must feed its transformed element into the element, root and ten-god ledgers instead of retaining the original full root, got ${JSON.stringify({ root: transformedLuckBranchRoot, profile: transformedLuckBranchProfile, raw: transformedLuckBranchReview.rawScores, effective: transformedLuckBranchReview.scores })}`);
+
+const competingLuckGroupsBazi = { pillars: { year: '甲寅', month: '壬子', day: '甲卯', hour: '乙申' }, dayStem: '甲' };
+const competingLuckGroupsReview = scriptContext.BaziEngine.evaluateLuckImpact('甲', '戊辰', scriptContext.BaziEngine.analyzePattern(competingLuckGroupsBazi)).conditionReview;
+const acceptedMeetingGroup = competingLuckGroupsReview.interactions.groups.find((x) => x.name === '三会木局');
+const suppressedHarmonyGroup = competingLuckGroupsReview.interactions.groups.find((x) => x.name === '三合水局');
+assert(acceptedMeetingGroup && acceptedMeetingGroup.active && acceptedMeetingGroup.activatedByLuck && suppressedHarmonyGroup && !suppressedHarmonyGroup.active && suppressedHarmonyGroup.complete && suppressedHarmonyGroup.suppressedByGroup === '三会木局' && suppressedHarmonyGroup.status === '争局让位三会木局', `two complete groups sharing the luck branch cannot transform that branch into different elements at the same time; the lower-order group must explicitly yield, got ${JSON.stringify(competingLuckGroupsReview.interactions.groups)}`);
+
+const fifthPillarWaterBazi = { pillars: { year: '庚申', month: '壬子', day: '甲申', hour: '壬子' }, dayStem: '甲' };
+const fifthPillarWaterImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '戊辰', scriptContext.BaziEngine.analyzePattern(fifthPillarWaterBazi));
+const completedFifthWaterGroup = fifthPillarWaterImpact.conditionReview.interactions.groups.find((x) => x.name === '三合水局');
+assert(completedFifthWaterGroup && completedFifthWaterGroup.complete && completedFifthWaterGroup.active && !completedFifthWaterGroup.challenged && completedFifthWaterGroup.activatedByLuck && completedFifthWaterGroup.positions.includes(4), `the luck branch should complete and transform a supported 申子辰 group only after all three branches are present, got ${JSON.stringify(fifthPillarWaterImpact.conditionReview.interactions.groups)}`);
+
+const fifthPillarRootBazi = { pillars: { year: '甲子', month: '乙丑', day: '甲寅', hour: '辛丑' }, dayStem: '甲' };
+const fifthPillarRootPattern = scriptContext.BaziEngine.analyzePattern(fifthPillarRootBazi);
+const fifthPillarRootImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '戊申', fifthPillarRootPattern);
+const fifthPillarRootReview = fifthPillarRootImpact.conditionReview;
+const natalDayRoot = fifthPillarRootPattern.strengthScore.dimensions.roots.items.find((x) => x.position === 'day');
+const currentDayRoot = fifthPillarRootReview.strengthScore.dimensions.roots.items.find((x) => x.position === 'day');
+assert(fifthPillarRootPattern.strength === '中和' && /弱/.test(fifthPillarRootReview.strength) && fifthPillarRootReview.strengthScore.support < fifthPillarRootPattern.strengthScore.support && fifthPillarRootPattern.carryingCapacity.canCarryOutputKill && !fifthPillarRootReview.carryingCapacity.canCarryOutputKill, `luck clash/punishment should feed back into current strength and carrying capacity without changing natal strength, got ${JSON.stringify({ natal: fifthPillarRootPattern.strengthScore, current: fifthPillarRootReview.strengthScore })}`);
+assert(natalDayRoot.rootPower > currentDayRoot.rootPower && currentDayRoot.attacks.includes('冲') && currentDayRoot.attacks.includes('刑') && fifthPillarRootReview.interactions.branchPairs.some((x) => x.involvesLuck && x.type === '冲' && x.active), `the fifth pillar must reduce the attacked natal root through the arbitrated clash/punishment graph, got ${JSON.stringify({ natalDayRoot, currentDayRoot, pairs: fifthPillarRootReview.interactions.branchPairs })}`);
+
+const fifthPillarSecondaryAttackBazi = { pillars: { year: '庚申', month: '丁丑', day: '乙卯', hour: '己巳' }, dayStem: '乙' };
+const fifthPillarPunishment = scriptContext.BaziEngine.evaluateLuckImpact('乙', '壬子', scriptContext.BaziEngine.analyzePattern(fifthPillarSecondaryAttackBazi)).conditionReview;
+const fifthPillarHarmBreak = scriptContext.BaziEngine.evaluateLuckImpact('乙', '戊辰', scriptContext.BaziEngine.analyzePattern(fifthPillarSecondaryAttackBazi)).conditionReview;
+assert(fifthPillarPunishment.interactions.branchPairs.some((x) => x.type === '刑' && x.active && x.involvesLuck && x.left === 2 && x.right === 4) && fifthPillarPunishment.strengthScore.dimensions.roots.items.some((x) => x.position === 'day' && x.attacks.includes('刑')), `a luck 子 branch punishment of the natal 卯 day branch must reach that exact root calculation, got ${JSON.stringify(fifthPillarPunishment.interactions.branchPairs)}`);
+assert(fifthPillarHarmBreak.interactions.branchPairs.some((x) => x.type === '害' && x.active && x.involvesLuck && x.left === 2 && x.right === 4) && fifthPillarHarmBreak.interactions.branchPairs.some((x) => x.type === '破' && x.active && x.involvesLuck && x.left === 1 && x.right === 4) && fifthPillarHarmBreak.strengthScore.dimensions.roots.items.some((x) => x.position === 'day' && x.attacks.includes('害')), `luck 辰 must harm the natal 卯 day branch and break the natal 丑 month branch at the exact endpoints, got ${JSON.stringify(fifthPillarHarmBreak.interactions.branchPairs)}`);
+
+const luckFormsInjurySealBazi = { pillars: { year: '乙卯', month: '甲午', day: '甲子', hour: '丁亥' }, dayStem: '甲' };
+const luckFormsInjurySealPattern = scriptContext.BaziEngine.analyzePattern(luckFormsInjurySealBazi);
+const luckFormsInjurySealSnapshot = JSON.stringify(luckFormsInjurySealPattern);
+const luckFormsInjurySealImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '癸酉', luckFormsInjurySealPattern);
+const luckFormsInjurySealReview = luckFormsInjurySealImpact.conditionReview;
+const luckSealFlow = luckFormsInjurySealReview.interactionFlow.steps.find((x) => x.from.some((god) => god.includes('印')) && x.to.includes('伤官'));
+assert(!luckFormsInjurySealPattern.comboPatterns.includes('伤官配印格') && luckFormsInjurySealPattern.comboClues.some((x) => x.name === '伤官配印线索参考') && luckFormsInjurySealReview.strictFormation && luckFormsInjurySealReview.effectiveAdded.includes('伤官配印格') && luckFormsInjurySealImpact.toMain === '伤官配印格' && luckFormsInjurySealImpact.toStatus === '已成' && luckFormsInjurySealImpact.activationStatus === '运中补格' && luckFormsInjurySealImpact.scoreLedger.numericOwner === '格局状态迁移' && !luckFormsInjurySealImpact.scoreLedger.elementCounted, `a complete reachable luck remedy may form 伤官配印 only in the current luck context and receive one terminal formation score, got ${JSON.stringify(luckFormsInjurySealImpact)}`);
+assert(luckSealFlow && luckSealFlow.active && luckSealFlow.left.pillar === 'luck' && luckSealFlow.left.position === 4 && luckSealFlow.right.position === 3 && luckSealFlow.effectiveDistance === 1 && luckFormsInjurySealReview.clarityChange.direction === '改善' && JSON.stringify(luckFormsInjurySealPattern) === luckFormsInjurySealSnapshot, `current luck formation must expose the fifth-pillar control path while leaving the complete natal analysis immutable, got ${JSON.stringify({ flow: luckSealFlow, clarity: luckFormsInjurySealReview.clarityChange })}`);
+
+const luckDamagesSealBazi = { pillars: { year: '丁卯', month: '庚午', day: '甲子', hour: '壬戌' }, dayStem: '甲' };
+const luckDamagesSealPattern = scriptContext.BaziEngine.analyzePattern(luckDamagesSealBazi);
+const luckDamagesSealSnapshot = JSON.stringify(luckDamagesSealPattern);
+const luckDamagesSealImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '戊巳', luckDamagesSealPattern);
+const luckDamagesSealReview = luckDamagesSealImpact.conditionReview;
+assert(luckDamagesSealPattern.mainPattern === '伤官配印格' && luckDamagesSealPattern.clarity.level === '较清' && luckDamagesSealReview.conflicts.some((x) => x.name === '财坏印') && luckDamagesSealReview.patternDisease.items.some((x) => x.family === '财印相战' && x.status !== '已解') && !luckDamagesSealReview.strictFormation && luckDamagesSealImpact.toMain === luckDamagesSealPattern.mainPattern && luckDamagesSealImpact.toStatus === '成而有瑕' && !/^(清|较清)$/.test(luckDamagesSealReview.clarity.level), `a luck wealth star that reaches and damages the seal must worsen the current disease/purity result instead of preserving strict 伤官配印, got ${JSON.stringify(luckDamagesSealImpact)}`);
+assert(JSON.stringify(luckDamagesSealPattern) === luckDamagesSealSnapshot, 'a damaging luck review must not write its current disease or clarity back into the natal analysis');
+
+const trueFollowKillLuckBazi = { pillars: { year: '辛酉', month: '辛酉', day: '甲戌', hour: '庚午' }, dayStem: '甲' };
+const trueFollowKillLuckPattern = scriptContext.BaziEngine.analyzePattern(trueFollowKillLuckBazi);
+const trueFollowKillLuckSnapshot = JSON.stringify(trueFollowKillLuckPattern);
+const brokenFollowKillLuck = scriptContext.BaziEngine.evaluateLuckImpact('甲', '壬寅', trueFollowKillLuckPattern);
+assert(trueFollowKillLuckPattern.mainPattern === '从格：从杀格' && brokenFollowKillLuck.conditionReview.specialLost.includes('从格：从杀格') && !brokenFollowKillLuck.conditionReview.specialPatternQualification && brokenFollowKillLuck.conditionReview.strengthScore.dimensions.roots.items.some((x) => x.position === 'luck' && x.grade === '本气根') && brokenFollowKillLuck.toMain === trueFollowKillLuckPattern.mainPattern && brokenFollowKillLuck.toStatus === '已破' && brokenFollowKillLuck.activationStatus === '当前受阻', `a luck seal/root may break a natal true follow pattern only for the current period, got ${JSON.stringify(brokenFollowKillLuck)}`);
+assert(JSON.stringify(trueFollowKillLuckPattern) === trueFollowKillLuckSnapshot, 'breaking a true special pattern in luck must preserve its natal qualification and main-pattern result');
+
+const fakeFollowLuckBazi = { pillars: { year: '庚午', month: '辛巳', day: '甲戌', hour: '庚午' }, dayStem: '甲' };
+const fakeFollowLuckPattern = scriptContext.BaziEngine.analyzePattern(fakeFollowLuckBazi);
+const fakeFollowLuckImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '辛酉', fakeFollowLuckPattern);
+const fakeFollowLuckReview = fakeFollowLuckImpact.conditionReview;
+assert(!fakeFollowLuckPattern.specialPatternQualification && !fakeFollowLuckReview.specialPatternQualification && fakeFollowLuckReview.specialPatterns.length === 0 && fakeFollowLuckReview.currentMainPattern.indexOf('从格：') !== 0 && fakeFollowLuckReview.specialClues.some((x) => x.includes('假从杀倾向')) && fakeFollowLuckImpact.text.includes('假从杀倾向'), `more killing in luck must not bypass the missing month-command condition; the incomplete special-pattern result must remain an explicit clue, got ${JSON.stringify(fakeFollowLuckReview.specialCandidates)}`);
+
+const diseaseComparisonBazi = { pillars: { year: '甲子', month: '己巳', day: '甲辰', hour: '戊巳' }, dayStem: '甲' };
+const diseaseComparisonImpact = scriptContext.BaziEngine.evaluateLuckImpact('甲', '庚子', scriptContext.BaziEngine.analyzePattern(diseaseComparisonBazi));
+const diseaseComparisonReview = diseaseComparisonImpact.conditionReview;
+assert(!diseaseComparisonReview.interactions.stemCombines.some((x) => x.involvesLuck) && !diseaseComparisonReview.interactions.branchPairs.some((x) => x.involvesLuck) && diseaseComparisonReview.comparisonBaseline.patternDisease.residualSeverity === diseaseComparisonReview.patternDisease.residualSeverity && diseaseComparisonReview.diseaseChanges.improved.length === 0 && diseaseComparisonReview.diseaseChanges.worsened.length === 0 && diseaseComparisonReview.diseaseChanges.newActive.length === 0, `luck disease changes must compare the same full-interaction algorithm on four- and five-pillar contexts instead of attributing pre-existing natal combinations to the luck pillar, got ${JSON.stringify(diseaseComparisonReview.diseaseChanges)}`);
+
+const lateRescueBazi = { pillars: { year: '壬申', month: '乙卯', day: '戊寅', hour: '己巳' }, dayStem: '戊' };
+const lateRescueReview = scriptContext.BaziEngine.evaluateLuckImpact('戊', '壬辰', scriptContext.BaziEngine.analyzePattern(lateRescueBazi)).conditionReview;
+const lateRescueSequence = lateRescueReview.interactionFlow.sequence.find((x) => x.name === '比劫夺财');
+const lateRescueDisease = lateRescueReview.patternDisease.items.find((x) => x.family === '比劫分财');
+assert(lateRescueSequence && lateRescueSequence.breaker.active && lateRescueSequence.rescue.active && lateRescueSequence.rescue.distance > lateRescueSequence.breaker.distance && lateRescueSequence.verdict === '破格作用较近，救应稍迟' && lateRescueDisease && lateRescueDisease.status === '部分化解' && lateRescueDisease.residual === '仍有残病' && lateRescueDisease.medicines.some((x) => x.name === '官杀制比劫' && x.rank === 1 && x.state.includes('救应晚于破格作用')), `an active rescue that arrives later than the nearer breaker must remain only a partial current-luck remedy, got ${JSON.stringify({ sequence: lateRescueSequence, disease: lateRescueDisease })}`);
+
+const halfGroupLuckBazi = { pillars: { year: '庚申', month: '戊寅', day: '乙丑', hour: '辛酉' }, dayStem: '乙' };
+const halfGroupLuckPattern = scriptContext.BaziEngine.analyzePattern(halfGroupLuckBazi);
+const halfGroupLuckImpact = scriptContext.BaziEngine.evaluateLuckImpact('乙', '壬子', halfGroupLuckPattern);
+const halfGroupLuckReview = halfGroupLuckImpact.conditionReview;
+assert(halfGroupLuckReview.interactions.groups.some((x) => x.members === '申子辰' && x.involvesLuck && !x.complete && !x.active && x.status === '线索') && !halfGroupLuckImpact.text.includes('补成三合水局'), `two branches may only remain a half-group clue and must not be promoted by display wording, got ${JSON.stringify(halfGroupLuckImpact)}`);
+const repeatedFifthPillarReview = scriptContext.BaziEngine.evaluateLuckImpact('乙', '壬子', halfGroupLuckPattern);
+scriptContext.BaziEngine.evaluateLuckImpact('乙', '戊辰', halfGroupLuckPattern);
+assert(JSON.stringify(scriptContext.BaziEngine.evaluateLuckImpact('乙', '壬子', halfGroupLuckPattern)) === JSON.stringify(repeatedFifthPillarReview), 'fifth-pillar reviews must be deterministic and must not leak state across luck-call order');
 const mixedOutputBazi = {
   person: '食伤混杂样本',
   gender: '男',
