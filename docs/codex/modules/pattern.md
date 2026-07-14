@@ -5,6 +5,9 @@
 Produce evidence-based strength, main pattern, pattern condition, special-pattern
 status, useful elements, and favorable/unfavorable interaction conclusions.
 
+The normative level-score, theoretical-percentile, hard-gate, and output contract
+is `pattern-percentile-design.md`.
+
 ## Primary File
 
 Start with `bazi-engine.js`. Search only these anchors:
@@ -55,9 +58,12 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   `偏低 / 中等 / 偏高 / 高 / 顶级`: theoretical percentile gives only the
   candidate grade, formation and disease-remedy gates set the floor and ceiling,
   and tied raw scores use midpoint rank without random splitting.
-- The current `PAT-208` candidate raw score is a six-dimensional weighted
-  ranking: classical pattern potential 20%, formation 25%, action flow 20%,
-  clarity 15%, disease-remedy 15%, and elemental-balance correction 5%.
+- The active `PAT-208` implementation below is the reproducible comparison
+  baseline, not the approved target weight set. The formal design audits
+  `10/25/25/15/20/5` before any replacement or freeze. The current baseline is
+  a six-dimensional weighted ranking: classical pattern potential 20%,
+  formation 25%, action flow 20%, clarity 15%, disease-remedy 15%, and
+  elemental-balance correction 5%.
   A displayed pattern name never earns points by itself. Only the verified main
   pattern identified by a stable rule ID receives one classical-potential
   component; secondary names and compatible combinations do not stack it.
