@@ -24,25 +24,24 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P2
 - Working branch: `main`
-- Last shared commit: `602a8b7`
-- Changed: implemented the `PAT-208` `v5` Bazi authority-scoring candidate with
-  six attributable dimensions, one verified classical-potential award, strict
-  special-pattern qualification and independent natal context, plus a frozen
-  23,916-chart theoretical baseline; no Qimen files changed and the active
-  rollback backup remains untouched.
+- Last shared commit: `b16682a`
+- Changed: confirmed and published `PAT-LV-DESIGN-v1`, the formal design for
+  natal structure scoring, the 518,400-chart equal-weight theoretical set,
+  midpoint tie percentiles, five candidate grades, Zi Ping hard gates,
+  cross-dimension numeric ownership, and shared ordinary/professional outputs;
+  no runtime or Qimen files changed.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
-  (`18 baselines ok`); `$env:BAZI_FULL_PATTERN_BASELINE='1'; node
-  check-bazi-page.js; Remove-Item Env:BAZI_FULL_PATTERN_BASELINE`
-  (`bazi page checks ok`); `git diff --check`.
-- Next task: let the user review the `v5` output; only after explicit approval
-  replace the active scoring backup with this version, otherwise adjust the
-  candidate weights and rebuild the frozen baseline.
-- Caution: the active rollback source is still `d95c0fd`; the `v5` standard
-  deviation is 1.369258 times `v4`, slightly above the 1.35 engineering warning
-  while the largest score bucket remains 12.4101%. Special-pattern luck-cycle
-  rechecking remains deferred to the luck module; caps, diminishing returns,
-  positive/negative balance, and parameter calibration also remain deferred.
+  (`18 baselines ok`); `git diff --check`.
+- Next task: P2 pulls `main`, reads
+  `docs/codex/modules/pattern-percentile-design.md`, and implements the design
+  in order: unified `causeId / numericOwner`, the pure 518,400-chart generator,
+  full-set distribution and boundary audit, then a sensitivity report for user
+  review. Do not start display integration before the score model is frozen.
+- Caution: `10/25/25/15/20/5` is the approved audit candidate, not a frozen
+  production weight set. Keep the active `20/25/20/15/15/5` model as the
+  comparison baseline, and do not change rule conditions and weights in the
+  same audit run.
 
 ## Replace At Each Handoff
 
