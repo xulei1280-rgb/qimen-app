@@ -24,25 +24,27 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P2
 - Working branch: `main`
-- Last shared commit: `602a8b7`
-- Changed: implemented the `PAT-208` `v5` Bazi authority-scoring candidate with
-  six attributable dimensions, one verified classical-potential award, strict
-  special-pattern qualification and independent natal context, plus a frozen
-  23,916-chart theoretical baseline; no Qimen files changed and the active
-  rollback backup remains untouched.
+- Last shared commit: `b5c013a`
+- Changed: completed the `PAT-LV-DESIGN-v1` audit-only implementation: unified
+  `causeId / numericOwner`, generated and checked all 518,400 equal-weight legal
+  four-pillar structures, compared `20/25/20/15/15/5` with
+  `10/25/25/15/20/5`, and published histograms, exact tie intervals, extrema,
+  P5/P20/P50/P80/P95 boundaries and sensitivity results; active scoring, Bazi
+  UI and all Qimen files remain unchanged.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
   (`18 baselines ok`); `$env:BAZI_FULL_PATTERN_BASELINE='1'; node
   check-bazi-page.js; Remove-Item Env:BAZI_FULL_PATTERN_BASELINE`
-  (`bazi page checks ok`); `git diff --check`.
-- Next task: let the user review the `v5` output; only after explicit approval
-  replace the active scoring backup with this version, otherwise adjust the
-  candidate weights and rebuild the frozen baseline.
-- Caution: the active rollback source is still `d95c0fd`; the `v5` standard
-  deviation is 1.369258 times `v4`, slightly above the 1.35 engineering warning
-  while the largest score bucket remains 12.4101%. Special-pattern luck-cycle
-  rechecking remains deferred to the luck module; caps, diminishing returns,
-  positive/negative balance, and parameter calibration also remain deferred.
+  (`bazi page checks ok`, 518,400/518,400); `git diff --check`.
+- Next task: user reviews
+  `docs/codex/modules/pattern-percentile-audit-v1.md`; after an explicit choice,
+  audit either dimension anchors/discreteness or candidate weights as one
+  isolated variable family. Do not start UI integration yet.
+- Caution: the candidate is not frozen. It lowers potential dominance but
+  compresses the score range, expands the 75-point tie bucket to 14.644290%,
+  leaves formation correlation at 0.903677, and moves 16,922 charts into the
+  candidate P95 tie bucket after derived-clarity deduplication. Flow, remedy
+  and balance also retain concentrated neutral anchors.
 
 ## Replace At Each Handoff
 
