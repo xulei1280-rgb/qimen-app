@@ -24,15 +24,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main`
-- Last shared commit: `67608bb`
-- Changed: published pattern score v4: one-decimal structure score now directly
-  selects the public five-grade candidate; P values remain audit-only. The
-  existing high/top qualification gates remain in force.
+- Last shared commit: `f12ed55`
+- Changed: published the clarified structure-page wording and classical-rule
+  notes for the pattern/useful-element module. Scoring logic was not changed.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
   (`18 baselines ok`); `git diff --check`.
-- Next task: user reviews the public structure-score wording and decides whether
-  to refine a single scoring dimension or continue another Bazi module.
+- Next task: user reviews the clarified pattern/useful guidance, then chooses
+  the next Bazi module or a narrowly scoped pattern rule.
 - Caution: do not change score bands, weights, or qualification gates without a
   new theoretical audit and explicit user confirmation.
 
