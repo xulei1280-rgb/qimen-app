@@ -139,6 +139,8 @@ assert(!html.includes('载入问真样本'), 'WenZhen sample loader button shoul
 assert(!/DOMContentLoaded[\s\S]*loadSample\(\)/.test(html), 'opening bazi page should not auto-chart');
 assert(!html.includes('data-view="history"'), 'save records should be a top-level tab, not a result tab');
 assert(!html.includes('data-view-panel="history"'), 'save records should not live inside result detail panels');
+const lifeNote = '计划抵达寻常，冒险改写人生；非凡，生于计划之外。';
+assert(html.includes(`<p class="life-note">${lifeNote}</p>`) && html.indexOf('<h1>八字分析</h1>') < html.indexOf(lifeNote) && html.indexOf(lifeNote) < html.indexOf('id="homeTabs"'), 'the approved low-emphasis life note should appear below the Bazi page title and outside analysis results');
 assert(/function showBaziHome\(name\)[\s\S]*data-home-panel/.test(html), 'top-level form/history navigation should exist');
 assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'building a chart should enter the result layer');
 assert(/function loadBaziRecord\(id\)[\s\S]*showBaziResult\(\)/.test(html), 'loading a saved record should enter the result layer');
@@ -317,6 +319,35 @@ const referencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
 const conciseReferenceBazi = { ...referenceBazi, scores: scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars), relations: [] };
 const conciseStructureHtml = scriptContext.renderStructure(conciseReferenceBazi);
 assert(['主要格局', '格局层次', '成格结论', '用神总论', '当前大运格局'].every((label) => conciseStructureHtml.includes(label)), `structure page should keep the direct conclusion cards, got ${conciseStructureHtml}`);
+assert(conciseStructureHtml.includes('pattern-score-help-button') && conciseStructureHtml.includes('aria-label="查看结构分说明"') && conciseStructureHtml.includes('aria-describedby="explain-help-structure-score"') && conciseStructureHtml.includes('role="tooltip"'), 'the public structure score should expose an accessible hover, focus, and tap explanation');
+assert(['这个分数评价的是八字原局本身', '原局结构：', '行运时机：', '现实条件：', '不是人生结果'].every((text) => conciseStructureHtml.includes(text)), 'the structure-score explanation should distinguish natal structure, luck timing, and real-world conditions in plain language');
+assert(!conciseStructureHtml.includes('格局层次表示命盘结构与行运承接，不代表人的价值'), 'the old bottom disclaimer should be removed after the full explanation moves beside the structure score');
+const contextHelpContracts = {
+  missing: '五行缺失不等于命里一定不好',
+  strength: '旺衰不是命好命坏的评分',
+  useful: '不等于数量越多越好',
+  'main-pattern': '格局名称只说明命盘的主要作用路线',
+  'current-luck': '不会把原局永久改成另一个层次',
+  phenomenon: '不是医学诊断，也不等于固定性格',
+  'positive-phenomenon': '不代表才华或成就必然兑现',
+  interaction: '不能单独等同于结婚、破财、疾病',
+  'special-pattern': '条件不足只能作为特殊结构线索',
+  formation: '成而有瑕',
+};
+Object.entries(contextHelpContracts).forEach(([key, expected]) => {
+  const tip = scriptContext.contextHelp(key);
+  assert(tip.includes(`data-help="${key}"`) && tip.includes('class="explain-help-button"') && tip.includes(`aria-describedby="explain-help-${key}"`) && tip.includes(`id="explain-help-${key}"`) && tip.includes('role="tooltip"') && tip.includes(expected), `${key} should expose its agreed question-mark explanation, got ${tip}`);
+});
+assert(['missing', 'useful', 'main-pattern', 'formation', 'strength', 'current-luck', 'interaction'].every((key) => conciseStructureHtml.includes(`data-help="${key}"`)), 'always-visible structure sections should render all agreed question-mark explanations');
+const usefulNoteHtml = conciseStructureHtml.match(/<div class="note-line"><strong>喜用参考：<\/strong>(.*?)<\/div>/)[1];
+const missingNoteHtml = conciseStructureHtml.match(/<div class="note-line"><strong>五行缺失：<\/strong>(.*?)<\/div>/)[1];
+assert(usefulNoteHtml.indexOf('主 ') < usefulNoteHtml.indexOf('data-help="useful"') && missingNoteHtml.indexOf('五行皆有') < missingNoteHtml.indexOf('data-help="missing"'), 'top summary help controls should appear after the full useful-element and missing-element conclusions');
+assert(["detailBox('气势病象',phenomenon,contextHelp('phenomenon'))", "detailBox('清秀气象',positivePhenomenon,contextHelp('positive-phenomenon'))", "detailBox('特殊格局',specialPatternText(data.patternAnalysis)+classicalTransformNote(data.patternAnalysis),contextHelp('special-pattern'))"].every((source) => html.includes(source)), 'conditional phenomenon and special-pattern cards should attach their agreed explanations when rendered');
+const diseaseQuote = '有病方为贵，无伤不是奇；格中如去病，财禄两相随。';
+assert(conciseStructureHtml.includes(`class="classical-pattern-note">古诀参考：“${diseaseQuote}”——《渊海子平·五言独步》`) && conciseStructureHtml.indexOf('<strong>病药通关</strong>') < conciseStructureHtml.indexOf(diseaseQuote) && conciseStructureHtml.indexOf(diseaseQuote) < conciseStructureHtml.indexOf('<strong>当前大运格局</strong>'), 'the disease-remedy card should show the verified classical line as a direct small-print note without another help control');
+const clarityQuote = '一清到底有精神，管取生平富贵真；澄浊求清清得去，时来寒谷也回春。';
+assert(conciseStructureHtml.includes(`古诀参考：“${clarityQuote}”——《滴天髓阐微·清气》`) && conciseStructureHtml.indexOf('<strong>清浊去留</strong>') < conciseStructureHtml.indexOf(clarityQuote) && conciseStructureHtml.indexOf(clarityQuote) < conciseStructureHtml.indexOf('<strong>病药通关</strong>'), 'the clarity card should show only the confirmed classical clarity line');
+assert(!conciseStructureHtml.includes('何处起根源？流到何方住？'), 'the rejected source-and-flow line should not appear beneath the main-pattern conclusion');
 assert(!/ZP-[A-Z]/.test(conciseStructureHtml) && !conciseStructureHtml.includes('理论结构位置：') && !conciseStructureHtml.includes('<strong>格局状态</strong>') && !conciseStructureHtml.includes('<strong>格局成败</strong>') && !conciseStructureHtml.includes('<strong>成败因子</strong>') && !conciseStructureHtml.includes('<strong>干支提示</strong>'), 'structure page should suppress internal rule ids, score diagnostics, and duplicate cards');
 assert(scriptContext.buildPatternContextText(conciseReferenceBazi).includes('ZP-MG-06') && scriptContext.buildPatternContextText(conciseReferenceBazi).includes('结构分：') && !scriptContext.buildPatternContextText(conciseReferenceBazi).includes('理论结构位置：'), 'AI context should retain the hidden technical rule and structure score without exposing percentile position');
 assert(typeof scriptContext.BaziEngine.strengthScore === 'function', 'BaziEngine should expose weighted strengthScore');
@@ -1125,6 +1156,8 @@ const transformBazi = {
 const transformPattern = scriptContext.BaziEngine.analyzePattern(transformBazi);
 assert(transformPattern.specialPatterns.some((x) => x.includes('丁壬化木')), `season-supported transform should form 丁壬化木, got ${transformPattern.specialPatterns.join(',')}`);
 assert(transformPattern.mainPattern.includes('化气格'), `true transform should become main pattern, got ${transformPattern.mainPattern}`);
+const transformQuote = '化得真者只论化，化神还有几般话。';
+assert(scriptContext.classicalTransformNote(transformPattern).includes(transformQuote) && scriptContext.classicalTransformNote(transformPattern).includes('《滴天髓阐微·化象》'), 'a strictly qualified transformation pattern should show the confirmed classical transformation line');
 const transformPotential = scoreDimension(transformPattern, 'potential');
 assert(transformPotential.score >= 90 && transformPotential.components.length === 1 && transformPotential.components[0].ruleId === 'ZP-SP-09' && transformPotential.components[0].pattern === transformPattern.mainPattern && transformPotential.components[0].tier === 'S' && transformPattern.patternStructures.some((x) => x.role === '主格' && x.ruleId === 'ZP-SP-09') && traceablePotentialSource(transformPotential.components[0]), `a true 化气 pattern should receive one traceable high special-pattern potential component, got ${JSON.stringify(transformPotential)}`);
 assert(!transformPattern.elementPhenomena.some((x) => x.name === '木多火塞') && !/^(有瑕|浊|偏浊|不清|冲战)$/.test(transformPattern.clarity.level), `a true 丁壬化木 chart must be evaluated around transformed wood qi instead of inheriting fire-daymaster 木多火塞 or ordinary 印格 clarity penalties, got ${JSON.stringify({ phenomena: transformPattern.elementPhenomena, clarity: transformPattern.clarity })}`);
@@ -1140,6 +1173,7 @@ const rootedTransformBazi = {
 const rootedTransformPattern = scriptContext.BaziEngine.analyzePattern(rootedTransformBazi);
 assert(!rootedTransformPattern.specialPatterns.some((x) => x.startsWith('化气格：')), `rooted day master should not form 化气格, got ${rootedTransformPattern.specialPatterns.join(',')}`);
 assert(rootedTransformPattern.specialPatterns.some((x) => x.includes('丁壬化木未成倾向')), `rooted transform should remain a special-pattern clue, got ${rootedTransformPattern.specialPatterns.join(',')}`);
+assert(scriptContext.classicalTransformNote(rootedTransformPattern) === '', 'an incomplete or false transformation clue must not show the strict transformation classical line');
 assert(!scoreDimension(rootedTransformPattern, 'potential').components.some((x) => /^ZP-SP-/.test(x.ruleId || '') || /化气/.test(x.evidence || '')), `假化 may remain a clue but must contribute no special classical potential, got ${JSON.stringify(scoreDimension(rootedTransformPattern, 'potential'))}`);
 const oppositePolarityRootedTransformPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '甲寅', month: '壬寅', day: '丁巳', hour: '甲辰' }, dayStem: '丁' });
 assert(!oppositePolarityRootedTransformPattern.specialPatterns.some((x) => x.startsWith('化气格：')) && oppositePolarityRootedTransformPattern.specialPatterns.some((x) => x.includes('丁壬化木未成倾向')), `an opposite-polarity peer root such as 巳中丙 must also break 丁壬化木, got ${JSON.stringify(oppositePolarityRootedTransformPattern.specialPatterns)}`);
@@ -1250,7 +1284,7 @@ assert(html.includes('function usefulPriorityText'), 'structure UI should includ
 assert(html.includes('function comboConflictText'), 'structure UI should include combo conflict helper');
 assert(html.includes('function currentLuckPatternText'), 'structure UI should include current-luck pattern conclusion helper');
 assert(html.includes('function publicPatternLevel'), 'structure UI should include the agreed public level-label helper');
-assert(html.includes('格局层次表示命盘结构与行运承接，不代表人的价值') && html.includes('现实兑现边界：'), 'the page and AI context should expose the agreed realization boundary');
+assert(html.includes('这个分数评价的是八字原局本身') && html.includes('现实兑现边界：'), 'the page explanation and AI context should expose the agreed realization boundary');
 const yiMaoLuck = referenceLuck.rows.find((r) => r.gz === '乙卯');
 assert(referenceLuck.startAge === 3, `reference luck start age should match WenZhen 3 sui, got ${referenceLuck.startAge}`);
 assert(yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck) === 2025, `乙卯 luck should start in 2025, got ${yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck)}`);

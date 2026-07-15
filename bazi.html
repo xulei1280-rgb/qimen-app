@@ -56,6 +56,7 @@ button,input,select{font:inherit}
 }
 h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .sub{margin-top:7px;color:#777;font-size:14px;letter-spacing:2px}
+.life-note{margin:8px 0 0;color:#998e80;font-size:12px;line-height:1.6}
 .entry-card,.result-card,.core-card{
   background:rgba(255,255,255,.96);
   border:1px solid var(--line);
@@ -269,6 +270,19 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
 .detail-box{border:1px solid #eee1ca;background:#fffdf8;border-radius:12px;padding:11px 12px;line-height:1.65;color:#433a31}
 .detail-box strong{color:#9b2f22}
+.explain-help{position:relative;display:inline-flex;align-items:center;margin-left:6px;vertical-align:middle}
+.explain-help-button{display:inline-grid;place-items:center;width:18px;height:18px;padding:0;border:1px solid #c9a96e;border-radius:50%;background:#fffaf0;color:#76501f;font:800 12px/1 Arial,sans-serif;cursor:help}
+.explain-help-button:focus-visible{outline:2px solid #9b2f22;outline-offset:2px}
+.explain-help-popover{position:absolute;z-index:30;top:calc(100% + 8px);left:-6px;width:min(410px,calc(100vw - 48px));padding:13px 14px;border:1px solid #dfc89e;border-radius:8px;background:#fffdf8;box-shadow:0 10px 28px rgba(67,58,49,.18);color:#433a31;font-size:13px;font-weight:400;line-height:1.65;opacity:0;visibility:hidden;transform:translateY(-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease,visibility .16s ease}
+.explain-help:hover .explain-help-popover,.explain-help:focus-within .explain-help-popover{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}
+.detail-box:nth-child(even) .explain-help-popover,.note-line .explain-help-popover,.pattern-score-help .explain-help-popover{right:-6px;left:auto}
+.explain-help-popover b{display:block;margin-bottom:5px;color:#9b2f22;font-size:14px}
+.explain-help-popover p{margin:0 0 8px}
+.explain-help-popover ul{margin:0 0 8px;padding-left:18px}
+.explain-help-popover li+li{margin-top:4px}
+.explain-help-popover p:last-child{margin-bottom:0}
+.pattern-score-help .explain-help-popover p:last-child{font-weight:800}
+.classical-pattern-note{display:block;margin-top:8px;padding-top:7px;border-top:1px solid #eee1ca;color:#806f5d;font-size:12px;line-height:1.6}
 .phenomenon-detail{margin-top:8px;border-top:1px solid #eee1ca;padding-top:7px}
 .phenomenon-detail summary{cursor:pointer;color:#8a5a20;font-weight:800}
 .phenomenon-detail div{padding-top:6px}
@@ -536,6 +550,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
     </div>
     <h1>八字分析</h1>
     <div class="sub">四柱排盘 · 格局喜用参考</div>
+    <p class="life-note">计划抵达寻常，冒险改写人生；非凡，生于计划之外。</p>
   </header>
 
   <div id="homeTabs" class="home-tabs" role="tablist">
@@ -1143,27 +1158,26 @@ function renderStructure(data){
   return '<div class="section-title">格局喜用参考</div><div class="structure-grid"><div>'+bars+'</div><div class="structure-note">'+
     '<div class="note-line"><strong>命格：</strong>'+data.pattern+'。</div>'+
     '<div class="note-line"><strong>定格依据：</strong>'+patternBasisText(data)+'</div>'+
-    '<div class="note-line"><strong>喜用参考：</strong>主 '+(data.useful.primaryUse||data.useful.use).join('、')+'；佐 '+((data.useful.secondaryUse||[]).join('、')||'无')+'；慎 '+data.useful.avoid.join('、')+'。</div>'+
-    '<div class="note-line"><strong>五行缺失：</strong>'+(missing.length?missing.join('、'):'五行皆有')+'。</div>'+
+    '<div class="note-line"><strong>喜用参考：</strong>主 '+(data.useful.primaryUse||data.useful.use).join('、')+'；佐 '+((data.useful.secondaryUse||[]).join('、')||'无')+'；慎 '+data.useful.avoid.join('、')+'。'+contextHelp('useful')+'</div>'+
+    '<div class="note-line"><strong>五行缺失：</strong>'+(missing.length?missing.join('、'):'五行皆有')+'。'+contextHelp('missing')+'</div>'+
     '</div></div><div class="detail-grid">'+
-    detailBox('主要格局',patternCandidates(data))+
-    detailBox('格局层次',patternLevelText(data))+
-    detailBox('成格结论',patternConclusionText(data))+
+    detailBox('主要格局',patternCandidates(data),contextHelp('main-pattern'))+
+    detailBox('格局层次',patternLevelText(data)+patternScoreHelp())+
+    detailBox('成格结论',patternConclusionText(data),contextHelp('formation'))+
     detailBox('用神总论',usefulPriorityText(data))+
     detailBox('格局用神',usefulLayerText(data,'pattern'))+
     detailBox('扶抑与调候','扶抑：'+usefulLayerText(data,'fuyi')+'<br>调候：'+usefulLayerText(data,'tiaohou'))+
-    detailBox('旺衰依据',strengthEvidenceText(data))+
+    detailBox('旺衰依据',strengthEvidenceText(data),contextHelp('strength'))+
     detailBox('根气与透藏','通根：'+rootInfo(data)+'<br>透干：'+stemRevealInfo(data))+
-    (phenomenon?detailBox('气势病象',phenomenon):'')+
-    (positivePhenomenon?detailBox('清秀气象',positivePhenomenon):'')+
-    detailBox('清浊去留',patternClarityText(data))+
+    (phenomenon?detailBox('气势病象',phenomenon,contextHelp('phenomenon')):'')+
+    (positivePhenomenon?detailBox('清秀气象',positivePhenomenon,contextHelp('positive-phenomenon')):'')+
+    detailBox('清浊去留',patternClarityText(data)+classicalClarityNote())+
     (conflicts.length?detailBox('组合冲突',comboConflictText(data)):'')+
-    detailBox('病药通关',remedyText(data))+
-    (specials.length?detailBox('特殊格局',specialPatternText(data.patternAnalysis)):'')+
-    detailBox('当前大运格局',currentLuckPatternText(data))+
-    detailBox('干支作用',interactionText(data))+
-    '</div>'+renderTenGodSummary(data)+renderRelationPanel(data)+
-    '<p class="hint-line">格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就；家庭、教育、时代、行业环境和个人选择仍会影响兑现。</p>';
+    detailBox('病药通关',remedyText(data)+classicalDiseaseNote())+
+    (specials.length?detailBox('特殊格局',specialPatternText(data.patternAnalysis)+classicalTransformNote(data.patternAnalysis),contextHelp('special-pattern')):'')+
+    detailBox('当前大运格局',currentLuckPatternText(data),contextHelp('current-luck'))+
+    detailBox('干支作用',interactionText(data),contextHelp('interaction'))+
+    '</div>'+renderTenGodSummary(data)+renderRelationPanel(data);
 }
 function renderReasoningBasis(data){
   var luck=getLuckData(data);
@@ -1179,7 +1193,54 @@ function renderReasoningBasis(data){
     '<span class="tag">当前流年 '+luck.inquiry.flowYearGz+'</span>'+
     '</div>'+(evidence.length?'<div class="hint-line">'+evidence.map(esc).join('<br>')+'</div>':'')+'</div>';
 }
-function detailBox(title,body){return '<div class="detail-box"><strong>'+title+'</strong><div class="detail-body">'+body+'</div></div>'}
+function detailBox(title,body,help){return '<div class="detail-box">'+(help?'<div class="detail-box-heading"><strong>'+title+'</strong>'+help+'</div>':'<strong>'+title+'</strong>')+'<div class="detail-body">'+body+'</div></div>'}
+function classicalPatternNote(text,source){
+  return '<small class="classical-pattern-note">古诀参考：“'+text+'”——'+source+'</small>';
+}
+function classicalDiseaseNote(){
+  return classicalPatternNote('有病方为贵，无伤不是奇；格中如去病，财禄两相随。','《渊海子平·五言独步》');
+}
+function classicalClarityNote(){
+  return classicalPatternNote('一清到底有精神，管取生平富贵真；澄浊求清清得去，时来寒谷也回春。','《滴天髓阐微·清气》');
+}
+function classicalTransformNote(patternAnalysis){
+  var qualification=patternAnalysis&&patternAnalysis.specialPatternQualification;
+  if(!qualification||qualification.type!=='化气格'||!/^化气格：/.test(qualification.name||''))return '';
+  return classicalPatternNote('化得真者只论化，化神还有几般话。','《滴天髓阐微·化象》');
+}
+function helpPopover(key,label,title,body,extraClass){
+  var className='explain-help'+(extraClass?' '+extraClass:'');
+  var buttonClass='explain-help-button'+(extraClass==='pattern-score-help'?' pattern-score-help-button':'');
+  var helpId='explain-help-'+key;
+  return '<span class="'+className+'" data-help="'+key+'">'+
+    '<button class="'+buttonClass+'" type="button" aria-label="'+label+'" aria-describedby="'+helpId+'">?</button>'+
+    '<span class="explain-help-popover" id="'+helpId+'" role="tooltip"><b>'+title+'</b>'+body+'</span></span>';
+}
+function contextHelp(key){
+  var items={
+    missing:{label:'查看五行缺失说明',title:'五行缺失怎么看？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的是喜神、忌神，还是对格局没有关键作用。</p>'},
+    strength:{label:'查看旺衰说明',title:'旺衰代表什么？',body:'<p>旺衰不是命好命坏的评分。它主要说明日主能否承受财官、泄秀和压力，以及应该扶助、疏泄还是制衡。</p>'},
+    useful:{label:'查看喜用说明',title:'喜用怎么看？',body:'<p>喜用表示某种五行或十神在当前结构中能够解决什么问题，不等于数量越多越好。用神过量、位置不对或同时破坏其他结构，也可能由喜转忌。</p>'},
+    'main-pattern':{label:'查看主要格局说明',title:'主要格局代表什么？',body:'<p>格局名称只说明命盘的主要作用路线，不代表见到某个格名就一定富贵。是否真正成格，还要看根透、清纯、作用可达、破格和救应。</p>'},
+    'current-luck':{label:'查看当前大运格局说明',title:'当前大运会改变原局吗？',body:'<p>大运可以补格、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把原局永久改成另一个层次。</p>'},
+    phenomenon:{label:'查看气势病象说明',title:'气势病象是什么？',body:'<p>这里的“病象”是命理结构术语，不是医学诊断，也不等于固定性格。它只说明某种五行气势可能造成的结构偏差与表现倾向。</p>'},
+    'positive-phenomenon':{label:'查看清秀气象说明',title:'清秀气象代表什么？',body:'<p>清秀气象表示某类优势具备较好的结构条件，不代表才华或成就必然兑现。是否发挥仍要看整体格局、行运与现实条件。</p>'},
+    interaction:{label:'查看干支作用说明',title:'干支作用怎么看？',body:'<p>合、冲、刑、害、破只说明干支之间发生了什么作用，不能单独等同于结婚、破财、疾病或其他具体事件。</p>'},
+    'special-pattern':{label:'查看特殊格局说明',title:'特殊格局为什么要严判？',body:'<p>从格、化气格和专旺格必须满足严格条件；条件不足只能作为特殊结构线索，不能直接定为特殊格局。</p>'},
+    formation:{label:'查看成格结论说明',title:'成格状态怎么看？',body:'<ul><li><strong>已成：</strong>主要条件成立。</li><li><strong>成而有瑕：</strong>结构成立，但仍有损伤或限制。</li><li><strong>待成：</strong>关键条件不足，只能保留成格方向。</li><li><strong>已破：</strong>关键作用链受损，且救应不足。</li></ul>'}
+  };
+  var item=items[key];
+  return item?helpPopover(key,item.label,item.title,item.body,'context-help'):'';
+}
+function patternScoreHelp(){
+  return helpPopover('structure-score','查看结构分说明','这个分数代表什么？',
+    '<p>这个分数评价的是八字原局本身是否成格、清纯、流通、有救应，以及理论上的承载与发挥条件。它不能直接说明一个人现在有多少钱、生活好不好或社会位置如何。</p>'+
+    '<p>现实结果由三部分共同影响：</p>'+
+    '<ul><li><strong>原局结构：</strong>先天优势、问题和可发挥方向。</li><li><strong>行运时机：</strong>某个阶段是在补足优势，还是加重原有问题。</li><li><strong>现实条件：</strong>家庭起点、教育、地区与时代、行业、资金、人脉、健康、认知、能力积累和个人选择。</li></ul>'+
+    '<p>因此，现实中可能出现：</p>'+
+    '<ul><li>原局层次较高，但环境不合或没有行动，优势长期没有兑现。</li><li>原局层次中等，但现实条件和个人选择较好，发展明显高于平均。</li><li>原局存在问题，但遇到合适的行运并抓住机会，也可能阶段性跃升。</li><li>同一个人在不同阶段，财富和生活状态会发生很大变化，但原局结构分不会改变。</li></ul>'+
+    '<p>简单来说：这个分数评价的是八字基础，不是人生结果。</p>','pattern-score-help');
+}
 function renderTenGodSummary(data){
   var counts={};
   ['year','month','hour'].forEach(function(k){addTenGod(counts,tenGod(data.dayStem,data.pillars[k][0]))});
