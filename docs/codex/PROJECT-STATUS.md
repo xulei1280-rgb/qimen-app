@@ -24,7 +24,7 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared commit: `eaf7970`
+- Last shared feature commit: `fba2622`
 - Changed: integrated the strict pattern/useful-element engine, percentile audit
   materials, standard/professional display, concise structure cards, contextual
   explanations, classical notes, selected-luck context, and old-record migration
