@@ -319,7 +319,11 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .explain-help-button{display:inline-grid;place-items:center;width:18px;height:18px;padding:0;border:1px solid #c9a96e;border-radius:50%;background:#fffaf0;color:#76501f;font:800 12px/1 Arial,sans-serif;cursor:help}
 .explain-help-button:focus-visible{outline:2px solid #9b2f22;outline-offset:2px}
 .explain-help-popover{position:absolute;z-index:30;top:calc(100% + 8px);left:-6px;width:min(410px,calc(100vw - 48px));padding:13px 14px;border:1px solid #dfc89e;border-radius:8px;background:#fffdf8;box-shadow:0 10px 28px rgba(67,58,49,.18);color:#433a31;font-size:13px;font-weight:400;line-height:1.65;opacity:0;visibility:hidden;transform:translateY(-4px);pointer-events:none;transition:opacity .16s ease,transform .16s ease,visibility .16s ease}
-.explain-help:hover .explain-help-popover,.explain-help:focus-within .explain-help-popover{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}
+.explain-help.is-open .explain-help-popover{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}
+.explain-help-backdrop,.explain-help-close{display:none}
+@media(hover:hover) and (pointer:fine){
+  .explain-help:hover .explain-help-popover,.explain-help:focus-within .explain-help-popover{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}
+}
 .detail-box:nth-child(even) .explain-help-popover,.note-line .explain-help-popover,.pattern-score-help .explain-help-popover{right:-6px;left:auto}
 .explain-help-popover b{display:block;margin-bottom:5px;color:#9b2f22;font-size:14px}
 .explain-help-popover p{margin:0 0 8px}
@@ -530,6 +534,15 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .history-actions button{border:1px solid #d7c6a6;border-radius:8px;background:#fffaf0;color:#6f4a1d;font-weight:800;padding:6px 9px;cursor:pointer}
 .empty{color:#888;font-size:13px;padding:8px}
 @media(max-width:800px){
+  body.help-popover-open{overflow:hidden}
+  .explain-help.is-open{z-index:60}
+  .explain-help-backdrop{position:fixed;z-index:58;inset:0;background:rgba(35,29,23,.38)}
+  .explain-help.is-open .explain-help-backdrop{display:block}
+  .explain-help-popover,.detail-box:nth-child(even) .explain-help-popover,.note-line .explain-help-popover,.pattern-score-help .explain-help-popover{position:fixed;z-index:59;top:50%;right:auto;bottom:auto;left:50%;width:calc(100vw - 32px);max-width:440px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);padding:18px 44px 18px 18px;overflow:auto;overscroll-behavior:contain;transform:translate(-50%,-48%)}
+  .explain-help:not(.is-open) .explain-help-popover{opacity:0;visibility:hidden;transform:translate(-50%,-48%);pointer-events:none}
+  .explain-help.is-open .explain-help-popover{transform:translate(-50%,-50%)}
+  .explain-help-close{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:50%;background:#f3e8d5;color:#6d4b22;font:700 22px/1 Arial,sans-serif;cursor:pointer}
+  .explain-help-close:focus-visible{outline:2px solid #9b2f22;outline-offset:2px}
   .page{padding:18px 12px 34px}
   h1{font-size:26px}
   .entry-card{padding:24px 18px;border-radius:18px}
@@ -1356,9 +1369,47 @@ function helpPopover(key,label,title,body,extraClass){
   var buttonClass='explain-help-button'+(extraClass==='pattern-score-help'?' pattern-score-help-button':'');
   var helpId='explain-help-'+key;
   return '<span class="'+className+'" data-help="'+key+'">'+
-    '<button class="'+buttonClass+'" type="button" aria-label="'+label+'" aria-describedby="'+helpId+'">?</button>'+
-    '<span class="explain-help-popover" id="'+helpId+'" role="tooltip"><b>'+title+'</b>'+body+'</span></span>';
+    '<button class="'+buttonClass+'" type="button" aria-label="'+label+'" aria-controls="'+helpId+'" aria-expanded="false" onclick="toggleHelpPopover(event,this)">?</button>'+
+    '<span class="explain-help-backdrop" aria-hidden="true" onclick="closeHelpPopover(event,this)"></span>'+
+    '<span class="explain-help-popover" id="'+helpId+'" role="dialog" aria-modal="false" aria-hidden="true"><button class="explain-help-close" type="button" aria-label="关闭说明" onclick="closeHelpPopover(event,this)">×</button><b>'+title+'</b>'+body+'</span></span>';
 }
+function setHelpPopoverState(help,open){
+  if(!help)return;
+  help.classList.toggle('is-open',open);
+  var button=help.querySelector('.explain-help-button');
+  var popover=help.querySelector('.explain-help-popover');
+  if(button)button.setAttribute('aria-expanded',open?'true':'false');
+  if(popover)popover.setAttribute('aria-hidden',open?'false':'true');
+  document.body.classList.toggle('help-popover-open',!!document.querySelector('.explain-help.is-open'));
+}
+function closeAllHelpPopovers(except){
+  document.querySelectorAll('.explain-help.is-open').forEach(function(help){if(help!==except)setHelpPopoverState(help,false)});
+}
+function toggleHelpPopover(event,button){
+  event.preventDefault();
+  event.stopPropagation();
+  var help=button.closest('.explain-help');
+  var open=!help.classList.contains('is-open');
+  closeAllHelpPopovers(help);
+  setHelpPopoverState(help,open);
+}
+function closeHelpPopover(event,control){
+  event.preventDefault();
+  event.stopPropagation();
+  var help=control.closest('.explain-help');
+  var button=help&&help.querySelector('.explain-help-button');
+  setHelpPopoverState(help,false);
+  if(button)button.focus({preventScroll:true});
+}
+document.addEventListener('click',function(event){
+  var open=document.querySelector('.explain-help.is-open');
+  if(open&&!open.contains(event.target))setHelpPopoverState(open,false);
+});
+document.addEventListener('keydown',function(event){
+  if(event.key!=='Escape')return;
+  var open=document.querySelector('.explain-help.is-open');
+  if(open)closeHelpPopover(event,open.querySelector('.explain-help-close'));
+});
 function contextHelp(key){
   var items={
     missing:{label:'查看五行缺失说明',title:'五行缺失怎么看？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的是喜神、忌神，还是对格局没有关键作用。</p>'},

@@ -24,16 +24,15 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared feature commit: `fba2622`
-- Changed: integrated the strict pattern/useful-element engine, percentile audit
-  materials, standard/professional display, concise structure cards, contextual
-  explanations, classical notes, selected-luck context, and old-record migration
-  into the I-drive checkout without discarding either computer's accepted work.
+- Last shared baseline: `be87286`
+- Changed: repaired question-mark explanations on mobile. Narrow screens now use
+  a bounded, scrollable dialog with a close button and backdrop dismissal;
+  desktop hover/focus behavior remains available.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
   (`18 baselines ok`); browser verification at
   `http://127.0.0.1:8082/bazi.html`.
-- Next task: user reviews the consolidated pattern/useful-element page, then
+- Next task: user verifies the explanation dialog on a physical phone, then
   selects the next narrowly scoped optimization.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,

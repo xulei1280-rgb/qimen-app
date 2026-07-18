@@ -409,7 +409,7 @@ const referencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
 const conciseReferenceBazi = { ...referenceBazi, scores: scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars), relations: [] };
 const conciseStructureHtml = scriptContext.renderStructure(conciseReferenceBazi);
 assert(['主要格局', '格局层次', '成格结论', '用神总论', '当前大运格局'].every((label) => conciseStructureHtml.includes(label)), `structure page should keep the direct conclusion cards, got ${conciseStructureHtml}`);
-assert(conciseStructureHtml.includes('pattern-score-help-button') && conciseStructureHtml.includes('aria-label="查看结构分说明"') && conciseStructureHtml.includes('aria-describedby="explain-help-structure-score"') && conciseStructureHtml.includes('role="tooltip"'), 'the public structure score should expose an accessible hover, focus, and tap explanation');
+assert(conciseStructureHtml.includes('pattern-score-help-button') && conciseStructureHtml.includes('aria-label="查看结构分说明"') && conciseStructureHtml.includes('aria-controls="explain-help-structure-score"') && conciseStructureHtml.includes('aria-expanded="false"') && conciseStructureHtml.includes('role="dialog"'), 'the public structure score should expose an accessible hover, focus, and tap explanation');
 assert(['这个分数评价的是八字原局本身', '原局结构：', '行运时机：', '现实条件：', '不是人生结果'].every((text) => conciseStructureHtml.includes(text)), 'the structure-score explanation should distinguish natal structure, luck timing, and real-world conditions in plain language');
 assert(!conciseStructureHtml.includes('格局层次表示命盘结构与行运承接，不代表人的价值'), 'the old bottom disclaimer should be removed after the full explanation moves beside the structure score');
 const contextHelpContracts = {
@@ -426,8 +426,9 @@ const contextHelpContracts = {
 };
 Object.entries(contextHelpContracts).forEach(([key, expected]) => {
   const tip = scriptContext.contextHelp(key);
-  assert(tip.includes(`data-help="${key}"`) && tip.includes('class="explain-help-button"') && tip.includes(`aria-describedby="explain-help-${key}"`) && tip.includes(`id="explain-help-${key}"`) && tip.includes('role="tooltip"') && tip.includes(expected), `${key} should expose its agreed question-mark explanation, got ${tip}`);
+  assert(tip.includes(`data-help="${key}"`) && tip.includes('class="explain-help-button"') && tip.includes(`aria-controls="explain-help-${key}"`) && tip.includes(`id="explain-help-${key}"`) && tip.includes('role="dialog"') && tip.includes('aria-label="关闭说明"') && tip.includes(expected), `${key} should expose its agreed question-mark explanation, got ${tip}`);
 });
+['function setHelpPopoverState','function closeAllHelpPopovers','function toggleHelpPopover','function closeHelpPopover','help-popover-open','explain-help-backdrop','max-height:calc(100dvh - 32px)','.explain-help:not(.is-open) .explain-help-popover'].forEach((needle) => assert(html.includes(needle), `mobile help dialog safeguard missing ${needle}`));
 assert(['missing', 'useful', 'main-pattern', 'formation', 'strength', 'current-luck', 'interaction'].every((key) => conciseStructureHtml.includes(`data-help="${key}"`)), 'always-visible structure sections should render all agreed question-mark explanations');
 const usefulNoteHtml = conciseStructureHtml.match(/<div class="note-line"><strong>喜用参考：<\/strong>(.*?)<\/div>/)[1];
 const missingNoteHtml = conciseStructureHtml.match(/<div class="note-line"><strong>五行缺失：<\/strong>(.*?)<\/div>/)[1];
