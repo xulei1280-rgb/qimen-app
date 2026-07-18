@@ -24,13 +24,16 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `b6f1c7b`
-- Changed: completed `P1-03` Qimen responsive fixes and the mobile touch-target
-  portion of `P1-04`; reorganized the mobile time controls into three clear rows.
-- Checks: browser verification at 320, 390 and 1024px; no full-page horizontal
-  overflow; mobile controls are 44px high; no console errors; `git diff --check`.
-- Next task: locally optimize the Bazi mobile birth-time input as a separate UI
-  item, then verify it on a physical phone before status integration.
+- Last shared baseline: `50703f7`
+- Changed: added and completed `P1-20`; Bazi mobile birth-time controls now keep
+  year, month, day, hour and minute in one row with 44px touch height. Year can
+  be typed directly or selected from a native current-year +/-50-year picker.
+  Desktop layout and all calculation behavior remain unchanged.
+- Checks: `node check-bazi-page.js` (`bazi page checks ok`); browser verification
+  at 320 and 390px; physical-phone verification; no horizontal overflow or
+  console errors; `git diff --check`.
+- Next task: select the next lightweight, single-module, low-risk item from the
+  unified registry.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
   weights, or qualification gates without a new theoretical audit and explicit
