@@ -406,7 +406,7 @@ assert(scriptContext.renderPillarTable(scriptContext.currentBazi).includes('神�
 scriptContext.luckSelection.month = 0;
 const monthContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);
 assert(monthContext.flowMonth && !scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流月'), 'pillar table should still hide flow month outside luck view');
-assert(monthContext.flowMonth && !scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流月'), 'the comparison chart should keep flow month in its own track and detail area');
+assert(monthContext.flowMonth && scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流月'), 'the luck comparison chart should add the selected flow-month column');
 const aiPromptWithSelection = scriptContext.buildAiPrompt('看当前选择');
 assert(aiPromptWithSelection.includes('用户当前运势选择'), 'AI prompt should include selected luck state');
 assert(aiPromptWithSelection.includes(monthContext.luckRow.gz) && aiPromptWithSelection.includes(`${monthContext.flowYear.year} ${monthContext.flowYear.gz}`) && aiPromptWithSelection.includes(monthContext.flowMonth.gz), 'AI prompt should include selected luck/year/month stems');

@@ -1281,6 +1281,7 @@ function renderPillarTable(data,includeTransit){
   if(includeTransit){
     order.unshift(['luck','大运',ctx.luckRow.gz,luckStartYear(data,ctx.luckRow)+'起']);
     order.unshift(['flowYear','流年',ctx.flowYear.gz,ctx.flowYear.year+'年']);
+    if(ctx.flowMonth)order.unshift(['flowMonth','流月',ctx.flowMonth.gz,ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel]);
   }
   function cells(fn){return order.map(function(o){return '<td>'+fn(o[2],o[0])+'</td>'}).join('')}
   return '<div class="section-title">四柱排盘</div><div class="pillar-table-wrap"><table class="pillar-table">'+
