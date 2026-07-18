@@ -555,7 +555,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 }
 .history-search:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.12)}
 
-@media(max-width:900px){
+@media(max-width:1100px){
   body{display:flex;flex-direction:column;align-items:center;padding:16px 10px 28px;gap:18px}
   .main-area{min-width:auto;width:100%}
   h1{font-size:22px;letter-spacing:2px}
@@ -563,7 +563,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .page-actions{width:100%;max-width:340px;align-items:stretch}
   .page-actions .page-switch{flex:1;justify-content:center;min-height:44px}
   .display-mode{flex:1}
-  .display-mode button{min-height:40px}
+  .display-mode button{min-height:44px}
   .board-wrap{width:340px;height:340px;margin:2px auto 18px}
   .board-wrap:before{inset:-8px}
   .palace{width:107px;height:107px;border-radius:5px;border-width:1px}
@@ -589,11 +589,15 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .p-earth .stem{font-size:15px}
   .p-earth .cs{font-size:8px}
   .p-yingan{top:46%;left:5px;font-size:8px}
-  .time-bar{padding:5px 6px;gap:3px;flex-wrap:wrap}
-  .time-bar input{font-size:11px!important;padding:3px 4px!important;width:54px!important}
-  .time-bar .person-input{width:82px!important}
-  .time-bar select{font-size:11px;padding:3px 4px}
-  .time-bar button{font-size:11px!important;padding:4px 8px!important}
+  .time-bar{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));align-items:center;padding:8px;gap:6px}
+  .time-bar .cal-tabs{grid-column:span 4;order:1;display:grid;grid-template-columns:1fr 1fr}
+  .time-bar .cal-tab{display:flex;align-items:center;justify-content:center;min-height:44px;padding:4px}
+  .time-bar #personName{grid-column:span 4;order:2}
+  .time-bar #gender{grid-column:span 2;order:3}
+  .time-bar #year,.time-bar #month,.time-bar #day,.time-bar #hour,.time-bar #minute{grid-column:span 2;order:4}
+  .time-bar>button{grid-column:span 2;order:5}
+  .time-bar input,.time-bar select{width:100%!important;height:44px!important;min-width:0;min-height:44px;max-height:44px;font-size:12px!important;line-height:1.2;padding:4px 6px!important}
+  .time-bar button{height:44px;font-size:11px!important;padding:6px 4px!important}
   .solar-bar{width:100%;max-width:340px;margin:-6px auto 10px;padding:7px;gap:5px;font-size:11px}
   .solar-bar input[type="number"]{width:82px;font-size:11px}
   .solar-bar select,.solar-bar button{font-size:11px}
@@ -606,9 +610,23 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .question-bar input{grid-column:1/-1;width:100%;font-size:13px;padding:10px 12px;min-height:44px}
   .question-bar button{min-width:0;width:100%;min-height:44px;padding:9px 8px;font-size:13px;white-space:normal;line-height:1.25}
   .quick-questions{width:100%;max-width:340px;gap:5px}
-  .quick-questions button{font-size:11px;padding:3px 7px}
+  .time-bar button,.solar-bar button,.tool-row button,.quick-questions button,.side-tab,.hist-item .hi-btns button,.followups button,.ai-chat button{min-height:44px}
+  .quick-questions button{font-size:11px;padding:7px}
   .info-panel{width:100%;font-size:11px}
   .side-panel{width:100%;position:static;padding:14px;max-height:none}
+}
+@media(max-width:360px){
+  body{padding-left:4px;padding-right:4px}
+  .time-bar #year{font-size:11px!important;padding:2px!important}
+  .board-wrap{width:296px;height:296px}
+  .board-wrap:before{inset:-4px}
+  .palace{width:93px;height:93px}
+  #p4{top:3px;left:3px}#p9{top:3px;left:101px}#p2{top:3px;left:199px}
+  #p3{top:101px;left:3px}#p5{top:101px;left:101px}#p7{top:101px;left:199px}
+  #p8{top:199px;left:3px}#p1{top:199px;left:101px}#p6{top:199px;left:199px}
+  .p-star{font-size:12px}
+  .p-heaven .stem{font-size:16px}
+  .p-earth .stem{font-size:14px}
 }
 @media print{
   body{display:block;background:#fff;padding:0}

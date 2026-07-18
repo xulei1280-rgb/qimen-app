@@ -24,14 +24,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `57dd0ae`
-- Changed: marked `P1-11` deferred by user decision. The existing clickable
-  lunar-calendar notice remains unchanged; no business code was modified.
-- Checks: P0/P1/P2 registry count check (`41` unique items; completed `6`,
-  partial `20`, not started `13`, deferred `2`); four source links exist;
-  `git diff --check`.
-- Next task: select the next lightweight, single-module, low-risk item from the
-  unified registry.
+- Last shared baseline: `b6f1c7b`
+- Changed: completed `P1-03` Qimen responsive fixes and the mobile touch-target
+  portion of `P1-04`; reorganized the mobile time controls into three clear rows.
+- Checks: browser verification at 320, 390 and 1024px; no full-page horizontal
+  overflow; mobile controls are 44px high; no console errors; `git diff --check`.
+- Next task: locally optimize the Bazi mobile birth-time input as a separate UI
+  item, then verify it on a physical phone before status integration.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
   weights, or qualification gates without a new theoretical audit and explicit
