@@ -24,16 +24,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `be87286`
-- Changed: added a unified optimization status registry and backfilled all 41
-  P0/P1/P2 audit items with conservative completed/partial/not-started/deferred
-  states. Linked the registry from the four source documents.
-- Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
-  `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
-  (`18 baselines ok`); browser verification at
-  `http://127.0.0.1:8082/bazi.html`.
-- Next task: select one `P*-*` or `PAT-*` item from the unified registry and
-  implement it as a narrowly scoped change.
+- Last shared baseline: `57dd0ae`
+- Changed: marked `P1-11` deferred by user decision. The existing clickable
+  lunar-calendar notice remains unchanged; no business code was modified.
+- Checks: P0/P1/P2 registry count check (`41` unique items; completed `6`,
+  partial `20`, not started `13`, deferred `2`); four source links exist;
+  `git diff --check`.
+- Next task: select the next lightweight, single-module, low-risk item from the
+  unified registry.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
   weights, or qualification gates without a new theoretical audit and explicit
