@@ -24,14 +24,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `50703f7`
-- Changed: added and completed `P1-20`; Bazi mobile birth-time controls now keep
-  year, month, day, hour and minute in one row with 44px touch height. Year can
-  be typed directly or selected from a native current-year +/-50-year picker.
-  Desktop layout and all calculation behavior remain unchanged.
-- Checks: `node check-bazi-page.js` (`bazi page checks ok`); browser verification
-  at 320 and 390px; physical-phone verification; no horizontal overflow or
-  console errors; `git diff --check`.
+- Last shared baseline: `3102c16`
+- Changed: completed `P1-02`; Bazi decade-luck, flow-year and flow-month cards
+  now share a readable stem/branch and ten-god summary on desktop and mobile.
+  Mobile selectors scroll locally, retain usable sizing, highlight the current
+  choice and keep it visible; the selected flow-month comparison column remains.
+- Checks: `node check-bazi-page.js` (`bazi page checks ok`);
+  `node check-baselines.js` (`18 baselines ok`); 320px no-horizontal-overflow
+  verification; `git diff --check`.
 - Next task: select the next lightweight, single-module, low-risk item from the
   unified registry.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
