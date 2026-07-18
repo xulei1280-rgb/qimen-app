@@ -253,6 +253,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .bazi-view{display:none}
 .bazi-view.active{display:block}
 .core-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+.core-cards[hidden]{display:none!important}
 .core-card{border-radius:18px;padding:18px;min-height:126px}
 .core-card span,.section-title{display:block;color:#777;font-size:14px;margin-bottom:8px}
 .core-card strong{display:block;font-size:28px;line-height:1.22;color:var(--red)}
@@ -428,10 +429,10 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .origin-col .origin-meta{color:#6a5a48;font-size:12px;line-height:1.7}
 .fortune-row{border-top:1px solid #f0e3cb;padding:11px 12px}
 .fortune-row h4{margin:0 0 9px;color:#7a2f22;font-size:14px}
-.fortune-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
+.fortune-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
 .fortune-grid{display:grid;gap:8px;padding-bottom:0}
-.year-grid{grid-template-columns:repeat(10,minmax(0,1fr))}
-.month-grid{grid-template-columns:repeat(12,minmax(0,1fr))}
+.year-grid{grid-template-columns:repeat(10,minmax(72px,1fr))}
+.month-grid{grid-template-columns:repeat(12,minmax(64px,1fr))}
 .fortune-item{
   flex:0 0 auto;
   min-width:102px;
@@ -439,18 +440,22 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   border-radius:12px;
   background:#fffaf0;
   color:#5f4822;
+  min-height:112px;
   padding:9px 10px;
   text-align:center;
   cursor:pointer;
+  scroll-snap-align:start;
 }
 .fortune-item:hover{border-color:#b49350}
 .fortune-item.active{border-color:#9b2f22;background:#fff0d1;color:#9b2f22;box-shadow:0 10px 24px rgba(155,47,34,.11)}
-.fortune-item b{display:block;font-size:18px;line-height:1.1;margin:3px 0}
-.fortune-item span{display:block;color:#817362;font-size:12px;line-height:1.35}
+.fortune-label,.fortune-meta{display:block;line-height:1.25}
+.fortune-label{color:#6a5844;font-size:13px;font-weight:900}
+.fortune-meta{min-height:16px;color:#8a7b68;font-size:12px}
+.fortune-pillar{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:5px;text-align:left;line-height:1.1}
+.fortune-pillar b{font-size:22px;line-height:1;font-weight:900}
+.fortune-pillar small{color:#817362;font-size:12px;font-weight:800}
 .month-item{min-width:86px}
-.year-grid .fortune-item,.month-grid .fortune-item{min-width:0;padding:8px 4px}
-.year-grid .fortune-item b,.month-grid .fortune-item b{font-size:16px}
-.year-grid .fortune-item span,.month-grid .fortune-item span{font-size:11px}
+.year-grid .fortune-item,.month-grid .fortune-item{min-width:0}
 .luck-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px}
 .analysis-box{border:1px solid #eadfc9;background:#fffaf0;border-radius:13px;padding:12px;line-height:1.7}
 .analysis-box strong{display:block;color:#9b2f22;margin-bottom:5px}
@@ -562,10 +567,15 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .origin-col:nth-child(2){border-right:0}
   .origin-col:nth-child(-n+2){border-bottom:1px solid #f0e3cb}
   .luck-detail-grid{grid-template-columns:1fr}
-  .fortune-grid{gap:5px}
-  .year-grid .fortune-item,.month-grid .fortune-item{border-radius:9px;padding:7px 2px}
-  .year-grid .fortune-item b,.month-grid .fortune-item b{font-size:15px}
-  .year-grid .fortune-item span,.month-grid .fortune-item span{font-size:10px}
+  .bazi-tabs{position:sticky;top:0;z-index:30;margin:0 -2px 14px;padding:6px 2px 8px;background:#fffdf8;box-shadow:0 5px 12px rgba(67,58,49,.08)}
+  .fortune-scroll.year-grid,.fortune-scroll.month-grid{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
+  .fortune-scroll .fortune-item{min-width:0;border-radius:10px;padding:8px 7px}
+  .luck-scroll .fortune-item{flex-basis:88px}
+  .year-grid .fortune-item{flex-basis:78px}
+  .month-grid .fortune-item{flex-basis:74px}
+  .fortune-label{font-size:13px}
+  .fortune-meta,.fortune-pillar small{font-size:12px}
+  .fortune-pillar b{font-size:21px}
   .ai-controls{grid-template-columns:1fr 1fr}
   .ai-controls input{grid-column:1/-1}
   .ai-followup{grid-template-columns:1fr}
@@ -613,11 +623,15 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .luck-block-title{padding:9px 10px}
   .luck-block-title span{font-size:11px}
   .fortune-row{padding:9px 8px}
-  .year-grid,.month-grid{gap:3px}
-  .year-grid .fortune-item,.month-grid .fortune-item{border-radius:8px;padding:5px 1px}
-  .year-grid .fortune-item b,.month-grid .fortune-item b{font-size:13px}
-  .year-grid .fortune-item span:first-child,.month-grid .fortune-item span:first-child{font-size:8px;white-space:nowrap}
-  .year-grid .fortune-item span:last-child,.month-grid .fortune-item span:last-child{display:none}
+  .bazi-tabs{margin-bottom:12px}
+  .fortune-scroll{gap:6px}
+  .fortune-scroll .fortune-item{min-height:108px;padding:8px 6px}
+  .luck-scroll .fortune-item{flex-basis:84px}
+  .year-grid .fortune-item{flex-basis:74px}
+  .month-grid .fortune-item{flex-basis:70px}
+  .fortune-label{font-size:12px}
+  .fortune-meta,.fortune-pillar small{font-size:11px}
+  .fortune-pillar b{font-size:20px}
   .selected-stack{padding:0 8px 10px}
   .analysis-box{padding:10px}
   .back,.display-mode button,.home-tabs button,.bazi-tabs button,.history-actions button,.history-toolbar button,.history-toolbar select{min-height:44px}
@@ -1214,13 +1228,13 @@ function renderBazi(data){
   currentBazi=data;
   currentBaziView='structure';
   document.getElementById('resultArea').innerHTML=
-    '<section class="basic-dashboard"><div class="section-title">基础排盘</div><div class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
     '<div class="bazi-tabs" role="tablist">'+
     '<button type="button" data-view="basic" onclick="switchBaziView(\'basic\')">基本信息</button>'+
     '<button type="button" class="active" data-view="structure" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
     '<button type="button" data-view="luck" onclick="switchBaziView(\'luck\')">大运流年</button>'+
     '<button type="button" data-view="ai" onclick="switchBaziView(\'ai\')">AI断命</button>'+
     '</div>'+
+    '<section class="basic-dashboard"><div class="section-title">基础排盘</div><div id="structureSummary" class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
     '<div class="bazi-view" data-view-panel="basic"><section class="result-card">'+renderBasicInfo(data)+'</section></div>'+
     '<div class="bazi-view active" data-view-panel="structure"><section class="result-card">'+renderStructure(data)+'</section></div>'+
     '<div class="bazi-view" data-view-panel="luck"><section class="result-card">'+renderLuckPanel(data)+'</section></div>'+
@@ -1230,6 +1244,8 @@ function switchBaziView(name){
   currentBaziView=name;
   document.querySelectorAll('.bazi-tabs button').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-view')===name)});
   document.querySelectorAll('.bazi-view').forEach(function(panel){panel.classList.toggle('active',panel.getAttribute('data-view-panel')===name)});
+  var summary=document.getElementById('structureSummary');
+  if(summary)summary.hidden=name!=='structure';
   var chart=document.querySelector('.basic-dashboard .result-card');
   if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,name==='luck');
 }
@@ -1250,6 +1266,10 @@ function renderCoreCards(data){
 function hiddenText(dayStem,branch){
   return (HIDDEN[branch]||[]).map(function(s){return '<span class="wx-'+STEM_WX[s]+'">'+s+tenGod(dayStem,s)+'</span>'}).join('<br>');
 }
+function branchMainGod(dayStem,branch){
+  var mainStem=(HIDDEN[branch]||[])[0];
+  return mainStem?tenGod(dayStem,mainStem):'';
+}
 function renderPillarTable(data,includeTransit){
   var ctx=getSelectedLuckContext(data);
   var order=[
@@ -1261,7 +1281,6 @@ function renderPillarTable(data,includeTransit){
   if(includeTransit){
     order.unshift(['luck','大运',ctx.luckRow.gz,luckStartYear(data,ctx.luckRow)+'起']);
     order.unshift(['flowYear','流年',ctx.flowYear.gz,ctx.flowYear.year+'年']);
-    if(ctx.flowMonth)order.unshift(['flowMonth','流月',ctx.flowMonth.gz,ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel]);
   }
   function cells(fn){return order.map(function(o){return '<td>'+fn(o[2],o[0])+'</td>'}).join('')}
   return '<div class="section-title">四柱排盘</div><div class="pillar-table-wrap"><table class="pillar-table">'+
@@ -1883,11 +1902,20 @@ function selectLuckPart(part,index){
   if(part==='month')luckSelection.month=index;
   var panel=document.querySelector('[data-view-panel="luck"] .result-card');
   if(panel&&currentBazi)panel.innerHTML=renderLuckPanel(currentBazi);
-  var aiPanel=document.querySelector('[data-view-panel="ai"] .result-card');
-  if(aiPanel&&currentBazi)aiPanel.innerHTML=renderAiPanel();
   var chart=document.querySelector('.basic-dashboard .result-card');
   if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,currentBaziView==='luck');
+  var aiPanel=document.querySelector('[data-view-panel="ai"] .result-card');
+  if(aiPanel&&currentBazi)aiPanel.innerHTML=renderAiPanel();
+  keepLuckSelectionVisible(part);
   syncActiveBaziRecord();
+}
+function keepLuckSelectionVisible(part){
+  if(typeof window==='undefined'||!window.matchMedia||!window.matchMedia('(max-width: 800px)').matches)return;
+  var reveal=function(){
+    var selected=document.querySelector('[data-view-panel="luck"] .fortune-item.active[data-luck-part="'+part+'"]');
+    if(selected&&selected.scrollIntoView)selected.scrollIntoView({block:'nearest',inline:'nearest'});
+  };
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(reveal);else reveal();
 }
 function renderLuckOrigin(data){
   var names={year:'年柱',month:'月柱',day:'日柱',hour:'时柱'};
@@ -1899,17 +1927,20 @@ function renderLuckOrigin(data){
         '<div class="origin-meta">藏干 '+hiddenText(data.dayStem,gz[1]).replace(/<br>/g,' / ')+'<br>五行 '+STEM_WX[gz[0]]+' / '+BRANCH_WX[gz[1]]+'</div></div>';
     }).join('')+'</div></section>';
 }
-function fortuneButton(label,main,sub,part,index,active,extraClass){
-  return '<button type="button" class="fortune-item '+(extraClass||'')+(active?' active':'')+'" onclick="selectLuckPart(\''+part+'\','+index+')"><span>'+label+'</span><b>'+main+'</b><span>'+sub+'</span></button>';
+function fortuneButton(label,meta,gz,stemGod,branchGod,part,index,active,extraClass){
+  return '<button type="button" class="fortune-item '+(extraClass||'')+(active?' active':'')+'" data-luck-part="'+part+'" data-luck-index="'+index+'" onclick="selectLuckPart(\''+part+'\','+index+')">'+
+    '<span class="fortune-label">'+label+'</span>'+(meta?'<span class="fortune-meta">'+meta+'</span>':'<span class="fortune-meta"></span>')+
+    '<span class="fortune-pillar"><b class="wx-'+STEM_WX[gz[0]]+'">'+gz[0]+'</b><small>'+stemGod+'</small></span>'+
+    '<span class="fortune-pillar"><b class="wx-'+BRANCH_WX[gz[1]]+'">'+gz[1]+'</b><small>'+branchGod+'</small></span></button>';
 }
 function renderLuckSelector(data,ctx){
-  var luckBtns=ctx.luck.rows.map(function(r,i){return fortuneButton(r.from+'-'+r.to+'岁',''+r.gz,luckStartYear(data,r)+'起 · '+r.stemGod,'luck',i,i===ctx.luckIndex,'')}).join('');
-  var yearBtns=ctx.years.map(function(y,i){return fortuneButton(y.year+'年',y.gz,y.stemGod+' · '+y.branchWx,'year',i,i===ctx.yearIndex,'')}).join('');
-  var monthBtns=ctx.months.map(function(m,i){return fortuneButton(m.term+'<br>'+m.dateLabel,m.gz,m.stemGod+' · '+m.branchWx,'month',i,i===ctx.monthIndex,'month-item')}).join('');
+  var luckBtns=ctx.luck.rows.map(function(r,i){return fortuneButton(luckStartYear(data,r)+'年',r.from+'岁',r.gz,r.stemGod,branchMainGod(data.dayStem,r.gz[1]),'luck',i,i===ctx.luckIndex,'')}).join('');
+  var yearBtns=ctx.years.map(function(y,i){return fortuneButton(y.year+'年','',y.gz,y.stemGod,branchMainGod(data.dayStem,y.gz[1]),'year',i,i===ctx.yearIndex,'')}).join('');
+  var monthBtns=ctx.months.map(function(m,i){return fortuneButton(m.term,m.dateLabel,m.gz,m.stemGod,branchMainGod(data.dayStem,m.gz[1]),'month',i,i===ctx.monthIndex,'month-item')}).join('');
   return '<section class="luck-selector"><div class="luck-block-title">运势选择<span>先大运，再流年，再流月</span></div>'+
     '<div class="fortune-row"><h4>大运</h4><div class="fortune-scroll luck-scroll">'+luckBtns+'</div></div>'+
-    '<div class="fortune-row"><h4>流年</h4><div class="fortune-grid year-grid">'+yearBtns+'</div></div>'+
-    '<div class="fortune-row"><h4>流月</h4><div class="fortune-grid month-grid">'+monthBtns+'</div></div></section>';
+    '<div class="fortune-row"><h4>流年</h4><div class="fortune-scroll fortune-grid year-grid">'+yearBtns+'</div></div>'+
+    '<div class="fortune-row"><h4>流月</h4><div class="fortune-scroll fortune-grid month-grid">'+monthBtns+'</div></div></section>';
 }
 function stemPairRelation(a,b){
   var he={'甲己':'合土','乙庚':'合金','丙辛':'合水','丁壬':'合木','戊癸':'合火'},chong={'甲庚':'冲','乙辛':'冲','丙壬':'冲','丁癸':'冲'};

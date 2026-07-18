@@ -94,6 +94,7 @@ assert(patternPercentileDesign.includes('PAT-LV-DESIGN-v1') && patternPercentile
   'function shenShaForPillar',
   'function renderLuckOrigin',
   'function renderLuckSelector',
+  'function keepLuckSelectionVisible',
   'function renderLuckDetail',
   'class="luck-overview"',
   'class="luck-rail"',
@@ -213,6 +214,12 @@ assert(/function loadBaziRecord\(id\)[\s\S]*showBaziResult\(\)/.test(html), 'loa
 assert(/function renderBazi\(data\)[\s\S]*currentBaziView='structure'/.test(html), 'newly rendered charts should default to structure view');
 assert(html.includes('<button type="button" class="active" data-view="structure"'), 'structure tab should be active by default');
 assert(html.includes('<div class="bazi-view active" data-view-panel="structure"'), 'structure panel should be visible by default');
+assert(html.indexOf('<div class="bazi-tabs"') < html.indexOf('<section class="basic-dashboard">'), 'result tabs should appear before basic dashboard content');
+assert(html.indexOf('<section class="basic-dashboard">') < html.indexOf('data-view-panel="basic"'), 'the shared natal chart should sit above individual result views');
+assert(/function switchBaziView\(name\)[\s\S]*renderPillarTable\(currentBazi,name==='luck'\)/.test(html), 'switching result views should retain the shared natal chart and add transit columns only for luck');
+assert(!html.includes('luckStickyMount') && !html.includes('luck-sticky-context'), 'luck comparison should not add a sticky duplicate table that can flicker on mobile');
+assert(html.includes('id="structureSummary"') && /function switchBaziView\(name\)[\s\S]*summary\.hidden=name!=='structure'/.test(html), 'day-master, pillar, strength, and useful summary cards should show only in the structure view');
+assert(html.includes('.core-cards[hidden]{display:none!important}'), 'the structure-only summary must override the grid layout when a non-structure tab hides it');
 
 [
   '基础排盘',
@@ -384,9 +391,14 @@ assert(flowMonths2026[0].term === '立春' && flowMonths2026[0].dateLabel === '2
 assert(flowMonths2026[11].term === '小寒' && flowMonths2026[11].dateLabel === '2027/1/5' && flowMonths2026[11].gz === '辛丑', `flow month xiaohan should cross Gregorian year: ${JSON.stringify(flowMonths2026[11])}`);
 assert(scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-selector"'), 'luck panel should render stacked selector');
 assert(!scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-origin"'), 'luck panel should not repeat origin comparison');
-assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-scroll luck-scroll'), 'decade luck can keep horizontal scroll when needed');
-assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-grid year-grid'), 'flow years should use fixed 10-cell grid');
-assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-grid month-grid'), 'flow months should use fixed 12-cell grid');
+const luckSelectorHtml = scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext);
+assert(luckSelectorHtml.includes('fortune-scroll luck-scroll'), 'decade luck should keep its own horizontal scroll container');
+assert(luckSelectorHtml.includes('fortune-scroll fortune-grid year-grid'), 'flow years should keep their own responsive scroll container');
+assert(luckSelectorHtml.includes('fortune-scroll fortune-grid month-grid'), 'flow months should keep their own responsive scroll container');
+assert(scriptContext.branchMainGod('丙','午') === '劫财' && scriptContext.branchMainGod('丙','寅') === '偏印', 'branch summary should derive the ten-god from the existing first hidden stem');
+assert(luckSelectorHtml.includes('class="fortune-pillar"') && luckSelectorHtml.includes(luckContext.luckRow.stemGod) && luckSelectorHtml.includes(scriptContext.branchMainGod(scriptContext.currentBazi.dayStem,luckContext.luckRow.gz[1])), 'luck cells should expose the stem god and main-hidden-stem branch god');
+assert(luckSelectorHtml.includes(luckContext.flowYear.stemGod) && luckSelectorHtml.includes(scriptContext.branchMainGod(scriptContext.currentBazi.dayStem,luckContext.flowYear.gz[1])), 'flow-year cells should expose the stem god and main-hidden-stem branch god');
+assert(luckSelectorHtml.includes(luckContext.months[0].stemGod) && luckSelectorHtml.includes(scriptContext.branchMainGod(scriptContext.currentBazi.dayStem,luckContext.months[0].gz[1])), 'flow-month cells should expose the stem god and main-hidden-stem branch god');
 assert(!/class="fortune-item month-item active"/.test(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext)), 'month buttons should not be active by default');
 assert(!scriptContext.renderPillarTable(scriptContext.currentBazi).includes('大运') && !scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流年'), 'pillar table should show only natal pillars by default');
 assert(scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('大运') && scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流年'), 'pillar table should include luck/year only in luck view');
@@ -394,7 +406,7 @@ assert(scriptContext.renderPillarTable(scriptContext.currentBazi).includes('神�
 scriptContext.luckSelection.month = 0;
 const monthContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);
 assert(monthContext.flowMonth && !scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流月'), 'pillar table should still hide flow month outside luck view');
-assert(monthContext.flowMonth && scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流月'), 'pillar table should include flow month in luck view after month selection');
+assert(monthContext.flowMonth && !scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流月'), 'the comparison chart should keep flow month in its own track and detail area');
 const aiPromptWithSelection = scriptContext.buildAiPrompt('看当前选择');
 assert(aiPromptWithSelection.includes('用户当前运势选择'), 'AI prompt should include selected luck state');
 assert(aiPromptWithSelection.includes(monthContext.luckRow.gz) && aiPromptWithSelection.includes(`${monthContext.flowYear.year} ${monthContext.flowYear.gz}`) && aiPromptWithSelection.includes(monthContext.flowMonth.gz), 'AI prompt should include selected luck/year/month stems');
