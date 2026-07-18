@@ -25,19 +25,19 @@ Use a dedicated module worktree when work must happen in parallel.
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
 - Last shared baseline: `be87286`
-- Changed: repaired question-mark explanations on mobile. Narrow screens now use
-  a bounded, scrollable dialog with a close button and backdrop dismissal;
-  desktop hover/focus behavior remains available.
+- Changed: added a unified optimization status registry and backfilled all 41
+  P0/P1/P2 audit items with conservative completed/partial/not-started/deferred
+  states. Linked the registry from the four source documents.
 - Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
   `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
   (`18 baselines ok`); browser verification at
   `http://127.0.0.1:8082/bazi.html`.
-- Next task: user verifies the explanation dialog on a physical phone, then
-  selects the next narrowly scoped optimization.
+- Next task: select one `P*-*` or `PAT-*` item from the unified registry and
+  implement it as a narrowly scoped change.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
   weights, or qualification gates without a new theoretical audit and explicit
-  user confirmation.
+  user confirmation. A document-only proposal is not an implemented feature.
 
 ## Replace At Each Handoff
 

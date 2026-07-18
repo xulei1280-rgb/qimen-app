@@ -1,5 +1,7 @@
 # 格局层次理论基准库
 
+> 统一进度入口：[`docs/codex/OPTIMIZATION-STATUS.md`](../OPTIMIZATION-STATUS.md)
+
 ## 当前版本
 
 - 基准版本：`ZP-TB-1984-2044-D11-H12-v9`

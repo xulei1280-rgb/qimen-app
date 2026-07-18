@@ -1,5 +1,7 @@
 # 格局层次结构分设计
 
+> 统一进度入口：[`docs/codex/OPTIMIZATION-STATUS.md`](../OPTIMIZATION-STATUS.md)
+
 > 版本：`PAT-LV-DESIGN-v1`
 > 状态：正式设计，2026-07-15确认采用结构分直接分档
 > 模块：完整格局喜用
