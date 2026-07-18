@@ -23,11 +23,22 @@ Use a dedicated module worktree when work must happen in parallel.
 ## Active Handoff
 
 - Owner: P1
-- Working branch: `codex/bazi-local-work`
-- State: Bazi module work is still being integrated locally. Uncommitted files
-  are not available to P2 until P1 commits and pushes the intended state.
-- Before P2 continues: P1 records the last commit, changed modules, checks, and
-  next task below, then pushes `main`.
+- Working branch: `main` (use the I-drive checkout only)
+- Last shared commit: `eaf7970`
+- Changed: integrated the strict pattern/useful-element engine, percentile audit
+  materials, standard/professional display, concise structure cards, contextual
+  explanations, classical notes, selected-luck context, and old-record migration
+  into the I-drive checkout without discarding either computer's accepted work.
+- Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`;
+  `node check-bazi-page.js` (`bazi page checks ok`); `node check-baselines.js`
+  (`18 baselines ok`); browser verification at
+  `http://127.0.0.1:8082/bazi.html`.
+- Next task: user reviews the consolidated pattern/useful-element page, then
+  selects the next narrowly scoped optimization.
+- Caution: retain the C-drive worktree temporarily only as a migration backup;
+  do not develop or validate from its `file://` page. Do not change score bands,
+  weights, or qualification gates without a new theoretical audit and explicit
+  user confirmation.
 
 ## Replace At Each Handoff
 
