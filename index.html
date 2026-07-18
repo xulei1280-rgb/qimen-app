@@ -89,6 +89,52 @@ h1{
   box-shadow:0 6px 16px rgba(61,42,18,.07);
 }
 .page-switch:hover{background:#fffaf0;border-color:var(--line-strong)}
+.page-actions{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+.page-actions .page-switch{margin-bottom:0}
+.display-mode{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  padding:2px;
+  border:1px solid rgba(169,111,40,.34);
+  border-radius:999px;
+  background:rgba(255,253,247,.76);
+  box-shadow:0 6px 16px rgba(61,42,18,.07);
+}
+.display-mode button{
+  min-width:50px;
+  min-height:26px;
+  border:0;
+  border-radius:999px;
+  background:transparent;
+  color:#70481a;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:bold;
+}
+.display-mode button.active{background:#74301f;color:#fffdf7}
+body:not([data-display-mode="professional"]) .professional-only{display:none!important}
+body[data-display-mode="professional"] .standard-only{display:none!important}
+.reading-guide{
+  margin:10px 0;
+  padding:10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#fffaf0;
+  color:#544534;
+  font-size:12px;
+  line-height:1.7;
+}
+.reading-guide h4{margin:0 0 6px;color:#963222;font-size:13px}
+.reading-guide p{margin:4px 0}
+.reading-guide strong{color:#7f2b20}
+.reasoning-chain{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.reasoning-chain span{padding:3px 6px;border:1px solid #e1cda8;border-radius:5px;background:#fffdf7;color:#70481a;font-weight:bold}
 
 .time-bar{
   width:min(100%,720px);
@@ -215,6 +261,18 @@ h1{
 }
 .status-chip strong{color:var(--cinnabar)}
 .status-chip.warn{color:#855e16;background:#fff8df;border-color:#d8b35c}
+.plate-freshness{
+  width:444px;
+  margin:-6px auto 12px;
+  padding:8px 10px;
+  border:1px solid #d8b35c;
+  border-radius:5px;
+  background:#fff8df;
+  color:#755212;
+  text-align:center;
+  font-size:12px;
+  font-weight:bold;
+}
 
 .board-wrap{
   position:relative;
@@ -502,6 +560,10 @@ h1{
   .main-area{min-width:auto;width:100%}
   h1{font-size:22px;letter-spacing:2px}
   .subtitle{margin-bottom:12px}
+  .page-actions{width:100%;max-width:340px;align-items:stretch}
+  .page-actions .page-switch{flex:1;justify-content:center;min-height:44px}
+  .display-mode{flex:1}
+  .display-mode button{min-height:40px}
   .board-wrap{width:340px;height:340px;margin:2px auto 18px}
   .board-wrap:before{inset:-8px}
   .palace{width:107px;height:107px;border-radius:5px;border-width:1px}
@@ -537,6 +599,7 @@ h1{
   .solar-bar select,.solar-bar button{font-size:11px}
   .solar-preview{flex:1 0 100%;text-align:center}
   .status-strip{width:100%;max-width:340px;margin:4px auto 10px}
+  .plate-freshness{width:100%;max-width:340px;margin:-2px auto 10px}
   .status-chip{font-size:10px;padding:3px 6px}
   .tool-row{width:100%;max-width:340px;grid-template-columns:1fr;gap:8px;margin-bottom:10px}
   .question-bar{width:100%;max-width:340px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -560,7 +623,13 @@ h1{
 <div class="main-area">
   <h1>奇门遁甲</h1>
   <div class="subtitle">时家转盘 · 拆补法</div>
-  <a class="page-switch" href="bazi.html">八字分析 →</a>
+  <div class="page-actions">
+    <a class="page-switch" href="bazi.html">八字分析 →</a>
+    <div class="display-mode" aria-label="显示模式">
+      <button type="button" data-display-mode="standard" onclick="setDisplayMode('standard')" title="保留专业词，并用大白话解释">标准</button>
+      <button type="button" data-display-mode="professional" onclick="setDisplayMode('professional')" title="显示专业术语、判定依据和推理顺序">专业</button>
+    </div>
+  </div>
   <div class="time-bar">
     <div class="cal-tabs">
       <span class="cal-tab active" id="tabSolar" onclick="switchCal('solar')">公历</span>
@@ -580,17 +649,18 @@ h1{
     <button class="primary" onclick="doPaiPan()">🔮 起盘</button>
   </div>
   <div class="solar-bar">
-    <label><input type="checkbox" id="useTrueSolar" onchange="saveSolarSettings();refreshSolarPreview()">真太阳时</label>
+    <label><input type="checkbox" id="useTrueSolar" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()">真太阳时</label>
     <select id="locationPreset" onchange="applyLocationPreset(this.value)" title="选择常用地点经度">
       <option value="">自定义经度</option>
       <option value="103.99505">云南师宗</option>
       <option value="102.83289">昆明</option>
       <option value="116.4074">北京</option>
     </select>
-    <input type="number" id="longitude" step="0.0001" value="103.9951" onchange="saveSolarSettings();refreshSolarPreview()" title="经度，东经为正；中国标准时区按东经120度计算">
+    <input type="number" id="longitude" step="0.0001" value="103.9951" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()" title="经度，东经为正；中国标准时区按东经120度计算">
     <button onclick="useBrowserLocation()" title="使用浏览器定位读取经度，只保存在本机">📍 定位</button>
     <span class="solar-preview" id="solarPreview">未启用真太阳时</span>
   </div>
+  <div class="plate-freshness" id="plateFreshness" hidden>时间或起盘设置已改变，请重新点击「起盘」。</div>
   <div class="status-strip" id="statusStrip" aria-live="polite"></div>
   <div class="board-wrap" id="board"></div>
   <div class="tool-row">
@@ -675,23 +745,39 @@ var SAVED_HISTORY_STORAGE='qimen_history';
 var AI_MODE_STORAGE='qimen_ai_mode';
 var TRUE_SOLAR_STORAGE='qimen_true_solar_enabled';
 var LONGITUDE_STORAGE='qimen_longitude';
+var DISPLAY_MODE_STORAGE='analysis_display_mode';
+var plateInputFingerprint='';
+var qimenAiRequestSeq=0;
 
 (function init(){
   var m=document.getElementById('month'),d=document.getElementById('day'),h=document.getElementById('hour');
   for(var i=1;i<=12;i++) m.appendChild(new Option(i,i));
   for(var i=0;i<=23;i++) h.appendChild(new Option(i+'时',i));
   for(var i=0;i<60;i++) document.getElementById('minute').appendChild(new Option(i+'分',i));
-  document.getElementById('year').addEventListener('change',function(){updateDayOptions();refreshSolarPreview()});
-  document.getElementById('month').addEventListener('change',function(){updateDayOptions();refreshSolarPreview()});
-  ['day','hour','minute'].forEach(function(id){document.getElementById(id).addEventListener('change',refreshSolarPreview)});
+  document.getElementById('year').addEventListener('change',function(){updateDayOptions();refreshSolarPreview();markPlateDirty()});
+  document.getElementById('month').addEventListener('change',function(){updateDayOptions();refreshSolarPreview();markPlateDirty()});
+  ['day','hour','minute'].forEach(function(id){document.getElementById(id).addEventListener('change',function(){refreshSolarPreview();markPlateDirty()})});
+  ['gender','personName'].forEach(function(id){document.getElementById(id).addEventListener('change',markPlateDirty)});
   document.getElementById('question').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();analyzeWithAI()}});
   setControlTitles();
+  initDisplayMode();
   loadAiMode();
   loadSolarSettings();
   useCurrentTime();
   buildBoard();
   setTimeout(function(){doPaiPan({skipRecord:true})},100);
 })();
+
+function initDisplayMode(){
+  var saved=localStorage.getItem(DISPLAY_MODE_STORAGE);
+  setDisplayMode(saved==='professional'?'professional':'standard',false);
+}
+function setDisplayMode(mode,persist){
+  mode=mode==='professional'?'professional':'standard';
+  document.body.setAttribute('data-display-mode',mode);
+  document.querySelectorAll('[data-display-mode]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-display-mode')===mode)});
+  if(persist!==false)localStorage.setItem(DISPLAY_MODE_STORAGE,mode);
+}
 
 function setControlTitles(){
   var titles={year:'公历年份',month:'公历月份',day:'公历日期',hour:'时辰小时',minute:'分钟',gender:'求测人性别'};
@@ -700,6 +786,7 @@ function setControlTitles(){
 
 function useCurrentTime(){
   setControlsFromDate(new Date());
+  markPlateDirty();
 }
 function daysInMonth(year,month){return new Date(year,month,0).getDate()}
 function updateDayOptions(preferredDay){
@@ -720,6 +807,38 @@ function switchCal(t){
   currentCal=t;
   document.getElementById('tabSolar').classList.toggle('active',t==='solar');
   document.getElementById('tabLunar').classList.toggle('active',t==='lunar');
+  markPlateDirty();
+}
+function currentPlateInputFingerprint(){
+  var t=getTimeInput();
+  return JSON.stringify({
+    calendar:currentCal,
+    time:[t.year,t.month,t.day,t.hour,t.minute],
+    gender:document.getElementById('gender').value,
+    person:getPersonName(),
+    trueSolar:document.getElementById('useTrueSolar').checked,
+    longitude:Number(getLongitude()).toFixed(5)
+  });
+}
+function setPlateActionsDisabled(disabled){
+  ['btnAI','btnCopy','btnExport','btnSave'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=!!disabled});
+}
+function markPlateDirty(){
+  if(!plateData||!plateInputFingerprint)return;
+  var dirty=currentPlateInputFingerprint()!==plateInputFingerprint;
+  var note=document.getElementById('plateFreshness');
+  if(note)note.hidden=!dirty;
+  setPlateActionsDisabled(dirty);
+  if(dirty)qimenAiRequestSeq++;
+}
+function ensureCurrentPlate(){
+  if(!plateData){alert('请先起盘');return false}
+  if(!plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint){
+    markPlateDirty();
+    alert('时间或起盘设置已改变，请重新点击「起盘」。');
+    return false;
+  }
+  return true;
 }
 function getTimeInput(){
   var y=parseInt(document.getElementById('year').value),m=parseInt(document.getElementById('month').value),d=parseInt(document.getElementById('day').value),h=parseInt(document.getElementById('hour').value),mi=parseInt(document.getElementById('minute').value);
@@ -799,7 +918,7 @@ function refreshSolarPreview(){
 }
 function loadSolarSettings(){
   var lon=localStorage.getItem(LONGITUDE_STORAGE)||'103.99505';
-  document.getElementById('useTrueSolar').checked=false;
+  document.getElementById('useTrueSolar').checked=localStorage.getItem(TRUE_SOLAR_STORAGE)==='1';
   document.getElementById('longitude').value=lon;
 }
 function saveSolarSettings(){
@@ -812,6 +931,7 @@ function applyLocationPreset(v){
     saveSolarSettings();
   }
   refreshSolarPreview();
+  markPlateDirty();
 }
 function useBrowserLocation(){
   if(!navigator.geolocation){alert('当前浏览器不支持定位。');return}
@@ -820,6 +940,7 @@ function useBrowserLocation(){
     document.getElementById('locationPreset').value='';
     saveSolarSettings();
     refreshSolarPreview();
+    markPlateDirty();
   },function(err){alert('定位失败：'+err.message+'。也可以手动填写经度。')},{enableHighAccuracy:true,timeout:8000,maximumAge:600000});
 }
 
@@ -1031,12 +1152,15 @@ function buildBoard(){
 
 function doPaiPan(opts){
   opts=opts||{};
+  qimenAiRequestSeq++;
   var t=getTimeInput();
   var pt=getPaiPanTime(t);
   plateData=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
   plateData.inputTime=pt.input;
   plateData.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction};
   plateData.personName=getPersonName();
+  plateData.gender=document.getElementById('gender').value;
+  plateData.currentCal=currentCal;
   selectedPalace=null;
   document.querySelectorAll('.palace').forEach(function(p){p.classList.remove('selected')});
   renderPlate(plateData);
@@ -1044,10 +1168,10 @@ function doPaiPan(opts){
   aiHistory=[];
   aiTopic=null;
   currentAutoHistoryId=null;
-  document.getElementById('btnAI').disabled=false;
-  document.getElementById('btnCopy').disabled=false;
-  document.getElementById('btnExport').disabled=false;
-  document.getElementById('btnSave').disabled=false;
+  plateInputFingerprint=currentPlateInputFingerprint();
+  var freshness=document.getElementById('plateFreshness');
+  if(freshness)freshness.hidden=true;
+  setPlateActionsDisabled(false);
   var note=getJieQiNote(pt.used);
   var solarNote=pt.enabled?'真太阳时：输入 '+formatTimeObj(pt.input)+'，校正 '+formatOffset(pt.correction)+'，起盘用 '+formatTimeObj(pt.used)+'。':'';
   renderStatus(plateData,note);
@@ -1145,7 +1269,7 @@ function renderSidePanel(data,focusNum){
   var sc=document.getElementById('sideContent');
   sc.innerHTML=renderPalaceFocus(data,focusNum)+
     (data.personName?'<div class="info-row"><span class="info-label">姓名/标记</span><span class="info-value">'+esc(data.personName)+'</span></div>':'')+
-    '<div class="info-row"><span class="info-label">性别</span><span class="info-value">'+document.getElementById('gender').value+'</span></div>'+
+    '<div class="info-row"><span class="info-label">性别</span><span class="info-value">'+(data.gender||document.getElementById('gender').value)+'</span></div>'+
     (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">输入时间</span><span class="info-value">'+formatTimeObj(data.inputTime)+'</span></div>':'')+
     '<div class="info-row"><span class="info-label">'+(data.trueSolar&&data.trueSolar.enabled?'起盘用时':'阳历时间')+'</span><span class="info-value">'+data.solarTime.year+'-'+pad(data.solarTime.month)+'-'+pad(data.solarTime.day)+' '+pad(data.solarTime.hour)+':'+pad(data.solarTime.minute||0)+'</span></div>'+
     (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">真太阳时</span><span class="info-value">东经 '+Number(data.trueSolar.longitude).toFixed(3)+'° · '+formatOffset(data.trueSolar.correction)+'</span></div>':'')+
@@ -1162,6 +1286,12 @@ function renderSidePanel(data,focusNum){
     '<div class="info-row"><span class="info-label">局式</span><span class="info-value">'+ji.juShi+'</span></div>'+
     '<div class="info-row"><span class="info-label">旬空</span><span class="info-value">'+data.kongWang.join(' ')+'</span></div>'+
     '<div class="info-row"><span class="info-label">马星</span><span class="info-value">'+data.maXing+'</span></div>'+
+    '<div class="reading-guide standard-only" data-reading-guide="qimen"><h4>用普通话看这个盘</h4>'+
+      '<p><strong>值符</strong>是整盘最主要的气势和关注点；<strong>值使门</strong>表示事情更可能通过哪种行动方式落地。</p>'+
+      '<p><strong>旬空</strong>表示相关信息暂时不实、难落实或力量打折，不等于一定没有；<strong>马星</strong>提示走动、变化、出行或事情加速。</p>'+
+      '<p><strong>看单宫</strong>时，门看事情怎么发生，星看性质和状态，神看外在氛围与助力，天盘干看当前变化，地盘干看原有基础。门迫、击刑、入墓是受限方式的专业名称，要和整宫及用神一起判断。</p>'+
+    '</div>'+
+    '<div class="reading-guide professional-only"><h4>专业判读顺序</h4><div class="reasoning-chain"><span>局式旬首</span>→<span>值符值使</span>→<span>用神落宫</span>→<span>门星神仪</span>→<span>旺衰格局</span>→<span>空马刑墓</span></div></div>'+
     '<div class="legend"><h4>📖 颜色图例</h4>'+
       '<div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> 门迫 — 八门受制</div>'+
       '<div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span> 击刑 — 地支相刑</div>'+
@@ -1213,7 +1343,7 @@ function copyFallback(text){
 }
 
 async function copyPlateText(){
-  if(!plateData)return;
+  if(!ensureCurrentPlate())return;
   var text=buildPlateText(plateData);
   try{
     if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(text);
@@ -1225,7 +1355,7 @@ async function copyPlateText(){
 }
 
 function exportPlate(){
-  if(!plateData){alert('请先起盘');return}
+  if(!ensureCurrentPlate())return;
   window.print();
 }
 
@@ -1263,11 +1393,13 @@ function selectPalace(num){
 }
 
 async function analyzeWithAI(){
-  if(!plateData){alert('请先起盘');return}
+  if(!ensureCurrentPlate())return;
   var question=document.getElementById('question').value.trim();
   if(!question){alert('请输入你想问的事情');return}
   var apiKey=getApiKey();
   if(!apiKey){alert('未填写 DeepSeek API Key');return}
+  var aiRequestId=++qimenAiRequestSeq;
+  var aiRequestFingerprint=plateInputFingerprint;
   var gender=document.getElementById('gender').value;
   var qType=getQuestionType();
   var aiMode=document.getElementById('aiMode').value;
@@ -1306,6 +1438,7 @@ async function analyzeWithAI(){
   try{
     var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-chat',messages:messages,max_tokens:1500,temperature:0.7})});
     var d=await resp.json();
+    if(aiRequestId!==qimenAiRequestSeq||aiRequestFingerprint!==plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint)return;
     if(d.choices&&d.choices[0]){
       if(!aiTopic)aiTopic=pendingTopic;
       aiHistory.push({q:question,a:d.choices[0].message.content.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
@@ -1314,9 +1447,11 @@ async function analyzeWithAI(){
     }else{
       document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ AI 返回异常: '+esc(JSON.stringify(d))+'</div>';
     }
-  }catch(e){document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>'}
-  aiBtn.disabled=false;
-  updateAiButtonLabel();
+  }catch(e){
+    if(aiRequestId===qimenAiRequestSeq&&aiRequestFingerprint===plateInputFingerprint)document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>';
+  }finally{
+    if(aiRequestId===qimenAiRequestSeq){aiBtn.disabled=false;updateAiButtonLabel()}
+  }
 }
 
 function renderAIHistory(){
@@ -1395,6 +1530,8 @@ function addAutoHistory(){
     tag:getQuestionTypeLabel(getQuestionType()),
     questionType:getQuestionType(),
     question:q,
+    gender:plateData.gender||document.getElementById('gender').value,
+    currentCal:plateData.currentCal||currentCal,
     solarTime:plateData.solarTime,
     data:JSON.parse(JSON.stringify(plateData)),
     aiTopic:aiTopic?JSON.parse(JSON.stringify(aiTopic)):null,
@@ -1418,6 +1555,8 @@ function updateCurrentAutoHistory(){
   item.tag=getQuestionTypeLabel(getQuestionType());
   item.questionType=getQuestionType();
   item.question=recordQuestion;
+  item.gender=plateData.gender||document.getElementById('gender').value;
+  item.currentCal=plateData.currentCal||currentCal;
   item.solarTime=plateData.solarTime;
   item.data=JSON.parse(JSON.stringify(plateData));
   item.aiTopic=aiTopic?JSON.parse(JSON.stringify(aiTopic)):null;
@@ -1427,7 +1566,7 @@ function updateCurrentAutoHistory(){
   renderAutoHistory();
 }
 function saveToHistory(){
-  if(!plateData)return;
+  if(!ensureCurrentPlate())return;
   plateData.personName=getPersonName();
   var tag=getQuestionTypeLabel(getQuestionType());
   var q=currentQuestionText();
@@ -1442,6 +1581,8 @@ function saveToHistory(){
     person:plateData.personName||'',
     questionType:getQuestionType(),
     question:q,
+    gender:plateData.gender||document.getElementById('gender').value,
+    currentCal:plateData.currentCal||currentCal,
     solarTime:plateData.solarTime,
     data:JSON.parse(JSON.stringify(plateData)),
     aiTopic:aiTopic?JSON.parse(JSON.stringify(aiTopic)):null,
@@ -1457,6 +1598,7 @@ function loadHistory(id,kind){
   var hist=getRecords(kind==='auto'?AUTO_HISTORY_STORAGE:SAVED_HISTORY_STORAGE);
   var item=hist.find(function(h){return h.id===id});
   if(!item)return;
+  qimenAiRequestSeq++;
   plateData=item.data;
   aiHistory=item.aiHistory?JSON.parse(JSON.stringify(item.aiHistory)):[];
   aiTopic=item.aiTopic?JSON.parse(JSON.stringify(item.aiTopic)):(aiHistory[0]?{question:aiHistory[0].q,type:item.questionType||'general',person:item.person||'',createdAt:item.createdAt||''}:null);
@@ -1464,6 +1606,12 @@ function loadHistory(id,kind){
   if(item.questionType&&document.getElementById('questionType'))document.getElementById('questionType').value=item.questionType;
   if(document.getElementById('question'))document.getElementById('question').value=item.question||'';
   if(document.getElementById('personName'))document.getElementById('personName').value=item.person||plateData.personName||'';
+  plateData.gender=item.gender||plateData.gender||'男';
+  plateData.currentCal=item.currentCal||plateData.currentCal||'solar';
+  document.getElementById('gender').value=plateData.gender;
+  currentCal=plateData.currentCal;
+  document.getElementById('tabSolar').classList.toggle('active',currentCal==='solar');
+  document.getElementById('tabLunar').classList.toggle('active',currentCal==='lunar');
   selectedPalace=null;
   setControlsFromTime(plateData.inputTime||plateData.solarTime);
   var ts=plateData.trueSolar||{enabled:false,longitude:getLongitude()};
@@ -1474,10 +1622,10 @@ function loadHistory(id,kind){
   renderPlate(plateData);
   renderSidePanel(plateData);
   renderStatus(plateData);
-  document.getElementById('btnAI').disabled=false;
-  document.getElementById('btnCopy').disabled=false;
-  document.getElementById('btnExport').disabled=false;
-  document.getElementById('btnSave').disabled=false;
+  plateInputFingerprint=currentPlateInputFingerprint();
+  var freshness=document.getElementById('plateFreshness');
+  if(freshness)freshness.hidden=true;
+  setPlateActionsDisabled(false);
   var solarNote=plateData.trueSolar&&plateData.trueSolar.enabled?'真太阳时：输入 '+formatTimeObj(plateData.inputTime)+'，校正 '+formatOffset(plateData.trueSolar.correction)+'，起盘用 '+formatTimeObj(plateData.solarTime)+'。':'';
   setSideTab('info');
   document.getElementById('infoPanel').innerHTML='<div class="title">📜 已加载'+(kind==='auto'?'起盘记录':'保存起盘')+' — '+esc(item.name)+'</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,getJieQiNote(plateData.solarTime))+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
