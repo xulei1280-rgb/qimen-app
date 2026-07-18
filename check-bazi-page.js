@@ -54,6 +54,8 @@ function assert(condition, message) {
   'function renderRelationPanel',
   'function getInquiryTimeInfo',
   'function getLuckData',
+  'function selectedLuckContextText',
+  'function buildAiContextSnapshot',
   'function editBaziRecord',
   'function deleteBaziRecord',
   'function deleteBaziAiTurn',
@@ -84,6 +86,58 @@ function assert(condition, message) {
   '推理依据',
   '结论 -> 依据 -> 反证 -> 不确定处 -> 可验证点',
 ].forEach((needle) => assert(html.includes(needle), `missing ${needle}`));
+
+[
+  'analysis_display_mode',
+  'id="baziHistorySearch"',
+  'id="baziHistorySort"',
+  'function exportBaziRecords',
+  'function importBaziRecords',
+  'function baziChartFingerprint',
+  'var baziAiRequestSeq',
+  'professional-only',
+  'standard-only',
+  'data-structure-mode-switch',
+  'data-standard-copy',
+  'data-professional-copy',
+  'function standardStructureText',
+  'function structureDetailBox',
+].forEach((needle) => assert(html.includes(needle), `missing local UX safeguard ${needle}`));
+['data-reading-guide="bazi-table"','data-reading-guide="bazi-structure"','这些专业词，用大白话怎么看','用普通话理解这张盘'].forEach((needle) => {
+  assert(!html.includes(needle), `obsolete duplicate explanation should be removed: ${needle}`);
+});
+assert(!html.includes('slice(0,50)'), 'saved Bazi records must not be silently truncated');
+['副星','星运','空亡','纳音','神煞'].forEach((label) => {
+  assert(!html.includes(`<tr class="professional-only"><th class="row-label">${label}</th>`), `${label} should remain visible in standard mode`);
+});
+
+const qimenHtml = fs.readFileSync('index.html', 'utf8');
+[
+  'analysis_display_mode',
+  'id="plateFreshness"',
+  'function currentPlateInputFingerprint',
+  'function markPlateDirty',
+  'function ensureCurrentPlate',
+  'var qimenAiRequestSeq',
+  'plateData.gender',
+  'plateData.currentCal',
+  'professional-only',
+  'standard-only',
+  'data-reading-guide="qimen"',
+  '用普通话看这个盘',
+].forEach((needle) => assert(qimenHtml.includes(needle), `missing Qimen UX safeguard ${needle}`));
+[
+  'class="gz-table"',
+  '<span class="info-label">旬首</span>',
+  '<span class="info-label">局式</span>',
+  '<span class="info-label">旬空</span>',
+  '<span class="info-label">马星</span>',
+  '<div class="legend"><h4>',
+].forEach((needle) => assert(qimenHtml.includes(needle), `standard Qimen view should retain ${needle}`));
+assert(/function useCurrentTime\(\)[\s\S]*?markPlateDirty\(\)/.test(qimenHtml), 'current-time shortcut should invalidate an existing plate');
+[...qimenHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)].forEach((match, index) => {
+  new vm.Script(match[1], { filename: `index-inline-${index}.js` });
+});
 
 assert(!html.includes('sample-btn'), 'sample button should be removed');
 assert(!html.includes('载入问真样本'), 'WenZhen sample loader button should be removed');
@@ -129,6 +183,9 @@ assert(html.includes('<div class="bazi-view active" data-view-panel="structure"'
   '当前流年参考',
   '大运表',
   '不要自行改写当前年份',
+  '用户当前运势选择',
+  '上轮本地上下文摘要',
+  'luckSelection:cloneLuckSelection',
 ].forEach((needle) => assert(html.includes(needle), `missing stage2 text ${needle}`));
 
 [
@@ -153,6 +210,8 @@ assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'openin
   'window.BaziEngine',
   'function analyzePattern',
   'function shenShaForPillar',
+  'function luckStartInfo',
+  'function getFlowMonths',
   'SHENSHA_RULES',
 ].forEach((needle) => assert(engine.includes(needle), `engine missing ${needle}`));
 const sample = qimen + `
@@ -231,6 +290,8 @@ scriptContext.currentBazi = {
     location: { name: '云南省 曲靖市 麒麟区', lng: 103.805, lat: 25.4951 },
   },
 };
+scriptContext.currentBazi.scores = scriptContext.BaziEngine.scoreWuxing(scriptContext.currentBazi.pillars);
+scriptContext.currentBazi.relations = [];
 const luckContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);
 assert(luckContext.years.length === 10, 'selected luck should expose 10 flow years');
 assert(luckContext.months.length === 12, 'selected flow year should expose 12 flow months');
@@ -238,6 +299,26 @@ assert(luckContext.luck.rows.length === 10, 'luck selector should expose 10 deca
 assert(luckContext.luckRow && luckContext.flowYear, 'selected luck context should include luck/year');
 assert(luckContext.flowMonth == null, 'flow month should be unselected by default');
 assert(luckContext.months[0].term === '立春' && luckContext.months[0].dateLabel.includes('/'), 'flow months should be keyed by solar terms with Gregorian dates');
+const forwardLuckChart = {
+  person: '起运校验',
+  gender: '男',
+  pillars: { year: '庚午', month: '辛巳', day: '壬申', hour: '癸卯' },
+  dayStem: '壬',
+  dayElement: '水',
+  time: { used: { year: 1990, month: 5, day: 7, hour: 5, minute: 59 }, input: { year: 1990, month: 5, day: 7, hour: 7, minute: 0 }, enabled: true, correction: -61, location: { name: '参考', lng: 103.805, lat: 25.4951 } },
+};
+const startInfo = scriptContext.BaziEngine.luckStartInfo(forwardLuckChart);
+assert(startInfo.direction === '顺行' && startInfo.term === '芒种', `forward luck should start from next 芒种, got ${JSON.stringify(startInfo)}`);
+assert(startInfo.startAge === 10, `exact/near 30-day luck offset should enter at 10 sui, got ${startInfo.startAge}`);
+const forwardLuck = scriptContext.getLuckData(forwardLuckChart, new Date(2026, 6, 9, 12));
+assert(forwardLuck.startAge === 10 && scriptContext.luckStartYear(forwardLuckChart, forwardLuck.rows[0]) === 1999, 'luck start year should follow virtual-age entry year');
+const beforeLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 3, 12));
+const afterLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 4, 12));
+assert(beforeLiChun.flowYearNumber === 2025 && beforeLiChun.flowYearGz === '乙巳', `flow year before lichun mismatch: ${JSON.stringify(beforeLiChun)}`);
+assert(afterLiChun.flowYearNumber === 2026 && afterLiChun.flowYearGz === '丙午', `flow year after lichun mismatch: ${JSON.stringify(afterLiChun)}`);
+const flowMonths2026 = scriptContext.getFlowMonths(2026, '丁');
+assert(flowMonths2026[0].term === '立春' && flowMonths2026[0].dateLabel === '2026/2/4' && flowMonths2026[0].gz === '庚寅', `flow month lichun mismatch: ${JSON.stringify(flowMonths2026[0])}`);
+assert(flowMonths2026[11].term === '小寒' && flowMonths2026[11].dateLabel === '2027/1/5' && flowMonths2026[11].gz === '辛丑', `flow month xiaohan should cross Gregorian year: ${JSON.stringify(flowMonths2026[11])}`);
 assert(scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-selector"'), 'luck panel should render stacked selector');
 assert(!scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-origin"'), 'luck panel should not repeat origin comparison');
 assert(scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext).includes('fortune-scroll luck-scroll'), 'decade luck can keep horizontal scroll when needed');
@@ -251,6 +332,10 @@ scriptContext.luckSelection.month = 0;
 const monthContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);
 assert(monthContext.flowMonth && !scriptContext.renderPillarTable(scriptContext.currentBazi).includes('流月'), 'pillar table should still hide flow month outside luck view');
 assert(monthContext.flowMonth && scriptContext.renderPillarTable(scriptContext.currentBazi, true).includes('流月'), 'pillar table should include flow month in luck view after month selection');
+const aiPromptWithSelection = scriptContext.buildAiPrompt('看当前选择');
+assert(aiPromptWithSelection.includes('用户当前运势选择'), 'AI prompt should include selected luck state');
+assert(aiPromptWithSelection.includes(monthContext.luckRow.gz) && aiPromptWithSelection.includes(`${monthContext.flowYear.year} ${monthContext.flowYear.gz}`) && aiPromptWithSelection.includes(monthContext.flowMonth.gz), 'AI prompt should include selected luck/year/month stems');
+assert(scriptContext.buildAiContextSnapshot(scriptContext.currentBazi).includes('用户当前运势选择'), 'AI context snapshot should preserve selected luck state for follow-ups');
 scriptContext.luckSelection = { luck: 9, year: 9, month: 9 };
 scriptContext.resetLuckSelection();
 const resetContext = scriptContext.getSelectedLuckContext(scriptContext.currentBazi);

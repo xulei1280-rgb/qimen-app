@@ -83,6 +83,47 @@
     var day=getDayGZ(dayDate.getFullYear(),dayDate.getMonth()+1,dayDate.getDate());
     return {year:getYearGZ(t.year,t.month,t.day),month:getMonthGZ(t.year,t.month,t.day),day:day,hour:getHourGZ(day,t.hour)};
   }
+  var MAJOR_SOLAR_TERMS=[
+    {name:'立春',month:2,day:4},{name:'惊蛰',month:3,day:5},{name:'清明',month:4,day:5},
+    {name:'立夏',month:5,day:5},{name:'芒种',month:6,day:5},{name:'小暑',month:7,day:7},
+    {name:'立秋',month:8,day:7},{name:'白露',month:9,day:7},{name:'寒露',month:10,day:8},
+    {name:'立冬',month:11,day:7},{name:'大雪',month:12,day:7},{name:'小寒',month:1,day:5,nextYear:true}
+  ];
+  function flowTermYear(flowYear,term){return flowYear+(term.nextYear?1:0)}
+  function termDate(flowYear,term){return new Date(flowTermYear(flowYear,term),term.month-1,term.day)}
+  function getFlowYearNumber(t){
+    return (t.month===1||(t.month===2&&t.day<4))?t.year-1:t.year;
+  }
+  function getFlowYearGZ(year){
+    return typeof getYearGZ==='function'?getYearGZ(year,7,1):'';
+  }
+  function luckDirection(data){
+    var yangYear='甲丙戊庚壬'.indexOf(data.pillars.year[0])>=0;
+    return ((data.gender==='男'&&yangYear)||(data.gender==='女'&&!yangYear))?1:-1;
+  }
+  function luckStartInfo(data){
+    var used=data.time.used,dir=luckDirection(data);
+    var birth=new Date(used.year,used.month-1,used.day,used.hour||0,used.minute||0);
+    var terms=[];
+    for(var y=used.year-1;y<=used.year+1;y++){
+      MAJOR_SOLAR_TERMS.forEach(function(t){terms.push({name:t.name,year:flowTermYear(y,t),month:t.month,day:t.day,date:termDate(y,t)})});
+    }
+    terms.sort(function(a,b){return a.date-b.date});
+    var target=null;
+    terms.forEach(function(t){
+      if(dir>0&&t.date>birth&&(!target||t.date<target.date))target=t;
+      if(dir<0&&t.date<birth&&(!target||t.date>target.date))target=t;
+    });
+    var days=target?Math.abs(target.date-birth)/86400000:0;
+    return {direction:dir>0?'顺行':'逆行',term:target?target.name:'',termDate:target?{year:target.year,month:target.month,day:target.day}:null,days:days,startAge:Math.max(1,Math.ceil(days/3))};
+  }
+  function luckStartAge(data){return luckStartInfo(data).startAge}
+  function getFlowMonths(year,dayStem){
+    return MAJOR_SOLAR_TERMS.map(function(t,i){
+      var termYear=flowTermYear(year,t),mgz=typeof getMonthGZ==='function'?getMonthGZ(termYear,t.month,t.day):'';
+      return {month:i+1,term:t.name,dateLabel:termYear+'/'+t.month+'/'+t.day,year:termYear,gz:mgz,stemGod:tenGod(dayStem,mgz[0]),branchWx:BRANCH_WX[mgz[1]]};
+    });
+  }
   function scoreWuxing(pillars){
     var scores={木:0,火:0,土:0,金:0,水:0};
     Object.keys(pillars).forEach(function(k){
@@ -491,7 +532,7 @@
     return {primary:primary,pattern:primary,patternBasis:basis,patternState:state,patternVerdict:verdict,candidates:candidates,comboPatterns:combos,mainPattern:mainPattern,patternLevel:level,remedy:remedy,factors:factors,clarity:clarity,comboConflicts:comboConflicts,usePriority:usePriority,specialPatterns:specials,classifiedClues:clues,strength:strength,strengthScore:weightedStrength,useful:useful,evidence:evidence};
   }
 
-  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern};
+  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern};
   root.BaziEngine=api;
   if(root.window)root.window.BaziEngine=api; // window.BaziEngine
 })(typeof globalThis!=='undefined'?globalThis:this);
