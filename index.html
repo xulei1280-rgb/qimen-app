@@ -291,6 +291,20 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   border-radius:8px;
   z-index:-1;
 }
+.board-empty-tip{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  z-index:3;
+  color:#7b6248;
+  font-size:14px;
+  font-weight:bold;
+  text-shadow:0 1px 0 rgba(255,255,255,.9);
+}
+.board-empty-tip[hidden]{display:none}
 .palace{
   position:absolute;
   width:140px;
@@ -783,7 +797,6 @@ var qimenAiRequestSeq=0;
   loadSolarSettings();
   useCurrentTime();
   buildBoard();
-  setTimeout(function(){doPaiPan({skipRecord:true})},100);
 })();
 
 function initDisplayMode(){
@@ -888,7 +901,7 @@ function shiftHour(delta){
   var t=getTimeInput();
   var dt=new Date(t.year,t.month-1,t.day,t.hour+(delta||0),t.minute||0);
   setControlsFromDate(dt);
-  doPaiPan({skipRecord:true});
+  markPlateDirty();
 }
 
 function dayOfYear(y,m,d){
@@ -1166,6 +1179,10 @@ function buildBoard(){
       '<span class="p-earth"><span class="cs"></span><span class="stem"></span></span>';
     board.appendChild(div);
   }
+  var tip=document.createElement('div');
+  tip.className='board-empty-tip';
+  tip.textContent='请选择时间并点击起盘';
+  board.appendChild(tip);
 }
 
 function doPaiPan(opts){
@@ -1198,6 +1215,8 @@ function doPaiPan(opts){
 }
 
 function renderPlate(data){
+  var tip=document.querySelector('.board-empty-tip');
+  if(tip)tip.hidden=true;
   for(var g=1;g<=9;g++){
     var o=data.gongs[g],p=document.getElementById('p'+g);
     if(!p)continue;
@@ -1378,6 +1397,7 @@ function exportPlate(){
 }
 
 function selectPalace(num){
+  if(!plateData)return;
   // 再次点击已选宫位 → 取消选中
   if(selectedPalace===num){
     document.getElementById('p'+num).classList.remove('selected');
@@ -1392,7 +1412,6 @@ function selectPalace(num){
   document.querySelectorAll('.palace').forEach(function(p){p.classList.remove('selected')});
   document.getElementById('p'+num).classList.add('selected');
   selectedPalace=num;
-  if(!plateData)return;
   var o=plateData.gongs[num];
   var dirs=['','坎','坤','震','巽','中','乾','兑','艮','离'];
   var marks=getPalaceMarks(o);
@@ -1454,7 +1473,7 @@ async function analyzeWithAI(){
   aiBtn.disabled=true;
   aiBtn.textContent='⏳ 分析中 · '+getAiModeLabel(aiMode);
   try{
-    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-chat',messages:messages,max_tokens:1500,temperature:0.7})});
+    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-v4-pro',messages:messages,max_tokens:1500,temperature:0.7})});
     var d=await resp.json();
     if(aiRequestId!==qimenAiRequestSeq||aiRequestFingerprint!==plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint)return;
     if(d.choices&&d.choices[0]){

@@ -25,15 +25,12 @@ Use a dedicated module worktree when work must happen in parallel.
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
 - Last shared baseline: `3102c16`
-- Changed: completed `P1-02`; Bazi decade-luck, flow-year and flow-month cards
-  now share a readable stem/branch and ten-god summary on desktop and mobile.
-  Mobile selectors scroll locally, retain usable sizing, highlight the current
-  choice and keep it visible; the selected flow-month comparison column remains.
-- Checks: `node check-bazi-page.js` (`bazi page checks ok`);
-  `node check-baselines.js` (`18 baselines ok`); 320px no-horizontal-overflow
-  verification; `git diff --check`.
-- Next task: select the next lightweight, single-module, low-risk item from the
-  unified registry.
+- Changed: Qimen now starts with a current-time input and empty nine-palace
+  frame; users explicitly click `起盘` to generate or refresh the plate. The
+  AI request model is `deepseek-v4-pro`.
+- Checks: Qimen inline-script syntax and interaction assertions (`qimen
+  interaction checks ok`; `empty-tip visibility checks ok`); `git diff --check`.
+- Next task: user acceptance check of the Qimen start-and-pai-pan flow.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
   weights, or qualification gates without a new theoretical audit and explicit
