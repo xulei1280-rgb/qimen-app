@@ -24,13 +24,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `3102c16`
-- Changed: Qimen now starts with a current-time input and empty nine-palace
-  frame; users explicitly click `起盘` to generate or refresh the plate. The
-  AI request model is `deepseek-v4-pro`.
-- Checks: Qimen inline-script syntax and interaction assertions (`qimen
-  interaction checks ok`; `empty-tip visibility checks ok`); `git diff --check`.
-- Next task: user acceptance check of the Qimen start-and-pai-pan flow.
+- Last shared baseline: `db9a1ac`
+- Changed: Qimen AI now uses `deepseek-v4-flash`; its conversation history
+  renders as independently collapsible question cards with one-click collapse
+  and single-turn deletion. Local fact-check notices were removed.
+- Checks: `qimen AI card checks ok`; `qimen local fact-check removal ok`;
+  `git diff --check`.
+- Next task: user acceptance check of the Qimen AI conversation flow.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
   weights, or qualification gates without a new theoretical audit and explicit
