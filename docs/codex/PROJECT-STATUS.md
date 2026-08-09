@@ -24,12 +24,10 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `db9a1ac`
-- Changed: Qimen AI now uses `deepseek-v4-flash`; its conversation history
-  renders as independently collapsible question cards with one-click collapse
-  and single-turn deletion. Local fact-check notices were removed.
-- Checks: `qimen AI card checks ok`; `qimen local fact-check removal ok`;
-  `git diff --check`.
+- Last shared baseline: `34d0f08`
+- Changed: Qimen AI keeps DeepSeek V4 Flash thinking mode enabled, raises the
+  output allowance to 3000 tokens, and refuses to save an empty final answer.
+- Checks: `qimen thinking response checks ok`; `git diff --check`.
 - Next task: user acceptance check of the Qimen AI conversation flow.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,

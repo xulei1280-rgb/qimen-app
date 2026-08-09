@@ -1493,12 +1493,18 @@ async function analyzeWithAI(){
   aiBtn.disabled=true;
   aiBtn.textContent='⏳ 分析中 · '+getAiModeLabel(aiMode);
   try{
-    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-v4-flash',messages:messages,max_tokens:1500,temperature:0.7})});
+    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-v4-flash',messages:messages,max_tokens:3000,thinking:{type:'enabled'}})});
     var d=await resp.json();
     if(aiRequestId!==qimenAiRequestSeq||aiRequestFingerprint!==plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint)return;
     if(d.choices&&d.choices[0]){
+      var choice=d.choices[0],answer=choice.message&&typeof choice.message.content==='string'?choice.message.content.trim():'';
+      if(!answer){
+        var emptyNotice=choice.finish_reason==='length'?'❌ 思考已达到输出上限，未生成最终回答。请重试或改用「简断」。':'❌ AI 思考完成但未返回最终回答，请重试。';
+        document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>'+emptyNotice+'</div>';
+        return;
+      }
       if(!aiTopic)aiTopic=pendingTopic;
-      aiHistory.push({q:question,a:d.choices[0].message.content.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
+      aiHistory.push({q:question,a:answer.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
       aiCollapsed[aiHistory.length-1]=false;
       updateCurrentAutoHistory();
       document.getElementById('aiResult').innerHTML=renderAIHistory();
