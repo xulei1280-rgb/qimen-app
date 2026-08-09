@@ -24,15 +24,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `9a42e33`
-- Changed: Qimen AI now uses DeepSeek V4 Pro with thinking mode, a 4096-token
-  output allowance, and an explicit instruction to return a final user answer.
-- Checks: `qimen V4 Pro thinking checks ok`; `git diff --check`.
-- Next task: user acceptance check of the Qimen AI conversation flow.
+- Last shared baseline: `c9b6a52`
+- Changed: 奇门与八字 AI 提问改为自动增高的多行输入框，并在分析期间显示已用时状态。
+- Checks: `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-baselines.js`; `git diff --check`; 内联脚本解析及本地桌面、390px 手机宽度验证。
+- Next task: 用户验收奇门与八字的 AI 提问输入和分析计时反馈。
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
-  do not develop or validate from its `file://` page. Do not change score bands,
-  weights, or qualification gates without a new theoretical audit and explicit
-  user confirmation. A document-only proposal is not an implemented feature.
+  do not develop or validate from its `file://` page. 本次未改计算、API 模型或提示词。
 
 ## Replace At Each Handoff
 

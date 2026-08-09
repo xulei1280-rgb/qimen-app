@@ -144,6 +144,12 @@ assert(patternPercentileDesign.includes('PAT-LV-DESIGN-v1') && patternPercentile
   '结论 -> 依据 -> 反证 -> 不确定处 -> 可验证点',
 ].forEach((needle) => assert(html.includes(needle), `missing ${needle}`));
 
+assert(html.includes('<textarea id="aiQuestion" rows="2"') && html.includes('<textarea id="aiFollowupQuestion" rows="2"'), 'AI question inputs should support multi-line entry');
+assert((html.match(/onkeydown="handleBaziAiKeydown/g) || []).length === 2, 'AI question inputs should support Ctrl/Cmd+Enter sending');
+assert(html.includes('function autoGrowBaziAiTextarea') && html.includes('max=164') && html.includes('function resetBaziAiTextarea'), 'AI question inputs should auto-grow and reset after sending');
+assert(html.includes('function showBaziAiPending') && html.includes('id="baziAiPending"') && html.includes('AI 正在分析 · 已用 '), 'Bazi AI should show an elapsed analysis status');
+assert(/function analyzeBazi\(sourceId\)[\s\S]*?showBaziAiPending\(requestId\)[\s\S]*?clearBaziAiPending\(requestId\)/.test(html), 'Bazi AI pending status should start and stop with each request');
+
 [
   'analysis_display_mode',
   'id="baziHistorySearch"',

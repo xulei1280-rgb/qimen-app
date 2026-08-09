@@ -84,7 +84,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .basic-dashboard{display:grid;gap:16px;margin-bottom:16px}
 .field{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:center;margin-bottom:18px}
 .field>label{font-size:15px;color:#222}
-.field input[type=text],.display-field,.editor-panel input,.editor-panel select,.ai-controls input,.ai-controls select,.ai-followup input{
+.field input[type=text],.display-field,.editor-panel input,.editor-panel select,.ai-controls textarea,.ai-controls select,.ai-followup textarea{
   width:100%;
   min-height:40px;
   border:1px solid #ddd6c8;
@@ -94,7 +94,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   padding:0 14px;
   outline:none;
 }
-.field input:focus,.display-field:focus,.editor-panel input:focus,.editor-panel select:focus,.ai-controls input:focus,.ai-controls select:focus,.ai-followup input:focus{
+.field input:focus,.display-field:focus,.editor-panel input:focus,.editor-panel select:focus,.ai-controls textarea:focus,.ai-controls select:focus,.ai-followup textarea:focus{
   border-color:var(--gold);
   box-shadow:0 0 0 3px rgba(180,147,80,.16);
 }
@@ -482,6 +482,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   cursor:pointer;
 }
 .primary-small{background:linear-gradient(180deg,#2c745f,#185743);border-color:#185743;color:#fff}
+.ai-controls textarea,.ai-followup textarea{box-sizing:border-box;min-height:66px;max-height:164px;overflow-y:auto;resize:vertical;padding:10px 14px;font:inherit;line-height:1.5}
 .ai-result{
   min-height:72px;
   margin-top:14px;
@@ -509,6 +510,10 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .fact-check.ok strong{color:#1f644f}
 .fact-check ul{margin:6px 0 0 18px;padding:0}
 .ai-followup{display:grid;grid-template-columns:1fr 110px;gap:10px;margin-top:12px}
+.ai-pending{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border:1px dashed #8ab49f;border-radius:10px;background:#f0f8f2;color:#1f644f;font-weight:800}
+.ai-pending:before{content:'⏳';animation:ai-pending-pulse 1.2s ease-in-out infinite}
+@keyframes ai-pending-pulse{50%{opacity:.48;transform:translateY(-1px)}}
+@media(prefers-reduced-motion:reduce){.ai-pending:before{animation:none}}
 .history-list{display:grid;gap:8px;margin-top:12px}
 .history-toolbar{display:grid;grid-template-columns:minmax(0,1fr) 130px auto auto;gap:8px;margin-top:12px}
 .history-toolbar input,.history-toolbar select,.history-toolbar button{
@@ -577,7 +582,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .fortune-meta,.fortune-pillar small{font-size:12px}
   .fortune-pillar b{font-size:21px}
   .ai-controls{grid-template-columns:1fr 1fr}
-  .ai-controls input{grid-column:1/-1}
+  .ai-controls textarea{grid-column:1/-1}
   .ai-followup{grid-template-columns:1fr}
   .history-toolbar{grid-template-columns:1fr 1fr}
   .history-toolbar input{grid-column:1/-1}
@@ -741,7 +746,53 @@ var API_KEY_STORAGE='qimen_deepseek_api_key';
 var BAZI_RECORDS='bazi_records';
 var DISPLAY_MODE_STORAGE='analysis_display_mode';
 var baziAiRequestSeq=0;
+var baziAiPendingRequest=0,baziAiTimer=null;
 var baziRecordStorageError='';
+
+function autoGrowBaziAiTextarea(el){
+  if(!el)return;
+  el.style.height='auto';
+  var max=164,next=Math.min(el.scrollHeight,max);
+  el.style.height=Math.max(next,66)+'px';
+  el.style.overflowY=el.scrollHeight>max?'auto':'hidden';
+}
+function resetBaziAiTextarea(el){
+  if(!el)return;
+  el.value='';el.style.height='';el.style.overflowY='';
+}
+function handleBaziAiKeydown(event,sourceId){
+  if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){
+    event.preventDefault();
+    analyzeBazi(sourceId);
+  }
+}
+function setBaziAiPendingControls(disabled){
+  ['btnAi','btnAiFollowup'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=!!disabled});
+}
+function updateBaziAiElapsed(requestId,startedAt){
+  if(requestId!==baziAiPendingRequest)return;
+  var el=document.getElementById('baziAiPending');
+  if(!el)return;
+  var seconds=Math.floor((Date.now()-startedAt)/1000),minutes=Math.floor(seconds/60);
+  el.textContent='AI 正在分析 · 已用 '+String(minutes).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+}
+function showBaziAiPending(requestId){
+  clearBaziAiPending();
+  baziAiPendingRequest=requestId;
+  setBaziAiPendingControls(true);
+  var result=document.getElementById('aiResult'),startedAt=Date.now();
+  if(result)result.innerHTML=renderAiHistoryHtml()+'<div class="ai-pending" id="baziAiPending" role="status" aria-live="polite"></div>';
+  updateBaziAiElapsed(requestId,startedAt);
+  baziAiTimer=setInterval(function(){updateBaziAiElapsed(requestId,startedAt)},1000);
+}
+function clearBaziAiPending(requestId){
+  if(requestId&&requestId!==baziAiPendingRequest)return;
+  if(baziAiTimer)clearInterval(baziAiTimer);
+  baziAiTimer=null;baziAiPendingRequest=0;
+  var pending=document.getElementById('baziAiPending');
+  if(pending)pending.remove();
+  setBaziAiPendingControls(false);
+}
 var WUXING=['木','火','土','金','水'];
 var STEM_WX={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'金',辛:'金',壬:'水',癸:'水'};
 var BRANCH_WX={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'};
@@ -1198,6 +1249,7 @@ function refreshPatternAnalysis(data){
 }
 function buildBazi(){
   baziAiRequestSeq++;
+  clearBaziAiPending();
   var editedRecordId=editingActiveRecord?activeBaziRecordId:null;
   currentBazi=calculateBazi();
   aiHistory=[];
@@ -2023,7 +2075,7 @@ function renderAiPanel(){
     (currentBazi?renderReasoningBasis(currentBazi):'')+
     renderQuickAiQuestions()+
     '<div class="ai-controls">'+
-    '<input id="aiQuestion" placeholder="继续问这个八字：命格、事业、财运、感情、某年运势...">'+
+    '<textarea id="aiQuestion" rows="2" placeholder="继续问这个八字：命格、事业、财运、感情、某年运势..." aria-label="八字分析问题" oninput="autoGrowBaziAiTextarea(this)" onkeydown="handleBaziAiKeydown(event,\'aiQuestion\')"></textarea>'+
     '<select id="aiMode"><option value="brief">简断</option><option value="detail">详断</option><option value="pattern">格局层次</option><option value="luck">大运流年思路</option><option value="conclusion">只看结论</option></select>'+
     '<button class="primary-small" onclick="analyzeBazi()" id="btnAi">AI 分析</button>'+
     '<button class="secondary" onclick="exportBaziReport()" id="btnExportBazi">导出报告</button>'+
@@ -2032,7 +2084,7 @@ function renderAiPanel(){
     '<div class="ai-history-tools"><button type="button" onclick="collapseAllBaziAi()">一键收起</button></div>'+
     '<div id="aiResult" class="ai-result">'+renderAiHistoryHtml()+'</div>'+
     '<div class="ai-followup">'+
-    '<input id="aiFollowupQuestion" placeholder="继续追问这个八字...">'+
+    '<textarea id="aiFollowupQuestion" rows="2" placeholder="继续追问这个八字..." aria-label="八字连续追问" oninput="autoGrowBaziAiTextarea(this)" onkeydown="handleBaziAiKeydown(event,\'aiFollowupQuestion\')"></textarea>'+
     '<button class="primary-small" onclick="analyzeBazi(\'aiFollowupQuestion\')" id="btnAiFollowup">继续问</button>'+
     '</div>';
 }
@@ -2043,7 +2095,7 @@ function renderQuickAiQuestions(){
 }
 function useBaziQuestion(q){
   var input=document.getElementById('aiQuestion');
-  if(input){input.value=q;input.focus();}
+  if(input){input.value=q;autoGrowBaziAiTextarea(input);input.focus();}
 }
 function renderAiHistory(){
   if(!aiHistory.length)return '可以围绕同一八字连续追问不同主题。';
@@ -2182,6 +2234,7 @@ function getApiKey(){
   return key.trim();
 }
 async function analyzeBazi(sourceId){
+  if(baziAiPendingRequest)return;
   if(!currentBazi)buildBazi();
   currentBazi=refreshPatternAnalysis(currentBazi);
   sourceId=sourceId||'aiQuestion';
@@ -2203,6 +2256,7 @@ async function analyzeBazi(sourceId){
   messages.push({role:'user',content:promptText});
   var btn=document.getElementById(sourceId==='aiFollowupQuestion'?'btnAiFollowup':'btnAi'),old=btn.textContent;
   btn.disabled=true;btn.textContent='分析中...';
+  showBaziAiPending(requestId);
   try{
     var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'deepseek-chat',messages:messages,max_tokens:1800,temperature:0.65})});
     var data=await resp.json();
@@ -2215,12 +2269,12 @@ async function analyzeBazi(sourceId){
     var answer=data.choices[0].message.content.replace(/\*\*/g,'');
     aiHistory.push({q:q,a:answer,t:new Date().toLocaleTimeString(),mode:mode,context:contextSnapshot,luckSelection:cloneLuckSelection()});
     document.getElementById('aiResult').innerHTML=renderAiHistoryHtml();
-    if(input)input.value='';
+    resetBaziAiTextarea(input);
     syncActiveBaziRecord();
   }catch(e){
-    if(requestId===baziAiRequestSeq&&requestFingerprint===baziChartFingerprint(currentBazi))document.getElementById('aiResult').textContent='AI 分析失败：'+e.message;
+    if(requestId===baziAiRequestSeq&&requestFingerprint===baziChartFingerprint(currentBazi))document.getElementById('aiResult').innerHTML=renderAiHistoryHtml()+'<div class="fact-check"><strong>AI 分析失败：</strong>'+esc(e.message)+'</div>';
   }finally{
-    btn.disabled=false;btn.textContent=old;
+    if(requestId===baziAiRequestSeq){clearBaziAiPending(requestId);btn.disabled=false;btn.textContent=old;}
   }
 }
 function baziChartFingerprint(data){
@@ -2405,6 +2459,7 @@ function loadBaziRecord(id){
   var item=getBaziRecords().find(function(x){return x.id===id});
   if(!item)return;
   baziAiRequestSeq++;
+  clearBaziAiPending();
   currentBazi=item.bazi;
   if(currentBazi)currentBazi.person=recordPersonFromTitle(item);
   aiHistory=item.aiHistory||[];

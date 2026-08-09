@@ -182,7 +182,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   outline:none;
 }
 .person-input{width:88px}
-.time-bar select:focus,.time-bar input:focus,.question-bar input:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.14)}
+.time-bar select:focus,.time-bar input:focus,.question-bar textarea:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.14)}
 .cal-tabs{display:flex;gap:0}
 .cal-tab{
   padding:6px 14px;
@@ -363,16 +363,22 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 #p8{top:298px;left:6px}#p1{top:298px;left:152px}#p6{top:298px;left:298px}
 
 .question-bar{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:0;width:444px;flex-wrap:wrap}
-.question-bar input{
+.question-bar textarea{
   flex:1 0 100%;
   min-width:0;
+  box-sizing:border-box;
   background:#fffdf8;
   color:var(--ink);
   border:1px solid var(--line);
   padding:12px 14px;
   border-radius:6px;
+  font:inherit;
   font-size:13px;
-  min-height:44px;
+  line-height:1.5;
+  min-height:66px;
+  max-height:164px;
+  overflow-y:auto;
+  resize:vertical;
   outline:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
 }
@@ -465,10 +471,14 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .followups button{border:1px solid rgba(169,111,40,.34);background:#fffdf8;color:#5c4731;border-radius:5px;padding:4px 8px;font-size:12px;cursor:pointer}
 .followups button:hover{background:#f4ead8;border-color:var(--line-strong)}
 .ai-chat{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed rgba(169,111,40,.28);white-space:normal}
-.ai-chat input{min-width:0;border:1px solid rgba(169,111,40,.34);border-radius:6px;background:#fffdf8;color:var(--ink);padding:8px 10px;font-size:13px;outline:none}
-.ai-chat input:focus{border-color:var(--jade);box-shadow:0 0 0 3px rgba(46,92,78,.12)}
+.ai-chat textarea{min-width:0;box-sizing:border-box;min-height:66px;max-height:164px;overflow-y:auto;resize:vertical;border:1px solid rgba(169,111,40,.34);border-radius:6px;background:#fffdf8;color:var(--ink);padding:8px 10px;font:inherit;font-size:13px;line-height:1.5;outline:none}
+.ai-chat textarea:focus{border-color:var(--jade);box-shadow:0 0 0 3px rgba(46,92,78,.12)}
 .ai-chat button{border:1px solid var(--jade);background:var(--jade);color:#fffdf7;border-radius:6px;padding:0 14px;font-size:13px;font-weight:bold;cursor:pointer}
 .ai-chat button:hover{filter:brightness(1.05)}
+.ai-pending{display:flex;align-items:center;gap:7px;margin-top:10px;padding:9px 10px;border:1px dashed rgba(35,107,88,.42);border-radius:6px;background:rgba(236,246,239,.72);color:var(--jade);font-weight:bold;white-space:normal}
+.ai-pending:before{content:'⏳';animation:ai-pending-pulse 1.2s ease-in-out infinite}
+@keyframes ai-pending-pulse{50%{opacity:.48;transform:translateY(-1px)}}
+@media(prefers-reduced-motion:reduce){.ai-pending:before{animation:none}}
 
 .side-panel{
   position:sticky;
@@ -637,7 +647,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .status-chip{font-size:10px;padding:3px 6px}
   .tool-row{width:100%;max-width:340px;grid-template-columns:1fr;gap:8px;margin-bottom:10px}
   .question-bar{width:100%;max-width:340px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .question-bar input{grid-column:1/-1;width:100%;font-size:13px;padding:10px 12px;min-height:44px}
+  .question-bar textarea{grid-column:1/-1;width:100%;font-size:13px;padding:10px 12px;min-height:66px}
   .question-bar button{min-width:0;width:100%;min-height:44px;padding:9px 8px;font-size:13px;white-space:normal;line-height:1.25}
   .quick-questions{width:100%;max-width:340px;gap:5px}
   .time-bar button,.solar-bar button,.tool-row button,.quick-questions button,.side-tab,.hist-item .hi-btns button,.followups button,.ai-chat button{min-height:44px}
@@ -752,7 +762,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
     <button type="button" onclick="useQuestionTemplate('birth')">命盘分析</button>
   </div>
   <div class="question-bar">
-    <input type="text" placeholder="输入你想问的事情..." id="question">
+    <textarea rows="2" placeholder="输入你想问的事情..." id="question" aria-label="奇门分析问题" oninput="autoGrowQimenAiTextarea(this)" onkeydown="handleQimenAiKeydown(event)"></textarea>
     <button onclick="analyzeWithAI()" id="btnAI" disabled>🤖 AI 分析</button>
     <button onclick="copyPlateText()" id="btnCopy" disabled title="复制当前盘面文字">📋 复制</button>
     <button onclick="exportPlate()" id="btnExport" disabled title="打印当前盘面，可保存为 PDF">🖨 导出</button>
@@ -798,6 +808,52 @@ var LONGITUDE_STORAGE='qimen_longitude';
 var DISPLAY_MODE_STORAGE='analysis_display_mode';
 var plateInputFingerprint='';
 var qimenAiRequestSeq=0;
+var qimenAiPendingRequest=0,qimenAiTimer=null;
+
+function autoGrowQimenAiTextarea(el){
+  if(!el)return;
+  el.style.height='auto';
+  var max=164,next=Math.min(el.scrollHeight,max);
+  el.style.height=Math.max(next,66)+'px';
+  el.style.overflowY=el.scrollHeight>max?'auto':'hidden';
+}
+function resetQimenAiTextarea(el){
+  if(!el)return;
+  el.value='';el.style.height='';el.style.overflowY='';
+}
+function handleQimenAiKeydown(event,isFollowup){
+  if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){
+    event.preventDefault();
+    if(isFollowup)askFollowupFromChat();else analyzeWithAI();
+  }
+}
+function setQimenAiPendingControls(disabled){
+  ['btnAI','btnQimenFollowup'].forEach(function(id){var el=document.getElementById(id);if(el)el.disabled=!!disabled});
+}
+function updateQimenAiElapsed(requestId,startedAt){
+  if(requestId!==qimenAiPendingRequest)return;
+  var el=document.getElementById('qimenAiPending');
+  if(!el)return;
+  var seconds=Math.floor((Date.now()-startedAt)/1000),minutes=Math.floor(seconds/60);
+  el.textContent='AI 正在分析 · 已用 '+String(minutes).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
+}
+function showQimenAiPending(requestId){
+  clearQimenAiPending();
+  qimenAiPendingRequest=requestId;
+  setQimenAiPendingControls(true);
+  var result=document.getElementById('aiResult'),startedAt=Date.now();
+  if(result)result.innerHTML=renderAIHistory()+'<div class="ai-pending" id="qimenAiPending" role="status" aria-live="polite"></div>';
+  updateQimenAiElapsed(requestId,startedAt);
+  qimenAiTimer=setInterval(function(){updateQimenAiElapsed(requestId,startedAt)},1000);
+}
+function clearQimenAiPending(requestId){
+  if(requestId&&requestId!==qimenAiPendingRequest)return;
+  if(qimenAiTimer)clearInterval(qimenAiTimer);
+  qimenAiTimer=null;qimenAiPendingRequest=0;
+  var pending=document.getElementById('qimenAiPending');
+  if(pending)pending.remove();
+  setQimenAiPendingControls(false);
+}
 
 (function init(){
   var m=document.getElementById('month'),d=document.getElementById('day'),h=document.getElementById('hour');
@@ -877,8 +933,8 @@ function markPlateDirty(){
   var dirty=currentPlateInputFingerprint()!==plateInputFingerprint;
   var note=document.getElementById('plateFreshness');
   if(note)note.hidden=!dirty;
+  if(dirty){qimenAiRequestSeq++;clearQimenAiPending()}
   setPlateActionsDisabled(dirty);
-  if(dirty)qimenAiRequestSeq++;
 }
 function ensureCurrentPlate(){
   if(!plateData){alert('请先起盘');return false}
@@ -1171,6 +1227,7 @@ function useQuestionTemplate(type){
   var prefix=item[1];
   var cur=input.value.trim();
   input.value=cur?prefix+cur:prefix;
+  autoGrowQimenAiTextarea(input);
   input.focus();
   input.setSelectionRange(input.value.length,input.value.length);
 }
@@ -1206,6 +1263,7 @@ function buildBoard(){
 function doPaiPan(opts){
   opts=opts||{};
   qimenAiRequestSeq++;
+  clearQimenAiPending();
   var t=getTimeInput();
   var pt=getPaiPanTime(t);
   plateData=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
@@ -1488,10 +1546,10 @@ async function analyzeWithAI(){
     messages.push({role:'assistant',content:aiHistory[i].a});
   }
   messages.push({role:'user',content:prompt});
-  document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>⏳ AI 分析中…</div>';
   var aiBtn=document.getElementById('btnAI');
   aiBtn.disabled=true;
   aiBtn.textContent='⏳ 分析中 · '+getAiModeLabel(aiMode);
+  showQimenAiPending(aiRequestId);
   try{
     var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-v4-pro',messages:messages,max_tokens:4096,thinking:{type:'enabled'},reasoning_effort:'high'})});
     var d=await resp.json();
@@ -1506,6 +1564,7 @@ async function analyzeWithAI(){
       if(!aiTopic)aiTopic=pendingTopic;
       aiHistory.push({q:question,a:answer.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
       aiCollapsed[aiHistory.length-1]=false;
+      resetQimenAiTextarea(document.getElementById('question'));
       updateCurrentAutoHistory();
       document.getElementById('aiResult').innerHTML=renderAIHistory();
     }else{
@@ -1514,7 +1573,7 @@ async function analyzeWithAI(){
   }catch(e){
     if(aiRequestId===qimenAiRequestSeq&&aiRequestFingerprint===plateInputFingerprint)document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>';
   }finally{
-    if(aiRequestId===qimenAiRequestSeq){aiBtn.disabled=false;updateAiButtonLabel()}
+    if(aiRequestId===qimenAiRequestSeq){clearQimenAiPending(aiRequestId);aiBtn.disabled=false;updateAiButtonLabel()}
   }
 }
 
@@ -1528,14 +1587,15 @@ function renderAIHistory(){
       '<summary class="ai-turn-question"><b>第'+(i+1)+'问</b><span class="ai-turn-time">'+esc(aiHistory[i].t)+'</span><button type="button" class="ai-turn-delete" title="删除这一问" aria-label="删除第'+(i+1)+'问" onclick="event.preventDefault();event.stopPropagation();deleteAiTurn('+i+')">删除</button><span class="ai-turn-toggle"></span><strong>'+esc(aiHistory[i].q)+'</strong></summary>'+
       '<div class="ai-turn-answer">'+br(aiHistory[i].a)+'</div></details>';
   }
+  var pending=qimenAiPendingRequest>0?' disabled':'';
   return h+'<div class="followups">'+
     '<button type="button" onclick="setFollowupQuestion(\'继续细看用神落宫和旺衰。\')">细看用神</button>'+
     '<button type="button" onclick="setFollowupQuestion(\'重点看应期，大概什么时候有变化？\')">看应期</button>'+
     '<button type="button" onclick="setFollowupQuestion(\'对方或外部环境现在是什么状态？\')">看对方状态</button>'+
     '<button type="button" onclick="setFollowupQuestion(\'给我具体行动建议和避坑点。\')">行动建议</button>'+
   '</div><div class="ai-chat">'+
-    '<input id="followupQuestion" type="text" placeholder="继续追问这个盘里的同一件事..." onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();askFollowupFromChat()}">'+
-    '<button type="button" onclick="askFollowupFromChat()">发送</button>'+
+    '<textarea id="followupQuestion" rows="2" placeholder="继续追问这个盘里的同一件事..." aria-label="奇门连续追问" oninput="autoGrowQimenAiTextarea(this)" onkeydown="handleQimenAiKeydown(event,true)"></textarea>'+
+    '<button type="button" id="btnQimenFollowup" onclick="askFollowupFromChat()"'+pending+'>发送</button>'+
   '</div>';
 }
 
@@ -1580,6 +1640,7 @@ function deleteAiTurn(index){
 function setFollowupQuestion(text){
   var input=document.getElementById('followupQuestion')||document.getElementById('question');
   input.value=text;
+  autoGrowQimenAiTextarea(input);
   input.focus();
 }
 
@@ -1589,7 +1650,8 @@ function askFollowupFromChat(){
   var text=(chat&&chat.value.trim())||'';
   if(!text){if(chat)chat.focus();return}
   main.value=text;
-  if(chat)chat.value='';
+  autoGrowQimenAiTextarea(main);
+  if(chat)resetQimenAiTextarea(chat);
   analyzeWithAI();
 }
 
@@ -1703,6 +1765,7 @@ function loadHistory(id,kind){
   var item=hist.find(function(h){return h.id===id});
   if(!item)return;
   qimenAiRequestSeq++;
+  clearQimenAiPending();
   plateData=item.data;
   aiHistory=item.aiHistory?JSON.parse(JSON.stringify(item.aiHistory)):[];
   aiCollapsed={};
