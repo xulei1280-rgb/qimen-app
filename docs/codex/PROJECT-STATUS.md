@@ -24,10 +24,10 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `34d0f08`
-- Changed: Qimen AI keeps DeepSeek V4 Flash thinking mode enabled, raises the
-  output allowance to 3000 tokens, and refuses to save an empty final answer.
-- Checks: `qimen thinking response checks ok`; `git diff --check`.
+- Last shared baseline: `9a42e33`
+- Changed: Qimen AI now uses DeepSeek V4 Pro with thinking mode, a 4096-token
+  output allowance, and an explicit instruction to return a final user answer.
+- Checks: `qimen V4 Pro thinking checks ok`; `git diff --check`.
 - Next task: user acceptance check of the Qimen AI conversation flow.
 - Caution: retain the C-drive worktree temporarily only as a migration backup;
   do not develop or validate from its `file://` page. Do not change score bands,
