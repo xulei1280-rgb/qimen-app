@@ -94,9 +94,12 @@ h1{
   align-items:center;
   justify-content:center;
   gap:8px;
+  flex-wrap:wrap;
   margin-bottom:12px;
 }
+.module-nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .page-actions .page-switch{margin-bottom:0}
+.page-switch[aria-current="page"]{color:#fff;background:#70481a;border-color:#70481a}
 .display-mode{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -600,9 +603,10 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .main-area{min-width:auto;width:100%}
   h1{font-size:22px;letter-spacing:2px}
   .subtitle{margin-bottom:12px}
-  .page-actions{width:100%;max-width:340px;align-items:stretch}
-  .page-actions .page-switch{flex:1;justify-content:center;min-height:44px}
-  .display-mode{flex:1}
+  .page-actions{width:100%;max-width:420px;align-items:stretch}
+  .page-actions .module-nav{width:100%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+  .page-actions .page-switch{min-width:0;justify-content:center;min-height:44px;padding-inline:6px}
+  .display-mode{width:100%}
   .display-mode button{min-height:44px}
   .board-wrap{width:340px;height:340px;margin:2px auto 18px}
   .board-wrap:before{inset:-8px}
@@ -682,8 +686,12 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   <h1>奇门遁甲</h1>
   <div class="subtitle">时家转盘 · 拆补法</div>
   <div class="page-actions">
-    <a class="page-switch" href="bazi.html">八字分析 →</a>
-    <a class="page-switch" href="liuyao.html">六爻问事 →</a>
+    <nav class="module-nav" aria-label="术数模块">
+      <a class="page-switch" href="index.html" aria-current="page">奇门</a>
+      <a class="page-switch" href="bazi.html">八字</a>
+      <a class="page-switch" href="liuyao.html">六爻</a>
+      <a class="page-switch" href="ziwei.html">紫微</a>
+    </nav>
     <div class="display-mode" aria-label="显示模式">
       <button type="button" data-display-mode="standard" onclick="setDisplayMode('standard')" title="保留专业词，并用大白话解释">标准</button>
       <button type="button" data-display-mode="professional" onclick="setDisplayMode('professional')" title="显示专业术语、判定依据和推理顺序">专业</button>

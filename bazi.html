@@ -54,6 +54,7 @@ button,input,select{font:inherit}
   font-weight:700;
   cursor:pointer;
 }
+.back[aria-current="page"]{color:#fff;background:#4d525c;border-color:#4d525c}
 h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .sub{margin-top:7px;color:#777;font-size:14px;letter-spacing:2px}
 .life-note{margin:6px 0 0;color:#777;font-size:12px}
@@ -651,10 +652,12 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 <body>
 <main class="page">
   <header class="top">
-    <div class="top-row">
-      <a class="back" href="index.html">← 奇门遁甲</a>
-      <a class="back" href="liuyao.html">六爻问事 →</a>
-    </div>
+    <nav class="top-row module-nav" aria-label="术数模块">
+      <a class="back" href="index.html">奇门</a>
+      <a class="back" href="bazi.html" aria-current="page">八字</a>
+      <a class="back" href="liuyao.html">六爻</a>
+      <a class="back" href="ziwei.html">紫微</a>
+    </nav>
     <h1>八字分析</h1>
     <div class="sub">四柱排盘 · 格局喜用参考</div>
     <p class="life-note">计划抵达寻常，冒险改写人生；非凡，生于计划之外。</p>
