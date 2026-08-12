@@ -30,7 +30,7 @@ Use a dedicated module worktree when work must happen in parallel.
 - Last shared baseline: `15d69cf`（本次交接提交的父提交）
 - Changed: 奇门、八字、六爻、紫微四页统一为固定顺序的四模块导航，保留各页原有视觉风格并标记当前模块；同步补充导航回归检查，未改计算内核、记录、AI 上下文或存储键。
 - Checks: `node .\check-ziwei-page.js`（30 个固定盘、1049 项断言）；`node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-baselines.js`（18 个基线）；390px 浏览器逐页导航与点击互通检查；`git diff --check`。
-- Next task: 推送后确认 GitHub Pages 部署完成，并继续本地验盘与移动端体验验收。
+- Next task: 继续本地验盘与移动端体验验收；后续修改仍先本地确认再推送。
 - Caution: 紫微对照盘属于开源实现的工程交叉验证，不是专家金标准或科学权威结论。
 
 ## Replace At Each Handoff
