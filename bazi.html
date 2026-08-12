@@ -2259,7 +2259,7 @@ async function analyzeBazi(sourceId){
   btn.disabled=true;btn.textContent='分析中...';
   showBaziAiPending(requestId);
   try{
-    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'deepseek-chat',messages:messages,max_tokens:1800,temperature:0.65})});
+    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:'deepseek-v4-pro',messages:messages,max_tokens:16384,thinking:{type:'enabled'},reasoning_effort:'high'})});
     var data=await resp.json();
     if(data.error)throw new Error(data.error.message||'AI 请求失败');
     if(requestId!==baziAiRequestSeq||requestFingerprint!==baziChartFingerprint(currentBazi)||requestRecordId!==activeBaziRecordId){
@@ -2267,7 +2267,15 @@ async function analyzeBazi(sourceId){
       if(stale)stale.innerHTML=renderAiHistoryHtml()+'<div class="fact-check"><strong>盘面已切换</strong>，本次回复没有写入当前八字。</div>';
       return;
     }
-    var answer=data.choices[0].message.content.replace(/\*\*/g,'');
+    var choice=data.choices&&data.choices[0],answer=choice&&choice.message&&typeof choice.message.content==='string'?choice.message.content.trim():'';
+    if(!answer){
+      if(choice&&choice.finish_reason==='length')throw new Error('DeepSeek 思考达到输出上限，未生成最终回答，请缩短问题后重试');
+      if(choice&&choice.finish_reason==='content_filter')throw new Error('DeepSeek 因内容过滤没有返回回答，请调整问题后重试');
+      if(choice&&choice.finish_reason==='insufficient_system_resource')throw new Error('DeepSeek 当前推理资源不足，请稍后重试');
+      if(choice&&choice.message&&choice.message.reasoning_content)throw new Error('DeepSeek 只返回了思考过程，没有生成最终回答，请重试');
+      throw new Error('DeepSeek 返回了空回答，请重试');
+    }
+    answer=answer.replace(/\*\*/g,'');
     aiHistory.push({q:q,a:answer,t:new Date().toLocaleTimeString(),mode:mode,context:contextSnapshot,luckSelection:cloneLuckSelection()});
     document.getElementById('aiResult').innerHTML=renderAiHistoryHtml();
     resetBaziAiTextarea(input);

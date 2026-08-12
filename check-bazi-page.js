@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const vm = require('vm');
 
 const html = fs.readFileSync('bazi.html', 'utf8');
+assert(html.includes("model:'deepseek-v4-pro'") && html.includes("max_tokens:16384") && html.includes("thinking:{type:'enabled'}") && html.includes("reasoning_effort:'high'"), 'Bazi AI should use DeepSeek V4 Pro thinking mode with enough output budget');
+assert(!html.includes("model:'deepseek-chat'"), 'Bazi AI should not use the retired non-thinking model alias');
 
 function assert(condition, message) {
   if (!condition) {
