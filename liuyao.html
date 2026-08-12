@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>六爻问事 - 纳甲排盘</title>
+<style>
+:root{
+  --paper:#f3ead9;--paper-light:#fffaf0;--ink:#29231d;--muted:#776b5d;
+  --line:#ccb991;--line-strong:#9c7545;--cinnabar:#a73624;--jade:#365f50;
+  --shadow:0 18px 45px rgba(71,52,31,.13);--radius:16px;--focus:#2d557c;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;color:var(--ink);font-family:"Noto Serif SC","Songti SC",SimSun,serif;
+  background:
+    radial-gradient(circle at 12% 10%,rgba(167,54,36,.08),transparent 28%),
+    radial-gradient(circle at 88% 24%,rgba(54,95,80,.08),transparent 32%),
+    repeating-linear-gradient(90deg,rgba(92,68,39,.018) 0,rgba(92,68,39,.018) 1px,transparent 1px,transparent 4px),
+    var(--paper);min-height:100vh;
+}
+button,input,select,textarea{font:inherit}
+button,a,input,select,textarea{outline:none}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{box-shadow:0 0 0 3px rgba(45,85,124,.25);border-color:var(--focus)!important}
+button{cursor:pointer}
+[hidden]{display:none!important}
+.skip{position:absolute;left:-9999px;top:8px;background:#fff;padding:8px 12px;z-index:20}.skip:focus{left:8px}
+.shell{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:28px 0 56px}
+.masthead{text-align:center;margin-bottom:22px}
+.masthead h1{font-size:clamp(32px,6vw,58px);letter-spacing:.16em;margin:8px 0 2px;font-weight:800}
+.masthead .sub{color:var(--muted);letter-spacing:.2em;font-size:13px}
+.module-nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:18px}
+.module-nav a{color:#5e4329;text-decoration:none;border:1px solid var(--line);background:rgba(255,250,240,.76);border-radius:999px;padding:9px 16px;font-weight:700;min-height:44px;display:inline-flex;align-items:center}
+.module-nav a[aria-current="page"]{background:var(--ink);color:var(--paper-light);border-color:var(--ink)}
+.home-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:18px}
+.home-tabs button,.mode-switch button{border:1px solid var(--line);background:var(--paper-light);color:#5e4329;border-radius:999px;padding:8px 16px;min-height:44px;font-weight:700}
+.home-tabs button.active,.mode-switch button.active{background:var(--cinnabar);color:#fff;border-color:var(--cinnabar)}
+.grid{display:grid;grid-template-columns:minmax(300px,.82fr) minmax(460px,1.18fr);gap:18px;align-items:start}
+.card{background:rgba(255,250,240,.92);border:1px solid rgba(156,117,69,.42);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.card-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.card-title h2,.card-title h3{margin:0;font-size:20px}.eyebrow{font-size:11px;letter-spacing:.16em;color:var(--cinnabar);font-weight:800}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:grid;gap:6px}.field.full{grid-column:1/-1}.field label{font-size:12px;color:#5f5549;font-weight:700}
+.field input,.field select,.field textarea,.history-tools input,.history-tools select,.review-grid input,.review-grid select,.review-grid textarea,.ai-box textarea{
+  width:100%;border:1px solid var(--line);background:#fffdf8;color:var(--ink);border-radius:9px;padding:10px 11px;min-height:44px
+}
+textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0 0}
+.cast-methods{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 12px}
+.cast-methods button,.action,.secondary,.danger{border-radius:10px;min-height:48px;padding:9px 10px;font-weight:800}
+.cast-methods button,.action{border:1px solid var(--cinnabar);background:var(--cinnabar);color:#fff}
+.cast-methods button:nth-child(2){background:var(--jade);border-color:var(--jade)}
+.cast-methods button:nth-child(3),.secondary{background:var(--paper-light);color:#5e4329;border:1px solid var(--line)}
+.danger{background:#fff7f4;color:#942f22;border:1px solid #dba89f}
+.cast-methods button:disabled,.action:disabled,.secondary:disabled{opacity:.52;cursor:not-allowed}
+.step-box{border:1px dashed var(--line-strong);background:#fbf3e5;border-radius:12px;padding:12px;margin-top:12px}
+.step-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.step-head strong{color:var(--cinnabar)}
+.step-lines{display:flex;gap:7px;margin-top:10px;min-height:42px;align-items:center;flex-wrap:wrap}
+.step-chip{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 9px;font-size:12px}.step-chip.moving{color:var(--cinnabar);border-color:#c87869;font-weight:800}
+.manual-box{border-top:1px solid #dfd0b7;margin-top:14px;padding-top:14px}
+.manual-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.manual-grid label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.manual-grid select{min-height:44px;border:1px solid var(--line);border-radius:8px;background:#fffdf8;padding:7px}
+.status{min-height:22px;margin-top:10px;font-size:13px;color:var(--jade);font-weight:700}.status.error{color:var(--cinnabar)}
+.blank{min-height:430px;display:grid;place-items:center;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.35);padding:32px}
+.blank-mark{font-size:56px;color:rgba(156,117,69,.58);line-height:1}.blank strong{display:block;color:#5e4329;font-size:18px;margin:12px 0 6px}
+.result-card{animation:rise .42s ease both}.summary{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;text-align:center;padding:14px 0 18px;border-bottom:1px solid #ddceb2}
+.gua-name{font-size:22px;font-weight:900}.gua-symbol{font-size:42px;line-height:1;color:#6a4c2a}.arrow{color:var(--cinnabar);font-size:22px}.meta-strip{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:12px 0 15px}.tag{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;background:#fff9ed}.tag.accent{border-color:#c87869;color:var(--cinnabar)}
+.plate{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fffdf8}
+.plate-head,.line-row{display:grid;grid-template-columns:58px minmax(62px,.7fr) minmax(185px,1.55fr) 92px 55px minmax(150px,1.3fr);gap:7px;align-items:center;padding:9px 10px}
+.standard .plate-head,.standard .line-row{grid-template-columns:58px minmax(185px,1.55fr) 92px 55px minmax(150px,1.3fr)}
+.plate-head{background:#efe1ca;color:#665746;font-size:11px;font-weight:800}.line-row{border-top:1px solid #eadfce;min-height:72px}.line-row.moving{background:linear-gradient(90deg,rgba(167,54,36,.08),transparent 54%)}
+.spirit{font-size:12px;color:#6b5e50}.hidden-spirit{font-size:11px;color:#8a7966}.stem-branch{font-weight:900}.relative{color:var(--cinnabar);font-weight:800;margin-right:5px}.element{font-size:11px;color:var(--muted)}
+.yao-cell{display:grid;grid-template-columns:1fr 22px;align-items:center;gap:4px}.yao{height:12px;display:flex;gap:11px;align-items:center}.yao span{height:7px;background:var(--ink);border-radius:1px;flex:1}.line-row.moving .yao span{background:var(--cinnabar)}.yao.yang span+span{display:none}.move-mark{font:900 18px/1 Arial;color:var(--cinnabar)}
+.shi-ying{font-weight:900;color:var(--jade);text-align:center}.facts{font-size:11px;color:#6e6255;line-height:1.5;margin-top:4px}.changed-cell{font-size:12px;line-height:1.55}.changed-cell.muted{color:#a49a8c}
+.mode-switch{display:flex;gap:6px}.mode-switch button{min-height:38px;padding:6px 12px}
+.standard .pro-only{display:none!important}
+.ai-box,.review-box{margin-top:16px;border-top:1px solid #ddceb2;padding-top:16px}.ai-actions,.review-actions{display:flex;gap:8px;align-items:center;margin-top:9px;flex-wrap:wrap}.ai-actions button,.review-actions button{min-height:44px;padding:8px 14px}.ai-status{font-size:12px;color:var(--muted)}
+.ai-turn{border:1px solid #dcc8a8;border-radius:10px;margin-top:10px;background:#fff}.ai-turn summary{cursor:pointer;padding:10px 12px;font-weight:800;color:#65462b}.ai-answer{padding:0 12px 14px;white-space:pre-wrap;line-height:1.75;font-family:system-ui,sans-serif;font-size:14px}
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.review-grid label{display:grid;gap:5px;font-size:12px;color:var(--muted)}.review-grid .full{grid-column:1/-1}
+.history-panel{max-width:950px;margin:0 auto}.history-tools{display:grid;grid-template-columns:1fr 140px auto auto;gap:8px;margin-bottom:14px}.history-tools button{min-height:44px;padding:8px 12px}.history-list{display:grid;gap:10px}.history-item{border:1px solid var(--line);background:rgba(255,250,240,.94);border-radius:12px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:12px}.history-item h3{font-size:16px;margin:0 0 5px}.history-meta{font-size:12px;color:var(--muted);line-height:1.6}.history-actions{display:flex;gap:6px;align-items:center}.history-actions button{min-height:44px;padding:7px 10px}.empty-list{text-align:center;padding:35px;color:var(--muted)}
+.local-note{font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0 14px}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.blank{min-height:260px}.history-panel{max-width:none}}
+@media(max-width:620px){
+  .shell{width:min(100% - 16px,1180px);padding-top:18px}.card{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cast-methods{grid-template-columns:1fr}.manual-grid{grid-template-columns:1fr 1fr}
+  .summary{grid-template-columns:1fr 38px 1fr}.gua-name{font-size:17px}.gua-symbol{font-size:34px}
+  .plate{overflow-x:auto}.plate-head,.line-row{min-width:690px}.review-grid{grid-template-columns:1fr}.review-grid .full{grid-column:auto}
+  .history-tools{grid-template-columns:1fr 1fr}.history-tools input{grid-column:1/-1}.history-item{grid-template-columns:1fr}.history-actions{justify-content:flex-end}.module-nav a{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body class="standard">
+<a class="skip" href="#main">跳到主要内容</a>
+<div class="shell">
+  <header class="masthead">
+    <div class="eyebrow">文王卦 · 纳甲六爻</div>
+    <h1>六爻问事</h1>
+    <div class="sub">一事一问 · 先成卦，后解读</div>
+    <nav class="module-nav" aria-label="术数模块">
+      <a href="index.html">奇门</a><a href="bazi.html">八字</a><a href="liuyao.html" aria-current="page">六爻</a>
+    </nav>
+  </header>
+
+  <div class="home-tabs" role="tablist" aria-label="六爻页面">
+    <button type="button" id="tabCast" class="active" role="tab" aria-selected="true" onclick="showHome('cast')">起卦</button>
+    <button type="button" id="tabHistory" role="tab" aria-selected="false" onclick="showHome('history')">复盘记录</button>
+  </div>
+
+  <main id="main">
+    <section id="castHome" class="grid">
+      <article class="card">
+        <div class="card-title"><div><div class="eyebrow">01 / 问事</div><h2>写清一件事</h2></div></div>
+        <fieldset id="castFields" style="border:0;padding:0;margin:0">
+          <div class="form-grid">
+            <div class="field"><label for="askerMode">求测方式</label><select id="askerMode"><option value="self">本人求测</option><option value="other">代录他人卦象</option></select></div>
+            <div class="field"><label for="gender">求测人性别</label><select id="gender"><option value="男">男</option><option value="女">女</option><option value="不透露">不透露</option></select></div>
+            <div class="field"><label for="personName">姓名 / 标记（可选）</label><input id="personName" maxlength="40" placeholder="例如：自己、朋友甲"></div>
+            <div class="field"><label for="questionType">问事类型</label><select id="questionType"><option value="career">事业工作</option><option value="wealth">财运交易</option><option value="love">感情关系</option><option value="cooperation">合作谈判</option><option value="travel">出行迁动</option><option value="lost">寻找失物</option><option value="other">其他具体事项</option></select></div>
+            <div class="field full"><label for="castTime">起卦时间（北京时间）</label><input id="castTime" type="datetime-local" step="60"><button class="secondary" type="button" onclick="useCurrentTime()">使用当前时间</button></div>
+            <div class="field full"><label for="question">本卦只问这一件事</label><textarea id="question" rows="3" maxlength="500" placeholder="例如：未来三个月，我是否适合接受目前这份工作邀请？"></textarea></div>
+          </div>
+        </fieldset>
+        <p class="hint">起卦开始后，问题和占时会锁定。医疗、法律和高风险投资只能作传统象意参考。</p>
+
+        <div class="cast-methods">
+          <button type="button" id="btnStep" onclick="drawNextLine()">逐爻摇卦</button>
+          <button type="button" id="btnQuick" onclick="quickCast()">一键成卦</button>
+          <button type="button" id="btnManualToggle" onclick="toggleManual()">手动录入</button>
+        </div>
+
+        <div id="stepBox" class="step-box" hidden>
+          <div class="step-head"><strong id="stepTitle">准备摇初爻</strong><button type="button" class="secondary" onclick="cancelStepCast()">取消</button></div>
+          <div id="stepLines" class="step-lines" aria-live="polite"></div>
+        </div>
+
+        <div id="manualBox" class="manual-box" hidden>
+          <div class="card-title"><h3>按初爻到上爻录入</h3></div>
+          <div id="manualGrid" class="manual-grid"></div>
+          <button type="button" id="btnManualBuild" class="action" style="width:100%;margin-top:10px" onclick="manualCast()">生成卦象</button>
+        </div>
+        <div id="castStatus" class="status" role="status" aria-live="polite"></div>
+      </article>
+
+      <article class="card" id="plateCard">
+        <div id="blankPlate" class="blank"><div><div class="blank-mark">☷</div><strong>此刻尚未成卦</strong><div>写下问题，再逐爻摇卦、一键成卦，或录入已有卦象。</div></div></div>
+        <div id="resultArea" hidden></div>
+      </article>
+    </section>
+
+    <section id="historyHome" class="history-panel" hidden>
+      <article class="card">
+        <div class="card-title"><div><div class="eyebrow">卦例留痕</div><h2>复盘记录</h2></div></div>
+        <div class="history-tools">
+          <input id="historySearch" type="search" placeholder="搜索问题、姓名、卦名" oninput="renderHistory()">
+          <select id="historyFilter" onchange="renderHistory()" aria-label="复盘状态"><option value="all">全部记录</option><option value="pending">待验证</option><option value="verified">已验证</option></select>
+          <button class="secondary" type="button" onclick="exportRecords()">导出</button>
+          <button class="secondary" type="button" onclick="document.getElementById('recordImport').click()">导入</button>
+          <input id="recordImport" type="file" accept="application/json,.json" hidden onchange="importRecords(this)">
+        </div>
+        <div class="local-note">记录和 AI 对话只保存在当前浏览器。换设备或清理浏览器前，请先导出备份。</div>
+        <div id="historyStatus" class="status" role="status"></div>
+        <div id="historyList" class="history-list"></div>
+      </article>
+    </section>
+  </main>
+</div>
+
+<script src="qimen.js"></script>
+<script src="bazi-engine.js?v=20260715.2"></script>
+<script src="liuyao-engine.js?v=20260812.1"></script>
+<script>
+var API_KEY_STORAGE='qimen_deepseek_api_key';
+var RECORDS_STORAGE='liuyao_records_v1';
+var DISPLAY_STORAGE='liuyao_display_mode';
+var currentRecord=null,currentPlate=null,stepLines=[],stepMeta=null,aiRequestSeq=0;
+var LINE_NAMES=['初爻','二爻','三爻','四爻','五爻','上爻'];
+var LINE_VALUE_LABELS={6:'老阴 · 动',7:'少阳 · 静',8:'少阴 · 静',9:'老阳 · 动'};
+var TOPIC_LABELS={career:'事业工作',wealth:'财运交易',love:'感情关系',cooperation:'合作谈判',travel:'出行迁动',lost:'寻找失物',other:'其他具体事项'};
+var SOURCE_LABELS={step:'逐爻摇卦',quick:'一键成卦',manual:'手动录入'};
+
+function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function nl(value){return esc(value).replace(/\n/g,'<br>')}
+function setStatus(id,text,error){var el=document.getElementById(id);el.textContent=text||'';el.classList.toggle('error',!!error)}
+function nowShanghai(){
+  var parts=new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  var map={};parts.forEach(function(part){map[part.type]=part.value});
+  return map.year+'-'+map.month+'-'+map.day+'T'+map.hour+':'+map.minute;
+}
+function useCurrentTime(){document.getElementById('castTime').value=nowShanghai()}
+function parseCastTime(value){
+  var match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value||'');
+  if(!match)throw new Error('请选择完整的起卦时间');
+  var time={year:+match[1],month:+match[2],day:+match[3],hour:+match[4],minute:+match[5]};
+  if(time.year<1900||time.year>2100)throw new Error('首版支持1900年至2100年的起卦时间');
+  return time;
+}
+function collectMeta(){
+  var question=document.getElementById('question').value.trim();
+  if(!question)throw new Error('请先写清本卦要问的一件事');
+  return {
+    asker:{mode:document.getElementById('askerMode').value,name:document.getElementById('personName').value.trim(),gender:document.getElementById('gender').value},
+    questionType:document.getElementById('questionType').value,question:question,
+    castTimeInput:document.getElementById('castTime').value,time:parseCastTime(document.getElementById('castTime').value)
+  };
+}
+function lockForm(locked){
+  document.getElementById('castFields').disabled=locked;
+  document.getElementById('btnQuick').disabled=locked;
+  document.getElementById('btnManualToggle').disabled=locked;
+  document.getElementById('btnManualBuild').disabled=locked;
+}
+function toggleManual(){document.getElementById('manualBox').hidden=!document.getElementById('manualBox').hidden}
+function renderManualInputs(){
+  document.getElementById('manualGrid').innerHTML=LINE_NAMES.map(function(name,index){return '<label>'+name+'<select id="manualLine'+index+'"><option value="">请选择</option><option value="6">6 老阴（动）</option><option value="7">7 少阳（静）</option><option value="8">8 少阴（静）</option><option value="9">9 老阳（动）</option></select></label>'}).join('');
+}
+function drawNextLine(){
+  try{
+    if(!stepMeta){stepMeta=collectMeta();stepLines=[];lockForm(true);document.getElementById('stepBox').hidden=false}
+    var value=LiuyaoEngine.drawLine();stepLines.push(value);renderStep();
+    if(stepLines.length===6){var meta=stepMeta,lines=stepLines.slice();stepMeta=null;stepLines=[];lockForm(false);document.getElementById('stepBox').hidden=true;finishCast('step',lines,meta)}
+  }catch(error){setStatus('castStatus',error.message,true)}
+}
+function renderStep(){
+  document.getElementById('stepTitle').textContent=stepLines.length<6?'已得'+stepLines.length+'爻，下一次摇'+LINE_NAMES[stepLines.length]:'六爻已齐';
+  document.getElementById('stepLines').innerHTML=stepLines.map(function(value,index){return '<span class="step-chip '+((value===6||value===9)?'moving':'')+'">'+LINE_NAMES[index]+' '+value+' · '+LINE_VALUE_LABELS[value]+'</span>'}).join('');
+  document.getElementById('btnStep').textContent=stepLines.length<6?'摇'+LINE_NAMES[stepLines.length]:'逐爻摇卦';
+}
+function cancelStepCast(){stepMeta=null;stepLines=[];lockForm(false);document.getElementById('stepBox').hidden=true;document.getElementById('btnStep').textContent='逐爻摇卦';setStatus('castStatus','已取消本次逐爻起卦')}
+function quickCast(){try{var meta=collectMeta(),lines=[];for(var i=0;i<6;i++)lines.push(LiuyaoEngine.drawLine());finishCast('quick',lines,meta)}catch(error){setStatus('castStatus',error.message,true)}}
+function manualCast(){
+  try{var meta=collectMeta(),lines=LINE_NAMES.map(function(_,index){return Number(document.getElementById('manualLine'+index).value)});LiuyaoEngine.validateLines(lines);finishCast('manual',lines,meta)}catch(error){setStatus('castStatus',error.message,true)}
+}
+function recordId(){return 'ly-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
+function finishCast(source,lines,meta){
+  var pillars=BaziEngine.buildPillars(meta.time);
+  var plate=LiuyaoEngine.buildPlate({lines:lines,monthGZ:pillars.month,dayGZ:pillars.day});
+  var now=new Date().toISOString();
+  currentPlate=plate;
+  currentRecord={schemaVersion:1,id:recordId(),engineVersion:LiuyaoEngine.version,source:source,asker:meta.asker,questionType:meta.questionType,question:meta.question,castTime:{input:meta.castTimeInput,timezone:'Asia/Shanghai',pillars:pillars,monthBuild:plate.calendar.monthBuild,dayGZ:plate.calendar.dayGZ,voidBranches:plate.calendar.voidBranches},lines:lines.slice(),plateSnapshot:plate,aiHistory:[],review:{status:'pending',observedAt:'',result:'',conclusion:''},createdAt:now,updatedAt:now};
+  lockForm(false);document.getElementById('btnStep').textContent='逐爻摇卦';persistCurrent();renderPlate();setStatus('castStatus','已成卦并保存：'+plate.primary.fullName+(plate.lines.some(function(line){return line.moving})?' 之 '+plate.changed.fullName:'（无动爻）'));
+  document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function readRecords(){
+  try{var value=JSON.parse(localStorage.getItem(RECORDS_STORAGE)||'[]');return Array.isArray(value)?value:[]}
+  catch(error){setStatus('castStatus','读取本机记录失败，请先导出可用数据后清理浏览器存储',true);return []}
+}
+function writeRecords(records){localStorage.setItem(RECORDS_STORAGE,JSON.stringify(records))}
+function persistCurrent(){
+  if(!currentRecord)return;
+  currentRecord.updatedAt=new Date().toISOString();
+  try{var records=readRecords(),index=records.findIndex(function(item){return item.id===currentRecord.id});if(index>=0)records[index]=currentRecord;else records.unshift(currentRecord);writeRecords(records)}
+  catch(error){setStatus('castStatus','卦象已生成，但保存失败：'+error.message,true)}
+}
+function setDisplayMode(mode){
+  mode=mode==='professional'?'professional':'standard';document.body.className=mode;try{localStorage.setItem(DISPLAY_STORAGE,mode)}catch(error){}
+  document.querySelectorAll('[data-display]').forEach(function(button){button.classList.toggle('active',button.dataset.display===mode)});
+}
+function lineGraphic(line){return '<div class="yao '+(line.yinYang==='阳'?'yang':'yin')+'"><span></span><span></span></div><b class="move-mark">'+(line.moving?(line.value===9?'○':'×'):'')+'</b>'}
+function renderLine(line){
+  var original=line.original,changed=line.changed;
+  var hidden=line.hidden?'<span class="relative">'+esc(line.hidden.relative)+'</span>'+esc(line.hidden.stem+line.hidden.branch)+'<span class="pro-only"> · '+esc(line.hidden.element)+'</span>':'—';
+  var changedHtml=line.moving?'<span class="relative">'+esc(changed.relative)+'</span><b>'+esc(changed.stem+changed.branch)+'</b> <span class="element">'+esc(changed.element)+'</span>'+(line.changeFacts.length?'<div class="facts">'+esc(line.changeFacts.join(' · '))+'</div>':''):'<span class="muted">静爻不变</span>';
+  return '<div class="line-row '+(line.moving?'moving':'')+'"><div class="spirit"><b>'+esc(line.label)+'</b><br>'+esc(line.spirit)+'</div><div class="hidden-spirit pro-only">'+hidden+'</div><div><span class="relative">'+esc(original.relative)+'</span><span class="stem-branch">'+esc(original.stem+original.branch)+'</span> <span class="element">'+esc(original.element)+'</span>'+(line.facts.length?'<div class="facts">'+esc(line.facts.join(' · '))+'</div>':'')+'</div><div class="yao-cell">'+lineGraphic(line)+'</div><div class="shi-ying">'+(line.shi?'世':(line.ying?'应':''))+'</div><div class="changed-cell">'+changedHtml+'</div></div>';
+}
+function plateText(plate){
+  var rows=plate.lines.slice().reverse().map(function(line){return line.label+' '+line.spirit+' '+(line.hidden?'伏'+line.hidden.relative+line.hidden.stem+line.hidden.branch+' ':'')+line.original.relative+line.original.stem+line.original.branch+(line.shi?' 世':'')+(line.ying?' 应':'')+(line.moving?' 动→'+line.changed.relative+line.changed.stem+line.changed.branch+' '+line.changeFacts.join('/'):'')+(line.facts.length?' ['+line.facts.join('/')+']':'')});
+  return plate.primary.fullName+(plate.lines.some(function(line){return line.moving})?' 之 '+plate.changed.fullName:'（无动爻）')+'\n'+plate.calendar.monthGZ+'月 '+plate.calendar.dayGZ+'日 旬空'+plate.calendar.voidBranches.join('')+'\n'+rows.join('\n');
+}
+function renderPlate(){
+  if(!currentRecord||!currentPlate)return;
+  var plate=currentPlate,moving=plate.lines.filter(function(line){return line.moving}).map(function(line){return line.label});
+  var tags=plate.tags.concat(moving.length?['动爻：'+moving.join('、')]:['无动爻']);
+  document.getElementById('blankPlate').hidden=true;document.getElementById('resultArea').hidden=false;
+  document.getElementById('resultArea').innerHTML='<div class="result-card">'+
+    '<div class="card-title"><div><div class="eyebrow">02 / 盘面</div><h2>'+esc(currentRecord.question)+'</h2></div><div class="mode-switch" aria-label="盘面显示模式"><button type="button" data-display="standard" onclick="setDisplayMode(\'standard\')">标准</button><button type="button" data-display="professional" onclick="setDisplayMode(\'professional\')">专业</button></div></div>'+
+    '<div class="summary"><div><div class="gua-symbol">'+esc(plate.primary.symbol)+'</div><div class="gua-name">'+esc(plate.primary.fullName)+'</div><div class="hint">'+esc(plate.palace.name+'宫'+plate.palace.element+' · '+plate.palace.type)+'</div></div><div class="arrow">→</div><div><div class="gua-symbol">'+esc(plate.changed.symbol)+'</div><div class="gua-name">'+esc(moving.length?plate.changed.fullName:'无变卦')+'</div><div class="hint">'+(moving.length?esc('动'+moving.length+'爻'):'六爻皆静')+'</div></div></div>'+
+    '<div class="meta-strip"><span class="tag">'+esc(currentRecord.castTime.input.replace('T',' '))+' 北京时间</span><span class="tag">'+esc(plate.calendar.monthGZ)+'月</span><span class="tag">'+esc(plate.calendar.dayGZ)+'日</span><span class="tag">旬空 '+esc(plate.calendar.voidBranches.join(''))+'</span>'+tags.map(function(tag){return '<span class="tag accent">'+esc(tag)+'</span>'}).join('')+'</div>'+
+    '<div class="plate"><div class="plate-head"><div>六神</div><div class="pro-only">伏神</div><div>本卦六亲 / 纳甲</div><div>爻象</div><div>世应</div><div>变卦</div></div>'+plate.lines.slice().reverse().map(renderLine).join('')+'</div>'+
+    '<div class="ai-box"><div class="card-title"><div><div class="eyebrow">03 / 解读</div><h3>AI 六爻分析</h3></div></div><div id="aiHistory">'+renderAiHistory()+'</div><textarea id="aiQuestion" rows="2" maxlength="500" placeholder="围绕本卦原问题继续问，不要换成另一件事"></textarea><div class="ai-actions"><button id="btnAI" class="action" type="button" onclick="analyzeWithAI()">AI 解卦</button><span id="aiStatus" class="ai-status" role="status"></span></div></div>'+
+    '<div class="review-box"><div class="card-title"><div><div class="eyebrow">04 / 验证</div><h3>事后复盘</h3></div></div><div class="review-grid"><label>状态<select id="reviewStatus"><option value="pending">待验证</option><option value="verified">已验证</option></select></label><label>实际发生时间<input id="reviewObserved" type="date"></label><label class="full">实际结果<textarea id="reviewResult" rows="2" maxlength="1000" placeholder="事情后来实际怎样发展？"></textarea></label><label class="full">复盘结论<textarea id="reviewConclusion" rows="2" maxlength="1000" placeholder="哪些判断吻合，哪些没有，可能原因是什么？"></textarea></label></div><div class="review-actions"><button class="action" type="button" onclick="saveReview()">保存复盘</button><button class="secondary" type="button" onclick="copyCurrentPlate()">复制盘面</button></div></div></div>';
+  var review=currentRecord.review||{};document.getElementById('reviewStatus').value=review.status||'pending';document.getElementById('reviewObserved').value=review.observedAt||'';document.getElementById('reviewResult').value=review.result||'';document.getElementById('reviewConclusion').value=review.conclusion||'';
+  setDisplayMode(localStorage.getItem(DISPLAY_STORAGE)||'standard');
+}
+function saveReview(){
+  if(!currentRecord)return;currentRecord.review={status:document.getElementById('reviewStatus').value,observedAt:document.getElementById('reviewObserved').value,result:document.getElementById('reviewResult').value.trim(),conclusion:document.getElementById('reviewConclusion').value.trim()};persistCurrent();setStatus('castStatus','复盘已保存')
+}
+async function copyCurrentPlate(){try{await navigator.clipboard.writeText(plateText(currentPlate));setStatus('castStatus','盘面已复制')}catch(error){setStatus('castStatus','复制失败：'+error.message,true)}}
+function renderAiHistory(){
+  var history=currentRecord&&Array.isArray(currentRecord.aiHistory)?currentRecord.aiHistory:[];
+  if(!history.length)return '<div class="hint">成卦后由 AI 按用神、世应、日月与动变给出可核查的证据链。传统术数仅供参考。</div>';
+  return history.map(function(turn,index){return '<details class="ai-turn" open><summary>第'+(index+1)+'问 · '+esc(turn.question)+'</summary><div class="ai-answer">'+nl(turn.answer)+'</div></details>'}).join('');
+}
+function aiPlateContext(){
+  return JSON.stringify({engineVersion:currentPlate.version,question:currentRecord.question,questionType:TOPIC_LABELS[currentRecord.questionType],asker:currentRecord.asker,castTime:currentRecord.castTime,primary:currentPlate.primary,changed:currentPlate.changed,palace:currentPlate.palace,tags:currentPlate.tags,lines:currentPlate.lines},null,2);
+}
+async function analyzeWithAI(){
+  if(!currentRecord||!currentPlate)return;
+  var follow=document.getElementById('aiQuestion').value.trim()||currentRecord.question;
+  var key=localStorage.getItem(API_KEY_STORAGE)||'';
+  if(!key){key=prompt('请输入 DeepSeek API Key（只保存在本机浏览器）')||'';if(key.trim())localStorage.setItem(API_KEY_STORAGE,key.trim())}
+  if(!key.trim()){setStatus('castStatus','未填写 DeepSeek API Key',true);return}
+  var requestId=++aiRequestSeq,recordIdAtStart=currentRecord.id,button=document.getElementById('btnAI');button.disabled=true;button.textContent='分析中…';document.getElementById('aiStatus').textContent='正在核对用神、世应、日月和动变';
+  var system='你是谨慎的传统纳甲六爻分析师。一个卦只回答同一人、同一事、同一决策的连续追问；若用户换了问题，只回复“一个卦只能问同一件事，请重新起卦”。只能引用提供的结构化盘面，不得虚构动爻、六亲、纳甲、世应、旬空、月破或旺衰。不得用吉凶分数。医疗、法律和高风险投资只能提供传统象意与风险提示，不得替代专业意见。回答依次包含：结论与倾向、用神选择及理由、支持证据、反向证据、世应日月动变、可能应期条件、流派分歧或不确定处、现实行动建议。';
+  var messages=[{role:'system',content:system}];
+  (currentRecord.aiHistory||[]).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
+  messages.push({role:'user',content:'本卦原始问题：'+currentRecord.question+'\n本次问题：'+follow+'\n盘面事实（JSON）：\n'+aiPlateContext()});
+  try{
+    var response=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key.trim()},body:JSON.stringify({model:'deepseek-v4-pro',messages:messages,max_tokens:4096,thinking:{type:'enabled'},reasoning_effort:'high'})});
+    var data=await response.json();
+    if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart)return;
+    if(!response.ok)throw new Error(data.error&&data.error.message||('HTTP '+response.status));
+    var answer=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
+    if(!answer||!answer.trim())throw new Error('AI 未返回最终解读，请重试');
+    currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString()});persistCurrent();document.getElementById('aiHistory').innerHTML=renderAiHistory();document.getElementById('aiQuestion').value='';
+  }catch(error){if(requestId===aiRequestSeq)setStatus('castStatus','AI 请求失败：'+error.message,true)}
+  finally{if(requestId===aiRequestSeq&&currentRecord&&currentRecord.id===recordIdAtStart){button.disabled=false;button.textContent='AI 解卦';document.getElementById('aiStatus').textContent=''}}
+}
+function showHome(name){
+  var cast=name==='cast';document.getElementById('castHome').hidden=!cast;document.getElementById('historyHome').hidden=cast;document.getElementById('tabCast').classList.toggle('active',cast);document.getElementById('tabHistory').classList.toggle('active',!cast);document.getElementById('tabCast').setAttribute('aria-selected',String(cast));document.getElementById('tabHistory').setAttribute('aria-selected',String(!cast));if(!cast)renderHistory()
+}
+function renderHistory(){
+  var query=(document.getElementById('historySearch').value||'').trim().toLowerCase(),filter=document.getElementById('historyFilter').value;
+  var records=readRecords().filter(function(record){var hay=[record.question,record.asker&&record.asker.name,record.plateSnapshot&&record.plateSnapshot.primary&&record.plateSnapshot.primary.fullName].join(' ').toLowerCase();return (!query||hay.indexOf(query)>=0)&&(filter==='all'||(record.review&&record.review.status||'pending')===filter)}).sort(function(a,b){return String(b.updatedAt).localeCompare(String(a.updatedAt))});
+  var box=document.getElementById('historyList');if(!records.length){box.innerHTML='<div class="empty-list">还没有符合条件的卦例。</div>';return}
+  box.innerHTML=records.map(function(record){var plate=record.plateSnapshot||{},primary=plate.primary||{},changed=plate.changed||{},moving=plate.lines&&plate.lines.some(function(line){return line.moving});return '<article class="history-item"><div><h3>'+esc(record.question||'未命名卦例')+'</h3><div class="history-meta">'+esc(record.castTime&&record.castTime.input||'')+' · '+esc(SOURCE_LABELS[record.source]||record.source)+' · '+esc(primary.fullName||'')+(moving?' 之 '+esc(changed.fullName||''):'')+' · '+((record.review&&record.review.status)==='verified'?'已验证':'待验证')+'</div></div><div class="history-actions"><button class="secondary" type="button" onclick="openRecord(\''+esc(record.id)+'\')">打开</button><button class="danger" type="button" onclick="deleteRecord(\''+esc(record.id)+'\')">删除</button></div></article>'}).join('');
+}
+function openRecord(id){
+  var record=readRecords().find(function(item){return item.id===id});if(!record)return;aiRequestSeq++;currentRecord=record;currentPlate=record.plateSnapshot;renderPlate();showHome('cast');document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'});setStatus('castStatus','已按保存快照打开，不重新计算历史盘')
+}
+function deleteRecord(id){if(!confirm('删除这条卦例？删除后只能通过之前导出的备份恢复。'))return;var records=readRecords().filter(function(item){return item.id!==id});try{writeRecords(records);if(currentRecord&&currentRecord.id===id){currentRecord=null;currentPlate=null;document.getElementById('resultArea').hidden=true;document.getElementById('blankPlate').hidden=false}renderHistory()}catch(error){setStatus('historyStatus','删除失败：'+error.message,true)}}
+function exportRecords(){
+  var payload={schemaVersion:1,exportedAt:new Date().toISOString(),records:readRecords()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='liuyao-records-'+nowShanghai().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)
+}
+function validImportedRecord(record){try{return !!(record&&record.schemaVersion===1&&/^[A-Za-z0-9._-]{1,100}$/.test(record.id)&&typeof record.question==='string'&&LiuyaoEngine.validateLines(record.lines)&&record.plateSnapshot&&record.plateSnapshot.version)}catch(error){return false}}
+function importRecords(input){
+  var file=input.files&&input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){try{var parsed=JSON.parse(reader.result),incoming=Array.isArray(parsed)?parsed:parsed.records;if(!Array.isArray(incoming))throw new Error('文件中没有记录列表');incoming=incoming.filter(validImportedRecord);var map={};readRecords().concat(incoming).forEach(function(record){var old=map[record.id];if(!old||String(record.updatedAt)>String(old.updatedAt))map[record.id]=record});writeRecords(Object.keys(map).map(function(id){return map[id]}));setStatus('historyStatus','导入完成：识别 '+incoming.length+' 条有效记录');renderHistory()}catch(error){setStatus('historyStatus','导入失败：'+error.message,true)}finally{input.value=''}};reader.readAsText(file)
+}
+
+useCurrentTime();renderManualInputs();setDisplayMode(localStorage.getItem(DISPLAY_STORAGE)||'standard');
+</script>
+</body>
+</html>
