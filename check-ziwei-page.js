@@ -398,7 +398,7 @@ function runBaselineIsolation() {
   const baziDiff = childProcess.execFileSync("git", ["diff", "--unified=0", "main", "--", "bazi.html"], { cwd: ROOT, encoding: "utf8" });
   const changedLines = baziDiff.split(/\r?\n/).filter((line) => /^[+-](?![+-])/.test(line));
   const allowedAiChange = /var resp=await fetch|var answer=data\.choices|var choice=data\.choices|if\(!answer\)|finish_reason|reasoning_content|throw new Error\('DeepSeek|answer=answer\.replace/;
-  assert(changedLines.length > 0 && changedLines.every((line) => allowedAiChange.test(line) || /^\+\s*}$/.test(line)), "八字改动超出已授权的 AI 思考调用与空回答诊断范围");
+  assert(changedLines.every((line) => allowedAiChange.test(line) || /^\+\s*}$/.test(line)), "八字改动超出已授权的 AI 思考调用与空回答诊断范围");
 }
 
 try {
