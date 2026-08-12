@@ -2,6 +2,7 @@
   'use strict';
 
   var VERSION='LIUYAO-NAJIA-2026.08.12-v1';
+  var RELATION_VERSION='LIUYAO-RELATION-2026.08.12-v1';
   var STEMS='甲乙丙丁戊己庚辛壬癸'.split('');
   var BRANCHES='子丑寅卯辰巳午未申酉戌亥'.split('');
   var ELEMENTS={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
@@ -238,8 +239,109 @@
     };
   }
 
+  function relationNodeName(node){
+    if(node.kind==='month'||node.kind==='day'||node.kind==='change')return node.label;
+    var role=node.roles.indexOf('飞神')>=0?'飞神':(node.roles.indexOf('世爻')>=0?'世爻':(node.roles.indexOf('应爻')>=0?'应爻':'动爻'));
+    return role+'（'+node.label+'）';
+  }
+
+  function relationsToFocus(node,focus){
+    var out=[],sourceName=relationNodeName(node),calendarKind=node.kind==='month'?'月':(node.kind==='day'?'日':'');
+    function add(type,term,label,fromId,toId,directional,evidence){
+      out.push({type:type,term:term,label:label,fromId:fromId,toId:toId,directional:directional,evidence:evidence});
+    }
+    if(node.branch===focus.branch){
+      var sameTerm=calendarKind?'临'+calendarKind:'同支';
+      add('same',sameTerm,calendarKind?'用神临'+sourceName:'用神与'+sourceName+'同支',node.id,focus.id,false,'用神'+focus.branch+'与'+sourceName+node.branch+'地支相同');
+    }
+    if(CLASH[node.branch]===focus.branch){
+      var clashTerm=node.kind==='month'?'月破':(node.kind==='day'?'日冲':'冲');
+      add('clash',clashTerm,node.kind==='month'?'月建冲用神（月破）':(node.kind==='day'?'日辰冲用神（日冲）':sourceName+'与用神相冲'),node.id,focus.id,false,sourceName+node.branch+'与用神'+focus.branch+'地支相冲');
+    }
+    if(COMBINE[node.branch]===focus.branch){
+      var combineTerm=calendarKind?calendarKind+'合':'合';
+      add('combine',combineTerm,sourceName+'与用神六合',node.id,focus.id,false,sourceName+node.branch+'与用神'+focus.branch+'地支六合');
+    }
+    if(GENERATES[node.element]===focus.element){
+      add('generate',calendarKind?calendarKind+'生':'生',sourceName+'生用神',node.id,focus.id,true,sourceName+node.branch+node.element+'生用神'+focus.branch+focus.element);
+    }else if(GENERATES[focus.element]===node.element){
+      add('generate',calendarKind?'爻生'+calendarKind:'生','用神生'+sourceName,focus.id,node.id,true,'用神'+focus.branch+focus.element+'生'+sourceName+node.branch+node.element);
+    }
+    if(CONTROLS[node.element]===focus.element){
+      add('control',calendarKind?calendarKind+'克':'克',sourceName+'克用神',node.id,focus.id,true,sourceName+node.branch+node.element+'克用神'+focus.branch+focus.element);
+    }else if(CONTROLS[focus.element]===node.element){
+      add('control',calendarKind?'爻克'+calendarKind:'克','用神克'+sourceName,focus.id,node.id,true,'用神'+focus.branch+focus.element+'克'+sourceName+node.branch+node.element);
+    }
+    if(!out.length)add('none','无直接生克冲合',sourceName+'与用神无直接生克冲合',node.id,focus.id,false,sourceName+node.branch+node.element+'与用神'+focus.branch+focus.element+'之间没有生、克、冲、合或同支关系');
+    return out;
+  }
+
+  function changeEdge(node,focus,originalBranch){
+    var mappings={
+      '伏吟':['same','用神变爻与原爻同支（伏吟）',false,node.id,focus.id],
+      '回头冲':['clash','用神变爻回头冲原爻',false,node.id,focus.id],
+      '化合':['combine','用神变爻与原爻化合',false,node.id,focus.id],
+      '回头生':['generate','用神变爻回头生原爻',true,node.id,focus.id],
+      '回头克':['control','用神变爻回头克原爻',true,node.id,focus.id],
+      '化进':['advance','用神原爻化进',true,focus.id,node.id],
+      '化退':['retreat','用神原爻化退',true,focus.id,node.id]
+    };
+    var relations=changeRelations(originalBranch,node.branch).map(function(term){
+      var item=mappings[term];
+      return {type:item[0],term:term,label:item[1],fromId:item[3],toId:item[4],directional:item[2],evidence:'用神原爻'+originalBranch+focus.element+'变为'+node.branch+node.element+'，引擎标记为“'+term+'”'};
+    });
+    if(!relations.length)relations.push({type:'none',term:'无直接生克冲合',label:'用神动变无已标记关系',fromId:focus.id,toId:node.id,directional:false,evidence:'用神原爻'+originalBranch+focus.element+'变为'+node.branch+node.element+'，未形成回头生克、冲合、伏吟或化进化退'});
+    return {nodeId:node.id,relations:relations};
+  }
+
+  function buildUseGodRelations(input){
+    input=input||{};
+    var plate=input.plate,useGod=input.useGod||{};
+    if(!plate||!Array.isArray(plate.lines)||plate.lines.length!==6||!plate.calendar)throw new Error('需要完整的六爻盘面快照');
+    var position=Number(useGod.position),line=plate.lines.find(function(item){return item.position===position});
+    if(!line)throw new Error('用神爻位必须是初爻到上爻');
+    var hidden=!!useGod.hidden;
+    if(hidden&&!line.hidden)throw new Error(line.label+'没有可用伏神');
+    var item=hidden?line.hidden:line.original;
+    if(!item||!ELEMENTS[item.branch])throw new Error('用神缺少有效纳甲地支');
+    var focusRoles=hidden?['伏神']:[];
+    if(!hidden){if(line.shi)focusRoles.push('世爻');if(line.ying)focusRoles.push('应爻');if(line.moving)focusRoles.push('动爻')}
+    var focus={id:'use-god',kind:'useGod',label:'用神',position:position,lineLabel:line.label,hidden:hidden,roles:focusRoles,stem:item.stem,branch:item.branch,element:item.element,relative:item.relative,moving:!hidden&&line.moving,statuses:[]};
+    if((plate.calendar.voidBranches||[]).indexOf(item.branch)>=0)focus.statuses.push({type:'void',term:'旬空',label:'用神旬空',evidence:'用神地支'+item.branch+'落在'+plate.calendar.dayGZ+'日所属旬空'+(plate.calendar.voidBranches||[]).join('')+'之中'});
+
+    var monthBranch=plate.calendar.monthBuild||(plate.calendar.monthGZ||'')[1],dayBranch=plate.calendar.dayBranch||(plate.calendar.dayGZ||'')[1];
+    if(!ELEMENTS[monthBranch]||!ELEMENTS[dayBranch])throw new Error('盘面快照缺少有效月建或日辰');
+    var nodes=[
+      {id:'month',kind:'month',label:'月建',roles:[],stem:(plate.calendar.monthGZ||'')[0]||'',branch:monthBranch,element:ELEMENTS[monthBranch],stemBranch:plate.calendar.monthGZ||monthBranch,moving:false},
+      {id:'day',kind:'day',label:'日辰',roles:[],stem:(plate.calendar.dayGZ||'')[0]||'',branch:dayBranch,element:ELEMENTS[dayBranch],stemBranch:plate.calendar.dayGZ||dayBranch,moving:false}
+    ];
+    var lineNodes={};
+    function addLineNode(sourceLine,role){
+      if(!hidden&&sourceLine.position===position)return;
+      var id='line-'+sourceLine.position,node=lineNodes[id];
+      if(!node){
+        node=lineNodes[id]={id:id,kind:'line',label:sourceLine.label,position:sourceLine.position,roles:[],stem:sourceLine.original.stem,branch:sourceLine.original.branch,element:sourceLine.original.element,relative:sourceLine.original.relative,stemBranch:sourceLine.original.stem+sourceLine.original.branch,moving:sourceLine.moving};
+      }
+      if(node.roles.indexOf(role)<0)node.roles.push(role);
+    }
+    plate.lines.forEach(function(sourceLine){if(sourceLine.shi)addLineNode(sourceLine,'世爻');if(sourceLine.ying)addLineNode(sourceLine,'应爻');if(sourceLine.moving)addLineNode(sourceLine,'动爻')});
+    if(hidden)addLineNode(line,'飞神');
+
+    if(!hidden&&line.moving){
+      nodes.push({id:'use-god-change',kind:'change',label:'用神变爻',position:position,roles:['变爻'],stem:line.changed.stem,branch:line.changed.branch,element:line.changed.element,relative:line.changed.relative,stemBranch:line.changed.stem+line.changed.branch,moving:false});
+    }
+    var roleRank={'世爻':0,'应爻':1,'飞神':2,'动爻':3};
+    Object.keys(lineNodes).map(function(id){return lineNodes[id]}).sort(function(a,b){
+      var ar=Math.min.apply(null,a.roles.map(function(role){return roleRank[role]})),br=Math.min.apply(null,b.roles.map(function(role){return roleRank[role]}));
+      return ar-br||b.position-a.position;
+    }).forEach(function(node){nodes.push(node)});
+
+    var edges=nodes.map(function(node){return node.kind==='change'?changeEdge(node,focus,item.branch):{nodeId:node.id,relations:relationsToFocus(node,focus)}});
+    return {version:RELATION_VERSION,focus:focus,nodes:nodes,edges:edges};
+  }
+
   var api={
-    version:VERSION,drawLine:drawLine,validateLines:validateLines,buildPlate:buildPlate,
+    version:VERSION,relationVersion:RELATION_VERSION,drawLine:drawLine,validateLines:validateLines,buildPlate:buildPlate,buildUseGodRelations:buildUseGodRelations,
     constants:{trigrams:TRIGRAMS,hexagrams:HEXAGRAMS,palaces:PALACES,relatives:RELATIVES,lineLabels:LINE_LABELS,gz60:GZ60}
   };
   root.LiuyaoEngine=api;
