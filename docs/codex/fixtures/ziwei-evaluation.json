@@ -1,0 +1,2949 @@
+{
+  "schemaVersion": 1,
+  "evaluationDate": "2026-08-13",
+  "purpose": "紫微斗数内核候选工程评估用固定对照盘；只验证已声明规则，不证明预测准确性。",
+  "projectPolicy": {
+    "timezone": "Asia/Shanghai",
+    "defaultTimeBasis": "beijing_standard_time",
+    "trueSolarTime": "optional; longitude plus equation-of-time correction; confirm when earthly-branch period changes",
+    "yearDivide": "lunar_new_year",
+    "horoscopeDivide": "lunar_new_year",
+    "nominalAge": "target lunar year minus birth lunar year plus one; birthday ignored",
+    "leapMonth": "leap days 1-15 use previous month; days 16-end use next month",
+    "ratHour": "timeIndex 0 early rat; timeIndex 12 late rat; late rat advances the logical lunar day",
+    "algorithm": "iztro default based on Zi Wei Dou Shu Quan Shu; do not mix Zhongzhou mutagen/brightness tables"
+  },
+  "candidatePins": {
+    "iztro": {
+      "version": "2.5.8",
+      "sourceCommit": "9d39f1743bf31c2b3c635c9b9556215d9c90ee2c",
+      "npmShasum": "c559a7384036596c1971faace403f4a658076a81",
+      "npmIntegrity": "sha512-kgyyvxdSEvgJxi6zvHpvzGbXZLGXCdhTHYK2Pe/sRdBIQ7RfCArvupmg2ChUMQCSQGomW7XCI0gWwUuKJwPENg==",
+      "browserArtifactSha256": "4b8eca323e5d4291471567c62255a2166471c55c77ebe8f0d2d38240e69d12b1"
+    },
+    "fortel": {
+      "package": "fortel-ziweidoushu",
+      "version": "1.3.4",
+      "sourceCommit": "39584e11ad9ddb124bd4b337a3b148c2f0b25611",
+      "npmShasum": "ed72347cf6846ac7aa370c21b9741fbb41615d0d",
+      "npmIntegrity": "sha512-ZcCkzotbgAPKmdU2XjW/l0HQcTjouWYTDezPyggmrUPs/rWReEYefWeE8q+mwI3imeM0s2ntdsNpPdX2xlyQ1A==",
+      "browserArtifactSha256": "43361f4a3c34ce270eb0b7e57e30ebe3eefc3d639b2f6828a284b1f46fdd0c0e"
+    },
+    "ziweijs": {
+      "package": "@ziweijs/core",
+      "version": "0.3.0",
+      "sourceCommit": "101d85802d2e4a2c87c9e7801ba95777aefc7f42",
+      "npmShasum": "22b0a46daff3e2b8e47952f6f108c667f7775c3c",
+      "npmIntegrity": "sha512-fEW+RJNTpn4bUBwQNo3zWZu5z1md9gsKmA8U7ENyuHWpwv3QxtHcHOehacdgxWamhiZfpk6kqR/ZHxVhshxqFQ==",
+      "esmArtifactSha256": "2114dd37a9c89c0776724456e6bac8a8fd7f71131ee28ea34bffef06dc5d26ab"
+    }
+  },
+  "compactEncoding": {
+    "palaceLayout": "地支:宫名；星号表示身宫；十二段以竖线分隔",
+    "starPlacements": "星名@地支；以竖线分隔",
+    "mutagen": "禄/权/科/忌:星名；以竖线分隔",
+    "decadalRanges": "地支:起始虚岁-结束虚岁；以竖线分隔"
+  },
+  "evidenceSources": {
+    "iztroNpm": "https://www.npmjs.com/package/iztro/v/2.5.8",
+    "iztroSource": "https://github.com/SylarLong/iztro/tree/9d39f1743bf31c2b3c635c9b9556215d9c90ee2c",
+    "fortelNpm": "https://www.npmjs.com/package/fortel-ziweidoushu/v/1.3.4",
+    "fortelSource": "https://github.com/airicyu/fortel-ziweidoushu/tree/39584e11ad9ddb124bd4b337a3b148c2f0b25611",
+    "ziweijsNpm": "https://www.npmjs.com/package/@ziweijs/core/v/0.3.0",
+    "ziweijsSource": "https://github.com/lzm0x219/ziwei/tree/101d85802d2e4a2c87c9e7801ba95777aefc7f42/packages/core"
+  },
+  "fixtures": [
+    {
+      "id": "A01",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "2000-08-16",
+        "clockTime": "00:30",
+        "timeIndex": 0,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2025-8-16",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2000-08-16",
+        "clockTime": "00:30",
+        "timeIndex": 0
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2000-8-16",
+          "lunarYear": 2000,
+          "lunarMonth": 7,
+          "lunarDay": 17,
+          "isLeapMonth": false,
+          "sexagenary": "庚辰 甲申 丙午 戊子",
+          "timeLabel": "早子时",
+          "timeRange": "00:00~01:00"
+        },
+        "natal": {
+          "soulPalace": "申",
+          "bodyPalace": "申",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:迁移|卯:疾厄|辰:财帛|巳:子女|午:夫妻|未:兄弟|申:命宫*|酉:父母|戌:福德|亥:田宅|子:官禄|丑:仆役",
+          "majorStarPlacements": "七杀@丑|天同@辰|天府@未|天机@申|天梁@子|天相@亥|太阳@午|太阴@申|巨门@戌|廉贞@丑|武曲@巳|破军@巳|紫微@酉|贪狼@酉",
+          "keyMinorStarPlacements": "右弼@辰|地劫@亥|地空@亥|天钺@未|天马@寅|天魁@丑|左辅@戌|擎羊@酉|文昌@戌|文曲@辰|火星@寅|禄存@申|铃星@戌|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:62-71|卯:72-81|辰:82-91|巳:92-101|午:102-111|未:112-121|申:2-11|酉:12-21|戌:22-31|亥:32-41|子:42-51|丑:52-61"
+        },
+        "horoscope": {
+          "targetSolarDate": "2025-8-16",
+          "targetLunarDate": "二〇二五年闰六月廿三",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 8,
+            "palaceName": "命宫",
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "b03363cb05160762937d6f34d6ebeb48aa3bbb916999723124bc940b9b2054f8",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A02",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1992-03-12",
+        "clockTime": "01:30",
+        "timeIndex": 1,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2017-3-12",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1992-03-12",
+        "clockTime": "01:30",
+        "timeIndex": 1
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1992-3-12",
+          "lunarYear": 1992,
+          "lunarMonth": 2,
+          "lunarDay": 9,
+          "isLeapMonth": false,
+          "sexagenary": "壬申 癸卯 丁亥 辛丑",
+          "timeLabel": "丑时",
+          "timeRange": "01:00~03:00"
+        },
+        "natal": {
+          "soulPalace": "寅",
+          "bodyPalace": "辰",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:命宫|卯:父母|辰:福德*|巳:田宅|午:官禄|未:仆役|申:迁移|酉:疾厄|戌:财帛|亥:子女|子:夫妻|丑:兄弟",
+          "majorStarPlacements": "七杀@酉|天同@申|天府@卯|天机@子|天梁@申|天相@未|太阳@戌|太阴@辰|巨门@午|廉贞@巳|武曲@酉|破军@丑|紫微@丑|贪狼@巳",
+          "keyMinorStarPlacements": "右弼@酉|地劫@子|地空@戌|天钺@巳|天马@寅|天魁@卯|左辅@巳|擎羊@子|文昌@酉|文曲@巳|火星@卯|禄存@亥|铃星@亥|陀罗@戌",
+          "birthMutagen": "禄:天梁|权:紫微|科:左辅|忌:武曲",
+          "decadalRanges": "寅:4-13|卯:114-123|辰:104-113|巳:94-103|午:84-93|未:74-83|申:64-73|酉:54-63|戌:44-53|亥:34-43|子:24-33|丑:14-23"
+        },
+        "horoscope": {
+          "targetSolarDate": "2017-3-12",
+          "targetLunarDate": "二〇一七年二月十五",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 10,
+            "palaceName": "命宫",
+            "heavenlyStem": "壬",
+            "earthlyBranch": "子",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 7,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "酉",
+            "mutagen": "禄:太阴|权:天同|科:天机|忌:巨门"
+          }
+        }
+      },
+      "expectedSha256": "6b5335ba2b52ddab5c7b139e7c9b6678589572b91ab0e7aee0ec147180389a8c",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A03",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1984-11-05",
+        "clockTime": "03:30",
+        "timeIndex": 2,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2009-11-5",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1984-11-05",
+        "clockTime": "03:30",
+        "timeIndex": 2
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1984-11-5",
+          "lunarYear": 1984,
+          "lunarMonth": 10,
+          "lunarDay": 13,
+          "isLeapMonth": false,
+          "sexagenary": "甲子 乙亥 癸卯 甲寅",
+          "timeLabel": "寅时",
+          "timeRange": "03:00~05:00"
+        },
+        "natal": {
+          "soulPalace": "酉",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:仆役|卯:迁移|辰:疾厄|巳:财帛|午:子女|未:夫妻|申:兄弟|酉:命宫|戌:父母|亥:福德|子:田宅|丑:官禄*",
+          "majorStarPlacements": "七杀@申|天同@酉|天府@寅|天机@丑|天梁@未|天相@午|太阳@亥|太阴@卯|巨门@巳|廉贞@午|武曲@戌|破军@子|紫微@寅|贪狼@辰",
+          "keyMinorStarPlacements": "右弼@丑|地劫@丑|地空@酉|天钺@未|天马@寅|天魁@丑|左辅@丑|擎羊@卯|文昌@申|文曲@午|火星@辰|禄存@寅|铃星@子|陀罗@丑",
+          "birthMutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳",
+          "decadalRanges": "寅:54-63|卯:64-73|辰:74-83|巳:84-93|午:94-103|未:104-113|申:114-123|酉:4-13|戌:14-23|亥:24-33|子:34-43|丑:44-53"
+        },
+        "horoscope": {
+          "targetSolarDate": "2009-11-5",
+          "targetLunarDate": "二〇〇九年九月十九",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 9,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "亥",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "ac571deef4be20c512627647987847e683649813314e125f8d71c6182af44adc",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A04",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1976-06-21",
+        "clockTime": "05:30",
+        "timeIndex": 3,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2001-6-21",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1976-06-21",
+        "clockTime": "05:30",
+        "timeIndex": 3
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1976-6-21",
+          "lunarYear": 1976,
+          "lunarMonth": 5,
+          "lunarDay": 24,
+          "isLeapMonth": false,
+          "sexagenary": "丙辰 甲午 甲辰 丁卯",
+          "timeLabel": "卯时",
+          "timeRange": "05:00~07:00"
+        },
+        "natal": {
+          "soulPalace": "卯",
+          "bodyPalace": "酉",
+          "fiveElementsClass": "木三局",
+          "palaceLayout": "寅:兄弟|卯:命宫|辰:父母|巳:福德|午:田宅|未:官禄|申:仆役|酉:迁移*|戌:疾厄|亥:财帛|子:子女|丑:夫妻",
+          "majorStarPlacements": "七杀@丑|天同@辰|天府@未|天机@申|天梁@子|天相@亥|太阳@午|太阴@申|巨门@戌|廉贞@丑|武曲@巳|破军@巳|紫微@酉|贪狼@酉",
+          "keyMinorStarPlacements": "右弼@午|地劫@寅|地空@申|天钺@酉|天马@寅|天魁@亥|左辅@申|擎羊@午|文昌@未|文曲@未|火星@巳|禄存@巳|铃星@丑|陀罗@辰",
+          "birthMutagen": "禄:天同|权:天机|科:文昌|忌:廉贞",
+          "decadalRanges": "寅:13-22|卯:3-12|辰:113-122|巳:103-112|午:93-102|未:83-92|申:73-82|酉:63-72|戌:53-62|亥:43-52|子:33-42|丑:23-32"
+        },
+        "horoscope": {
+          "targetSolarDate": "2001-6-21",
+          "targetLunarDate": "二〇〇一年五月初一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "辛",
+            "earthlyBranch": "丑",
+            "ageRange": [
+              23,
+              32
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:巨门|权:太阳|科:文曲|忌:文昌"
+          }
+        }
+      },
+      "expectedSha256": "6d716b1208f2b1224142ceb1b7637e06f70cf465946639f484ab37adc7aff11b",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A05",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1968-06-30",
+        "clockTime": "07:30",
+        "timeIndex": 4,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "1993-6-30",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1968-06-30",
+        "clockTime": "07:30",
+        "timeIndex": 4
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1968-6-30",
+          "lunarYear": 1968,
+          "lunarMonth": 6,
+          "lunarDay": 5,
+          "isLeapMonth": false,
+          "sexagenary": "戊申 己未 辛未 壬辰",
+          "timeLabel": "辰时",
+          "timeRange": "07:00~09:00"
+        },
+        "natal": {
+          "soulPalace": "卯",
+          "bodyPalace": "亥",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:兄弟|卯:命宫|辰:父母|巳:福德|午:田宅|未:官禄|申:仆役|酉:迁移|戌:疾厄|亥:财帛*|子:子女|丑:夫妻",
+          "majorStarPlacements": "七杀@未|天同@戌|天府@丑|天机@寅|天梁@午|天相@巳|太阳@子|太阴@寅|巨门@辰|廉贞@未|武曲@亥|破军@亥|紫微@卯|贪狼@卯",
+          "keyMinorStarPlacements": "右弼@巳|地劫@卯|地空@未|天钺@未|天马@寅|天魁@丑|左辅@酉|擎羊@午|文昌@午|文曲@申|火星@午|禄存@巳|铃星@寅|陀罗@辰",
+          "birthMutagen": "禄:贪狼|权:太阴|科:右弼|忌:天机",
+          "decadalRanges": "寅:112-121|卯:2-11|辰:12-21|巳:22-31|午:32-41|未:42-51|申:52-61|酉:62-71|戌:72-81|亥:82-91|子:92-101|丑:102-111"
+        },
+        "horoscope": {
+          "targetSolarDate": "1993-6-30",
+          "targetLunarDate": "一九九三年五月十一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "巳",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 7,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "酉",
+            "mutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼"
+          }
+        }
+      },
+      "expectedSha256": "8f5205bdf11d2075d8474797dc854cb516e043979a03435e840c8aeebb56d63c",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A06",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "2012-09-09",
+        "clockTime": "09:30",
+        "timeIndex": 5,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2037-9-9",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2012-09-09",
+        "clockTime": "09:30",
+        "timeIndex": 5
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2012-9-9",
+          "lunarYear": 2012,
+          "lunarMonth": 7,
+          "lunarDay": 24,
+          "isLeapMonth": false,
+          "sexagenary": "壬辰 戊申 癸酉 丁巳",
+          "timeLabel": "巳时",
+          "timeRange": "09:00~11:00"
+        },
+        "natal": {
+          "soulPalace": "卯",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:兄弟|卯:命宫|辰:父母|巳:福德|午:田宅|未:官禄|申:仆役|酉:迁移|戌:疾厄|亥:财帛|子:子女|丑:夫妻*",
+          "majorStarPlacements": "七杀@卯|天同@寅|天府@酉|天机@午|天梁@寅|天相@丑|太阳@辰|太阴@戌|巨门@子|廉贞@亥|武曲@卯|破军@未|紫微@未|贪狼@亥",
+          "keyMinorStarPlacements": "右弼@辰|地劫@辰|地空@午|天钺@巳|天马@寅|天魁@卯|左辅@戌|擎羊@子|文昌@巳|文曲@酉|火星@未|禄存@亥|铃星@卯|陀罗@戌",
+          "birthMutagen": "禄:天梁|权:紫微|科:左辅|忌:武曲",
+          "decadalRanges": "寅:14-23|卯:4-13|辰:114-123|巳:104-113|午:94-103|未:84-93|申:74-83|酉:64-73|戌:54-63|亥:44-53|子:34-43|丑:24-33"
+        },
+        "horoscope": {
+          "targetSolarDate": "2037-9-9",
+          "targetLunarDate": "二〇三七年七月三十",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "丑",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:太阴|权:天同|科:天机|忌:巨门"
+          }
+        }
+      },
+      "expectedSha256": "f881d84559373a65d650fae9b62c5fa537c4bcfe26ae2d1a2344b43e4e9c8a8d",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A07",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1999-12-31",
+        "clockTime": "11:30",
+        "timeIndex": 6,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2024-12-31",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1999-12-31",
+        "clockTime": "11:30",
+        "timeIndex": 6
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1999-12-31",
+          "lunarYear": 1999,
+          "lunarMonth": 11,
+          "lunarDay": 24,
+          "isLeapMonth": false,
+          "sexagenary": "己卯 丙子 丁巳 丙午",
+          "timeLabel": "午时",
+          "timeRange": "11:00~13:00"
+        },
+        "natal": {
+          "soulPalace": "午",
+          "bodyPalace": "午",
+          "fiveElementsClass": "土五局",
+          "palaceLayout": "寅:财帛|卯:子女|辰:夫妻|巳:兄弟|午:命宫*|未:父母|申:福德|酉:田宅|戌:官禄|亥:仆役|子:迁移|丑:疾厄",
+          "majorStarPlacements": "七杀@巳|天同@子|天府@亥|天机@辰|天梁@辰|天相@卯|太阳@寅|太阴@子|巨门@寅|廉贞@酉|武曲@丑|破军@酉|紫微@巳|贪狼@丑",
+          "keyMinorStarPlacements": "右弼@子|地劫@巳|地空@巳|天钺@申|天马@巳|天魁@子|左辅@寅|擎羊@未|文昌@辰|文曲@戌|火星@卯|禄存@午|铃星@辰|陀罗@巳",
+          "birthMutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲",
+          "decadalRanges": "寅:45-54|卯:35-44|辰:25-34|巳:15-24|午:5-14|未:115-124|申:105-114|酉:95-104|戌:85-94|亥:75-84|子:65-74|丑:55-64"
+        },
+        "horoscope": {
+          "targetSolarDate": "2024-12-31",
+          "targetLunarDate": "二〇二四年腊月初一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 2,
+            "palaceName": "命宫",
+            "heavenlyStem": "戊",
+            "earthlyBranch": "辰",
+            "ageRange": [
+              25,
+              34
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 2,
+            "palaceName": "命宫",
+            "heavenlyStem": "甲",
+            "earthlyBranch": "辰",
+            "mutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳"
+          }
+        }
+      },
+      "expectedSha256": "a880959b35bec1a78be3fa0938886052e7a1a613115d97ce0567af6a52afb2be",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A08",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "2005-05-18",
+        "clockTime": "13:30",
+        "timeIndex": 7,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2030-5-18",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2005-05-18",
+        "clockTime": "13:30",
+        "timeIndex": 7
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2005-5-18",
+          "lunarYear": 2005,
+          "lunarMonth": 4,
+          "lunarDay": 11,
+          "isLeapMonth": false,
+          "sexagenary": "乙酉 辛巳 壬寅 丁未",
+          "timeLabel": "未时",
+          "timeRange": "13:00~15:00"
+        },
+        "natal": {
+          "soulPalace": "戌",
+          "bodyPalace": "子",
+          "fiveElementsClass": "土五局",
+          "palaceLayout": "寅:官禄|卯:仆役|辰:迁移|巳:疾厄|午:财帛|未:子女|申:夫妻|酉:兄弟|戌:命宫|亥:父母|子:福德*|丑:田宅",
+          "majorStarPlacements": "七杀@寅|天同@卯|天府@申|天机@未|天梁@丑|天相@子|太阳@巳|太阴@酉|巨门@亥|廉贞@子|武曲@辰|破军@午|紫微@申|贪狼@戌",
+          "keyMinorStarPlacements": "右弼@未|地劫@午|地空@辰|天钺@申|天马@亥|天魁@子|左辅@未|擎羊@辰|文昌@卯|文曲@亥|火星@戌|禄存@卯|铃星@巳|陀罗@寅",
+          "birthMutagen": "禄:天机|权:天梁|科:紫微|忌:太阴",
+          "decadalRanges": "寅:45-54|卯:55-64|辰:65-74|巳:75-84|午:85-94|未:95-104|申:105-114|酉:115-124|戌:5-14|亥:15-24|子:25-34|丑:35-44"
+        },
+        "horoscope": {
+          "targetSolarDate": "2030-5-18",
+          "targetLunarDate": "二〇三〇年四月十七",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 10,
+            "palaceName": "命宫",
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子",
+            "ageRange": [
+              25,
+              34
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 8,
+            "palaceName": "命宫",
+            "heavenlyStem": "庚",
+            "earthlyBranch": "戌",
+            "mutagen": "禄:太阳|权:武曲|科:太阴|忌:天同"
+          }
+        }
+      },
+      "expectedSha256": "94981b973bb0c5718c92ee9b1761c853263b8d5466e7915943e75ce22460f1a5",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "target.yearlyMutagen",
+            "classification": "school_difference",
+            "note": "流年四化沿用各自门派表。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A09",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1988-07-07",
+        "clockTime": "15:30",
+        "timeIndex": 8,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2013-7-7",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1988-07-07",
+        "clockTime": "15:30",
+        "timeIndex": 8
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1988-7-7",
+          "lunarYear": 1988,
+          "lunarMonth": 5,
+          "lunarDay": 24,
+          "isLeapMonth": false,
+          "sexagenary": "戊辰 戊午 癸亥 庚申",
+          "timeLabel": "申时",
+          "timeRange": "15:00~17:00"
+        },
+        "natal": {
+          "soulPalace": "戌",
+          "bodyPalace": "寅",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:官禄*|卯:仆役|辰:迁移|巳:疾厄|午:财帛|未:子女|申:夫妻|酉:兄弟|戌:命宫|亥:父母|子:福德|丑:田宅",
+          "majorStarPlacements": "七杀@酉|天同@申|天府@卯|天机@子|天梁@申|天相@未|太阳@戌|太阴@辰|巨门@午|廉贞@巳|武曲@酉|破军@丑|紫微@丑|贪狼@巳",
+          "keyMinorStarPlacements": "右弼@午|地劫@未|地空@卯|天钺@未|天马@寅|天魁@丑|左辅@申|擎羊@午|文昌@寅|文曲@子|火星@戌|禄存@巳|铃星@午|陀罗@辰",
+          "birthMutagen": "禄:贪狼|权:太阴|科:右弼|忌:天机",
+          "decadalRanges": "寅:42-51|卯:52-61|辰:62-71|巳:72-81|午:82-91|未:92-101|申:102-111|酉:112-121|戌:2-11|亥:12-21|子:22-31|丑:32-41"
+        },
+        "horoscope": {
+          "targetSolarDate": "2013-7-7",
+          "targetLunarDate": "二〇一三年五月三十",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 10,
+            "palaceName": "命宫",
+            "heavenlyStem": "甲",
+            "earthlyBranch": "子",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼"
+          }
+        }
+      },
+      "expectedSha256": "65fa6fabc5b13a03c462929efdd6f7e45cb6d970d724896fb8e2381a2bab4a1a",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A10",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1979-10-24",
+        "clockTime": "17:30",
+        "timeIndex": 9,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2004-10-24",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1979-10-24",
+        "clockTime": "17:30",
+        "timeIndex": 9
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1979-10-24",
+          "lunarYear": 1979,
+          "lunarMonth": 9,
+          "lunarDay": 4,
+          "isLeapMonth": false,
+          "sexagenary": "己未 甲戌 甲子 癸酉",
+          "timeLabel": "酉时",
+          "timeRange": "17:00~19:00"
+        },
+        "natal": {
+          "soulPalace": "丑",
+          "bodyPalace": "未",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:父母|卯:福德|辰:田宅|巳:官禄|午:仆役|未:迁移*|申:疾厄|酉:财帛|戌:子女|亥:夫妻|子:兄弟|丑:命宫",
+          "majorStarPlacements": "七杀@未|天同@戌|天府@丑|天机@寅|天梁@午|天相@巳|太阳@子|太阴@寅|巨门@辰|廉贞@未|武曲@亥|破军@亥|紫微@卯|贪狼@卯",
+          "keyMinorStarPlacements": "右弼@寅|地劫@申|地空@寅|天钺@申|天马@巳|天魁@子|左辅@子|擎羊@未|文昌@丑|文曲@丑|火星@午|禄存@午|铃星@未|陀罗@巳",
+          "birthMutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲",
+          "decadalRanges": "寅:12-21|卯:22-31|辰:32-41|巳:42-51|午:52-61|未:62-71|申:72-81|酉:82-91|戌:92-101|亥:102-111|子:112-121|丑:2-11"
+        },
+        "horoscope": {
+          "targetSolarDate": "2004-10-24",
+          "targetLunarDate": "二〇〇四年九月十一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 1,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "卯",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 6,
+            "palaceName": "命宫",
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申",
+            "mutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳"
+          }
+        }
+      },
+      "expectedSha256": "aec967386be4998d1da98dd9b79a9d8855191860cc6244a29c164464a5cb1dc7",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A11",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "1995-02-15",
+        "clockTime": "19:30",
+        "timeIndex": 10,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2020-2-15",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1995-02-15",
+        "clockTime": "19:30",
+        "timeIndex": 10
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1995-2-15",
+          "lunarYear": 1995,
+          "lunarMonth": 1,
+          "lunarDay": 16,
+          "isLeapMonth": false,
+          "sexagenary": "乙亥 戊寅 丁丑 庚戌",
+          "timeLabel": "戌时",
+          "timeRange": "19:00~21:00"
+        },
+        "natal": {
+          "soulPalace": "辰",
+          "bodyPalace": "子",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:夫妻|卯:兄弟|辰:命宫|巳:父母|午:福德|未:田宅|申:官禄|酉:仆役|戌:迁移|亥:疾厄|子:财帛*|丑:子女",
+          "majorStarPlacements": "七杀@巳|天同@子|天府@亥|天机@辰|天梁@辰|天相@卯|太阳@寅|太阴@子|巨门@寅|廉贞@酉|武曲@丑|破军@酉|紫微@巳|贪狼@丑",
+          "keyMinorStarPlacements": "右弼@戌|地劫@酉|地空@丑|天钺@申|天马@巳|天魁@子|左辅@辰|擎羊@辰|文昌@子|文曲@寅|火星@未|禄存@卯|铃星@申|陀罗@寅",
+          "birthMutagen": "禄:天机|权:天梁|科:紫微|忌:太阴",
+          "decadalRanges": "寅:24-33|卯:14-23|辰:4-13|巳:114-123|午:104-113|未:94-103|申:84-93|酉:74-83|戌:64-73|亥:54-63|子:44-53|丑:34-43"
+        },
+        "horoscope": {
+          "targetSolarDate": "2020-2-15",
+          "targetLunarDate": "二〇二〇年正月廿二",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 0,
+            "palaceName": "命宫",
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 10,
+            "palaceName": "命宫",
+            "heavenlyStem": "庚",
+            "earthlyBranch": "子",
+            "mutagen": "禄:太阳|权:武曲|科:太阴|忌:天同"
+          }
+        }
+      },
+      "expectedSha256": "d04c719f6fba188d1661bc2ac92b05df94c586870eddc9a34393ef35fdcb951f",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "target.yearlyMutagen",
+            "classification": "school_difference",
+            "note": "流年四化沿用各自门派表。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "A12",
+      "category": "ordinary",
+      "input": {
+        "solarDate": "2008-04-02",
+        "clockTime": "21:30",
+        "timeIndex": 11,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2033-4-2",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2008-04-02",
+        "clockTime": "21:30",
+        "timeIndex": 11
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2008-4-2",
+          "lunarYear": 2008,
+          "lunarMonth": 2,
+          "lunarDay": 26,
+          "isLeapMonth": false,
+          "sexagenary": "戊子 乙卯 壬申 辛亥",
+          "timeLabel": "亥时",
+          "timeRange": "21:00~23:00"
+        },
+        "natal": {
+          "soulPalace": "辰",
+          "bodyPalace": "寅",
+          "fiveElementsClass": "土五局",
+          "palaceLayout": "寅:夫妻*|卯:兄弟|辰:命宫|巳:父母|午:福德|未:田宅|申:官禄|酉:仆役|戌:迁移|亥:疾厄|子:财帛|丑:子女",
+          "majorStarPlacements": "七杀@亥|天同@午|天府@巳|天机@戌|天梁@戌|天相@酉|太阳@申|太阴@午|巨门@申|廉贞@卯|武曲@未|破军@卯|紫微@亥|贪狼@未",
+          "keyMinorStarPlacements": "右弼@酉|地劫@戌|地空@子|天钺@未|天马@寅|天魁@丑|左辅@巳|擎羊@午|文昌@亥|文曲@卯|火星@丑|禄存@巳|铃星@酉|陀罗@辰",
+          "birthMutagen": "禄:贪狼|权:太阴|科:右弼|忌:天机",
+          "decadalRanges": "寅:25-34|卯:15-24|辰:5-14|巳:115-124|午:105-114|未:95-104|申:85-94|酉:75-84|戌:65-74|亥:55-64|子:45-54|丑:35-44"
+        },
+        "horoscope": {
+          "targetSolarDate": "2033-4-2",
+          "targetLunarDate": "二〇三三年三月初三",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 0,
+            "palaceName": "命宫",
+            "heavenlyStem": "甲",
+            "earthlyBranch": "寅",
+            "ageRange": [
+              25,
+              34
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "丑",
+            "mutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼"
+          }
+        }
+      },
+      "expectedSha256": "f3a29d5cf92787c5f1c68244e5ea29783f7a6c4c9b066e607b18be8bf90aaf10",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Z01",
+      "category": "zi_boundary",
+      "input": {
+        "solarDate": "2024-01-15",
+        "clockTime": "00:30",
+        "timeIndex": 0,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2049-1-15",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-01-15",
+        "clockTime": "00:30",
+        "timeIndex": 0
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-1-15",
+          "lunarYear": 2023,
+          "lunarMonth": 12,
+          "lunarDay": 5,
+          "isLeapMonth": false,
+          "sexagenary": "癸卯 乙丑 戊寅 壬子",
+          "timeLabel": "早子时",
+          "timeRange": "00:00~01:00"
+        },
+        "natal": {
+          "soulPalace": "丑",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:父母|卯:福德|辰:田宅|巳:官禄|午:仆役|未:迁移|申:疾厄|酉:财帛|戌:子女|亥:夫妻|子:兄弟|丑:命宫*",
+          "majorStarPlacements": "七杀@戌|天同@未|天府@辰|天机@亥|天梁@酉|天相@申|太阳@酉|太阴@巳|巨门@未|廉贞@辰|武曲@申|破军@寅|紫微@子|贪狼@午",
+          "keyMinorStarPlacements": "右弼@亥|地劫@亥|地空@亥|天钺@巳|天马@巳|天魁@卯|左辅@卯|擎羊@丑|文昌@戌|文曲@辰|火星@酉|禄存@子|铃星@戌|陀罗@亥",
+          "birthMutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼",
+          "decadalRanges": "寅:114-123|卯:104-113|辰:94-103|巳:84-93|午:74-83|未:64-73|申:54-63|酉:44-53|戌:34-43|亥:24-33|子:14-23|丑:4-13"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-1-15",
+          "targetLunarDate": "二〇四八年腊月十二",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 9,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "亥",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 2,
+            "palaceName": "命宫",
+            "heavenlyStem": "戊",
+            "earthlyBranch": "辰",
+            "mutagen": "禄:贪狼|权:太阴|科:右弼|忌:天机"
+          }
+        }
+      },
+      "expectedSha256": "de310741aa9122b6d4a45f99563849995aac82fe89057512ef2e69cfa98d9718",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "target.yearlyMutagen",
+            "classification": "school_difference",
+            "note": "流年四化沿用各自门派表。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Z02",
+      "category": "zi_boundary",
+      "input": {
+        "solarDate": "2024-01-14",
+        "clockTime": "23:30",
+        "timeIndex": 12,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2049-1-14",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-01-14",
+        "clockTime": "23:30",
+        "timeIndex": 12
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-1-14",
+          "lunarYear": 2023,
+          "lunarMonth": 12,
+          "lunarDay": 4,
+          "isLeapMonth": false,
+          "sexagenary": "癸卯 乙丑 戊寅 壬子",
+          "timeLabel": "晚子时",
+          "timeRange": "23:00~00:00"
+        },
+        "natal": {
+          "soulPalace": "丑",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:父母|卯:福德|辰:田宅|巳:官禄|午:仆役|未:迁移|申:疾厄|酉:财帛|戌:子女|亥:夫妻|子:兄弟|丑:命宫*",
+          "majorStarPlacements": "七杀@戌|天同@未|天府@辰|天机@亥|天梁@酉|天相@申|太阳@酉|太阴@巳|巨门@未|廉贞@辰|武曲@申|破军@寅|紫微@子|贪狼@午",
+          "keyMinorStarPlacements": "右弼@亥|地劫@亥|地空@亥|天钺@巳|天马@巳|天魁@卯|左辅@卯|擎羊@丑|文昌@戌|文曲@辰|火星@酉|禄存@子|铃星@戌|陀罗@亥",
+          "birthMutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼",
+          "decadalRanges": "寅:114-123|卯:104-113|辰:94-103|巳:84-93|午:74-83|未:64-73|申:54-63|酉:44-53|戌:34-43|亥:24-33|子:14-23|丑:4-13"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-1-14",
+          "targetLunarDate": "二〇四八年腊月十一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 9,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "亥",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 2,
+            "palaceName": "命宫",
+            "heavenlyStem": "戊",
+            "earthlyBranch": "辰",
+            "mutagen": "禄:贪狼|权:太阴|科:右弼|忌:天机"
+          }
+        }
+      },
+      "expectedSha256": "22cd869366bfdf3bb8d8c2701439d197f3a3ab4b08f07fb16951dbcd7ddbf7c9",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "major",
+            "classification": "time_policy_difference",
+            "note": "两个实现都标识晚子时，但 iztro 将逻辑农历日推进一天；fortel 只保留子支位置。项目选择 iztro 口径。"
+          },
+          {
+            "field": "target.yearlyMutagen",
+            "classification": "school_difference",
+            "note": "流年四化沿用各自门派表。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Z03",
+      "category": "zi_boundary",
+      "input": {
+        "solarDate": "2000-02-04",
+        "clockTime": "00:30",
+        "timeIndex": 0,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2025-2-4",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2000-02-04",
+        "clockTime": "00:30",
+        "timeIndex": 0
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2000-2-4",
+          "lunarYear": 1999,
+          "lunarMonth": 12,
+          "lunarDay": 29,
+          "isLeapMonth": false,
+          "sexagenary": "己卯 丁丑 壬辰 庚子",
+          "timeLabel": "早子时",
+          "timeRange": "00:00~01:00"
+        },
+        "natal": {
+          "soulPalace": "丑",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:父母|卯:福德|辰:田宅|巳:官禄|午:仆役|未:迁移|申:疾厄|酉:财帛|戌:子女|亥:夫妻|子:兄弟|丑:命宫*",
+          "majorStarPlacements": "七杀@未|天同@戌|天府@丑|天机@寅|天梁@午|天相@巳|太阳@子|太阴@寅|巨门@辰|廉贞@未|武曲@亥|破军@亥|紫微@卯|贪狼@卯",
+          "keyMinorStarPlacements": "右弼@亥|地劫@亥|地空@亥|天钺@申|天马@巳|天魁@子|左辅@卯|擎羊@未|文昌@戌|文曲@辰|火星@酉|禄存@午|铃星@戌|陀罗@巳",
+          "birthMutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲",
+          "decadalRanges": "寅:12-21|卯:22-31|辰:32-41|巳:42-51|午:52-61|未:62-71|申:72-81|酉:82-91|戌:92-101|亥:102-111|子:112-121|丑:2-11"
+        },
+        "horoscope": {
+          "targetSolarDate": "2025-2-4",
+          "targetLunarDate": "二〇二五年正月初七",
+          "nominalAge": 27,
+          "decadal": {
+            "palaceIndex": 1,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "卯",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "c8800be2d99bf1ded45a7863f384b707fa2a498dc16aa856e6f5d00b73e54668",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Z04",
+      "category": "zi_boundary",
+      "input": {
+        "solarDate": "2000-02-03",
+        "clockTime": "23:30",
+        "timeIndex": 12,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2025-2-3",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2000-02-03",
+        "clockTime": "23:30",
+        "timeIndex": 12
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2000-2-3",
+          "lunarYear": 1999,
+          "lunarMonth": 12,
+          "lunarDay": 28,
+          "isLeapMonth": false,
+          "sexagenary": "己卯 丁丑 壬辰 庚子",
+          "timeLabel": "晚子时",
+          "timeRange": "23:00~00:00"
+        },
+        "natal": {
+          "soulPalace": "丑",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:父母|卯:福德|辰:田宅|巳:官禄|午:仆役|未:迁移|申:疾厄|酉:财帛|戌:子女|亥:夫妻|子:兄弟|丑:命宫*",
+          "majorStarPlacements": "七杀@未|天同@戌|天府@丑|天机@寅|天梁@午|天相@巳|太阳@子|太阴@寅|巨门@辰|廉贞@未|武曲@亥|破军@亥|紫微@卯|贪狼@卯",
+          "keyMinorStarPlacements": "右弼@亥|地劫@亥|地空@亥|天钺@申|天马@巳|天魁@子|左辅@卯|擎羊@未|文昌@戌|文曲@辰|火星@酉|禄存@午|铃星@戌|陀罗@巳",
+          "birthMutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲",
+          "decadalRanges": "寅:12-21|卯:22-31|辰:32-41|巳:42-51|午:52-61|未:62-71|申:72-81|酉:82-91|戌:92-101|亥:102-111|子:112-121|丑:2-11"
+        },
+        "horoscope": {
+          "targetSolarDate": "2025-2-3",
+          "targetLunarDate": "二〇二五年正月初六",
+          "nominalAge": 27,
+          "decadal": {
+            "palaceIndex": 1,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "卯",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "ef9cc84744c5cf315612165dedfcbc2caedb6a02860252a158ab0579ea959bc1",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Z05",
+      "category": "zi_boundary",
+      "input": {
+        "solarDate": "1990-05-07",
+        "clockTime": "00:05",
+        "timeIndex": 0,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2015-5-7",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1990-05-07",
+        "clockTime": "00:05",
+        "timeIndex": 0
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1990-5-7",
+          "lunarYear": 1990,
+          "lunarMonth": 4,
+          "lunarDay": 13,
+          "isLeapMonth": false,
+          "sexagenary": "庚午 辛巳 壬申 庚子",
+          "timeLabel": "早子时",
+          "timeRange": "00:00~01:00"
+        },
+        "natal": {
+          "soulPalace": "巳",
+          "bodyPalace": "巳",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:子女|卯:夫妻|辰:兄弟|巳:命宫*|午:父母|未:福德|申:田宅|酉:官禄|戌:仆役|亥:迁移|子:疾厄|丑:财帛",
+          "majorStarPlacements": "七杀@申|天同@酉|天府@寅|天机@丑|天梁@未|天相@午|太阳@亥|太阴@卯|巨门@巳|廉贞@午|武曲@戌|破军@子|紫微@寅|贪狼@辰",
+          "keyMinorStarPlacements": "右弼@未|地劫@亥|地空@亥|天钺@未|天马@申|天魁@丑|左辅@未|擎羊@酉|文昌@戌|文曲@辰|火星@丑|禄存@申|铃星@卯|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:94-103|卯:104-113|辰:114-123|巳:4-13|午:14-23|未:24-33|申:34-43|酉:44-53|戌:54-63|亥:64-73|子:74-83|丑:84-93"
+        },
+        "horoscope": {
+          "targetSolarDate": "2015-5-7",
+          "targetLunarDate": "二〇一五年三月十九",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 5,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 5,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "未",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "978752c0708314cded4c86a360374f7b13ab9c84f1f035068b0bc1b4b2c8530a",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Z06",
+      "category": "zi_boundary",
+      "input": {
+        "solarDate": "1990-05-06",
+        "clockTime": "23:55",
+        "timeIndex": 12,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2015-5-6",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "1990-05-06",
+        "clockTime": "23:55",
+        "timeIndex": 12
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "1990-5-6",
+          "lunarYear": 1990,
+          "lunarMonth": 4,
+          "lunarDay": 12,
+          "isLeapMonth": false,
+          "sexagenary": "庚午 辛巳 壬申 庚子",
+          "timeLabel": "晚子时",
+          "timeRange": "23:00~00:00"
+        },
+        "natal": {
+          "soulPalace": "巳",
+          "bodyPalace": "巳",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:子女|卯:夫妻|辰:兄弟|巳:命宫*|午:父母|未:福德|申:田宅|酉:官禄|戌:仆役|亥:迁移|子:疾厄|丑:财帛",
+          "majorStarPlacements": "七杀@申|天同@酉|天府@寅|天机@丑|天梁@未|天相@午|太阳@亥|太阴@卯|巨门@巳|廉贞@午|武曲@戌|破军@子|紫微@寅|贪狼@辰",
+          "keyMinorStarPlacements": "右弼@未|地劫@亥|地空@亥|天钺@未|天马@申|天魁@丑|左辅@未|擎羊@酉|文昌@戌|文曲@辰|火星@丑|禄存@申|铃星@卯|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:94-103|卯:104-113|辰:114-123|巳:4-13|午:14-23|未:24-33|申:34-43|酉:44-53|戌:54-63|亥:64-73|子:74-83|丑:84-93"
+        },
+        "horoscope": {
+          "targetSolarDate": "2015-5-6",
+          "targetLunarDate": "二〇一五年三月十八",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 5,
+            "palaceName": "命宫",
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 5,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "未",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "78d6b6d8afc508b126a9df8f043883feb02a7e7d04401d095be59efc73fd9c3a",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "major",
+            "classification": "time_policy_difference",
+            "note": "两个实现都标识晚子时，但 iztro 将逻辑农历日推进一天；fortel 只保留子支位置。项目选择 iztro 口径。"
+          },
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "L01",
+      "category": "leap_month",
+      "input": {
+        "solarDate": "2020-05-23",
+        "clockTime": "07:30",
+        "timeIndex": 4,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2045-5-23",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2020-05-23",
+        "clockTime": "07:30",
+        "timeIndex": 4
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2020-5-23",
+          "lunarYear": 2020,
+          "lunarMonth": 4,
+          "lunarDay": 1,
+          "isLeapMonth": true,
+          "sexagenary": "庚子 辛巳 丙寅 壬辰",
+          "timeLabel": "辰时",
+          "timeRange": "07:00~09:00"
+        },
+        "natal": {
+          "soulPalace": "丑",
+          "bodyPalace": "酉",
+          "fiveElementsClass": "火六局",
+          "palaceLayout": "寅:父母|卯:福德|辰:田宅|巳:官禄|午:仆役|未:迁移|申:疾厄|酉:财帛*|戌:子女|亥:夫妻|子:兄弟|丑:命宫",
+          "majorStarPlacements": "七杀@丑|天同@辰|天府@未|天机@申|天梁@子|天相@亥|太阳@午|太阴@申|巨门@戌|廉贞@丑|武曲@巳|破军@巳|紫微@酉|贪狼@酉",
+          "keyMinorStarPlacements": "右弼@未|地劫@卯|地空@未|天钺@未|天马@寅|天魁@丑|左辅@未|擎羊@酉|文昌@午|文曲@申|火星@午|禄存@申|铃星@寅|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:16-25|卯:26-35|辰:36-45|巳:46-55|午:56-65|未:66-75|申:76-85|酉:86-95|戌:96-105|亥:106-115|子:116-125|丑:6-15"
+        },
+        "horoscope": {
+          "targetSolarDate": "2045-5-23",
+          "targetLunarDate": "二〇四五年四月初七",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 1,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯",
+            "ageRange": [
+              26,
+              35
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "丑",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "6f71ee01a413a72877748fbb54fe976df510c2a7d5787e8fa35af9faad55b43d",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "L02",
+      "category": "leap_month",
+      "input": {
+        "solarDate": "2020-06-06",
+        "clockTime": "09:30",
+        "timeIndex": 5,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2045-6-6",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2020-06-06",
+        "clockTime": "09:30",
+        "timeIndex": 5
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2020-6-6",
+          "lunarYear": 2020,
+          "lunarMonth": 4,
+          "lunarDay": 15,
+          "isLeapMonth": true,
+          "sexagenary": "庚子 辛巳 庚辰 辛巳",
+          "timeLabel": "巳时",
+          "timeRange": "09:00~11:00"
+        },
+        "natal": {
+          "soulPalace": "子",
+          "bodyPalace": "戌",
+          "fiveElementsClass": "火六局",
+          "palaceLayout": "寅:福德|卯:田宅|辰:官禄|巳:仆役|午:迁移|未:疾厄|申:财帛|酉:子女|戌:夫妻*|亥:兄弟|子:命宫|丑:父母",
+          "majorStarPlacements": "七杀@酉|天同@申|天府@卯|天机@子|天梁@申|天相@未|太阳@戌|太阴@辰|巨门@午|廉贞@巳|武曲@酉|破军@丑|紫微@丑|贪狼@巳",
+          "keyMinorStarPlacements": "右弼@未|地劫@辰|地空@午|天钺@未|天马@寅|天魁@丑|左辅@未|擎羊@酉|文昌@巳|文曲@酉|火星@未|禄存@申|铃星@卯|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:106-115|卯:96-105|辰:86-95|巳:76-85|午:66-75|未:56-65|申:46-55|酉:36-45|戌:26-35|亥:16-25|子:6-15|丑:116-125"
+        },
+        "horoscope": {
+          "targetSolarDate": "2045-6-6",
+          "targetLunarDate": "二〇四五年四月廿一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 8,
+            "palaceName": "命宫",
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌",
+            "ageRange": [
+              26,
+              35
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "丑",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "170cc84b2637ff2eddf46ae773cc26ff8069192dcf977435c624931c5fa937e4",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "L03",
+      "category": "leap_month",
+      "input": {
+        "solarDate": "2020-06-07",
+        "clockTime": "11:30",
+        "timeIndex": 6,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2045-6-7",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2020-06-07",
+        "clockTime": "11:30",
+        "timeIndex": 6
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2020-6-7",
+          "lunarYear": 2020,
+          "lunarMonth": 4,
+          "lunarDay": 16,
+          "isLeapMonth": true,
+          "sexagenary": "庚子 壬午 辛巳 甲午",
+          "timeLabel": "午时",
+          "timeRange": "11:00~13:00"
+        },
+        "natal": {
+          "soulPalace": "子",
+          "bodyPalace": "子",
+          "fiveElementsClass": "火六局",
+          "palaceLayout": "寅:福德|卯:田宅|辰:官禄|巳:仆役|午:迁移|未:疾厄|申:财帛|酉:子女|戌:夫妻|亥:兄弟|子:命宫*|丑:父母",
+          "majorStarPlacements": "七杀@辰|天同@丑|天府@戌|天机@巳|天梁@卯|天相@寅|太阳@卯|太阴@亥|巨门@丑|廉贞@戌|武曲@寅|破军@申|紫微@午|贪狼@子",
+          "keyMinorStarPlacements": "右弼@午|地劫@巳|地空@巳|天钺@未|天马@寅|天魁@丑|左辅@申|擎羊@酉|文昌@辰|文曲@戌|火星@申|禄存@申|铃星@辰|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:26-35|卯:36-45|辰:46-55|巳:56-65|午:66-75|未:76-85|申:86-95|酉:96-105|戌:106-115|亥:116-125|子:6-15|丑:16-25"
+        },
+        "horoscope": {
+          "targetSolarDate": "2045-6-7",
+          "targetLunarDate": "二〇四五年四月廿二",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 0,
+            "palaceName": "命宫",
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅",
+            "ageRange": [
+              26,
+              35
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "丑",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "28da85ffcd5c3ea501e4012d96b97189add82635c32983cbecea3392a5493ec4",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "L04",
+      "category": "leap_month",
+      "input": {
+        "solarDate": "2020-06-20",
+        "clockTime": "13:30",
+        "timeIndex": 7,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2045-6-20",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2020-06-20",
+        "clockTime": "13:30",
+        "timeIndex": 7
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2020-6-20",
+          "lunarYear": 2020,
+          "lunarMonth": 4,
+          "lunarDay": 29,
+          "isLeapMonth": true,
+          "sexagenary": "庚子 壬午 甲午 辛未",
+          "timeLabel": "未时",
+          "timeRange": "13:00~15:00"
+        },
+        "natal": {
+          "soulPalace": "亥",
+          "bodyPalace": "丑",
+          "fiveElementsClass": "土五局",
+          "palaceLayout": "寅:田宅|卯:官禄|辰:仆役|巳:迁移|午:疾厄|未:财帛|申:子女|酉:夫妻|戌:兄弟|亥:命宫|子:父母|丑:福德*",
+          "majorStarPlacements": "七杀@辰|天同@丑|天府@戌|天机@巳|天梁@卯|天相@寅|太阳@卯|太阴@亥|巨门@丑|廉贞@戌|武曲@寅|破军@申|紫微@午|贪狼@子",
+          "keyMinorStarPlacements": "右弼@午|地劫@午|地空@辰|天钺@未|天马@寅|天魁@丑|左辅@申|擎羊@酉|文昌@卯|文曲@亥|火星@酉|禄存@申|铃星@巳|陀罗@未",
+          "birthMutagen": "禄:太阳|权:武曲|科:太阴|忌:天同",
+          "decadalRanges": "寅:95-104|卯:85-94|辰:75-84|巳:65-74|午:55-64|未:45-54|申:35-44|酉:25-34|戌:15-24|亥:5-14|子:115-124|丑:105-114"
+        },
+        "horoscope": {
+          "targetSolarDate": "2045-6-20",
+          "targetLunarDate": "二〇四五年五月初六",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 7,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉",
+            "ageRange": [
+              25,
+              34
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 11,
+            "palaceName": "命宫",
+            "heavenlyStem": "乙",
+            "earthlyBranch": "丑",
+            "mutagen": "禄:天机|权:天梁|科:紫微|忌:太阴"
+          }
+        }
+      },
+      "expectedSha256": "426b4b836f213748d731bd2440fca55d6ab64c769a78b08ffb35ada373d7c545",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Y01",
+      "category": "lunar_year_boundary",
+      "input": {
+        "solarDate": "2023-01-21",
+        "clockTime": "11:30",
+        "timeIndex": 6,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2048-1-21",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2023-01-21",
+        "clockTime": "11:30",
+        "timeIndex": 6
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2023-1-21",
+          "lunarYear": 2022,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "sexagenary": "壬寅 癸丑 己卯 庚午",
+          "timeLabel": "午时",
+          "timeRange": "11:00~13:00"
+        },
+        "natal": {
+          "soulPalace": "未",
+          "bodyPalace": "未",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:疾厄|卯:财帛|辰:子女|巳:夫妻|午:兄弟|未:命宫*|申:父母|酉:福德|戌:田宅|亥:官禄|子:仆役|丑:迁移",
+          "majorStarPlacements": "七杀@午|天同@亥|天府@子|天机@卯|天梁@巳|天相@辰|太阳@丑|太阴@丑|巨门@卯|廉贞@申|武曲@子|破军@戌|紫微@辰|贪狼@寅",
+          "keyMinorStarPlacements": "右弼@亥|地劫@巳|地空@巳|天钺@巳|天马@申|天魁@卯|左辅@卯|擎羊@子|文昌@辰|文曲@戌|火星@未|禄存@亥|铃星@酉|陀罗@戌",
+          "birthMutagen": "禄:天梁|权:紫微|科:左辅|忌:武曲",
+          "decadalRanges": "寅:72-81|卯:82-91|辰:92-101|巳:102-111|午:112-121|未:2-11|申:12-21|酉:22-31|戌:32-41|亥:42-51|子:52-61|丑:62-71"
+        },
+        "horoscope": {
+          "targetSolarDate": "2048-1-21",
+          "targetLunarDate": "二〇四七年腊月初七",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 7,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "酉",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 1,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "卯",
+            "mutagen": "禄:太阴|权:天同|科:天机|忌:巨门"
+          }
+        }
+      },
+      "expectedSha256": "a421bd60725f930aef3579d36d3ab5f30e453ab91d85c87863a22ebac9286edc",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "birthMutagen",
+            "classification": "school_difference",
+            "note": "iztro 默认全书表与 fortel 中州派四化表不同；本项目固定 iztro default，不混用。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Y02",
+      "category": "lunar_year_boundary",
+      "input": {
+        "solarDate": "2023-01-22",
+        "clockTime": "11:30",
+        "timeIndex": 6,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2048-1-22",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2023-01-22",
+        "clockTime": "11:30",
+        "timeIndex": 6
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2023-1-22",
+          "lunarYear": 2023,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "sexagenary": "癸卯 甲寅 庚辰 壬午",
+          "timeLabel": "午时",
+          "timeRange": "11:00~13:00"
+        },
+        "natal": {
+          "soulPalace": "申",
+          "bodyPalace": "申",
+          "fiveElementsClass": "木三局",
+          "palaceLayout": "寅:迁移|卯:疾厄|辰:财帛|巳:子女|午:夫妻|未:兄弟|申:命宫*|酉:父母|戌:福德|亥:田宅|子:官禄|丑:仆役",
+          "majorStarPlacements": "七杀@午|天同@亥|天府@子|天机@卯|天梁@巳|天相@辰|太阳@丑|太阴@丑|巨门@卯|廉贞@申|武曲@子|破军@戌|紫微@辰|贪狼@寅",
+          "keyMinorStarPlacements": "右弼@戌|地劫@巳|地空@巳|天钺@巳|天马@巳|天魁@卯|左辅@辰|擎羊@丑|文昌@辰|文曲@戌|火星@卯|禄存@子|铃星@辰|陀罗@亥",
+          "birthMutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼",
+          "decadalRanges": "寅:63-72|卯:73-82|辰:83-92|巳:93-102|午:103-112|未:113-122|申:3-12|酉:13-22|戌:23-32|亥:33-42|子:43-52|丑:53-62"
+        },
+        "horoscope": {
+          "targetSolarDate": "2048-1-22",
+          "targetLunarDate": "二〇四七年腊月初八",
+          "nominalAge": 25,
+          "decadal": {
+            "palaceIndex": 8,
+            "palaceName": "命宫",
+            "heavenlyStem": "壬",
+            "earthlyBranch": "戌",
+            "ageRange": [
+              23,
+              32
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 1,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "卯",
+            "mutagen": "禄:太阴|权:天同|科:天机|忌:巨门"
+          }
+        }
+      },
+      "expectedSha256": "57765526b352c47ffe9f6f5c2f1e8fcda203ef48ef80e0eb37b95f121f2630aa",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Y03",
+      "category": "lunar_year_boundary",
+      "input": {
+        "solarDate": "2024-02-09",
+        "clockTime": "11:30",
+        "timeIndex": 6,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2049-2-9",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-02-09",
+        "clockTime": "11:30",
+        "timeIndex": 6
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-2-9",
+          "lunarYear": 2023,
+          "lunarMonth": 12,
+          "lunarDay": 30,
+          "isLeapMonth": false,
+          "sexagenary": "癸卯 乙丑 癸卯 戊午",
+          "timeLabel": "午时",
+          "timeRange": "11:00~13:00"
+        },
+        "natal": {
+          "soulPalace": "未",
+          "bodyPalace": "未",
+          "fiveElementsClass": "火六局",
+          "palaceLayout": "寅:疾厄|卯:财帛|辰:子女|巳:夫妻|午:兄弟|未:命宫*|申:父母|酉:福德|戌:田宅|亥:官禄|子:仆役|丑:迁移",
+          "majorStarPlacements": "七杀@辰|天同@丑|天府@戌|天机@巳|天梁@卯|天相@寅|太阳@卯|太阴@亥|巨门@丑|廉贞@戌|武曲@寅|破军@申|紫微@午|贪狼@子",
+          "keyMinorStarPlacements": "右弼@亥|地劫@巳|地空@巳|天钺@巳|天马@巳|天魁@卯|左辅@卯|擎羊@丑|文昌@辰|文曲@戌|火星@卯|禄存@子|铃星@辰|陀罗@亥",
+          "birthMutagen": "禄:破军|权:巨门|科:太阴|忌:贪狼",
+          "decadalRanges": "寅:56-65|卯:46-55|辰:36-45|巳:26-35|午:16-25|未:6-15|申:116-125|酉:106-115|戌:96-105|亥:86-95|子:76-85|丑:66-75"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-2-9",
+          "targetLunarDate": "二〇四九年正月初八",
+          "nominalAge": 27,
+          "decadal": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "丁",
+            "earthlyBranch": "巳",
+            "ageRange": [
+              26,
+              35
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "83795d293aaeea2f30a7484c7de453a9008caa47130c9a32f8b28ac91945f8ba",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "Y04",
+      "category": "lunar_year_boundary",
+      "input": {
+        "solarDate": "2024-02-10",
+        "clockTime": "11:30",
+        "timeIndex": 6,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": false,
+        "targetDate": "2049-2-10",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-02-10",
+        "clockTime": "11:30",
+        "timeIndex": 6
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-2-10",
+          "lunarYear": 2024,
+          "lunarMonth": 1,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "sexagenary": "甲辰 丙寅 甲辰 庚午",
+          "timeLabel": "午时",
+          "timeRange": "11:00~13:00"
+        },
+        "natal": {
+          "soulPalace": "申",
+          "bodyPalace": "申",
+          "fiveElementsClass": "金四局",
+          "palaceLayout": "寅:迁移|卯:疾厄|辰:财帛|巳:子女|午:夫妻|未:兄弟|申:命宫*|酉:父母|戌:福德|亥:田宅|子:官禄|丑:仆役",
+          "majorStarPlacements": "七杀@亥|天同@午|天府@巳|天机@戌|天梁@戌|天相@酉|太阳@申|太阴@午|巨门@申|廉贞@卯|武曲@未|破军@卯|紫微@亥|贪狼@未",
+          "keyMinorStarPlacements": "右弼@戌|地劫@巳|地空@巳|天钺@未|天马@寅|天魁@丑|左辅@辰|擎羊@卯|文昌@辰|文曲@戌|火星@申|禄存@寅|铃星@辰|陀罗@丑",
+          "birthMutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳",
+          "decadalRanges": "寅:64-73|卯:54-63|辰:44-53|巳:34-43|午:24-33|未:14-23|申:4-13|酉:114-123|戌:104-113|亥:94-103|子:84-93|丑:74-83"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-2-10",
+          "targetLunarDate": "二〇四九年正月初九",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 4,
+            "palaceName": "命宫",
+            "heavenlyStem": "庚",
+            "earthlyBranch": "午",
+            "ageRange": [
+              24,
+              33
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "d89f47f3f7d2dcab834542412d1a62bb67afbd61feedf2685501209c1c822f56",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "T01",
+      "category": "true_solar",
+      "input": {
+        "solarDate": "2024-06-01",
+        "clockTime": "01:05",
+        "timeIndex": 1,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": true,
+        "longitude": 121.4737,
+        "placeLabel": "Shanghai",
+        "targetDate": "2049-6-1",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-06-01",
+        "clockTime": "01:13",
+        "timeIndex": 1
+      },
+      "trueSolarTime": {
+        "method": "longitude_plus_equation_of_time",
+        "correctionMinutes": 8.22,
+        "correctedDateTime": "2024-06-01 01:13",
+        "correctedTimeIndex": 1,
+        "crossesDate": false,
+        "crossesTimeBranch": false,
+        "confirmationRequired": false
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-6-1",
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 25,
+          "isLeapMonth": false,
+          "sexagenary": "甲辰 己巳 丙申 己丑",
+          "timeLabel": "丑时",
+          "timeRange": "01:00~03:00"
+        },
+        "natal": {
+          "soulPalace": "辰",
+          "bodyPalace": "午",
+          "fiveElementsClass": "木三局",
+          "palaceLayout": "寅:夫妻|卯:兄弟|辰:命宫|巳:父母|午:福德*|未:田宅|申:官禄|酉:仆役|戌:迁移|亥:疾厄|子:财帛|丑:子女",
+          "majorStarPlacements": "七杀@戌|天同@未|天府@辰|天机@亥|天梁@酉|天相@申|太阳@酉|太阴@巳|巨门@未|廉贞@辰|武曲@申|破军@寅|紫微@子|贪狼@午",
+          "keyMinorStarPlacements": "右弼@未|地劫@子|地空@戌|天钺@未|天马@寅|天魁@丑|左辅@未|擎羊@卯|文昌@酉|文曲@巳|火星@卯|禄存@寅|铃星@亥|陀罗@丑",
+          "birthMutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳",
+          "decadalRanges": "寅:23-32|卯:13-22|辰:3-12|巳:113-122|午:103-112|未:93-102|申:83-92|酉:73-82|戌:63-72|亥:53-62|子:43-52|丑:33-42"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-6-1",
+          "targetLunarDate": "二〇四九年五月初二",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 0,
+            "palaceName": "命宫",
+            "heavenlyStem": "丙",
+            "earthlyBranch": "寅",
+            "ageRange": [
+              23,
+              32
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "bc267d410776b6b7905343e5ff2fc08deb1ecf13d800a18ba59b106532cfac1f",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "T02",
+      "category": "true_solar",
+      "input": {
+        "solarDate": "2024-06-01",
+        "clockTime": "01:10",
+        "timeIndex": 1,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": true,
+        "longitude": 87.6168,
+        "placeLabel": "Urumqi",
+        "targetDate": "2049-5-31",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-05-31",
+        "clockTime": "23:02",
+        "timeIndex": 12
+      },
+      "trueSolarTime": {
+        "method": "longitude_plus_equation_of_time",
+        "correctionMinutes": -127.21,
+        "correctedDateTime": "2024-05-31 23:02",
+        "correctedTimeIndex": 12,
+        "crossesDate": true,
+        "crossesTimeBranch": true,
+        "confirmationRequired": true
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-5-31",
+          "lunarYear": 2024,
+          "lunarMonth": 4,
+          "lunarDay": 24,
+          "isLeapMonth": false,
+          "sexagenary": "甲辰 己巳 丙申 戊子",
+          "timeLabel": "晚子时",
+          "timeRange": "23:00~00:00"
+        },
+        "natal": {
+          "soulPalace": "巳",
+          "bodyPalace": "巳",
+          "fiveElementsClass": "木三局",
+          "palaceLayout": "寅:子女|卯:夫妻|辰:兄弟|巳:命宫*|午:父母|未:福德|申:田宅|酉:官禄|戌:仆役|亥:迁移|子:疾厄|丑:财帛",
+          "majorStarPlacements": "七杀@戌|天同@未|天府@辰|天机@亥|天梁@酉|天相@申|太阳@酉|太阴@巳|巨门@未|廉贞@辰|武曲@申|破军@寅|紫微@子|贪狼@午",
+          "keyMinorStarPlacements": "右弼@未|地劫@亥|地空@亥|天钺@未|天马@寅|天魁@丑|左辅@未|擎羊@卯|文昌@戌|文曲@辰|火星@寅|禄存@寅|铃星@戌|陀罗@丑",
+          "birthMutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳",
+          "decadalRanges": "寅:93-102|卯:103-112|辰:113-122|巳:3-12|午:13-22|未:23-32|申:33-42|酉:43-52|戌:53-62|亥:63-72|子:73-82|丑:83-92"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-5-31",
+          "targetLunarDate": "二〇四九年五月初一",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 5,
+            "palaceName": "命宫",
+            "heavenlyStem": "辛",
+            "earthlyBranch": "未",
+            "ageRange": [
+              23,
+              32
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "724625e8d7e3f9d9641fa29651b9a9503834bea870df649d0a10c1246c0beb0c",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [
+          {
+            "field": "major",
+            "classification": "time_policy_difference",
+            "note": "两个实现都标识晚子时，但 iztro 将逻辑农历日推进一天；fortel 只保留子支位置。项目选择 iztro 口径。"
+          }
+        ],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "T03",
+      "category": "true_solar",
+      "input": {
+        "solarDate": "2024-12-01",
+        "clockTime": "03:15",
+        "timeIndex": 2,
+        "gender": "female",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": true,
+        "longitude": 75.9898,
+        "placeLabel": "Kashgar",
+        "targetDate": "2049-12-1",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-12-01",
+        "clockTime": "00:28",
+        "timeIndex": 0
+      },
+      "trueSolarTime": {
+        "method": "longitude_plus_equation_of_time",
+        "correctionMinutes": -166.18,
+        "correctedDateTime": "2024-12-01 00:28",
+        "correctedTimeIndex": 0,
+        "crossesDate": false,
+        "crossesTimeBranch": true,
+        "confirmationRequired": true
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-12-1",
+          "lunarYear": 2024,
+          "lunarMonth": 11,
+          "lunarDay": 1,
+          "isLeapMonth": false,
+          "sexagenary": "甲辰 丙子 己亥 甲子",
+          "timeLabel": "早子时",
+          "timeRange": "00:00~01:00"
+        },
+        "natal": {
+          "soulPalace": "子",
+          "bodyPalace": "子",
+          "fiveElementsClass": "水二局",
+          "palaceLayout": "寅:福德|卯:田宅|辰:官禄|巳:仆役|午:迁移|未:疾厄|申:财帛|酉:子女|戌:夫妻|亥:兄弟|子:命宫*|丑:父母",
+          "majorStarPlacements": "七杀@酉|天同@申|天府@卯|天机@子|天梁@申|天相@未|太阳@戌|太阴@辰|巨门@午|廉贞@巳|武曲@酉|破军@丑|紫微@丑|贪狼@巳",
+          "keyMinorStarPlacements": "右弼@子|地劫@亥|地空@亥|天钺@未|天马@寅|天魁@丑|左辅@寅|擎羊@卯|文昌@戌|文曲@辰|火星@寅|禄存@寅|铃星@戌|陀罗@丑",
+          "birthMutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳",
+          "decadalRanges": "寅:102-111|卯:92-101|辰:82-91|巳:72-81|午:62-71|未:52-61|申:42-51|酉:32-41|戌:22-31|亥:12-21|子:2-11|丑:112-121"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-12-1",
+          "targetLunarDate": "二〇四九年冬月初七",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 8,
+            "palaceName": "命宫",
+            "heavenlyStem": "甲",
+            "earthlyBranch": "戌",
+            "ageRange": [
+              22,
+              31
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "362857ab475ea17b7454d95a3c450bc562b0e9f23d1527355cfd8b9ea0192957",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    },
+    {
+      "id": "T04",
+      "category": "true_solar",
+      "input": {
+        "solarDate": "2024-09-01",
+        "clockTime": "04:30",
+        "timeIndex": 2,
+        "gender": "male",
+        "timezone": "Asia/Shanghai",
+        "useTrueSolarTime": true,
+        "longitude": 116.4074,
+        "placeLabel": "Beijing",
+        "targetDate": "2049-9-1",
+        "targetTimeIndex": 6
+      },
+      "effectiveEngineInput": {
+        "solarDate": "2024-09-01",
+        "clockTime": "04:16",
+        "timeIndex": 2
+      },
+      "trueSolarTime": {
+        "method": "longitude_plus_equation_of_time",
+        "correctionMinutes": -13.74,
+        "correctedDateTime": "2024-09-01 04:16",
+        "correctedTimeIndex": 2,
+        "crossesDate": false,
+        "crossesTimeBranch": false,
+        "confirmationRequired": false
+      },
+      "rules": [
+        "P-BEIJING-TIME",
+        "P-LUNAR-NEW-YEAR",
+        "P-NATURAL-YEAR-NOMINAL-AGE",
+        "P-LEAP-15-SPLIT",
+        "P-EARLY-LATE-RAT"
+      ],
+      "expected": {
+        "calendar": {
+          "solarDate": "2024-9-1",
+          "lunarYear": 2024,
+          "lunarMonth": 7,
+          "lunarDay": 29,
+          "isLeapMonth": false,
+          "sexagenary": "甲辰 壬申 戊辰 甲寅",
+          "timeLabel": "寅时",
+          "timeRange": "03:00~05:00"
+        },
+        "natal": {
+          "soulPalace": "午",
+          "bodyPalace": "戌",
+          "fiveElementsClass": "土五局",
+          "palaceLayout": "寅:财帛|卯:子女|辰:夫妻|巳:兄弟|午:命宫|未:父母|申:福德|酉:田宅|戌:官禄*|亥:仆役|子:迁移|丑:疾厄",
+          "majorStarPlacements": "七杀@辰|天同@丑|天府@戌|天机@巳|天梁@卯|天相@寅|太阳@卯|太阴@亥|巨门@丑|廉贞@戌|武曲@寅|破军@申|紫微@午|贪狼@子",
+          "keyMinorStarPlacements": "右弼@辰|地劫@丑|地空@酉|天钺@未|天马@寅|天魁@丑|左辅@戌|擎羊@卯|文昌@申|文曲@午|火星@辰|禄存@寅|铃星@子|陀罗@丑",
+          "birthMutagen": "禄:廉贞|权:破军|科:武曲|忌:太阳",
+          "decadalRanges": "寅:85-94|卯:95-104|辰:105-114|巳:115-124|午:5-14|未:15-24|申:25-34|酉:35-44|戌:45-54|亥:55-64|子:65-74|丑:75-84"
+        },
+        "horoscope": {
+          "targetSolarDate": "2049-9-1",
+          "targetLunarDate": "二〇四九年八月初五",
+          "nominalAge": 26,
+          "decadal": {
+            "palaceIndex": 6,
+            "palaceName": "命宫",
+            "heavenlyStem": "壬",
+            "earthlyBranch": "申",
+            "ageRange": [
+              25,
+              34
+            ]
+          },
+          "yearly": {
+            "palaceIndex": 3,
+            "palaceName": "命宫",
+            "heavenlyStem": "己",
+            "earthlyBranch": "巳",
+            "mutagen": "禄:武曲|权:贪狼|科:天梁|忌:文曲"
+          }
+        }
+      },
+      "expectedSha256": "e1bf386f6d3eb76b6db75695494eefc67025de8400bead31a8bdabe6acf365bd",
+      "deterministicRepeat": true,
+      "crossCheck": {
+        "fortelVersion": "1.3.4",
+        "commonFieldsChecked": [
+          "lunarDate",
+          "soulPalace",
+          "bodyPalace",
+          "fiveElementsClass",
+          "palaceLayout",
+          "majorStars",
+          "keyMinorStars",
+          "decadalRanges",
+          "targetAge",
+          "targetDecadal",
+          "targetYearly",
+          "targetYearlyMutagen"
+        ],
+        "differences": [],
+        "unexplainedDifferences": []
+      }
+    }
+  ]
+}
