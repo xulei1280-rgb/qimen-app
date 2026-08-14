@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `10e78f9`（本次交接提交的父提交）
-- Changed: 四个模块统一接入本地 `deepseek-client.js`，继续使用 `deepseek-v4-pro` 高强度思考；若新版接口只返回思考过程或空正文，自动以关闭思考模式重试一次，奇门和六爻输出额度同步提高到 16384。未改计算内核、AI 提示词、记录结构或存储键。
-- Checks: `node .\check-deepseek-client.js`（思考空正文兜底、过滤及 HTTP 错误）；`node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-baselines.js`（18 个基线）；相关 JavaScript `node --check`; `git diff --check`。
-- Next task: 使用真实 DeepSeek API Key 分别抽测四页首问与连续追问；若仍失败，保留页面显示的原始 API 错误再定位账号或服务端问题。
-- Caution: 本次没有读取用户浏览器中的 API Key，网络返回以确定性模拟覆盖；紫微对照盘仍属于开源实现的工程交叉验证，不是专家金标准或科学权威结论。
+- Last shared baseline: `47516f7`（本次重新发布提交的父提交）
+- Changed: 四个模块已统一接入本地 `deepseek-client.js`，继续使用 `deepseek-v4-pro` 高强度思考；若新版接口只返回思考过程或空正文，自动以关闭思考模式重试一次，奇门和六爻输出额度为 16384。本次因手机端命中旧缓存而重新触发 GitHub Pages 发布，未再改计算、提示词、记录或 AI 请求逻辑。
+- Checks: `node .\check-deepseek-client.js`（思考空正文兜底、过滤及 HTTP 错误）；`node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-baselines.js`（18 个基线）；相关 JavaScript `node --check`; `git diff --check`；GitHub Pages 线上 `deepseek-client.js` 与六爻引用检查。
+- Next task: 使用带版本参数的线上地址和真实 DeepSeek API Key 抽测首问与连续追问；若仍失败，保留页面显示的原始 API 错误再定位账号或服务端问题。
+- Caution: GitHub Pages 当前返回 `Cache-Control: max-age=600`，旧地址最多可能缓存 10 分钟；本次没有读取用户浏览器中的 API Key。
 
 ## Replace At Each Handoff
 
