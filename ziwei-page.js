@@ -6,8 +6,7 @@
   const API_KEY_STORAGE = "qimen_deepseek_api_key";
   const THEME_STORAGE_KEY = "ziwei_theme_v1";
   const DENSITY_STORAGE_KEY = "ziwei_density_v1";
-  const API_URL = "https://api.deepseek.com/v1/chat/completions";
-  const AI_MODEL = "deepseek-v4-pro";
+  const AI_MODEL = window.DeepSeekClient.MODEL;
   const BRANCH_ORDER = ["巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯", "辰"];
   const EARTHLY_BRANCH_ORDER = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
   const TIME_BRANCH_LABELS = ["早子时", "丑时", "寅时", "卯时", "辰时", "巳时", "午时", "未时", "申时", "酉时", "戌时", "亥时", "晚子时"];
@@ -956,16 +955,7 @@
   }
 
   function extractAiAnswer(body) {
-    const choice = body?.choices?.[0];
-    const answer = choice?.message?.content?.trim();
-    if (answer) return answer;
-    const reason = choice?.finish_reason;
-    if (reason === "length") throw new Error("DeepSeek 输出额度已用尽，未生成最终回答，请缩短问题后重试。");
-    if (reason === "content_filter") throw new Error("DeepSeek 因内容过滤没有返回回答，请调整问题后重试。");
-    if (reason === "insufficient_system_resource") throw new Error("DeepSeek 当前推理资源不足，请稍后重试。");
-    if (reason === "tool_calls") throw new Error("DeepSeek 返回了当前页面不支持的工具调用，请重试。");
-    if (choice?.message?.reasoning_content) throw new Error("DeepSeek 只返回了思考过程，没有生成最终回答，请重试。");
-    throw new Error("DeepSeek 返回了空回答，请重试。");
+    return window.DeepSeekClient.extractAnswer(body);
   }
 
   function validateAiAnswer(answer, evidence) {
@@ -1017,23 +1007,13 @@
 
   async function requestAiCompletion(messages) {
     const apiKey = elements.apiKey.value.trim();
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages,
-        max_tokens: 16384,
-        thinking: { type: "enabled" },
-        reasoning_effort: "high",
-      }),
+    const result = await window.DeepSeekClient.requestFinal({
+      apiKey,
+      messages,
+      maxTokens: 16384,
+      onRetry() { elements.aiState.textContent = "思考已完成，正在获取最终回答…"; },
     });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const message = body?.error?.message || `${response.status} ${response.statusText}`;
-      throw new Error(`DeepSeek 请求失败：${message}`);
-    }
-    return extractAiAnswer(body);
+    return result.answer;
   }
 
   async function askAi(question) {

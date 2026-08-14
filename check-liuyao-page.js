@@ -1,6 +1,7 @@
 const assert=require('assert');
 const fs=require('fs');
 const engine=require('./liuyao-engine.js');
+const deepseekClient=require('./deepseek-client.js');
 
 const monthGZ='丙寅';
 const dayGZ='甲子';
@@ -200,7 +201,9 @@ assert.match(html,/@media\(max-width:900px\) and \(orientation:portrait\)/);
 assert.match(html,/@media\(max-width:900px\) and \(orientation:landscape\)/);
 assert.doesNotMatch(html,/document\.body\.className=mode/);
 assert.match(html,/liuyao_records_v1/);
-assert.match(html,/deepseek-v4-pro/);
+assert.strictEqual(deepseekClient.MODEL,'deepseek-v4-pro');
+assert.match(html,/src="deepseek-client\.js\?v=20260814\.1"/);
+assert.match(html,/DeepSeekClient\.requestFinal\(\{apiKey:key,messages:messages,maxTokens:16384/);
 assert.match(html,/requestId!==aiRequestSeq/);
 assert.match(html,/@media\(max-width:620px\)/);
 assert.match(html,/min-height:44px/);

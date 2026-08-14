@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const vm = require('vm');
 
 const html = fs.readFileSync('bazi.html', 'utf8');
-assert(html.includes("model:'deepseek-v4-pro'") && html.includes("max_tokens:16384") && html.includes("thinking:{type:'enabled'}") && html.includes("reasoning_effort:'high'"), 'Bazi AI should use DeepSeek V4 Pro thinking mode with enough output budget');
+assert(html.includes('src="deepseek-client.js?v=20260814.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
 assert(!html.includes("model:'deepseek-chat'"), 'Bazi AI should not use the retired non-thinking model alias');
 assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html" aria-current="page">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>/.test(html), 'Bazi should expose the unified four-module navigation');
 

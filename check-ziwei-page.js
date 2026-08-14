@@ -7,6 +7,7 @@ const vm = require("vm");
 global.self = global;
 const iztro = require("./vendor/iztro/2.5.8/iztro.min.js");
 const engine = require("./ziwei-engine.js");
+const deepseekClient = require("./deepseek-client.js");
 
 const ROOT = __dirname;
 const FIXTURE_PATH = path.join(ROOT, "docs", "codex", "fixtures", "ziwei-evaluation.json");
@@ -218,6 +219,7 @@ function createPageSandbox(pageSource) {
     confirm() { return true; },
     fetch() { throw new Error("checker must not call network"); },
     ZiweiEngine: engine,
+    DeepSeekClient: deepseekClient,
   };
   sandbox.window = sandbox;
   vm.runInNewContext(pageSource, sandbox, { filename: "ziwei-page.js" });
@@ -232,12 +234,11 @@ function runPageContracts() {
   assert(html.includes("[hidden] { display: none !important; }"), "缺少 hidden 样式修复");
   assert(html.includes("@media (prefers-reduced-motion: reduce)"), "缺少减少动态效果支持");
   assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html" aria-current="page">紫微<\/a>/.test(html), "紫微页面缺少统一四模块导航");
-  assert(pageSource.includes('const AI_MODEL = "deepseek-v4-pro"'), "AI 模型不是 deepseek-v4-pro");
+  assert(html.includes('src="deepseek-client.js?v=20260814.1"') && pageSource.includes("window.DeepSeekClient.requestFinal"), "紫微 AI 未使用共享最终回答兜底");
+  assert(pageSource.includes("const AI_MODEL = window.DeepSeekClient.MODEL"), "紫微 AI 模型未使用共享配置");
   assert(pageSource.includes('const STORAGE_KEY = "ziwei_records_v1"'), "记录存储键错误");
   assert(pageSource.includes('const API_KEY_STORAGE = "qimen_deepseek_api_key"'), "没有复用旧模块 API Key");
-  assert(pageSource.includes('max_tokens: 16384'), "紫微思考模式输出额度不足");
-  assert(pageSource.includes('thinking: { type: "enabled" }'), "紫微思考模式配置缺失");
-  assert(pageSource.includes('reasoning_effort: "high"'), "紫微思考强度配置缺失");
+  assert(pageSource.includes("maxTokens: 16384"), "紫微思考模式输出额度不足");
   assert(pageSource.includes("本地存储失败，记录没有被静默截断"), "存储异常提示缺失");
   assert(html.includes('id="locationSearch"') && html.includes('id="solarPreview"'), "真太阳时地点选择或预览缺失");
   assert(html.includes('id="aiPresetQuestions"') && html.includes(".ai-preset-list"), "AI 预设问法界面缺失");

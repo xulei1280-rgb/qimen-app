@@ -801,6 +801,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 </div>
 
 <script src="qimen.js?v=20260703-jieqi1"></script>
+<script src="deepseek-client.js?v=20260814.1"></script>
 <script>
 var currentCal='solar',selectedPalace=null,plateData=null;
 var aiHistory=[];
@@ -1560,24 +1561,16 @@ async function analyzeWithAI(){
   aiBtn.textContent='⏳ 分析中 · '+getAiModeLabel(aiMode);
   showQimenAiPending(aiRequestId);
   try{
-    var resp=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:'deepseek-v4-pro',messages:messages,max_tokens:4096,thinking:{type:'enabled'},reasoning_effort:'high'})});
-    var d=await resp.json();
+    var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:messages,maxTokens:16384,onRetry:function(){aiBtn.textContent='⏳ 正在获取最终回答…'}});
     if(aiRequestId!==qimenAiRequestSeq||aiRequestFingerprint!==plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint)return;
-    if(d.choices&&d.choices[0]){
-      var choice=d.choices[0],answer=choice.message&&typeof choice.message.content==='string'?choice.message.content.trim():'';
-      if(!answer){
-        var emptyNotice=choice.finish_reason==='length'?'❌ 思考已达到输出上限，未生成最终回答。请重试或改用「简断」。':'❌ AI 思考完成但未返回最终回答，请重试。';
-        document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>'+emptyNotice+'</div>';
-        return;
-      }
+    var answer=result.answer;
+    if(answer){
       if(!aiTopic)aiTopic=pendingTopic;
       aiHistory.push({q:question,a:answer.replace(/\*\*/g,''),t:new Date().toLocaleTimeString()});
       aiCollapsed[aiHistory.length-1]=false;
       resetQimenAiTextarea(document.getElementById('question'));
       updateCurrentAutoHistory();
       document.getElementById('aiResult').innerHTML=renderAIHistory();
-    }else{
-      document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ AI 返回异常: '+esc(JSON.stringify(d))+'</div>';
     }
   }catch(e){
     if(aiRequestId===qimenAiRequestSeq&&aiRequestFingerprint===plateInputFingerprint)document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>';

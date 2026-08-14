@@ -230,6 +230,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 <script src="qimen.js"></script>
 <script src="bazi-engine.js?v=20260715.2"></script>
 <script src="liuyao-engine.js?v=20260812.2"></script>
+<script src="deepseek-client.js?v=20260814.1"></script>
 <script>
 var API_KEY_STORAGE='qimen_deepseek_api_key';
 var RECORDS_STORAGE='liuyao_records_v1';
@@ -642,12 +643,9 @@ async function analyzeWithAI(){
   (currentRecord.aiHistory||[]).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
   messages.push({role:'user',content:'本卦原始问题：'+currentRecord.question+'\n本次问题：'+follow+'\n盘面事实（JSON）：\n'+aiPlateContext()});
   try{
-    var response=await fetch('https://api.deepseek.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key.trim()},body:JSON.stringify({model:'deepseek-v4-pro',messages:messages,max_tokens:4096,thinking:{type:'enabled'},reasoning_effort:'high'})});
-    var data=await response.json();
+    var result=await DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','思考已完成，正在获取最终解读')}});
     if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart)return;
-    if(!response.ok)throw new Error(data.error&&data.error.message||('HTTP '+response.status));
-    var answer=data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content;
-    if(!answer||!answer.trim())throw new Error('AI 未返回最终解读，请重试');
+    var answer=result.answer;
     currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString()});if(!persistCurrent('aiStatus'))keepAIStatus=true;var suggestion=suggestedUseGod();if(suggestion){currentPlateFocus='useGod';renderPlate();setStatus('useGodStatus','AI 已提出候选，请核对理由后确认')}else{document.getElementById('aiHistory').innerHTML=renderAiHistory();document.getElementById('aiQuickQuestions').innerHTML=renderAiQuickQuestions();document.getElementById('aiQuestion').value=''};
   }catch(error){if(requestId===aiRequestSeq){keepAIStatus=true;setStatus('aiStatus','AI 请求失败：'+error.message,true)}}
   finally{if(requestId===aiRequestSeq&&currentRecord&&currentRecord.id===recordIdAtStart){button.disabled=false;button.textContent='AI 解卦';if(!keepAIStatus)setStatus('aiStatus','')}}
