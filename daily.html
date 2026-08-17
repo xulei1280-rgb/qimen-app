@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3eadb">
+  <title>日运日记 · 每日命理记录</title>
+  <style>
+    :root{
+      --paper:#f3eadb;--paper-light:#fffaf0;--paper-deep:#e8dac5;--ink:#2d241c;--muted:#74675a;
+      --cinnabar:#a43b2b;--cinnabar-soft:#f0d8cf;--jade:#46685a;--jade-soft:#dce8df;--gold:#a67b3d;
+      --line:rgba(74,55,39,.2);--line-strong:rgba(74,55,39,.42);--shadow:0 22px 60px rgba(72,48,29,.12);
+      --radius:22px;--ease:cubic-bezier(.2,.8,.2,1);
+    }
+    *{box-sizing:border-box}
+    [hidden]{display:none!important}
+    html{color-scheme:light;scroll-behavior:smooth}
+    body{
+      margin:0;color:var(--ink);font-family:"Noto Sans SC","Microsoft YaHei",sans-serif;line-height:1.65;
+      background:
+        radial-gradient(circle at 12% 8%,rgba(164,59,43,.09),transparent 28%),
+        radial-gradient(circle at 90% 20%,rgba(70,104,90,.11),transparent 30%),
+        repeating-linear-gradient(90deg,rgba(82,58,39,.018) 0,rgba(82,58,39,.018) 1px,transparent 1px,transparent 5px),
+        var(--paper);
+    }
+    button,input,select,textarea{font:inherit;color:inherit}
+    button,.button-link{min-height:44px;border:1px solid var(--line-strong);border-radius:999px;background:var(--paper-light);padding:9px 17px;font-weight:700;cursor:pointer;transition:transform .22s var(--ease),box-shadow .22s var(--ease),background .22s var(--ease)}
+    button:hover,.button-link:hover{transform:translateY(-1px);box-shadow:0 9px 24px rgba(72,48,29,.12)}
+    button:disabled{cursor:not-allowed;opacity:.56;transform:none;box-shadow:none}
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(164,59,43,.3);outline-offset:3px}
+    a{color:var(--cinnabar)}
+    .skip-link{position:fixed;left:12px;top:12px;z-index:100;transform:translateY(-160%);background:var(--ink);color:#fff;padding:10px 14px;border-radius:8px}
+    .skip-link:focus{transform:none}
+    .grain{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.28;mix-blend-mode:multiply;background-image:radial-gradient(rgba(63,44,31,.16) .55px,transparent .6px);background-size:6px 6px}
+    .shell{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:24px 0 64px}
+    .masthead{position:relative;padding:22px 0 26px;border-bottom:1px solid var(--line)}
+    .masthead-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+    .brand{display:flex;align-items:flex-start;gap:14px;text-decoration:none;color:var(--ink)}
+    .brand-seal{width:46px;height:60px;display:grid;place-items:center;background:var(--cinnabar);color:#fff;border-radius:5px 5px 16px 16px;font-family:"STKaiti","KaiTi",serif;font-size:21px;letter-spacing:.08em;box-shadow:0 10px 22px rgba(164,59,43,.22)}
+    .brand h1{margin:0;font-family:"Noto Serif SC","Songti SC","STSong",serif;font-size:clamp(30px,5vw,52px);font-weight:800;letter-spacing:.12em;line-height:1.05}
+    .brand p{margin:8px 0 0;color:var(--muted);font-size:13px;letter-spacing:.13em}
+    .module-nav{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+    .module-nav a{min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border:1px solid transparent;border-radius:999px;color:#634c39;text-decoration:none;font-weight:700}
+    .module-nav a:hover{background:rgba(255,250,240,.75);border-color:var(--line)}
+    .module-nav a[aria-current="page"]{background:var(--ink);color:var(--paper-light)}
+    .utility-row{display:flex;justify-content:flex-end;gap:8px;margin-top:15px}
+    .utility-row button{min-height:44px;padding:7px 13px;font-size:13px;background:transparent}
+    .status{min-height:25px;margin:12px 0 0;text-align:right;color:var(--jade);font-size:13px}
+    .status.error{color:var(--cinnabar)}
+    main{padding-top:28px}
+    .profile-deck{position:relative;display:grid;grid-template-columns:minmax(220px,.72fr) 1.28fr;gap:22px;padding:24px;background:rgba(255,250,240,.74);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .profile-deck:before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:linear-gradient(var(--cinnabar),#d19c78)}
+    .eyebrow{margin:0 0 8px;color:var(--cinnabar);font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    .profile-deck h2,.section-heading h2{margin:0;font-family:"Noto Serif SC","Songti SC","STSong",serif;font-size:clamp(22px,3vw,32px)}
+    .profile-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-top:16px}
+    select,input,textarea{width:100%;border:1px solid var(--line-strong);border-radius:13px;background:rgba(255,253,247,.92);padding:10px 12px}
+    select,input{min-height:44px}
+    textarea{min-height:112px;resize:vertical}
+    .profile-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .profile-actions .button-link{display:inline-flex;align-items:center;text-decoration:none;font-size:14px}
+    .profile-actions .danger{color:var(--cinnabar);background:transparent}
+    .profile-creator{grid-column:1/-1;border-top:1px solid var(--line);padding-top:16px}
+    .profile-creator summary{width:max-content;cursor:pointer;color:var(--cinnabar);font-weight:800}
+    .profile-create-form{display:grid;grid-template-columns:1fr 150px minmax(220px,1.2fr);gap:12px;margin-top:16px;padding:18px;border:1px solid var(--line);border-radius:17px;background:rgba(255,255,255,.42)}
+    .profile-create-form .wide{grid-column:span 2}.profile-create-form .check-line{align-self:end;min-height:44px}
+    .profile-create-note{grid-column:1/-1;margin:0;color:var(--muted);font-size:12px}
+    .custom-location{display:grid;grid-template-columns:1fr 150px;gap:12px;grid-column:1/-1}
+    .profile-create-actions{display:flex;justify-content:flex-end;grid-column:1/-1}
+    .profile-identity{align-self:stretch;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;padding:18px 20px;border:1px solid rgba(70,104,90,.2);border-radius:18px;background:linear-gradient(135deg,rgba(220,232,223,.8),rgba(255,250,240,.64))}
+    .profile-monogram{width:74px;height:74px;display:grid;place-items:center;border:1px solid rgba(70,104,90,.35);border-radius:50%;background:var(--jade);color:#fff;font-family:"STKaiti","KaiTi",serif;font-size:30px;box-shadow:inset 0 0 0 5px rgba(255,255,255,.12)}
+    .profile-name{font:800 24px/1.3 "Noto Serif SC","Songti SC",serif}
+    .pillars{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+    .pillar-chip{display:inline-flex;gap:6px;align-items:center;padding:5px 9px;border-radius:999px;background:rgba(255,255,255,.66);font-size:13px}
+    .pillar-chip b{font-family:"STKaiti","KaiTi",serif;font-size:17px;color:var(--jade)}
+    .empty-state{margin-top:24px;padding:56px 24px;text-align:center;border:1px dashed var(--line-strong);border-radius:var(--radius);background:rgba(255,250,240,.55)}
+    .empty-state h2{font-family:"Noto Serif SC","Songti SC",serif;font-size:30px;margin:0 0 8px}
+    .workspace{margin-top:24px}
+    .date-rail{display:grid;grid-template-columns:44px minmax(220px,1fr) 44px auto;align-items:center;gap:9px;padding:12px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(255,250,240,.36)}
+    .date-rail input{font-weight:800;letter-spacing:.08em;text-align:center}
+    .snapshot-state{grid-column:1/-1;text-align:right;color:var(--muted);font-size:12px}
+    .workspace-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(310px,.75fr);gap:22px;margin-top:22px}
+    .fortune-sheet,.context-sheet,.diary-sheet,.ai-sheet,.recent-sheet{border:1px solid var(--line);border-radius:var(--radius);background:rgba(255,250,240,.84);box-shadow:var(--shadow)}
+    .fortune-sheet{position:relative;min-height:470px;padding:30px 32px 30px 106px;overflow:hidden}
+    .date-stamp{position:absolute;left:0;top:0;bottom:0;width:82px;display:flex;flex-direction:column;align-items:center;padding:28px 8px;background:var(--cinnabar);color:#fff;text-align:center}
+    .date-stamp strong{font:800 37px/1 "Noto Serif SC","Songti SC",serif}
+    .date-stamp span{margin-top:9px;font-size:12px;writing-mode:vertical-rl;letter-spacing:.14em}
+    .date-stamp b{margin-top:auto;font:800 26px/1.2 "STKaiti","KaiTi",serif;writing-mode:vertical-rl;letter-spacing:.12em}
+    .fortune-kicker{display:flex;align-items:center;gap:10px;color:var(--jade);font-size:12px;font-weight:900;letter-spacing:.16em}
+    .fortune-kicker:after{content:"";height:1px;flex:1;background:var(--line)}
+    .fortune-summary{margin:18px 0 14px;font:800 clamp(25px,4vw,40px)/1.35 "Noto Serif SC","Songti SC","STSong",serif;letter-spacing:.03em}
+    .fortune-limit{margin:0;color:var(--muted);font-size:13px}
+    .layer-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:24px}
+    .layer-card{padding:13px 10px;border-top:3px solid var(--jade);border-radius:0 0 12px 12px;background:var(--jade-soft);text-align:center}
+    .layer-card:last-child{border-color:var(--cinnabar);background:var(--cinnabar-soft)}
+    .layer-card small{display:block;color:var(--muted);font-size:11px}
+    .layer-card b{display:block;margin:4px 0;font:800 23px/1.2 "STKaiti","KaiTi",serif}
+    .layer-card span{font-size:11px}
+    .signal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+    .signal-box{padding:15px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.46)}
+    .signal-box h3{margin:0 0 8px;font-size:14px;color:var(--jade)}
+    .signal-box.caution h3{color:var(--cinnabar)}
+    .signal-box ul{margin:0;padding-left:1.2em;font-size:13px}
+    .signal-box li+li{margin-top:5px}
+    .context-sheet{padding:24px}
+    .context-block+.context-block{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+    .context-block h3{margin:0 0 10px;font:800 18px/1.3 "Noto Serif SC","Songti SC",serif}
+    .theme-panel{display:grid;gap:9px}.theme-card{padding:12px 13px;border-left:4px solid var(--jade);border-radius:0 12px 12px 0;background:var(--jade-soft)}
+    .theme-card.secondary{border-left-color:var(--gold);background:var(--paper-deep)}.theme-card b,.theme-card span{display:block}.theme-card b{font-family:"Noto Serif SC","Songti SC",serif}.theme-card span{margin-top:3px;color:var(--muted);font-size:12px}.theme-landing{color:var(--ink)!important;font-weight:700}
+    .focus-card{padding:15px;border:1px solid rgba(70,104,90,.28);border-radius:16px;background:linear-gradient(135deg,rgba(220,232,223,.78),rgba(255,250,240,.62))}.domain-badges{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.domain-badge{display:inline-flex;align-items:center;min-height:29px;padding:4px 10px;border-radius:999px;background:var(--jade);color:#fff;font-size:12px;font-weight:900}.domain-badge.secondary{background:var(--paper-deep);color:var(--ink);border:1px solid var(--line)}.domain-badge.strength{background:transparent;color:var(--cinnabar);border:1px solid rgba(164,59,43,.3)}
+    .focus-list{display:grid;gap:8px;margin:0}.focus-row{display:grid;grid-template-columns:70px minmax(0,1fr);gap:9px;margin:0;padding-top:8px;border-top:1px solid rgba(74,55,39,.13)}.focus-row:first-child{padding-top:0;border-top:0}.focus-row dt{color:var(--muted);font-size:11px;font-weight:800}.focus-row dd{min-width:0;margin:0;font-size:13px;font-weight:800;overflow-wrap:anywhere}.focus-action{margin:12px 0 0;padding:9px 11px;border-left:3px solid var(--cinnabar);background:rgba(255,255,255,.48);font-size:12px}
+    .core-evidence,.event-directions{display:grid;gap:8px;margin:0;padding:0;list-style:none}.core-evidence li,.event-direction{padding:10px 11px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.46);font-size:12px}
+    .event-direction b,.event-direction span{display:block}.event-direction b{color:var(--cinnabar)}.event-direction span{margin-top:4px;color:var(--muted)}
+    .relation-fold{border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.3)}.relation-fold summary{min-height:44px;display:flex;align-items:center;padding:9px 12px;cursor:pointer;font-weight:800;font-size:12px}.relation-tags{display:grid;gap:7px;padding:0 11px 12px}.relation-tags span{padding:8px 9px;border-radius:10px;background:var(--paper-deep);font-size:11px}.relation-tags span.suppressed{opacity:.72;border:1px dashed var(--line-strong)}
+    .boundary-note{margin-top:16px;padding:12px 14px;border-left:4px solid var(--gold);background:#f6ead4;color:#665035;font-size:12px}
+    .section-stack{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:22px}
+    .diary-sheet,.ai-sheet,.recent-sheet{padding:24px}
+    .section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+    .section-heading p{margin:5px 0 0;color:var(--muted);font-size:12px}
+    .event-form{display:grid;grid-template-columns:130px 130px minmax(0,1fr);gap:10px}
+    .field label{display:block;margin-bottom:5px;font-size:12px;font-weight:800;color:var(--muted)}
+    .field.full{grid-column:1/-1}
+    .form-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;grid-column:1/-1}
+    .check-line{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+    .check-line input{width:18px;height:18px;min-height:0}
+    .primary{background:var(--cinnabar);border-color:var(--cinnabar);color:#fff}
+    .event-list{display:grid;gap:10px;margin-top:20px}
+    .event-card{position:relative;padding:15px 15px 13px 19px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.48)}
+    .event-card:before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:4px;background:var(--gold)}
+    .event-card[data-valence="好事"]:before{background:var(--jade)}
+    .event-card[data-valence="坏事"]:before{background:var(--cinnabar)}
+    .event-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;color:var(--muted);font-size:12px}
+    .event-card p{margin:8px 0;white-space:pre-wrap}
+    .event-actions{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .event-actions button{min-height:34px;padding:5px 10px;background:transparent;font-size:12px}
+    .event-actions .tiny-actions{display:flex;gap:6px}
+    .empty-copy{padding:24px 8px;text-align:center;color:var(--muted);font-size:13px}
+    .privacy-note{padding:13px 15px;border:1px solid rgba(164,59,43,.22);border-radius:14px;background:var(--cinnabar-soft);font-size:12px}
+    .ai-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0}
+    .ai-model{color:var(--muted);font:12px/1.4 ui-monospace,"Cascadia Mono",monospace}
+    .ai-history{display:grid;gap:12px}
+    .ai-card{padding:17px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.52)}
+    .ai-card.stale{opacity:.72;border-style:dashed}
+    .ai-card header,.ai-card summary{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:11px}.ai-card summary{cursor:pointer;font-weight:700}.ai-card[open] summary{padding-bottom:10px;border-bottom:1px solid var(--line)}
+    .ai-card strong{color:var(--cinnabar)}
+    .ai-answer{margin-top:10px;white-space:pre-wrap;font-size:14px}
+    .ai-pending{display:flex;gap:9px;align-items:center;color:var(--jade);font-weight:700}
+    .ai-pending:before{content:"";width:16px;height:16px;border:2px solid rgba(70,104,90,.2);border-top-color:var(--jade);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .recent-sheet{margin-top:22px}
+    .recent-list{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+    .recent-day{min-height:74px;text-align:left;border-radius:14px;background:rgba(255,255,255,.42)}
+    .recent-day b,.recent-day span{display:block}
+    .recent-day span{color:var(--muted);font-size:11px;font-weight:400}
+    .view-switch{width:max-content;display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 auto 22px;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(255,250,240,.7);box-shadow:0 8px 24px rgba(72,48,29,.08)}
+    .view-switch button{min-width:112px;border:0;background:transparent;box-shadow:none}
+    .view-switch button[aria-selected="true"]{background:var(--ink);color:var(--paper-light);transform:none}
+    .timeline-view{display:grid;gap:20px}
+    .timeline-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:end;padding:28px;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(135deg,rgba(255,250,240,.9),rgba(220,232,223,.72));box-shadow:var(--shadow)}
+    .timeline-intro h2{margin:0;font:800 clamp(26px,4vw,40px)/1.25 "Noto Serif SC","Songti SC",serif}
+    .timeline-intro p{max-width:68ch;margin:8px 0 0;color:var(--muted)}
+    .timeline-luck{min-width:250px;padding:16px 18px;border-left:4px solid var(--cinnabar);background:rgba(255,255,255,.55);font-size:13px}
+    .timeline-luck b{display:block;font:800 24px/1.25 "STKaiti","KaiTi",serif;color:var(--cinnabar)}
+    .timeline-tree{position:relative;display:grid;gap:12px;padding-left:26px}
+    .timeline-tree:before{content:"";position:absolute;left:8px;top:18px;bottom:18px;width:2px;background:linear-gradient(var(--cinnabar),var(--gold),var(--jade))}
+    .timeline-node{position:relative;border:1px solid var(--line);border-radius:18px;background:rgba(255,250,240,.84);box-shadow:0 12px 32px rgba(72,48,29,.08);overflow:hidden}
+    .timeline-node:before{content:"";position:absolute;left:-24px;top:25px;width:12px;height:12px;border:3px solid var(--paper);border-radius:50%;background:var(--gold);box-shadow:0 0 0 1px var(--line-strong)}
+    .timeline-node.current:before{background:var(--cinnabar);box-shadow:0 0 0 4px rgba(164,59,43,.15)}
+    .timeline-toggle{width:100%;min-height:72px;display:grid;grid-template-columns:minmax(108px,.35fr) minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 18px;border:0;border-radius:0;background:transparent;text-align:left;box-shadow:none}
+    .timeline-toggle:hover{transform:none;background:rgba(220,232,223,.35);box-shadow:none}
+    .timeline-time b,.timeline-time span{display:block}.timeline-time b{font:800 21px/1.2 "Noto Serif SC","Songti SC",serif}.timeline-time span{color:var(--muted);font-size:11px}
+    .timeline-summary strong{display:block}.timeline-summary small{display:block;margin-top:3px;color:var(--muted);font-weight:400}
+    .timeline-chevron{font-size:20px;transition:transform .2s var(--ease)}
+    .timeline-toggle[aria-expanded="true"] .timeline-chevron{transform:rotate(90deg)}
+    .signal-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+    .signal-badge{display:inline-flex;align-items:center;min-height:24px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:11px;font-weight:800;background:var(--paper-deep)}
+    .signal-badge[data-signal="机会"]{color:#254c3d;background:var(--jade-soft)}
+    .signal-badge[data-signal="注意"]{color:#7c261b;background:var(--cinnabar-soft)}
+    .signal-badge[data-signal="变动"]{color:#70501e;background:#f2e3bd}
+    .signal-badge[data-signal="平稳"]{color:var(--muted);background:#eee7dc}
+    .timeline-body{padding:0 18px 18px;border-top:1px solid var(--line)}
+    .timeline-detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.6fr);gap:14px;padding:17px 0}
+    .timeline-detail p{margin:0}.timeline-themes{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+    .timeline-themes span{padding:4px 8px;border-radius:999px;background:var(--jade-soft);font-size:11px}
+    .evidence-fold{align-self:start;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.42)}
+    .evidence-fold summary{min-height:44px;display:flex;align-items:center;padding:9px 12px;cursor:pointer;font-weight:800;font-size:12px}
+    .evidence-fold ul{margin:0;padding:0 28px 13px;font-size:12px;color:var(--muted)}
+    .timeline-children{display:grid;gap:9px;padding:0 0 4px 18px;border-left:1px dashed var(--line-strong)}
+    .timeline-node.month{box-shadow:none;background:rgba(255,255,255,.4)}
+    .timeline-node.month:before{display:none}.timeline-node.month .timeline-toggle{min-height:64px}
+    .timeline-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 0 4px 18px;border-left:1px dashed var(--line-strong)}
+    .timeline-day{border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.48);overflow:hidden}
+    .timeline-day.today{border-color:var(--cinnabar);box-shadow:0 0 0 3px rgba(164,59,43,.08)}
+    .timeline-day-button{width:100%;min-height:68px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 13px;border:0;border-radius:0;background:transparent;text-align:left;box-shadow:none}
+    .timeline-day-button:hover{transform:none;background:rgba(255,250,240,.82);box-shadow:none}
+    .timeline-day-date b,.timeline-day-date span{display:block}.timeline-day-date b{font-size:16px}.timeline-day-date span{color:var(--muted);font-size:11px}
+    .timeline-day-copy{min-width:0}.timeline-day-copy strong,.timeline-day-copy small{display:block}.timeline-day-copy small{overflow:hidden;color:var(--muted);font-weight:400;text-overflow:ellipsis;white-space:nowrap}
+    .event-count{white-space:nowrap;color:var(--muted);font-size:11px}
+    .timeline-day-detail{padding:14px;border-top:1px solid var(--line);background:rgba(255,250,240,.62)}
+    .prediction-fact-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .prediction-fact{padding:12px;border-radius:12px;background:var(--jade-soft);font-size:12px}.prediction-fact.actual{background:var(--paper-deep)}
+    .prediction-fact h4{margin:0 0 7px;font-size:13px}.prediction-fact p{margin:0 0 6px}.prediction-fact p:last-child{margin-bottom:0}
+    .timeline-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.timeline-actions button{font-size:12px}
+    .timeline-ai{margin-top:12px;padding:13px;border:1px solid rgba(164,59,43,.2);border-radius:13px;background:rgba(240,216,207,.42);font-size:12px}
+    .timeline-ai.stale{opacity:.75;border-style:dashed}.timeline-ai header{display:flex;justify-content:space-between;gap:10px;color:var(--muted)}.timeline-ai .ai-answer{font-size:13px}
+    @media(max-width:900px){
+      .masthead-row{flex-direction:column}.module-nav{justify-content:flex-start}.utility-row{justify-content:flex-start}.status{text-align:left}
+      .profile-deck,.workspace-grid,.section-stack{grid-template-columns:1fr}.profile-identity{grid-template-columns:auto 1fr}
+      .recent-list{grid-template-columns:repeat(3,minmax(0,1fr))}.timeline-intro{grid-template-columns:1fr}.timeline-luck{min-width:0}.timeline-detail{grid-template-columns:1fr}
+    }
+    @media(max-width:620px){
+      .shell{width:min(100% - 18px,1180px);padding-top:12px}.masthead{padding-top:12px}.brand-seal{width:46px;height:58px;font-size:18px;letter-spacing:0}.brand h1{font-size:31px}
+      .module-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;gap:5px}.module-nav a{padding:7px 3px;font-size:12px}
+      .profile-deck{padding:19px 16px}.profile-controls,.profile-create-form,.custom-location{grid-template-columns:1fr}.profile-controls button{width:100%}.profile-identity{grid-template-columns:1fr;text-align:center}.profile-monogram{margin:auto}.pillars{justify-content:center}.profile-create-form .wide,.custom-location{grid-column:1/-1}.profile-create-actions button{width:100%}
+      .date-rail{grid-template-columns:44px minmax(0,1fr) 44px}.date-rail .today-button{grid-column:1/-1}.snapshot-state{grid-column:1/-1;text-align:center}
+      .fortune-sheet{padding:24px 18px 24px 76px}.date-stamp{width:60px}.date-stamp strong{font-size:29px}.date-stamp b{font-size:21px}.fortune-summary{font-size:25px}
+      .layer-strip{grid-template-columns:1fr 1fr}.signal-grid{grid-template-columns:1fr}.event-form{grid-template-columns:1fr 1fr}.event-form .field:nth-child(3){grid-column:1/-1}.form-bottom,.ai-toolbar{align-items:stretch;flex-direction:column}.form-bottom button,.ai-toolbar button{width:100%}
+      .recent-list{grid-template-columns:1fr 1fr}.diary-sheet,.ai-sheet,.context-sheet,.recent-sheet{padding:18px}.view-switch{width:100%}.view-switch button{min-width:0}.timeline-intro{padding:20px 17px}.timeline-tree{padding-left:18px}.timeline-tree:before{left:4px}.timeline-node:before{left:-18px}.timeline-toggle{grid-template-columns:1fr auto;padding:12px}.timeline-summary{grid-column:1/-1}.timeline-children,.timeline-days{padding-left:8px}.timeline-days{grid-template-columns:1fr}.prediction-fact-grid{grid-template-columns:1fr}
+    }
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="shell">
+    <header class="masthead">
+      <div class="masthead-row">
+        <a class="brand" href="daily.html">
+          <span class="brand-seal" aria-hidden="true">日笺</span>
+          <span><h1>日运日记</h1><p>事前留痕 · 事后复盘 · 不改原局</p></span>
+        </a>
+        <nav class="module-nav" aria-label="术数模块">
+          <a href="index.html">奇门</a><a href="bazi.html">八字</a><a href="liuyao.html">六爻</a><a href="ziwei.html">紫微</a><a href="daily.html" aria-current="page">日运</a>
+        </nav>
+      </div>
+      <div class="utility-row" aria-label="日记数据工具">
+        <button type="button" onclick="exportDailyData()">导出全部</button>
+        <button type="button" onclick="document.getElementById('importFile').click()">导入备份</button>
+        <input id="importFile" type="file" accept="application/json,.json" hidden onchange="importDailyData(this)">
+      </div>
+      <div id="appStatus" class="status" role="status" aria-live="polite"></div>
+    </header>
+
+    <main id="main">
+      <section class="profile-deck" aria-labelledby="profileTitle">
+        <div>
+          <p class="eyebrow">Profile / 命主档案</p>
+          <h2 id="profileTitle">先选今天要记录的人</h2>
+          <div class="profile-controls">
+            <select id="profileSelect" aria-label="选择命主" onchange="switchProfile(this.value)"><option value="">暂无命主</option></select>
+            <button type="button" onclick="syncBaziProfiles(false)">同步已有八字档案</button>
+          </div>
+          <div class="profile-actions">
+            <button type="button" onclick="openProfileCreator()">输入新命主</button>
+            <button id="deleteProfileButton" class="danger" type="button" onclick="deleteActiveProfile()" disabled>删除命主</button>
+          </div>
+        </div>
+        <div id="profileIdentity" class="profile-identity" aria-live="polite">
+          <div class="profile-monogram" aria-hidden="true">未</div>
+          <div><div class="profile-name">尚未建立命主档案</div><div class="pillars"><span class="pillar-chip">可在本页直接输入</span></div></div>
+        </div>
+        <details id="profileCreator" class="profile-creator">
+          <summary>直接建立日运命主</summary>
+          <form id="profileCreateForm" class="profile-create-form" onsubmit="createDailyProfile(event)">
+            <div class="field"><label for="profileName">命主姓名</label><input id="profileName" maxlength="40" autocomplete="off" placeholder="姓名或称呼" required></div>
+            <div class="field"><label for="profileGender">性别</label><select id="profileGender"><option>男</option><option>女</option></select></div>
+            <div class="field"><label for="profileBirthTime">出生时间（公历）</label><input id="profileBirthTime" type="datetime-local" min="1900-01-01T00:00" max="2100-12-31T23:59" required></div>
+            <div class="field wide"><label for="profileLocation">出生地点</label><select id="profileLocation" onchange="syncProfileLocation()" required><option value="" selected disabled>请选择出生地点</option><option value="102.7183|25.0389">云南省 昆明市</option><option value="103.8050|25.4951">云南省 曲靖市 麒麟区</option><option value="103.9936|24.8222">云南省 曲靖市 师宗县</option><option value="104.3087|24.8847">云南省 曲靖市 罗平县</option><option value="103.7662|24.5321">云南省 红河州 泸西县</option><option value="103.6668|25.0294">云南省 曲靖市 陆良县</option><option value="121.4737|31.2304">上海市</option><option value="113.2644|23.1291">广东省 广州市</option><option value="114.0579|22.5431">广东省 深圳市</option><option value="104.0668|30.5728">四川省 成都市</option><option value="106.5516|29.5630">重庆市</option><option value="120.1551|30.2741">浙江省 杭州市</option><option value="118.7969|32.0603">江苏省 南京市</option><option value="114.3055|30.5928">湖北省 武汉市</option><option value="108.9398|34.3416">陕西省 西安市</option><option value="106.6302|26.6470">贵州省 贵阳市</option><option value="custom">其他地点（手动输入）</option></select></div>
+            <label class="check-line"><input id="profileTrueSolar" type="checkbox" checked>使用真太阳时校正</label>
+            <div id="profileCustomLocation" class="custom-location" hidden><div class="field"><label for="profileLocationName">地点名称</label><input id="profileLocationName" maxlength="80" placeholder="例如：北京市"></div><div class="field"><label for="profileLongitude">东经</label><input id="profileLongitude" type="number" min="-180" max="180" step="0.0001" placeholder="例如 116.4074"></div></div>
+            <p class="profile-create-note">这里建立的是日运命主档案，不会跳转，也不会写入或改动八字页的保存记录。</p>
+            <div class="profile-create-actions"><button class="primary" type="submit">建立日运档案</button></div>
+          </form>
+        </details>
+      </section>
+
+      <section id="emptyState" class="empty-state">
+        <h2>这里还没有命主</h2>
+        <p>直接在本页输入出生资料即可建立日运档案；已有八字保存记录也可以选择同步。</p>
+        <button class="primary" type="button" onclick="openProfileCreator()">输入第一位命主</button>
+      </section>
+
+      <div id="workspace" class="workspace" hidden>
+        <div class="view-switch" role="tablist" aria-label="日运视图">
+          <button id="todayTab" type="button" role="tab" aria-selected="true" aria-controls="todayView" onclick="switchDailyView('today')">今日</button>
+          <button id="timelineTab" type="button" role="tab" aria-selected="false" aria-controls="timelineView" onclick="switchDailyView('timeline')">时间轴</button>
+        </div>
+        <div id="todayView" role="tabpanel" aria-labelledby="todayTab">
+        <section class="date-rail" aria-label="选择日记日期">
+          <button type="button" aria-label="前一天" onclick="shiftDate(-1)">←</button>
+          <input id="activeDate" type="date" aria-label="日记日期" onchange="loadDay(this.value)">
+          <button type="button" aria-label="后一天" onclick="shiftDate(1)">→</button>
+          <button class="today-button" type="button" onclick="goToday()">回到今天</button>
+          <div id="snapshotState" class="snapshot-state"></div>
+        </section>
+
+        <div class="workspace-grid">
+          <article class="fortune-sheet" aria-labelledby="fortuneTitle">
+            <div class="date-stamp"><strong id="dateDay">--</strong><span id="dateWeek">等待日期</span><b id="flowDayGz">--</b></div>
+            <div class="fortune-kicker">DAILY SNAPSHOT · 冻结日运</div>
+            <h2 id="fortuneTitle" class="fortune-summary">正在读取当天事实……</h2>
+            <p id="fortuneLimit" class="fortune-limit"></p>
+            <div id="layerStrip" class="layer-strip"></div>
+            <div class="signal-grid">
+              <section class="signal-box"><h3>可承接的线索</h3><ul id="opportunityList"></ul></section>
+              <section class="signal-box caution"><h3>宜留意的牵动</h3><ul id="cautionList"></ul></section>
+            </div>
+          </article>
+
+          <aside class="context-sheet" aria-label="日运依据">
+            <section class="context-block"><h3>现实落点</h3><div id="themePanel" class="theme-panel"></div></section>
+            <section class="context-block"><h3>核心依据</h3><ol id="topEvidenceList" class="core-evidence"></ol></section>
+            <section class="context-block"><h3>命理规则下优先应事方向</h3><div id="eventCandidateList" class="event-directions"></div></section>
+            <section class="context-block"><details id="meaningFold" class="relation-fold"><summary>命理依据</summary><div id="meaningPanel" class="relation-tags"></div></details></section>
+            <section class="context-block"><details id="relationFold" class="relation-fold"><summary>展开全部盘面关系</summary><div id="relationTags" class="relation-tags"></div></details></section>
+            <section class="context-block"><h3>采用边界</h3><p id="boundaryText">流日只作短期触发，不重算原局格局。</p><div id="boundaryWarning" class="boundary-note" hidden></div></section>
+          </aside>
+        </div>
+
+        <div class="section-stack">
+          <section class="diary-sheet" aria-labelledby="diaryTitle">
+            <div class="section-heading"><div><p class="eyebrow">Journal / 事件</p><h2 id="diaryTitle">今天发生了什么</h2><p>一天可以记录多件事；23 点后会注明命理换日。</p></div></div>
+            <form id="eventForm" class="event-form">
+              <div class="field"><label for="eventTime">发生时间</label><input id="eventTime" type="time" required></div>
+              <div class="field"><label for="eventValence">个人感受</label><select id="eventValence"><option>好事</option><option selected>普通</option><option>坏事</option></select></div>
+              <div class="field"><label for="eventCategory">事件类别</label><select id="eventCategory"><option>工作</option><option>财务</option><option>人际合作</option><option>亲密关系</option><option>学习文书</option><option>状态恢复</option><option>生活安排</option><option selected>其他</option></select></div>
+              <div class="field full"><label for="eventText">事件内容</label><textarea id="eventText" maxlength="1200" placeholder="只写事实，也可以补充自己的感受……" required></textarea></div>
+              <div class="form-bottom">
+                <label class="check-line"><input id="eventIncludeAi" type="checkbox" checked>允许把这一件事发送给 AI 复盘</label>
+                <button id="eventSubmit" class="primary" type="submit">记下这件事</button>
+              </div>
+            </form>
+            <div id="eventList" class="event-list"></div>
+          </section>
+
+          <section class="ai-sheet" aria-labelledby="aiTitle">
+            <div class="section-heading"><div><p class="eyebrow">Reflection / 解读</p><h2 id="aiTitle">按需生成命理反馈</h2><p>已有结果按版本保留，不会因后来改日记而静默改写。</p></div></div>
+            <div class="privacy-note"><strong>隐私提示：</strong>日记默认只在当前浏览器。点击生成后，仅勾选允许发送的当日事件会连同固定盘面事实发送给 DeepSeek；API Key 不进入导出文件。</div>
+            <div class="ai-toolbar"><div class="ai-model">deepseek-v4-pro<br>本地事实优先</div><button id="generateAiButton" class="primary" type="button" onclick="generateDailyAi()">生成今日详解</button></div>
+            <div id="aiHistory" class="ai-history"></div>
+          </section>
+        </div>
+
+        <section class="recent-sheet" aria-labelledby="recentTitle">
+          <div class="section-heading"><div><p class="eyebrow">Archive / 最近</p><h2 id="recentTitle">最近打开与记录</h2></div></div>
+          <div id="recentList" class="recent-list"></div>
+        </section>
+        </div>
+
+        <section id="timelineView" class="timeline-view" role="tabpanel" aria-labelledby="timelineTab" hidden>
+          <header class="timeline-intro">
+            <div><p class="eyebrow">Life rail / 分级时间轴</p><h2>从大运看到每日触发</h2><p>当前大运十年 → 流年 → 节气流月 → 每日。预测线索与实际日记同轴呈现，但不会混作事实。</p></div>
+            <div id="timelineLuck" class="timeline-luck" aria-live="polite">正在读取当前大运……</div>
+          </header>
+          <div class="boundary-note">流年、流月使用本地分钟级节气公式；大运起始年份仍属传统换算参考。交节前后两小时请结合准确历表复核。</div>
+          <div id="timelineTree" class="timeline-tree" aria-live="polite"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="qimen.js"></script>
+  <script src="bazi-engine.js?v=20260817.2"></script>
+  <script src="daily-engine.js?v=20260817.4"></script>
+  <script src="deepseek-client.js?v=20260814.1"></script>
+  <script>
+    var DAILY_DB_NAME='daily_journal_v1';
+    var DAILY_DB_VERSION=2;
+    var ACTIVE_PROFILE_STORAGE='daily_active_profile_v1';
+    var API_KEY_STORAGE='qimen_deepseek_api_key';
+    var PRIVACY_ACK_STORAGE='daily_ai_privacy_ack_v1';
+    var TIMELINE_PRIVACY_ACK_STORAGE='daily_timeline_ai_privacy_ack_v1';
+    var dailyDbPromise=null,activeProfile=null,activeDay=null,editingEntryId=null,aiPending=false,timelineAiPending='',activeView='today';
+    var LEGACY_EVENT_CATEGORIES={人际:'人际合作',感情:'亲密关系',健康:'状态恢复'};
+    var timelineState={profileId:'',initialized:false,openYear:null,openMonth:null,openDay:null},timelineNodeMap={},timelineChildrenMap={},timelineDaysByDate={},timelineAiByKey={},timelineRenderSequence=0;
+
+    function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+    function localToday(){return DailyFortuneEngine.dateKey(new Date())}
+    function isoNow(){return new Date().toISOString()}
+    function setStatus(message,isError){var el=document.getElementById('appStatus');el.textContent=message||'';el.classList.toggle('error',!!isError)}
+    function openDailyDb(){
+      if(dailyDbPromise)return dailyDbPromise;
+      dailyDbPromise=new Promise(function(resolve,reject){
+        if(!window.indexedDB){reject(new Error('当前浏览器不支持本地日记数据库'));return}
+        var request=indexedDB.open(DAILY_DB_NAME,DAILY_DB_VERSION);
+        request.onupgradeneeded=function(){
+          var db=request.result;
+          if(!db.objectStoreNames.contains('profiles'))db.createObjectStore('profiles',{keyPath:'id'});
+          if(!db.objectStoreNames.contains('days')){
+            var days=db.createObjectStore('days',{keyPath:'key'});
+            days.createIndex('profileId','profileId',{unique:false});
+          }
+          if(!db.objectStoreNames.contains('timelineAi')){
+            var timelineAi=db.createObjectStore('timelineAi',{keyPath:'key'});
+            timelineAi.createIndex('profileId','profileId',{unique:false});
+          }
+        };
+        request.onsuccess=function(){resolve(request.result)};
+        request.onerror=function(){reject(request.error||new Error('日记数据库打开失败'))};
+      });
+      return dailyDbPromise;
+    }
+    async function storeGet(storeName,key){var db=await openDailyDb();return new Promise(function(resolve,reject){var req=db.transaction(storeName,'readonly').objectStore(storeName).get(key);req.onsuccess=function(){resolve(req.result||null)};req.onerror=function(){reject(req.error)}})}
+    async function storeAll(storeName){var db=await openDailyDb();return new Promise(function(resolve,reject){var req=db.transaction(storeName,'readonly').objectStore(storeName).getAll();req.onsuccess=function(){resolve(req.result||[])};req.onerror=function(){reject(req.error)}})}
+    async function storePut(storeName,value){var db=await openDailyDb();return new Promise(function(resolve,reject){var tx=db.transaction(storeName,'readwrite');tx.objectStore(storeName).put(value);tx.oncomplete=function(){resolve(value)};tx.onerror=function(){reject(tx.error)}})}
+    async function profileDays(profileId){var db=await openDailyDb();return new Promise(function(resolve,reject){var req=db.transaction('days','readonly').objectStore('days').index('profileId').getAll(IDBKeyRange.only(profileId));req.onsuccess=function(){resolve(req.result||[])};req.onerror=function(){reject(req.error)}})}
+    async function profileTimelineAi(profileId){var db=await openDailyDb();return new Promise(function(resolve,reject){var req=db.transaction('timelineAi','readonly').objectStore('timelineAi').index('profileId').getAll(IDBKeyRange.only(profileId));req.onsuccess=function(){resolve(req.result||[])};req.onerror=function(){reject(req.error)}})}
+    async function removeProfileAndDays(profileId){
+      var db=await openDailyDb();
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(['profiles','days','timelineAi'],'readwrite'),days=tx.objectStore('days'),timelineAi=tx.objectStore('timelineAi');
+        tx.objectStore('profiles').delete(profileId);
+        days.index('profileId').openCursor(IDBKeyRange.only(profileId)).onsuccess=function(event){var cursor=event.target.result;if(cursor){cursor.delete();cursor.continue()}};
+        timelineAi.index('profileId').openCursor(IDBKeyRange.only(profileId)).onsuccess=function(event){var cursor=event.target.result;if(cursor){cursor.delete();cursor.continue()}};
+        tx.oncomplete=function(){resolve()};tx.onerror=function(){reject(tx.error)};
+      });
+    }
+    function baziRecords(){
+      var raw=localStorage.getItem('bazi_records');if(!raw)return [];
+      try{var parsed=JSON.parse(raw);return Array.isArray(parsed)?parsed:[]}catch(error){throw new Error('八字保存记录格式异常，请先在八字页导出备份')}
+    }
+    function openProfileCreator(){var box=document.getElementById('profileCreator');box.open=true;box.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){document.getElementById('profileName').focus()},250)}
+    function syncProfileLocation(){document.getElementById('profileCustomLocation').hidden=document.getElementById('profileLocation').value!=='custom'}
+    function directTimeParts(value){
+      var match=/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value||'');if(!match)throw new Error('请输入完整出生时间');
+      var out={year:+match[1],month:+match[2],day:+match[3],hour:+match[4],minute:+match[5]},check=new Date(Date.UTC(out.year,out.month-1,out.day,out.hour,out.minute));
+      if(check.getUTCFullYear()!==out.year||check.getUTCMonth()+1!==out.month||check.getUTCDate()!==out.day||check.getUTCHours()!==out.hour||check.getUTCMinutes()!==out.minute)throw new Error('出生时间无效');
+      return out;
+    }
+    function directDayOfYear(t){return Math.floor((Date.UTC(t.year,t.month-1,t.day)-Date.UTC(t.year,0,0))/86400000)}
+    function directEquationMinutes(t){var b=2*Math.PI*(directDayOfYear(t)-81)/364;return 9.87*Math.sin(2*b)-7.53*Math.cos(b)-1.5*Math.sin(b)}
+    function directAddMinutes(t,minutes){var d=new Date(Date.UTC(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(minutes)));return {year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate(),hour:d.getUTCHours(),minute:d.getUTCMinutes()}}
+    function directLocation(){
+      var select=document.getElementById('profileLocation'),option=select.options[select.selectedIndex];if(!option||!select.value)throw new Error('请选择出生地点');
+      if(select.value==='custom'){
+        var name=document.getElementById('profileLocationName').value.trim(),lng=Number(document.getElementById('profileLongitude').value);if(!name)throw new Error('请输入地点名称');if(!Number.isFinite(lng)||lng<-180||lng>180)throw new Error('请输入有效东经');return {name:name,lng:lng,lat:null};
+      }
+      var parts=select.value.split('|').map(Number);return {name:option.textContent,lng:parts[0],lat:parts[1]};
+    }
+    function buildDirectBazi(){
+      var person=document.getElementById('profileName').value.trim();if(!person)throw new Error('请输入命主姓名');
+      var gender=document.getElementById('profileGender').value,input=directTimeParts(document.getElementById('profileBirthTime').value),location=directLocation(),enabled=document.getElementById('profileTrueSolar').checked;
+      var longitudeCorrection=(location.lng-120)*4,equationCorrection=directEquationMinutes(input),correction=longitudeCorrection+equationCorrection,used=enabled?directAddMinutes(input,correction):input;
+      var pillars=BaziEngine.buildPillars(used),dayStem=pillars.day[0],scores=BaziEngine.scoreWuxing(pillars),bazi={person:person,gender:gender,time:{input:input,used:used,correction:correction,longitudeCorrection:longitudeCorrection,equationCorrection:equationCorrection,enabled:enabled,location:location},pillars:pillars,dayStem:dayStem,dayElement:BaziEngine.constants.STEM_WX[dayStem],scores:scores,relations:[]};
+      bazi.patternAnalysis=BaziEngine.analyzePattern(bazi);bazi.strength=bazi.patternAnalysis.strength;bazi.useful=bazi.patternAnalysis.useful;bazi.pattern=bazi.patternAnalysis.primary;return bazi;
+    }
+    async function createDailyProfile(event){
+      event.preventDefault();var button=event.currentTarget.querySelector('button[type="submit"]');button.disabled=true;
+      try{
+        var bazi=buildDirectBazi(),record={id:'daily-direct-'+Date.now().toString(36),name:bazi.person+' '+bazi.pillars.day+'日',bazi:bazi},profile=DailyFortuneEngine.profileFromBaziRecord(record),existing=await storeGet('profiles',profile.id);
+        if(!existing)await storePut('profiles',profile);localStorage.setItem(ACTIVE_PROFILE_STORAGE,profile.id);await loadProfiles();document.getElementById('profileCreator').open=false;setStatus(existing?'这位命主已存在，已切换到原档案。':'已在日运页建立 '+profile.name+'，没有写入八字页。',false);
+      }catch(error){setStatus('命主建立失败：'+error.message,true)}finally{button.disabled=false}
+    }
+    async function syncBaziProfiles(silent){
+      try{
+        var records=baziRecords(),profiles=await storeAll('profiles'),known={};profiles.forEach(function(item){known[item.id]=true});
+        var added=0,skipped=0;
+        for(var i=0;i<records.length;i++){
+          try{
+            var profile=DailyFortuneEngine.profileFromBaziRecord(records[i]);
+            if(known[profile.id]){skipped++;continue}
+            await storePut('profiles',profile);known[profile.id]=true;added++;
+          }catch(error){skipped++}
+        }
+        await loadProfiles();
+        if(!silent)setStatus(records.length?'已同步 '+added+' 位新命主；跳过 '+skipped+' 条重复或不完整记录。':'八字页还没有可同步的保存记录。',!records.length);
+      }catch(error){setStatus(error.message,true)}
+    }
+    async function loadProfiles(){
+      var profiles=(await storeAll('profiles')).sort(function(a,b){return String(a.name).localeCompare(String(b.name),'zh-CN-u-co-pinyin')});
+      var select=document.getElementById('profileSelect'),saved=localStorage.getItem(ACTIVE_PROFILE_STORAGE);
+      select.innerHTML=profiles.length?profiles.map(function(item){return '<option value="'+esc(item.id)+'">'+esc(item.name)+'</option>'}).join(''):'<option value="">暂无命主</option>';
+      if(!profiles.length){activeProfile=null;activeDay=null;renderNoProfile();return}
+      var selected=profiles.find(function(item){return item.id===saved})||profiles[0];select.value=selected.id;await switchProfile(selected.id);
+    }
+    function renderNoProfile(){
+      document.getElementById('emptyState').hidden=false;document.getElementById('workspace').hidden=true;document.getElementById('deleteProfileButton').disabled=true;
+      document.getElementById('profileIdentity').innerHTML='<div class="profile-monogram" aria-hidden="true">未</div><div><div class="profile-name">尚未建立命主档案</div><div class="pillars"><span class="pillar-chip">可在本页直接输入</span></div></div>';
+    }
+    async function switchProfile(id){
+      if(!id){renderNoProfile();return}
+      try{
+        var profile=await storeGet('profiles',id);if(!profile)throw new Error('命主档案不存在');
+        activeProfile=profile;localStorage.setItem(ACTIVE_PROFILE_STORAGE,id);document.getElementById('profileSelect').value=id;
+        document.getElementById('emptyState').hidden=true;document.getElementById('workspace').hidden=false;document.getElementById('deleteProfileButton').disabled=false;
+        if(timelineState.profileId!==id)timelineState={profileId:id,initialized:false,openYear:null,openMonth:null,openDay:null};
+        renderProfile();await loadDay(document.getElementById('activeDate').value||localToday());if(activeView==='timeline')await renderTimeline();
+      }catch(error){setStatus(error.message,true)}
+    }
+    function renderProfile(){
+      var b=activeProfile.bazi,p=b.pillars,labels=[['年',p.year],['月',p.month],['日',p.day],['时',p.hour]];
+      document.getElementById('profileIdentity').innerHTML='<div class="profile-monogram" aria-hidden="true">'+esc((activeProfile.name||'未')[0])+'</div><div><div class="profile-name">'+esc(activeProfile.name)+'</div><div class="pillars">'+labels.map(function(item){return '<span class="pillar-chip">'+item[0]+' <b>'+esc(item[1])+'</b></span>'}).join('')+'</div><div class="fortune-limit">'+esc(b.gender||'')+' · 日主 '+esc(b.dayStem||p.day[0])+' · 档案独立保存</div></div>';
+    }
+    async function switchDailyView(view){
+      activeView=view==='timeline'?'timeline':'today';var timeline=activeView==='timeline';
+      document.getElementById('todayView').hidden=timeline;document.getElementById('timelineView').hidden=!timeline;
+      document.getElementById('todayTab').setAttribute('aria-selected',String(!timeline));document.getElementById('timelineTab').setAttribute('aria-selected',String(timeline));
+      if(timeline&&activeProfile)await renderTimeline();
+    }
+    async function openTimelineDay(date){await switchDailyView('today');await loadDay(date);document.getElementById('todayView').scrollIntoView({behavior:'smooth',block:'start'})}
+    async function upgradeStoredDailySnapshots(){
+      var profiles=await storeAll('profiles'),profileMap={};profiles.forEach(function(item){profileMap[item.id]=item});var days=await storeAll('days'),changed=0,skipped=0,now=isoNow();
+      for(var i=0;i<days.length;i++){
+        if(days[i].snapshot&&days[i].snapshot.version===DailyFortuneEngine.version&&days[i].snapshot.outlookRevision===DailyFortuneEngine.outlookRevision)continue;
+        var profile=profileMap[days[i].profileId];if(!profile){skipped++;continue}
+        try{var upgraded=DailyFortuneEngine.upgradeDayRecord(days[i],profile,now);if(upgraded.changed){await storePut('days',upgraded.record);changed++}}catch(error){skipped++}
+      }
+      return {changed:changed,skipped:skipped};
+    }
+    async function loadDay(value){
+      if(!activeProfile)return;
+      try{
+        var date=DailyFortuneEngine.dateKey(value),key=activeProfile.id+'|'+date,day=await storeGet('days',key);
+        document.getElementById('activeDate').value=date;
+        if(!day){
+          day={key:key,profileId:activeProfile.id,date:date,snapshot:DailyFortuneEngine.buildSnapshot(activeProfile,date,isoNow()),entries:[],entryRevision:0,ai:[],createdAt:isoNow(),updatedAt:isoNow()};
+          await storePut('days',day);
+        }else if(!day.snapshot||day.snapshot.version!==DailyFortuneEngine.version||day.snapshot.outlookRevision!==DailyFortuneEngine.outlookRevision){
+          var upgraded=DailyFortuneEngine.upgradeDayRecord(day,activeProfile,isoNow());day=upgraded.record;if(upgraded.changed)await storePut('days',day);
+        }
+        activeDay=day;editingEntryId=null;resetEventForm();renderDay();await renderRecent();
+      }catch(error){setStatus('当天日运读取失败：'+error.message,true)}
+    }
+    function formatDate(dateKey){var parts=dateKey.split('-').map(Number),date=new Date(parts[0],parts[1]-1,parts[2],12);return {day:parts[2],week:new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'long'}).format(date),lunar:(function(){try{return new Intl.DateTimeFormat('zh-CN-u-ca-chinese',{month:'long',day:'numeric'}).format(date)}catch(error){return ''}})()}}
+    function timingLabel(timing){return timing==='pre-day'?'事前冻结':(timing==='retroactive'?'事后补看':'当日冻结')}
+    function renderList(id,values,emptyText){document.getElementById(id).innerHTML=(values&&values.length?values:[emptyText]).map(function(item){return '<li>'+esc(item)+'</li>'}).join('')}
+    function lifeFocusMarkup(focus,signal){
+      focus=focus||signal||{};signal=signal||{};
+      return '<article class="focus-card"><div class="domain-badges"><span class="domain-badge">主要 · '+esc(focus.lifeDomain||focus.domain||'生活安排')+'</span>'+(focus.secondaryLifeDomain?'<span class="domain-badge secondary">次看 · '+esc(focus.secondaryLifeDomain)+'</span>':'')+'<span class="domain-badge strength">'+esc(focus.domainStrength||'仅行动提醒')+'</span></div><dl class="focus-list"><div class="focus-row"><dt>主要看</dt><dd>'+esc(focus.lifeDomain||focus.domain||'生活安排')+'</dd></div><div class="focus-row"><dt>发生在哪</dt><dd>'+esc(focus.scope||'当天事务')+'</dd></div><div class="focus-row"><dt>具体留意</dt><dd>'+esc(focus.focus||'时间、顺序和现实约束')+'</dd></div></dl><p class="focus-action">行动：'+esc(signal.action||'先核对现实条件再安排下一步')+'</p></article>';
+    }
+    function renderDay(){
+      var snapshot=activeDay.snapshot,facts=snapshot.facts,outlook=snapshot.outlook,formatted=formatDate(snapshot.date),layers=facts.temporal.concat([facts.flowDay]);
+      document.getElementById('dateDay').textContent=String(formatted.day).padStart(2,'0');document.getElementById('dateWeek').textContent=formatted.week+(formatted.lunar?' · '+formatted.lunar:'');document.getElementById('flowDayGz').textContent=facts.flowDay.gz;
+      document.getElementById('fortuneTitle').textContent=outlook.summary;document.getElementById('fortuneLimit').textContent=outlook.limit;
+      var recomputeLabel=snapshot.recomputedFromVersion?(snapshot.recomputedFromVersion===snapshot.version?' · 落点规则复算':' · 由 '+snapshot.recomputedFromVersion+' 复算'):'';document.getElementById('snapshotState').textContent=timingLabel(snapshot.timing)+' · '+new Date(snapshot.generatedAt).toLocaleString()+' · '+snapshot.version+recomputeLabel;
+      document.getElementById('layerStrip').innerHTML=layers.map(function(item){return '<div class="layer-card"><small>'+esc(item.label)+'</small><b>'+esc(item.gz)+'</b><span>'+esc(item.stemGod)+' / '+esc(item.branchGod)+'</span></div>'}).join('');
+      renderList('opportunityList',outlook.opportunities,'暂无明确助力线索，按计划推进即可。');renderList('cautionList',outlook.cautions,'暂无明显牵动，仍以现实情况为准。');
+      document.getElementById('themePanel').innerHTML=lifeFocusMarkup(outlook.lifeFocus,outlook.primarySignal);
+      document.getElementById('topEvidenceList').innerHTML=(outlook.topEvidence||[]).slice(0,2).map(function(item){return '<li>'+esc(item)+'</li>'}).join('')||'<li>当前只有基础十神线索，不据此预测具体事件。</li>';
+      document.getElementById('eventCandidateList').innerHTML=(outlook.eventCandidates||[]).slice(0,2).map(function(item){return '<article class="event-direction"><b>'+esc(item.level)+' · '+esc(item.domain)+'</b><span>'+esc(item.text)+'</span><span>依据：'+esc(item.basis)+'</span><span>反向条件：'+esc(item.reverseCondition)+'</span></article>'}).join('')||'<div class="empty-copy">信号未达到多层同向条件，今天只给行动提醒，不预测具体事件。</div>';
+      var meanings=[outlook.primaryTheme].concat(outlook.secondaryTheme?[outlook.secondaryTheme]:[]).filter(Boolean);document.getElementById('meaningPanel').innerHTML=(meanings.length?meanings:[{name:'基础十神',explanation:'当前只有行动提醒，不据此预测具体事件。'}]).map(function(item){return '<span><b>'+esc(item.name)+'</b> · '+esc(item.explanation)+(item.landing?' · '+esc(item.landing):'')+'</span>'}).join('');document.querySelector('#meaningFold summary').textContent='命理依据（'+meanings.length+'）';
+      var relationTexts=(outlook.allRelations||[]),suppressed=outlook.suppressedRelations||[],relationBox=document.getElementById('relationTags');relationBox.innerHTML=(relationTexts.length?relationTexts:[{text:'未见需要展开的有效或受压制关系'}]).map(function(item){var isSuppressed=item.effective===false||suppressed.some(function(hidden){return hidden.text===item.text});return '<span class="'+(isSuppressed?'suppressed':'')+'">'+esc(item.text)+(item.reason?' · '+esc(item.reason):'')+'</span>'}).join('');document.querySelector('#relationFold summary').textContent='展开全部盘面关系（'+relationTexts.length+'）';
+      var preciseBoundary=facts.flowMonthBoundaryApproximate===false;document.getElementById('boundaryText').textContent=preciseBoundary?'流年、流月采用本地分钟级节气公式；原局、大运结论保持冻结。':'这是旧版冻结快照，仍沿用日期近似节气边界；不会静默重算。';
+      var warning=document.getElementById('boundaryWarning'),boundaryLabel=facts.nearestBoundary&&(facts.nearestBoundary.localTimeLabel||facts.nearestBoundary.boundaryKey);warning.hidden=!facts.nearBoundary;warning.textContent=facts.nearBoundary?'当前日期遇 '+facts.nearestBoundary.term+' 交节（'+boundaryLabel+'）；'+(preciseBoundary?'交界前后两小时建议结合准确历表复核。':'旧版只精确到日期，请重点复核交接日。'):'';
+      renderEvents();renderAiHistory();updateAiButton();
+    }
+    function eventId(){return 'event-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)}
+    function resetEventForm(){
+      editingEntryId=null;document.getElementById('eventForm').reset();document.getElementById('eventTime').value=new Date().toTimeString().slice(0,5);document.getElementById('eventValence').value='普通';document.getElementById('eventCategory').value='其他';document.getElementById('eventIncludeAi').checked=true;document.getElementById('eventSubmit').textContent='记下这件事';
+    }
+    async function saveActiveDay(){activeDay.updatedAt=isoNow();await storePut('days',activeDay);renderDay();await renderRecent()}
+    document.getElementById('eventForm').addEventListener('submit',async function(event){
+      event.preventDefault();if(!activeDay)return;
+      var text=document.getElementById('eventText').value.trim();if(!text){setStatus('请先写下事件内容。',true);return}
+      var now=isoNow(),item={id:editingEntryId||eventId(),time:document.getElementById('eventTime').value,valence:document.getElementById('eventValence').value,category:document.getElementById('eventCategory').value,text:text,includeInAi:document.getElementById('eventIncludeAi').checked,updatedAt:now};
+      if(editingEntryId){var index=activeDay.entries.findIndex(function(entry){return entry.id===editingEntryId});item.createdAt=activeDay.entries[index].createdAt;activeDay.entries[index]=item}else{item.createdAt=now;activeDay.entries.push(item);if(!activeDay.firstEntryAt)activeDay.firstEntryAt=now}
+      activeDay.entryRevision=(activeDay.entryRevision||0)+1;resetEventForm();await saveActiveDay();setStatus('事件已保存；原来的事前日运没有改写。',false);
+    });
+    function renderEvents(){
+      var box=document.getElementById('eventList'),entries=activeDay.entries||[];
+      if(!entries.length){box.innerHTML='<div class="empty-copy">还没有事件。先过生活，再回来记录。</div>';return}
+      box.innerHTML=entries.slice().sort(function(a,b){return String(a.time).localeCompare(String(b.time))}).map(function(item){
+        var ctx=DailyFortuneEngine.eventContext(activeDay.date,item.time);
+        return '<article class="event-card" data-valence="'+esc(item.valence)+'"><div class="event-meta"><strong>'+esc(item.time||'未记时间')+'</strong><span>'+esc(item.valence)+'</span><span>'+esc(item.category)+'</span><span>命理采用 '+esc(ctx.fortuneDate)+' '+esc(ctx.dayGz)+(ctx.shifted?' · 23点换日':'')+'</span></div><p>'+esc(item.text)+'</p><div class="event-actions"><label class="check-line"><input type="checkbox" '+(item.includeInAi!==false?'checked':'')+' onchange="toggleEntryAi(\''+item.id+'\',this.checked)">发送给 AI</label><div class="tiny-actions"><button type="button" onclick="editEntry(\''+item.id+'\')">编辑</button><button type="button" onclick="deleteEntry(\''+item.id+'\')">删除</button></div></div></article>';
+      }).join('');
+    }
+    function editEntry(id){
+      var item=activeDay.entries.find(function(entry){return entry.id===id});if(!item)return;
+      editingEntryId=id;document.getElementById('eventTime').value=item.time;document.getElementById('eventValence').value=item.valence;document.getElementById('eventCategory').value=LEGACY_EVENT_CATEGORIES[item.category]||item.category||'其他';document.getElementById('eventText').value=item.text;document.getElementById('eventIncludeAi').checked=item.includeInAi!==false;document.getElementById('eventSubmit').textContent='保存修改';document.getElementById('eventText').focus();
+    }
+    async function deleteEntry(id){if(!confirm('删除这件日记？原有 AI 反馈会保留并标记为旧版本。'))return;activeDay.entries=activeDay.entries.filter(function(item){return item.id!==id});activeDay.entryRevision=(activeDay.entryRevision||0)+1;resetEventForm();await saveActiveDay()}
+    async function toggleEntryAi(id,checked){var item=activeDay.entries.find(function(entry){return entry.id===id});if(!item)return;item.includeInAi=!!checked;item.updatedAt=isoNow();activeDay.entryRevision=(activeDay.entryRevision||0)+1;await saveActiveDay()}
+    function aiType(){
+      if((activeDay.entries||[]).length)return 'review';
+      if(activeDay.firstEntryAt)return 'retroactive';
+      return activeDay.snapshot.timing==='retroactive'?'retroactive':'forecast';
+    }
+    function aiTypeLabel(type){return type==='forecast'?'事前日运':(type==='retroactive'?'补看日运':'事后复盘')}
+    function updateAiButton(){
+      var type=aiType(),button=document.getElementById('generateAiButton');button.textContent=type==='review'?'生成日记复盘':(type==='retroactive'?'生成补看详解':'生成事前详解');button.disabled=aiPending;
+    }
+    function renderAiHistory(){
+      var box=document.getElementById('aiHistory'),items=(activeDay.ai||[]).slice().reverse();
+      if(!items.length){box.innerHTML='<div class="empty-copy">没有调用 AI。本地日运已经可以单独使用。</div>';return}
+      box.innerHTML=items.map(function(item){var diaryStale=item.type==='review'&&item.entryRevision!==(activeDay.entryRevision||0),engineStale=!!item.engineStale||item.promptVersion!==DailyFortuneEngine.promptVersion,stale=diaryStale||engineStale,reason=item.staleReason||(diaryStale?'日记内容后来有变化':'解释核心已升级');return '<details class="ai-card'+(stale?' stale':'')+'" '+(stale?'':'open')+'><summary><span><strong>'+aiTypeLabel(item.type)+'</strong> · 日记版本 '+item.entryRevision+(stale?' · 旧结果：'+esc(reason):'')+'</span><span>'+esc(new Date(item.createdAt).toLocaleString())+'</span></summary><div class="ai-answer">'+esc(item.answer)+'</div></details>'}).join('');
+    }
+    function getApiKey(){var key=localStorage.getItem(API_KEY_STORAGE)||'';if(!key){key=prompt('请输入 DeepSeek API Key（只保存在当前浏览器）')||'';if(key.trim())localStorage.setItem(API_KEY_STORAGE,key.trim())}return key.trim()}
+    async function generateDailyAi(){
+      if(aiPending||!activeDay)return;
+      var type=aiType(),selected=(activeDay.entries||[]).filter(function(item){return item.includeInAi!==false});
+      if(type==='review'&&!selected.length){setStatus('当前日记都没有勾选发送给 AI。',true);return}
+      var revision=activeDay.entryRevision||0,cacheKey=[type,revision,DailyFortuneEngine.promptVersion].join('|'),cached=(activeDay.ai||[]).find(function(item){return item.cacheKey===cacheKey});
+      if(cached){setStatus('已显示这个版本的缓存结果，没有重复调用 AI。',false);return}
+      if(selected.length&&!localStorage.getItem(PRIVACY_ACK_STORAGE)){
+        if(!confirm('将把当前勾选的 '+selected.length+' 件日记和固定盘面事实发送给 DeepSeek。是否继续？'))return;
+        localStorage.setItem(PRIVACY_ACK_STORAGE,'1');
+      }
+      var key=getApiKey();if(!key)return;
+      var requestKey=activeDay.key,requestRevision=revision,promptText=DailyFortuneEngine.buildAiPrompt(activeDay.snapshot,selected,type),button=document.getElementById('generateAiButton');
+      aiPending=true;button.disabled=true;button.textContent='正在生成…';document.getElementById('aiHistory').insertAdjacentHTML('afterbegin','<div id="dailyAiPending" class="ai-pending" role="status">AI 正在核对固定盘面与日记</div>');
+      try{
+        var result=await DeepSeekClient.requestFinal({apiKey:key,messages:[{role:'system',content:'你是传统子平命理日运记录助手。固定干支事实不可改写，推断必须给依据、反向信号和不确定处。'},{role:'user',content:promptText}],maxTokens:4096});
+        if(!activeDay||activeDay.key!==requestKey||activeDay.entryRevision!==requestRevision){setStatus('日记在分析期间发生变化，本次结果没有写入。',true);return}
+        activeDay.ai=activeDay.ai||[];activeDay.ai.push({id:'ai-'+Date.now().toString(36),type:type,entryRevision:revision,cacheKey:cacheKey,promptVersion:DailyFortuneEngine.promptVersion,createdAt:isoNow(),answer:result.answer});
+        await saveActiveDay();setStatus('AI 反馈已按版本保存。',false);
+      }catch(error){setStatus('AI 分析失败：'+error.message,true)}finally{aiPending=false;var pending=document.getElementById('dailyAiPending');if(pending)pending.remove();updateAiButton()}
+    }
+    function shiftDate(delta){if(!activeProfile)return;loadDay(DailyFortuneEngine.addDays(document.getElementById('activeDate').value,delta))}
+    function goToday(){loadDay(localToday())}
+    async function renderRecent(){
+      var days=(await profileDays(activeProfile.id)).sort(function(a,b){return b.date.localeCompare(a.date)}).slice(0,10),box=document.getElementById('recentList');
+      box.innerHTML=days.length?days.map(function(day){return '<button class="recent-day" type="button" onclick="loadDay(\''+day.date+'\')"><b>'+esc(day.date)+'</b><span>'+day.snapshot.facts.flowDay.gz+' · '+(day.entries||[]).length+' 件事 · '+(day.ai||[]).length+' 条解读</span></button>'}).join(''):'<div class="empty-copy">暂无日期记录</div>';
+    }
+    function timelineAiKey(node){return activeProfile.id+'|'+node.level+'|'+node.periodKey}
+    function signalBadges(node){return '<span class="signal-badges">'+node.signals.map(function(signal){return '<span class="signal-badge" data-signal="'+esc(signal)+'">'+esc(signal)+'</span>'}).join('')+'<span class="signal-badge">'+esc(node.strength)+'</span></span>'}
+    function chinaDateFromIso(value){return new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(value)).replace(/\//g,'-')}
+    function evidenceFold(node){var core=(node.topEvidence||node.evidence||[]).slice(0,2),relations=node.allRelations||[];return '<div><ul class="core-evidence">'+(core.length?core:['当前只有基础行动提醒']).map(function(item){return '<li>'+esc(item)+'</li>'}).join('')+'</ul><details class="evidence-fold"><summary>展开全部盘面关系（'+relations.length+'）</summary><ul>'+(relations.length?relations.map(function(item){return item.text}):['未见需要展开的有效或受压制关系']).map(function(item){return '<li>'+esc(item)+'</li>'}).join('')+'</ul></details></div>'}
+    function timelineAiMarkup(node){
+      var record=timelineAiByKey[timelineAiKey(node)],history=record&&record.history||[],latest=history[history.length-1],hash=DailyFortuneEngine.timelineFactsHash(node),stale=latest&&(latest.factsHash!==hash||latest.promptVersion!==DailyFortuneEngine.timelinePromptVersion),pending=timelineAiPending===node.periodKey;
+      return '<div class="timeline-actions"><button class="primary" type="button" '+(pending?'disabled':'')+' onclick="generateTimelineAi(\''+node.periodKey+'\')">'+(pending?'正在生成…':(latest?'重新生成AI解读':'生成AI解读'))+'</button></div>'+
+        (latest?'<article class="timeline-ai'+(stale?' stale':'')+'"><header><span>'+(stale?'旧版本解读':'本地保存的AI解读')+(history.length>1?' · 共'+history.length+'版':'')+'</span><span>'+esc(new Date(latest.createdAt).toLocaleString())+'</span></header><div class="ai-answer">'+esc(latest.answer)+'</div></article>':'');
+    }
+    function timelineNodeDetail(node){return '<div class="timeline-detail"><div><p>'+esc(node.summary)+'</p>'+lifeFocusMarkup(node.lifeFocus,node.primarySignal)+(node.boundaryWarning?'<div class="boundary-note">'+esc(node.boundaryWarning)+'</div>':'')+'</div>'+evidenceFold(node)+'</div>'+timelineAiMarkup(node)}
+    function renderMonthNode(node,days){
+      var open=timelineState.openMonth===node.periodKey;
+      return '<article class="timeline-node month'+(open?' open':'')+'"><button class="timeline-toggle" type="button" aria-expanded="'+open+'" onclick="toggleTimelineMonth(\''+node.periodKey+'\')"><span class="timeline-time"><b>'+esc(node.term+' · '+node.gz)+'</b><span>'+esc(chinaDateFromIso(node.startAt)+' 至 '+chinaDateFromIso(node.endAt))+'</span></span><span class="timeline-summary">'+signalBadges(node)+'<strong>'+esc(node.summary)+'</strong><small>'+esc(node.themes.join('、')||'平稳观察')+'</small></span><span class="timeline-chevron" aria-hidden="true">›</span></button>'+(open?'<div class="timeline-body">'+timelineNodeDetail(node)+'<div class="timeline-days">'+days.map(renderDayNode).join('')+'</div></div>':'')+'</article>';
+    }
+    function renderDayNode(node){
+      var open=timelineState.openDay===node.periodKey,day=timelineDaysByDate[node.date],events=day&&day.entries||[],today=node.date===localToday();
+      return '<article id="timeline-'+node.periodKey.replace(/:/g,'-')+'" class="timeline-day'+(today?' today':'')+'"><button class="timeline-day-button" type="button" aria-expanded="'+open+'" onclick="toggleTimelineDay(\''+node.periodKey+'\')"><span class="timeline-day-date"><b>'+esc(node.date.slice(5))+'</b><span>'+esc(node.weekday+' · '+node.gz)+'</span></span><span class="timeline-day-copy">'+signalBadges(node)+'<small>'+esc(node.summary)+'</small></span><span class="event-count">'+events.length+' 件事实</span></button>'+(open?renderDayDetail(node,day):'')+'</article>';
+    }
+    function renderDayDetail(node,day){
+      var events=day&&day.entries||[],latest=day&&day.ai&&day.ai[day.ai.length-1],stale=latest&&(latest.engineStale||latest.promptVersion!==DailyFortuneEngine.promptVersion||(latest.type==='review'&&latest.entryRevision!==(day.entryRevision||0)));
+      var actual=events.length?events.slice().sort(function(a,b){return String(a.time).localeCompare(String(b.time))}).map(function(item){var ctx=DailyFortuneEngine.eventContext(node.date,item.time);return '<p><strong>'+esc(item.time+' · '+item.valence+' · '+item.category)+'</strong><br>'+esc(item.text)+(ctx.shifted?'<br><small>23点换日：命理采用 '+esc(ctx.fortuneDate+' '+ctx.dayGz)+'</small>':'')+'</p>'}).join(''):'<p>尚无事实记录。</p>';
+      var eventText=(node.eventCandidates||[]).slice(0,2).map(function(item){return '<p><strong>'+esc(item.level)+'：</strong>'+esc(item.text)+'</p>'}).join('')||'<p>未达到多层同向条件，只保留行动提醒。</p>';
+      return '<div class="timeline-day-detail"><div class="prediction-fact-grid"><section class="prediction-fact"><h4>事前信号</h4><p>'+esc(node.summary)+'</p>'+eventText+'<p>'+esc((node.topEvidence||node.evidence).slice(0,2).join('；')||'未见突出触发')+'</p>'+(node.boundaryWarning?'<p>'+esc(node.boundaryWarning)+'</p>':'')+'</section><section class="prediction-fact actual"><h4>实际记录</h4>'+actual+'</section></div><div class="timeline-actions"><button class="primary" type="button" '+(timelineAiPending===node.periodKey?'disabled':'')+' onclick="generateTimelineDayAi(\''+node.date+'\')">'+(timelineAiPending===node.periodKey?'正在生成…':(latest?'重新生成每日AI':'生成每日AI'))+'</button><button type="button" onclick="openTimelineDay(\''+node.date+'\')">打开当天</button></div>'+(latest?'<article class="timeline-ai'+(stale?' stale':'')+'"><header><span>'+(stale?'日记后来有变化 · 旧结果':'每日AI解读')+'</span><span>'+esc(new Date(latest.createdAt).toLocaleString())+'</span></header><div class="ai-answer">'+esc(latest.answer)+'</div></article>':'')+'</div>';
+    }
+    function renderYearNode(node,months){
+      var open=timelineState.openYear===node.flowYear;
+      return '<article class="timeline-node'+(node.current?' current':'')+'"><button class="timeline-toggle" type="button" aria-expanded="'+open+'" onclick="toggleTimelineYear('+node.flowYear+')"><span class="timeline-time"><b>'+esc(node.flowYear+' · '+node.gz)+'</b><span>'+esc(node.age+'岁参考'+(node.current?' · 当前流年':''))+'</span></span><span class="timeline-summary">'+signalBadges(node)+'<strong>'+esc(node.summary)+'</strong><small>'+esc(node.themes.join('、')||'平稳观察')+'</small></span><span class="timeline-chevron" aria-hidden="true">›</span></button>'+(open?'<div class="timeline-body">'+timelineNodeDetail(node)+'<div class="timeline-children">'+months.map(function(month){return renderMonthNode(month,timelineChildrenMap[month.periodKey]||[])}).join('')+'</div></div>':'')+'</article>';
+    }
+    async function renderTimeline(){
+      if(!activeProfile)return;var sequence=++timelineRenderSequence,tree=document.getElementById('timelineTree');tree.innerHTML='<div class="empty-copy">正在生成本地时间轴……</div>';
+      try{
+        var timeline=DailyFortuneEngine.buildTimelineYears(activeProfile,localToday()),current=timeline.currentFlowYear,years=timeline.years;
+        if(!timelineState.initialized){timelineState.initialized=true;timelineState.openYear=years.some(function(item){return item.flowYear===current})?current:years[0].flowYear}
+        var months=timelineState.openYear==null?[]:DailyFortuneEngine.buildTimelineMonths(activeProfile,timelineState.openYear);
+        if(months.length&&!timelineState.openMonth&&timelineState.openYear===current){var now=Date.now(),currentMonth=months.find(function(item){return Date.parse(item.startAt)<=now&&Date.parse(item.endAt)>now});timelineState.openMonth=currentMonth&&currentMonth.periodKey||null}
+        var openMonth=months.find(function(item){return item.periodKey===timelineState.openMonth}),dayNodes=openMonth?DailyFortuneEngine.buildTimelineDays(activeProfile,openMonth):[];
+        if(dayNodes.length&&!timelineState.openDay&&dayNodes.some(function(item){return item.date===localToday()}))timelineState.openDay='day:'+localToday();
+        var storedDays=await profileDays(activeProfile.id),storedAi=await profileTimelineAi(activeProfile.id);if(sequence!==timelineRenderSequence)return;
+        timelineDaysByDate={};storedDays.forEach(function(item){timelineDaysByDate[item.date]=item});timelineAiByKey={};storedAi.forEach(function(item){timelineAiByKey[item.key]=item});timelineNodeMap={};timelineChildrenMap={};
+        years.forEach(function(item){timelineNodeMap[item.periodKey]=item});months.forEach(function(item){timelineNodeMap[item.periodKey]=item});dayNodes.forEach(function(item){timelineNodeMap[item.periodKey]=item});
+        if(timelineState.openYear!=null)timelineChildrenMap['year:'+timelineState.openYear]=months;if(openMonth)timelineChildrenMap[openMonth.periodKey]=dayNodes;
+        document.getElementById('timelineLuck').innerHTML='<b>'+esc((timeline.bigLuck.current?'当前':'首步')+timeline.bigLuck.gz+'大运')+'</b><span>'+esc((timeline.bigLuck.current?'':'尚未起运 · ')+timeline.bigLuck.from+'—'+timeline.bigLuck.to+'岁 · 约 '+timeline.bigLuck.startYear+'—'+timeline.bigLuck.endYear+' · '+timeline.bigLuck.direction)+'</span>';
+        tree.innerHTML=years.map(function(year){return renderYearNode(year,year.flowYear===timelineState.openYear?months:[])}).join('');
+      }catch(error){tree.innerHTML='<div class="empty-copy">时间轴生成失败：'+esc(error.message)+'</div>';setStatus('时间轴生成失败：'+error.message,true)}
+    }
+    async function toggleTimelineYear(year){timelineState.openYear=timelineState.openYear===year?null:year;timelineState.openMonth=null;timelineState.openDay=null;await renderTimeline()}
+    async function toggleTimelineMonth(periodKey){timelineState.openMonth=timelineState.openMonth===periodKey?null:periodKey;timelineState.openDay=null;await renderTimeline()}
+    async function toggleTimelineDay(periodKey){timelineState.openDay=timelineState.openDay===periodKey?null:periodKey;await renderTimeline()}
+    async function generateTimelineAi(periodKey){
+      var node=timelineNodeMap[periodKey];if(!node||timelineAiPending)return;var key=timelineAiKey(node),record=timelineAiByKey[key]||{key:key,profileId:activeProfile.id,level:node.level,periodKey:node.periodKey,history:[]},hash=DailyFortuneEngine.timelineFactsHash(node),cached=(record.history||[]).find(function(item){return item.factsHash===hash&&item.promptVersion===DailyFortuneEngine.timelinePromptVersion});
+      if(cached){setStatus('已显示这个周期的缓存结果，没有重复调用AI。',false);return}
+      if(!localStorage.getItem(TIMELINE_PRIVACY_ACK_STORAGE)){if(!confirm('将把命主固定盘面和本地时间轴信号发送给 DeepSeek；不会发送任何日记正文。是否继续？'))return;localStorage.setItem(TIMELINE_PRIVACY_ACK_STORAGE,'1')}
+      var apiKey=getApiKey();if(!apiKey)return;var profileId=activeProfile.id,promptText=DailyFortuneEngine.buildTimelineAiPrompt(activeProfile,node,timelineChildrenMap[node.periodKey]||[]);timelineAiPending=node.periodKey;await renderTimeline();
+      try{
+        var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:[{role:'system',content:'你是传统子平命理时间轴助手。固定干支事实不可改写，推断必须给依据、反向信号、不确定处和现实提醒。'},{role:'user',content:promptText}],maxTokens:4096});
+        if(!activeProfile||activeProfile.id!==profileId||!timelineNodeMap[periodKey]||DailyFortuneEngine.timelineFactsHash(timelineNodeMap[periodKey])!==hash){setStatus('时间轴在分析期间发生变化，本次结果没有写入。',true);return}
+        record.history=record.history||[];record.history.push({id:'timeline-ai-'+Date.now().toString(36),factsHash:hash,promptVersion:DailyFortuneEngine.timelinePromptVersion,createdAt:isoNow(),answer:result.answer});record.updatedAt=isoNow();await storePut('timelineAi',record);setStatus('周期AI解读已按版本保存在本地。',false);
+      }catch(error){setStatus('周期AI分析失败：'+error.message,true)}finally{timelineAiPending='';await renderTimeline()}
+    }
+    function dayAiTypeFor(day){if((day.entries||[]).length)return 'review';if(day.firstEntryAt)return 'retroactive';return day.snapshot.timing==='retroactive'?'retroactive':'forecast'}
+    async function generateTimelineDayAi(date){
+      if(timelineAiPending||!activeProfile)return;var profileId=activeProfile.id,key=profileId+'|'+date,day=await storeGet('days',key);
+      if(!day){day={key:key,profileId:profileId,date:date,snapshot:DailyFortuneEngine.buildSnapshot(activeProfile,date,isoNow()),entries:[],entryRevision:0,ai:[],createdAt:isoNow(),updatedAt:isoNow()};await storePut('days',day)}
+      var type=dayAiTypeFor(day),selected=(day.entries||[]).filter(function(item){return item.includeInAi!==false}),revision=day.entryRevision||0,cacheKey=[type,revision,DailyFortuneEngine.promptVersion].join('|');
+      if((day.ai||[]).some(function(item){return item.cacheKey===cacheKey})){setStatus('已显示这个日期的缓存结果，没有重复调用AI。',false);return}
+      if(type==='review'&&!selected.length){setStatus('这一天的日记都没有勾选发送给AI。',true);return}
+      if(selected.length&&!localStorage.getItem(PRIVACY_ACK_STORAGE)){if(!confirm('将把当天勾选的 '+selected.length+' 件日记和固定盘面事实发送给 DeepSeek。是否继续？'))return;localStorage.setItem(PRIVACY_ACK_STORAGE,'1')}
+      var apiKey=getApiKey();if(!apiKey)return;var promptText=DailyFortuneEngine.buildAiPrompt(day.snapshot,selected,type);timelineAiPending='day:'+date;await renderTimeline();
+      try{
+        var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:[{role:'system',content:'你是传统子平命理日运记录助手。固定干支事实不可改写，推断必须给依据、反向信号和不确定处。'},{role:'user',content:promptText}],maxTokens:4096}),fresh=await storeGet('days',key);
+        if(!fresh||fresh.entryRevision!==revision){setStatus('日记在分析期间发生变化，本次结果没有写入。',true);return}
+        fresh.ai=fresh.ai||[];fresh.ai.push({id:'ai-'+Date.now().toString(36),type:type,entryRevision:revision,cacheKey:cacheKey,promptVersion:DailyFortuneEngine.promptVersion,createdAt:isoNow(),answer:result.answer});fresh.updatedAt=isoNow();await storePut('days',fresh);if(activeDay&&activeDay.key===key)activeDay=fresh;setStatus('每日AI解读已按版本保存在本地。',false);
+      }catch(error){setStatus('每日AI分析失败：'+error.message,true)}finally{timelineAiPending='';await renderTimeline()}
+    }
+    async function deleteActiveProfile(){
+      if(!activeProfile)return;var days=await profileDays(activeProfile.id);
+      if(!confirm('删除命主“'+activeProfile.name+'”以及 '+days.length+' 天日记？此操作不可撤销，建议先导出备份。'))return;
+      await removeProfileAndDays(activeProfile.id);localStorage.removeItem(ACTIVE_PROFILE_STORAGE);activeProfile=null;activeDay=null;await loadProfiles();setStatus('命主及其日记已删除，无法恢复。',false);
+    }
+    async function exportDailyData(){
+      try{
+        var payload={version:3,exportedAt:isoNow(),engineVersion:DailyFortuneEngine.version,promptVersion:DailyFortuneEngine.promptVersion,timelinePromptVersion:DailyFortuneEngine.timelinePromptVersion,profiles:await storeAll('profiles'),days:await storeAll('days'),timelineAi:await storeAll('timelineAi')};
+        var blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='daily-journal-'+localToday()+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000);setStatus('已导出全部命主和日记；API Key 未包含。',false);
+      }catch(error){setStatus('导出失败：'+error.message,true)}
+    }
+    async function importDailyData(input){
+      var file=input.files&&input.files[0];if(!file)return;
+      try{
+        var parsed=JSON.parse(await file.text());if([1,2,3].indexOf(parsed.version)<0||!Array.isArray(parsed.profiles)||!Array.isArray(parsed.days))throw new Error('备份格式不正确');var incomingTimelineAi=Array.isArray(parsed.timelineAi)?parsed.timelineAi:[];
+        var profiles=await storeAll('profiles'),days=await storeAll('days'),timelineAi=await storeAll('timelineAi'),profileIds=new Set(profiles.map(function(item){return item.id})),dayKeys=new Set(days.map(function(item){return item.key})),timelineKeys=new Set(timelineAi.map(function(item){return item.key}));
+        parsed.profiles.forEach(function(item){if(!item||!item.id||!item.bazi)throw new Error('备份包含无效命主')});
+        parsed.days.forEach(function(item){if(!item||!item.key||!item.profileId||!item.snapshot)throw new Error('备份包含无效日记')});
+        incomingTimelineAi.forEach(function(item){if(!item||!item.key||!item.profileId||!Array.isArray(item.history))throw new Error('备份包含无效时间轴解读')});
+        var conflicts=parsed.profiles.filter(function(item){return profileIds.has(item.id)}).length+parsed.days.filter(function(item){return dayKeys.has(item.key)}).length+incomingTimelineAi.filter(function(item){return timelineKeys.has(item.key)}).length,overwrite=false;
+        if(conflicts)overwrite=confirm('备份中有 '+conflicts+' 条与本机同键的数据。确定用备份覆盖？取消将保留本机版本并只导入新数据。');
+        for(var i=0;i<parsed.profiles.length;i++)if(overwrite||!profileIds.has(parsed.profiles[i].id))await storePut('profiles',parsed.profiles[i]);
+        for(var j=0;j<parsed.days.length;j++)if(overwrite||!dayKeys.has(parsed.days[j].key))await storePut('days',parsed.days[j]);
+        for(var k=0;k<incomingTimelineAi.length;k++)if(overwrite||!timelineKeys.has(incomingTimelineAi[k].key))await storePut('timelineAi',incomingTimelineAi[k]);
+        var upgrade=await upgradeStoredDailySnapshots();await loadProfiles();setStatus('导入完成：'+parsed.profiles.length+' 位命主，'+parsed.days.length+' 天日记，'+incomingTimelineAi.length+' 条时间轴解读；其中 '+upgrade.changed+' 天已复算为 V3.1。',false);
+      }catch(error){setStatus('导入失败：'+error.message,true)}finally{input.value=''}
+    }
+    document.addEventListener('DOMContentLoaded',async function(){
+      document.getElementById('activeDate').value=localToday();
+      try{await openDailyDb();var profiles=await storeAll('profiles');if(!profiles.length)await syncBaziProfiles(true);else{var upgrade=await upgradeStoredDailySnapshots();await loadProfiles();if(upgrade.changed)setStatus('已保留原冻结时间、日记和 AI 历史，并将 '+upgrade.changed+' 天旧日运复算为 V3.1。',false)}}catch(error){setStatus(error.message,true);renderNoProfile()}
+    });
+  </script>
+</body>
+</html>

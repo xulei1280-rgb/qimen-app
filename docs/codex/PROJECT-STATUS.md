@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `47516f7`（本次重新发布提交的父提交）
-- Changed: 四个模块已统一接入本地 `deepseek-client.js`，继续使用 `deepseek-v4-pro` 高强度思考；若新版接口只返回思考过程或空正文，自动以关闭思考模式重试一次，奇门和六爻输出额度为 16384。本次因手机端命中旧缓存而重新触发 GitHub Pages 发布，未再改计算、提示词、记录或 AI 请求逻辑。
-- Checks: `node .\check-deepseek-client.js`（思考空正文兜底、过滤及 HTTP 错误）；`node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-baselines.js`（18 个基线）；相关 JavaScript `node --check`; `git diff --check`；GitHub Pages 线上 `deepseek-client.js` 与六爻引用检查。
-- Next task: 使用带版本参数的线上地址和真实 DeepSeek API Key 抽测首问与连续追问；若仍失败，保留页面显示的原始 API 错误再定位账号或服务端问题。
-- Caution: GitHub Pages 当前返回 `Cache-Control: max-age=600`，旧地址最多可能缓存 10 分钟；本次没有读取用户浏览器中的 API Key。
+- Last shared baseline: `10cf892`（本次日运模块提交的父提交）
+- Changed: 新增独立日运日记与可折叠时间轴，接入可复算的日运 V3.1 解释核心、旧快照复算、日记与 AI 历史保留；现实落点改为“主领域、发生场景、具体事项”，五个模块入口统一为奇门、八字、六爻、紫微、日运。
+- Checks: `node .\check-daily-page.js`; `node .\check-bazi-page.js`; `node .\check-baselines.js`（18 个基线）；`node .\check-qimen-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-deepseek-client.js`; 相关 JavaScript `node --check`; 五页面导航顺序与唯一当前项检查；`git diff --check`；日运页面 320px/390px 无横向溢出且控制台无错误。
+- Next task: 推送后核对 GitHub Pages 构建与线上 `daily.html`，再用真实命主连续记录验证现实落点是否仍有泛化或重复。
+- Caution: 命理现实领域是传统规则的现代产品翻译，不代表统计概率或必然事件；日运页本地测试未发送日记或 API Key。
 
 ## Replace At Each Handoff
 

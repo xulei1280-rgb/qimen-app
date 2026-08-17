@@ -657,6 +657,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
       <a class="back" href="bazi.html" aria-current="page">八字</a>
       <a class="back" href="liuyao.html">六爻</a>
       <a class="back" href="ziwei.html">紫微</a>
+      <a class="back" href="daily.html">日运</a>
     </nav>
     <h1>八字分析</h1>
     <div class="sub">四柱排盘 · 格局喜用参考</div>
@@ -1073,6 +1074,7 @@ function kongWang(gz){
   return KONG_BY_XUN[Math.floor(idx/10)]||'';
 }
 function buildPillars(t){
+  if(typeof BaziEngine!=='undefined'&&BaziEngine.buildPillars)return BaziEngine.buildPillars(t);
   var dayDate=new Date(t.year,t.month-1,t.day);
   if(t.hour>=23)dayDate.setDate(dayDate.getDate()+1);
   var day=getDayGZ(dayDate.getFullYear(),dayDate.getMonth()+1,dayDate.getDate());
@@ -1879,7 +1881,7 @@ function getLuckData(data,referenceDate){
     if(row.active)current=row;
     rows.push(row);
   }
-  for(var y=nowYear;y<nowYear+6;y++)years.push({year:y,gz:getYearGZ(y,7,1)});
+  for(var y=nowYear;y<nowYear+6;y++)years.push({year:y,gz:typeof BaziEngine!=='undefined'?BaziEngine.getFlowYearGZ(y):getYearGZ(y,7,1)});
   return {direction:dir>0?'顺行':'逆行',startAge:start,currentYear:nowYear,calendarYear:inquiry.time.year,virtualAge:age,current:current,rows:rows,years:years,inquiry:inquiry};
 }
 function luckStartYear(data,row){return data.time.used.year+row.from-1}
@@ -1920,7 +1922,7 @@ function getSelectedLuckContext(data){
   normalizeLuckSelection(data,luck);
   var row=luck.rows[luckSelection.luck],start=luckStartYear(data,row),years=[],months=[];
   for(var y=start;y<start+10;y++){
-    var ygz=getYearGZ(y,7,1);
+    var ygz=typeof BaziEngine!=='undefined'?BaziEngine.getFlowYearGZ(y):getYearGZ(y,7,1);
     years.push({year:y,gz:ygz,stemGod:tenGod(data.dayStem,ygz[0]),branchWx:BRANCH_WX[ygz[1]]});
   }
   var currentYearIndex=years.findIndex(function(y){return y.year===luck.currentYear});

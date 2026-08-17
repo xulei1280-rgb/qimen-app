@@ -6,6 +6,7 @@
 
 - [`source-manifest.md`](source-manifest.md)：书目、版本、完整度、许可和本地文件。
 - [`rule-crosswalk.md`](rule-crosswalk.md)：各书在本项目中的采用范围、冲突处理和规则主题索引。
+- [`daily-rule-crosswalk.md`](daily-rule-crosswalk.md)：流日、十神应事、岁运触发与易理行动方向的规则边界。
 - [`checksums.sha256`](checksums.sha256)：全部原始文本与扫描的 SHA-256 完整性校验。
 - `texts/`：维基文库原始 Wikitext 快照，不作现代标点或内容改写。
 - `scans/`：维基共享资源公版扫描，用于核页、校异和补足电子文本。
@@ -19,6 +20,7 @@
 5. 《穷通宝鉴》
 6. 《神峰通考》（又见题名《命理正宗》）
 7. 《五行精纪》
+8. 《周易》（仅作时位、进退、变通的解释层）
 
 ## 使用边界
 

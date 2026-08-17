@@ -15,6 +15,7 @@
 | 《穷通宝鉴》 | `texts/qiongtong-baojian.wiki.txt` | [维基文库](https://zh.wikisource.org/wiki/%E7%A9%B7%E9%80%9A%E5%AE%9D%E9%91%91)，修订 `2294674` | 单页全文快照 | 只作为十干十二月调候与气候校正层；不越过月令格局和成败条件单独定高低。 |
 | 《神峰通考》/《命理正宗》 | `scans/shenfeng-tongkao.pdf`；`texts/mingli-zhengzong.wiki.txt` | [《神峰通考》全文扫描](https://commons.wikimedia.org/wiki/File:NLC416-12jh004266-48929_%E7%A5%9E%E5%B3%B0%E9%80%9A%E8%80%83.pdf)，SHA1 `d6a5e7057c538168acb95bad4f2f33691390f6ef`；[《命理正宗》转录](https://zh.wikisource.org/wiki/%E5%91%BD%E7%90%86%E6%AD%A3%E5%AE%97)，修订 `833127` | 扫描为全书；转录只是短篇入口 | 两题名属于同一张楠体系，不当作两份独立证据重复计权。用于病药、雕枯旺弱、损益和格局正误辨析。 |
 | 《五行精纪》 | `texts/wuxing-jingji.wiki.txt` | [维基文库](https://zh.wikisource.org/wiki/%E4%BA%94%E8%A1%8C%E7%B2%BE%E7%B4%80)，修订 `2352956` | 单页全文快照 | 保存为历史前置文献。其年命、纳音、禄命与神煞框架不进入默认子平格局评分，只作术语源流和异说档案。 |
+| 《周易》 | `daily-rule-crosswalk.md`（仅保存采用句与解释边界，不保存伪造卦例） | [中国哲学书电子化计划《周易》固定入口](https://ctext.org/book-of-changes/zh)，2026-08-17 核对 | 采用范围索引，不是全文快照 | 只取《系辞下》《艮·彖》的时位、进退、变通原则，转换为行动次序；不自动起卦，不参与子平格局、喜用或合冲裁决。 |
 
 ## 三命通会修订号
 

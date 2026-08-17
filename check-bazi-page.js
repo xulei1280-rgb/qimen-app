@@ -5,7 +5,7 @@ const vm = require('vm');
 const html = fs.readFileSync('bazi.html', 'utf8');
 assert(html.includes('src="deepseek-client.js?v=20260814.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
 assert(!html.includes("model:'deepseek-chat'"), 'Bazi AI should not use the retired non-thinking model alias');
-assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html" aria-current="page">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>/.test(html), 'Bazi should expose the unified four-module navigation');
+assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html" aria-current="page">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), 'Bazi should expose the unified five-module navigation');
 
 function assert(condition, message) {
   if (!condition) {
@@ -16,6 +16,7 @@ function assert(condition, message) {
 const patternSourceRoot = 'docs/codex/modules/pattern-sources';
 const sourceManifest = fs.readFileSync(`${patternSourceRoot}/source-manifest.md`, 'utf8');
 const sourceCrosswalk = fs.readFileSync(`${patternSourceRoot}/rule-crosswalk.md`, 'utf8');
+const dailyRuleCrosswalk = fs.readFileSync(`${patternSourceRoot}/daily-rule-crosswalk.md`, 'utf8');
 const patternBacklog = fs.readFileSync('docs/codex/modules/pattern-optimization-backlog.md', 'utf8');
 const theoreticalBaselineDoc = fs.readFileSync('docs/codex/modules/pattern-theoretical-baseline.md', 'utf8');
 const confirmationBiasPostmortem = fs.readFileSync('docs/codex/modules/pattern-confirmation-bias-postmortem.md', 'utf8');
@@ -60,6 +61,7 @@ assert(!patternBacklog.includes('Elon Musk'), 'pattern validation backlog should
 assert(sourceCrosswalk.includes('`ZP-CG-02` 食神制杀') && sourceCrosswalk.includes('食神、七杀俱有根气并透出或得月令') && sourceCrosswalk.includes('财星承食生杀'), 'food-control formation should have a source-linked strict rule and explicit counter-condition');
 assert(theoreticalBaselineDoc.includes('ZP-TB-1984-2044-D11-H12-v9') && theoreticalBaselineDoc.includes('23,916') && theoreticalBaselineDoc.includes('不使用名人、朋友') && theoreticalBaselineDoc.includes('结构分直接分档'), 'the theoretical baseline document should freeze version, sample count, no-real-person boundary, and score-first grading contract');
 assert(patternPercentileDesign.includes('PAT-LV-DESIGN-v1') && patternPercentileDesign.includes('518,400') && patternPercentileDesign.includes('causeId') && patternPercentileDesign.includes('numericOwner') && patternPercentileDesign.includes('10%') && patternPercentileDesign.includes('25%'), 'PAT-LV-DESIGN-v1 should document the legal universe, cause ownership, and audit-only candidate weights');
+assert(sourceManifest.includes('《周易》') && sourceManifest.includes('不自动起卦') && dailyRuleCrosswalk.includes('`ZP-DAY-01`') && dailyRuleCrosswalk.includes('`ZP-DAY-03`') && dailyRuleCrosswalk.includes('`ZY-ACT-01`') && dailyRuleCrosswalk.includes('不预测事件'), 'daily V3 rules should be source-linked and keep Zhouyi as a bounded action layer');
 
 [
   'id="personName"',
@@ -355,6 +357,13 @@ assert(scriptContext.recordPersonFromTitle({ name: '张黎 丁酉日', bazi: { p
 assert(scriptContext.recordPersonFromTitle({ name: '事业盘 丁酉日', bazi: { person: '王五' } }) === '王五', 'saved record should keep explicit bazi.person');
 assert(scriptContext.BaziEngine, 'BaziEngine should load in VM');
 assert(typeof scriptContext.BaziEngine.analyzePattern === 'function', 'BaziEngine.analyzePattern should exist');
+assert(typeof scriptContext.BaziEngine.analyzeTemporalInteractions === 'function', 'BaziEngine should expose temporal interaction arbitration');
+const contestedTemporal = scriptContext.BaziEngine.analyzeTemporalInteractions({ pillars: { year: '甲子', month: '己丑', day: '乙卯', hour: '甲辰' } }, [{ key: 'flowDay', label: '流日', gz: '己巳' }]);
+assert(contestedTemporal.effectiveRelations.filter((item) => item.kind === 'stem-combine' && item.effect === 'contest').length === 2 && contestedTemporal.arbitration.decisions.some((item) => item.includes('争合受阻')), 'a temporal stem involved in two combinations should be retained as contested and never transformed exclusively');
+const clashCombineTemporal = scriptContext.BaziEngine.analyzeTemporalInteractions({ pillars: { year: '甲寅', month: '乙丑', day: '丙午', hour: '丁酉' } }, [{ key: 'flowDay', label: '流日', gz: '戊子' }]);
+assert(clashCombineTemporal.effectiveRelations.some((item) => item.type === '冲' && item.resolution === '冲合并见，合不解冲') && clashCombineTemporal.effectiveRelations.some((item) => item.type === '六合' && item.status === '合中逢冲'), 'a temporal clash and combine sharing one branch should both remain visible after arbitration');
+const meetingSuppressesBreak = scriptContext.BaziEngine.analyzeTemporalInteractions({ pillars: { year: '甲寅', month: '乙卯', day: '丙丑', hour: '丁午' } }, [{ key: 'flowDay', label: '流日', gz: '戊辰' }]);
+assert(meetingSuppressesBreak.groups.some((item) => item.name === '三会木局' && item.effective) && meetingSuppressesBreak.suppressedRelations.some((item) => item.type === '破' && item.suppressedBy === '三会木局'), 'a supported complete meeting should suppress a lower-order external break relation');
 scriptContext.currentBazi = {
   person: '测试',
   gender: '男',
@@ -388,16 +397,20 @@ const forwardLuckChart = {
 };
 const startInfo = scriptContext.BaziEngine.luckStartInfo(forwardLuckChart);
 assert(startInfo.direction === '顺行' && startInfo.term === '芒种', `forward luck should start from next 芒种, got ${JSON.stringify(startInfo)}`);
-assert(startInfo.startAge === 10, `exact/near 30-day luck offset should enter at 10 sui, got ${startInfo.startAge}`);
+assert(startInfo.startAgeExact > 10 && startInfo.startAge === 11, `minute-calibrated 30-day luck offset should enter at virtual age 11, got ${JSON.stringify(startInfo)}`);
 const forwardLuck = scriptContext.getLuckData(forwardLuckChart, new Date(2026, 6, 9, 12));
-assert(forwardLuck.startAge === 10 && scriptContext.luckStartYear(forwardLuckChart, forwardLuck.rows[0]) === 1999, 'luck start year should follow virtual-age entry year');
+assert(forwardLuck.startAge === 11 && scriptContext.luckStartYear(forwardLuckChart, forwardLuck.rows[0]) === 2000, 'luck start year should follow minute-calibrated virtual-age entry year');
 const beforeLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 3, 12));
 const afterLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 4, 12));
 assert(beforeLiChun.flowYearNumber === 2025 && beforeLiChun.flowYearGz === '乙巳', `flow year before lichun mismatch: ${JSON.stringify(beforeLiChun)}`);
 assert(afterLiChun.flowYearNumber === 2026 && afterLiChun.flowYearGz === '丙午', `flow year after lichun mismatch: ${JSON.stringify(afterLiChun)}`);
+assert(scriptContext.BaziEngine.getFlowYearNumber({ year: 2026, month: 2, day: 4, hour: 10, minute: 15 }) === 2025, 'the minute before exact lichun should remain in the prior flow year');
+assert(scriptContext.BaziEngine.getFlowYearNumber({ year: 2026, month: 2, day: 4, hour: 10, minute: 17 }) === 2026, 'the minute after exact lichun should enter the new flow year');
 const flowMonths2026 = scriptContext.getFlowMonths(2026, '丁');
-assert(flowMonths2026[0].term === '立春' && flowMonths2026[0].dateLabel === '2026/2/4' && flowMonths2026[0].gz === '庚寅', `flow month lichun mismatch: ${JSON.stringify(flowMonths2026[0])}`);
-assert(flowMonths2026[11].term === '小寒' && flowMonths2026[11].dateLabel === '2027/1/5' && flowMonths2026[11].gz === '辛丑', `flow month xiaohan should cross Gregorian year: ${JSON.stringify(flowMonths2026[11])}`);
+assert(flowMonths2026[0].term === '立春' && flowMonths2026[0].dateLabel === '2026/2/4' && flowMonths2026[0].localTimeLabel === '2026/2/4 10:16' && flowMonths2026[0].gz === '庚寅' && flowMonths2026[0].startAt && flowMonths2026[0].endAt, `flow month lichun mismatch: ${JSON.stringify(flowMonths2026[0])}`);
+assert(flowMonths2026[11].term === '小寒' && flowMonths2026[11].dateLabel === '2027/1/6' && flowMonths2026[11].gz === '辛丑', `flow month xiaohan should cross Gregorian year: ${JSON.stringify(flowMonths2026[11])}`);
+assert(scriptContext.BaziEngine.buildPillars({ year: 2026, month: 2, day: 4, hour: 10, minute: 15 }).month === '己丑' && scriptContext.BaziEngine.buildPillars({ year: 2026, month: 2, day: 4, hour: 10, minute: 17 }).month === '庚寅', 'Bazi pillars should share the exact flow-month boundary');
+assert(scriptContext.BaziEngine.nearestMajorSolarTerm({ year: 2026, month: 2, day: 4, hour: 10, minute: 15 }).distanceHours < 2, 'near-boundary lookup should flag the lichun handoff');
 assert(scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-selector"'), 'luck panel should render stacked selector');
 assert(!scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-origin"'), 'luck panel should not repeat origin comparison');
 const luckSelectorHtml = scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext);
@@ -1416,8 +1429,8 @@ const exactTermBazi = {
   time: { used: { year: 1994, month: 12, day: 22, hour: 12, minute: 44 }, input: { year: 1994, month: 12, day: 22, hour: 13, minute: 47 }, enabled: true, correction: -63, location: { name: '云南省 曲靖市 师宗县', lng: 103.9936, lat: 24.8222 } },
 };
 const exactTermLuck = scriptContext.getLuckData(exactTermBazi);
-assert(exactTermLuck.startAge === 6, `exact term gap should be virtual 6 sui, got ${exactTermLuck.startAge}`);
-assert(scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0]) === 1999, `exact term gap should start first luck in 1999, got ${scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0])}`);
+assert(exactTermLuck.startAge === 5, `minute-calibrated term gap should be virtual 5 sui, got ${exactTermLuck.startAge}`);
+assert(scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0]) === 1998, `minute-calibrated term gap should start first luck in 1998, got ${scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0])}`);
 scriptContext.currentBazi = referenceBazi;
 scriptContext.resetLuckSelection();
 const referencePillarTable = scriptContext.renderPillarTable(referenceBazi, true);

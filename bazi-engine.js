@@ -193,21 +193,33 @@
     var dayDate=new Date(t.year,t.month-1,t.day);
     if(t.hour>=23)dayDate.setDate(dayDate.getDate()+1);
     var day=getDayGZ(dayDate.getFullYear(),dayDate.getMonth()+1,dayDate.getDate());
-    return {year:getYearGZ(t.year,t.month,t.day),month:getMonthGZ(t.year,t.month,t.day),day:day,hour:getHourGZ(day,t.hour)};
+    var flowYear=getFlowYearNumber(t),months=getFlowMonths(flowYear,day[0]),moment=timeValue(t),month=months[0];
+    months.forEach(function(item){if(Date.parse(item.startAt)<=moment)month=item});
+    return {year:getFlowYearGZ(flowYear),month:month.gz,day:day,hour:getHourGZ(day,t.hour)};
   }
   var MAJOR_SOLAR_TERMS=[
-    {name:'立春',month:2,day:4},{name:'惊蛰',month:3,day:5},{name:'清明',month:4,day:5},
-    {name:'立夏',month:5,day:5},{name:'芒种',month:6,day:5},{name:'小暑',month:7,day:7},
-    {name:'立秋',month:8,day:7},{name:'白露',month:9,day:7},{name:'寒露',month:10,day:8},
-    {name:'立冬',month:11,day:7},{name:'大雪',month:12,day:7},{name:'小寒',month:1,day:5,nextYear:true}
+    {name:'立春',index:2},{name:'惊蛰',index:4},{name:'清明',index:6},
+    {name:'立夏',index:8},{name:'芒种',index:10},{name:'小暑',index:12},
+    {name:'立秋',index:14},{name:'白露',index:16},{name:'寒露',index:18},
+    {name:'立冬',index:20},{name:'大雪',index:22},{name:'小寒',index:0,nextYear:true}
   ];
   function flowTermYear(flowYear,term){return flowYear+(term.nextYear?1:0)}
-  function termDate(flowYear,term){return new Date(flowTermYear(flowYear,term),term.month-1,term.day)}
+  function termDate(flowYear,term){return solarTermDate(flowTermYear(flowYear,term),term.index)}
+  function timeValue(t){
+    var hour=Number.isFinite(Number(t&&t.hour))?Number(t.hour):12,minute=Number.isFinite(Number(t&&t.minute))?Number(t.minute):0;
+    return Date.UTC(t.year,t.month-1,t.day,hour-8,minute);
+  }
+  function chinaParts(date){
+    var value=new Date(date.getTime()+8*3600000);
+    return {year:value.getUTCFullYear(),month:value.getUTCMonth()+1,day:value.getUTCDate(),hour:value.getUTCHours(),minute:value.getUTCMinutes()};
+  }
+  function localTimeLabel(date){var p=chinaParts(date);return p.year+'/'+p.month+'/'+p.day+' '+String(p.hour).padStart(2,'0')+':'+String(p.minute).padStart(2,'0')}
   function getFlowYearNumber(t){
-    return (t.month===1||(t.month===2&&t.day<4))?t.year-1:t.year;
+    return timeValue(t)<solarTermDate(t.year,2).getTime()?t.year-1:t.year;
   }
   function getFlowYearGZ(year){
-    return typeof getYearGZ==='function'?getYearGZ(year,7,1):'';
+    var gz=getGZ60();
+    return gz[((year-1984)%60+60)%60]||'';
   }
   function luckDirection(data){
     var yangYear='甲丙戊庚壬'.indexOf(data.pillars.year[0])>=0;
@@ -215,10 +227,10 @@
   }
   function luckStartInfo(data){
     var used=data.time.used,dir=luckDirection(data);
-    var birth=new Date(used.year,used.month-1,used.day,used.hour||0,used.minute||0);
+    var birth=new Date(timeValue(used));
     var terms=[];
     for(var y=used.year-1;y<=used.year+1;y++){
-      MAJOR_SOLAR_TERMS.forEach(function(t){terms.push({name:t.name,year:flowTermYear(y,t),month:t.month,day:t.day,date:termDate(y,t)})});
+      MAJOR_SOLAR_TERMS.forEach(function(t){var date=termDate(y,t),parts=chinaParts(date);terms.push({name:t.name,year:parts.year,month:parts.month,day:parts.day,date:date})});
     }
     terms.sort(function(a,b){return a.date-b.date});
     var target=null;
@@ -227,14 +239,23 @@
       if(dir<0&&t.date<birth&&(!target||t.date>target.date))target=t;
     });
     var days=target?Math.abs(target.date-birth)/86400000:0;
-    return {direction:dir>0?'顺行':'逆行',term:target?target.name:'',termDate:target?{year:target.year,month:target.month,day:target.day}:null,days:days,startAge:Math.max(1,Math.ceil(days/3))};
+    var exactAge=days/3;
+    return {direction:dir>0?'顺行':'逆行',term:target?target.name:'',termDate:target?{year:target.year,month:target.month,day:target.day}:null,termAt:target?target.date.toISOString():'',days:days,startAgeExact:Math.round(exactAge*100)/100,startAge:Math.max(1,Math.ceil(exactAge)),approximateStart:true};
   }
   function luckStartAge(data){return luckStartInfo(data).startAge}
   function getFlowMonths(year,dayStem){
-    return MAJOR_SOLAR_TERMS.map(function(t,i){
-      var termYear=flowTermYear(year,t),mgz=typeof getMonthGZ==='function'?getMonthGZ(termYear,t.month,t.day):'';
-      return {month:i+1,term:t.name,dateLabel:termYear+'/'+t.month+'/'+t.day,year:termYear,gz:mgz,stemGod:tenGod(dayStem,mgz[0]),branchWx:BRANCH_WX[mgz[1]]};
+    var yearGz=getFlowYearGZ(year),startStem=[2,4,6,8,0][STEMS.indexOf(yearGz[0])%5];
+    var rows=MAJOR_SOLAR_TERMS.map(function(t,i){
+      var date=termDate(year,t),parts=chinaParts(date),mgz=STEMS[(startStem+i)%10]+BRANCHES[(i+2)%12];
+      return {month:i+1,term:t.name,dateLabel:parts.year+'/'+parts.month+'/'+parts.day,localTimeLabel:localTimeLabel(date),year:parts.year,gz:mgz,stemGod:tenGod(dayStem,mgz[0]),branchWx:BRANCH_WX[mgz[1]],startAt:date.toISOString()};
     });
+    rows.forEach(function(item,index){item.endAt=index<rows.length-1?rows[index+1].startAt:termDate(year+1,MAJOR_SOLAR_TERMS[0]).toISOString()});
+    return rows;
+  }
+  function nearestMajorSolarTerm(t){
+    var moment=timeValue(t),items=[];
+    for(var y=t.year-1;y<=t.year+1;y++)MAJOR_SOLAR_TERMS.forEach(function(term){var at=termDate(y,term);items.push({name:term.name,at:at.toISOString(),localTimeLabel:localTimeLabel(at),distanceHours:Math.abs(at.getTime()-moment)/3600000})});
+    return items.sort(function(a,b){return a.distanceHours-b.distanceHours})[0]||null;
   }
   var NATAL_PILLAR_KEYS=['year','month','day','hour'];
   var PILLAR_META={
@@ -242,11 +263,15 @@
     month:{index:1,stemLabel:'月干',branchLabel:'月令',shortLabel:'月',temporal:false},
     day:{index:2,stemLabel:'日干',branchLabel:'日支',shortLabel:'日',temporal:false},
     hour:{index:3,stemLabel:'时干',branchLabel:'时支',shortLabel:'时',temporal:false},
-    luck:{index:4,stemLabel:'运干',branchLabel:'运支',shortLabel:'运',temporal:true}
+    luck:{index:4,stemLabel:'运干',branchLabel:'运支',shortLabel:'运',temporal:true},
+    flowYear:{index:5,stemLabel:'流年干',branchLabel:'流年支',shortLabel:'年运',temporal:true},
+    flowMonth:{index:6,stemLabel:'流月干',branchLabel:'流月支',shortLabel:'月运',temporal:true},
+    flowDay:{index:7,stemLabel:'流日干',branchLabel:'流日支',shortLabel:'日运',temporal:true}
   };
+  var TEMPORAL_PILLAR_KEYS=['luck','flowYear','flowMonth','flowDay'];
   function orderedPillarKeys(pillars){
     var keys=NATAL_PILLAR_KEYS.filter(function(key){return pillars&&pillars[key]});
-    if(pillars&&pillars.luck)keys.push('luck');
+    TEMPORAL_PILLAR_KEYS.forEach(function(key){if(pillars&&pillars[key])keys.push(key)});
     return keys;
   }
   function visiblePillarKeys(pillars){
@@ -341,7 +366,7 @@
   }
   function interactionAnalysis(pillars,scores){
     scores=scores||scoreWuxing(pillars);
-    var keys=orderedPillarKeys(pillars),stems=keys.map(function(k){return pillars[k][0]}),branches=keys.map(function(k){return pillars[k][1]}),luckPosition=keys.indexOf('luck');
+    var keys=orderedPillarKeys(pillars),stems=keys.map(function(k){return pillars[k][0]}),branches=keys.map(function(k){return pillars[k][1]}),luckPosition=keys.indexOf('luck'),temporalPositions=keys.map(function(key,index){return PILLAR_META[key]&&PILLAR_META[key].temporal?index:-1}).filter(function(index){return index>=0});
     var total=WUXING.reduce(function(sum,w){return sum+(scores[w]||0)},0)||1,stemCombines=[],branchPairs=[],groups=[];
     function ratio(w){return (scores[w]||0)/total}
     function targetSupported(target,minRatio){
@@ -349,8 +374,8 @@
       return targetRatio>=minRatio&&(monthWx===target||gen[monthWx]===target||targetRatio>=0.4);
     }
     function relationMeta(left,right){
-      var involvesLuck=left===luckPosition||right===luckPosition,distance=right-left;
-      return {leftKey:keys[left],rightKey:keys[right],distance:distance,effectiveDistance:involvesLuck?1:distance,involvesLuck:involvesLuck};
+      var involvesLuck=left===luckPosition||right===luckPosition,involvesTemporal=temporalPositions.indexOf(left)>=0||temporalPositions.indexOf(right)>=0,distance=right-left;
+      return {leftKey:keys[left],rightKey:keys[right],distance:distance,effectiveDistance:involvesTemporal?1:distance,involvesLuck:involvesLuck,involvesTemporal:involvesTemporal};
     }
     for(var i=0;i<keys.length;i++)for(var j=i+1;j<keys.length;j++){
       if(combineStem[stems[i]]===stems[j]){
@@ -382,16 +407,17 @@
     });
     THREE_MEETINGS.concat(THREE_GROUPS).forEach(function(group){
       var members=group.members.split(''),present=members.filter(function(b){return branches.indexOf(b)>=0});
-      var positions=pillars.luck?branches.map(function(branch,index){return members.indexOf(branch)>=0?index:-1}).filter(function(index){return index>=0}):members.map(function(b){return branches.indexOf(b)});
+      var positions=keys.length>4?branches.map(function(branch,index){return members.indexOf(branch)>=0?index:-1}).filter(function(index){return index>=0}):members.map(function(b){return branches.indexOf(b)});
       var activatedByLuck=present.length===3&&members.some(function(member){return branches.slice(0,4).indexOf(member)<0})&&luckPosition>=0;
+      var activatedByTemporal=present.length===3&&positions.some(function(position){return temporalPositions.indexOf(position)>=0});
       if(present.length===3){
         var supported=BRANCH_WX[pillars.month[1]]===group.element||ratio(group.element)>=0.34;
         var externalClashes=branchPairs.filter(function(item){return item.type==='冲'&&((positions.indexOf(item.left)>=0&&positions.indexOf(item.right)<0)||(positions.indexOf(item.right)>=0&&positions.indexOf(item.left)<0))});
         var status=supported?(externalClashes.length?'成局有瑕':'成局有力'):(externalClashes.length?'成局受冲':'成局待验');
-        groups.push({name:group.name,members:group.members,positions:positions,element:group.element,status:status,complete:true,active:supported,challenged:externalClashes.length>0,activatedByLuck:activatedByLuck,involvesLuck:positions.indexOf(luckPosition)>=0,monthSupported:BRANCH_WX[pillars.month[1]]===group.element,supportRatio:Math.round(ratio(group.element)*1000)/1000,clashes:externalClashes.map(function(item){return branches[item.left]+branches[item.right]+'冲'}),priority:/三会/.test(group.name)?80:70,ruleId:/三会/.test(group.name)?'ZP-HC-02A':'ZP-HC-02B',text:group.name+'：'+status+(externalClashes.length?'（'+externalClashes.map(function(item){return branches[item.left]+branches[item.right]+'冲'}).join('、')+'）':'')});
+        groups.push({name:group.name,members:group.members,positions:positions,element:group.element,status:status,complete:true,active:supported,challenged:externalClashes.length>0,activatedByLuck:activatedByLuck,activatedByTemporal:activatedByTemporal,involvesLuck:positions.indexOf(luckPosition)>=0,involvesTemporal:positions.some(function(position){return temporalPositions.indexOf(position)>=0}),monthSupported:BRANCH_WX[pillars.month[1]]===group.element,supportRatio:Math.round(ratio(group.element)*1000)/1000,clashes:externalClashes.map(function(item){return branches[item.left]+branches[item.right]+'冲'}),priority:/三会/.test(group.name)?80:70,ruleId:/三会/.test(group.name)?'ZP-HC-02A':'ZP-HC-02B',text:group.name+'：'+status+(externalClashes.length?'（'+externalClashes.map(function(item){return branches[item.left]+branches[item.right]+'冲'}).join('、')+'）':'')});
       }else if(present.length===2){
-        var partialPositions=pillars.luck?positions:present.map(function(b){return branches.indexOf(b)});
-        groups.push({name:group.name.replace('三','半'),members:group.members,positions:partialPositions,element:group.element,status:'线索',complete:false,active:false,activatedByLuck:false,involvesLuck:partialPositions.indexOf(luckPosition)>=0,priority:10,ruleId:/三会/.test(group.name)?'ZP-HC-02A':'ZP-HC-02B',text:present.join('')+'见'+group.name.replace('三','半')+'线索'});
+        var partialPositions=keys.length>4?positions:present.map(function(b){return branches.indexOf(b)});
+        groups.push({name:group.name.replace('三','半'),members:group.members,positions:partialPositions,element:group.element,status:'线索',complete:false,active:false,activatedByLuck:false,activatedByTemporal:false,involvesLuck:partialPositions.indexOf(luckPosition)>=0,involvesTemporal:partialPositions.some(function(position){return temporalPositions.indexOf(position)>=0}),priority:10,ruleId:/三会/.test(group.name)?'ZP-HC-02A':'ZP-HC-02B',text:present.join('')+'见'+group.name.replace('三','半')+'线索'});
       }
     });
     var acceptedGroups=[];
@@ -442,7 +468,37 @@
     groups.filter(function(item){return item.complete}).forEach(function(item){decisions.push(item.text)});
     branchPairs.filter(function(item){return item.suppressedBy||item.resolution||item.status==='合中逢冲'}).forEach(function(item){decisions.push(item.text+(item.suppressedBy&&item.status.indexOf(item.suppressedBy)<0?'，让位于'+item.suppressedBy:''))});
     var arbitration={ruleIds:['ZP-HC-01','ZP-HC-02A','ZP-HC-02B','ZP-HC-03','ZP-HC-04','ZP-HC-05','ZP-HC-06'],principles:['先核天干是否专一合化，再辨争合妒合','完整三会、三合成局优先于单一六合，半会半合只作线索','异气完整局共享同一支时先取三会、再取三合，并按得令与成势复核，其余降为争局线索','合中逢冲时保留冲合并见，不以一字之合静默解冲','刑害破只按裁决后仍有效的关系反馈根气'],decisions:unique(decisions),text:decisions.length?unique(decisions).join('；'):'未见需要改变原始关系的合冲先后裁决'};
-    return {pillarKeys:keys,stems:stems,branches:branches,natalStems:stems.slice(0,4),natalBranches:branches.slice(0,4),dynamicPosition:luckPosition,stemCombines:stemCombines,branchPairs:branchPairs,groups:groups,arbitration:arbitration};
+    return {pillarKeys:keys,stems:stems,branches:branches,natalStems:stems.slice(0,4),natalBranches:branches.slice(0,4),dynamicPosition:luckPosition,dynamicPositions:temporalPositions,stemCombines:stemCombines,branchPairs:branchPairs,groups:groups,arbitration:arbitration};
+  }
+  function analyzeTemporalInteractions(bazi,layers){
+    if(!bazi||!bazi.pillars)throw new Error('命主八字资料不完整');
+    var sourceLayers=Array.isArray(layers)?layers:Object.keys(layers||{}).map(function(key){var value=layers[key];return typeof value==='string'?{key:key,gz:value}:Object.assign({key:key},value)});
+    var layerMap={},pillars={year:bazi.pillars.year,month:bazi.pillars.month,day:bazi.pillars.day,hour:bazi.pillars.hour};
+    sourceLayers.forEach(function(item){
+      if(!item||TEMPORAL_PILLAR_KEYS.indexOf(item.key)<0||!/^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/.test(item.gz||''))return;
+      pillars[item.key]=item.gz;layerMap[item.key]=item;
+    });
+    var temporalKeys=TEMPORAL_PILLAR_KEYS.filter(function(key){return pillars[key]});
+    if(!temporalKeys.length)return {relations:[],effectiveRelations:[],suppressedRelations:[],groups:[],arbitration:{ruleIds:[],principles:[],decisions:[],text:'未提供时序干支'}};
+    var raw=interactionAnalysis(pillars,scoreWuxing(pillars)),keys=raw.pillarKeys;
+    function labelFor(key){
+      if(layerMap[key]&&layerMap[key].label)return layerMap[key].label;
+      return ({year:'原局年柱',month:'原局月柱',day:'原局日柱',hour:'原局时柱',luck:'大运',flowYear:'流年',flowMonth:'流月',flowDay:'流日'})[key]||key;
+    }
+    function endpoint(key){return {key:key,label:labelFor(key),gz:pillars[key],temporal:temporalKeys.indexOf(key)>=0}}
+    function decoratePair(item,kind){
+      var leftKey=keys[item.left],rightKey=keys[item.right],left=endpoint(leftKey),right=endpoint(rightKey),source=right.temporal?right:left,target=source===right?left:right;
+      return Object.assign({},item,{kind:kind,leftEndpoint:left,rightEndpoint:right,sourceKey:source.key,sourceLabel:source.label,sourceGz:source.gz,targetKey:target.key,targetLabel:target.label,targetGz:target.gz,effective:item.active!==false&&item.effect!=='clue',suppressionReason:item.active===false?(item.suppressedBy||item.suppressedByGroup||item.status||'关系未通过裁决'):''});
+    }
+    function decorateGroup(item){
+      var participantKeys=item.positions.map(function(position){return keys[position]}),sourceKey=participantKeys.filter(function(key){return temporalKeys.indexOf(key)>=0}).sort(function(a,b){return TEMPORAL_PILLAR_KEYS.indexOf(b)-TEMPORAL_PILLAR_KEYS.indexOf(a)})[0]||participantKeys[participantKeys.length-1];
+      return Object.assign({},item,{kind:'group',participantKeys:participantKeys,participants:participantKeys.map(endpoint),sourceKey:sourceKey,sourceLabel:labelFor(sourceKey),sourceGz:pillars[sourceKey],targetKeys:participantKeys.filter(function(key){return key!==sourceKey}),effective:!!(item.complete&&item.active),suppressionReason:item.active===false&&item.complete?(item.suppressedByGroup||item.status||'完整会合未通过裁决'):''});
+    }
+    var stemRelations=raw.stemCombines.filter(function(item){return item.involvesTemporal}).map(function(item){return decoratePair(item,'stem-combine')});
+    var branchRelations=raw.branchPairs.filter(function(item){return item.involvesTemporal}).map(function(item){return decoratePair(item,'branch-relation')});
+    var groups=raw.groups.filter(function(item){return item.involvesTemporal}).map(decorateGroup);
+    var relations=stemRelations.concat(branchRelations,groups),effective=relations.filter(function(item){return item.effective}),suppressed=relations.filter(function(item){return !item.effective&&(item.suppressionReason||item.suppressedBy||item.suppressedByGroup)});
+    return {relations:relations,effectiveRelations:effective,suppressedRelations:suppressed,groups:groups,arbitration:raw.arbitration,pillarKeys:keys,ruleVersion:PATTERN_RULE_VERSION};
   }
   function stemInteractionChange(position,interactions){
     var relations=(interactions&&interactions.stemCombines||[]).filter(function(item){return item.active!==false&&(item.left===position||item.right===position)&&/^(transform|bind|contest|daymaster-combine)$/.test(item.effect)});
@@ -3010,7 +3066,7 @@
     return result;
   }
 
-  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,CLASSICAL_PATTERN_POTENTIAL_RULES:CLASSICAL_PATTERN_POTENTIAL_RULES,SPECIAL_PATTERN_RULES:SPECIAL_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,STRUCTURE_SCORE_LEVEL_BANDS:STRUCTURE_SCORE_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS,PATTERN_LEVEL_AUDIT_VERSION:PATTERN_LEVEL_AUDIT_VERSION,LEGAL_FOUR_PILLAR_GENERATOR_VERSION:LEGAL_FOUR_PILLAR_GENERATOR_VERSION,PATTERN_LEVEL_AUDIT_WEIGHTS:PATTERN_LEVEL_AUDIT_WEIGHTS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,evaluateLuckImpact:evaluateLuckImpact,patternStructureRawScore:patternStructureRawScore,reweightPatternScore:reweightPatternScore,percentileFromHistogram:percentileFromHistogram,percentileRangeFromHistogram:percentileRangeFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,structureGradeFromScore:structureGradeFromScore,patternGradeIndexWithinGates:patternGradeIndexWithinGates,forEachLegalFourPillar:forEachLegalFourPillar,buildPatternLevelAudit:buildPatternLevelAudit,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
+  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,CLASSICAL_PATTERN_POTENTIAL_RULES:CLASSICAL_PATTERN_POTENTIAL_RULES,SPECIAL_PATTERN_RULES:SPECIAL_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,STRUCTURE_SCORE_LEVEL_BANDS:STRUCTURE_SCORE_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS,PATTERN_LEVEL_AUDIT_VERSION:PATTERN_LEVEL_AUDIT_VERSION,LEGAL_FOUR_PILLAR_GENERATOR_VERSION:LEGAL_FOUR_PILLAR_GENERATOR_VERSION,PATTERN_LEVEL_AUDIT_WEIGHTS:PATTERN_LEVEL_AUDIT_WEIGHTS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,nearestMajorSolarTerm:nearestMajorSolarTerm,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,analyzeTemporalInteractions:analyzeTemporalInteractions,evaluateLuckImpact:evaluateLuckImpact,patternStructureRawScore:patternStructureRawScore,reweightPatternScore:reweightPatternScore,percentileFromHistogram:percentileFromHistogram,percentileRangeFromHistogram:percentileRangeFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,structureGradeFromScore:structureGradeFromScore,patternGradeIndexWithinGates:patternGradeIndexWithinGates,forEachLegalFourPillar:forEachLegalFourPillar,buildPatternLevelAudit:buildPatternLevelAudit,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
   root.BaziEngine=api;
   if(root.window)root.window.BaziEngine=api; // window.BaziEngine
 })(typeof globalThis!=='undefined'?globalThis:this);

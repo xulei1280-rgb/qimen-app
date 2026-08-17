@@ -212,8 +212,10 @@ assert.match(html,/<script src="liuyao-engine\.js/);
 
 const qimen=fs.readFileSync('./index.html','utf8');
 const bazi=fs.readFileSync('./bazi.html','utf8');
-assert.match(html,/href="index\.html">奇门<\/a><a href="bazi\.html">八字<\/a><a href="liuyao\.html" aria-current="page">六爻<\/a><a href="ziwei\.html">紫微<\/a>/);
+assert.match(html,/href="index\.html">奇门<\/a><a href="bazi\.html">八字<\/a><a href="liuyao\.html" aria-current="page">六爻<\/a><a href="ziwei\.html">紫微<\/a><a href="daily\.html">日运<\/a>/);
 assert.match(qimen,/href="ziwei\.html">紫微<\/a>/);
 assert.match(bazi,/href="ziwei\.html">紫微<\/a>/);
+assert.match(qimen,/href="daily\.html">日运<\/a>/);
+assert.match(bazi,/href="daily\.html">日运<\/a>/);
 
 console.log('liuyao page checks ok: 4096 inputs, 64 hexagrams, 8 pure najia fixtures');
