@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const vm = require('vm');
 
 const html = fs.readFileSync('bazi.html', 'utf8');
-assert(html.includes('src="deepseek-client.js?v=20260814.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
+assert(html.includes('src="deepseek-client.js?v=20260817.1"') && html.includes('DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384'), 'Bazi AI should use the shared DeepSeek final-answer fallback');
 assert(!html.includes("model:'deepseek-chat'"), 'Bazi AI should not use the retired non-thinking model alias');
 assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html" aria-current="page">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), 'Bazi should expose the unified five-module navigation');
 
@@ -283,7 +283,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20260715.2"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="bazi-engine.js?v=20260820.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -297,18 +297,21 @@ assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'openin
 ].forEach((needle) => assert(engine.includes(needle), `engine missing ${needle}`));
 const sample = qimen + `
 function dayOfYear(y,m,d){var start=new Date(y,0,0);return Math.floor((new Date(y,m-1,d)-start)/86400000)}
-function equationOfTimeMinutes(y,m,d){var n=dayOfYear(y,m,d);var b=2*Math.PI*(n-81)/364;return 9.87*Math.sin(2*b)-7.53*Math.cos(b)-1.5*Math.sin(b)}
+function equationOfTimeMinutes(y,m,d,hour,minute){var n=dayOfYear(y,m,d),clock=(Number(hour)||0)+(Number(minute)||0)/60,gamma=2*Math.PI/365*(n-1+(clock-12)/24);return 229.18*(0.000075+0.001868*Math.cos(gamma)-0.032077*Math.sin(gamma)-0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma))}
 function addMinutes(t,mins){var dt=new Date(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(mins));return {year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()}}
 function buildPillars(t){var dayDate=new Date(t.year,t.month-1,t.day);if(t.hour>=23)dayDate.setDate(dayDate.getDate()+1);var day=getDayGZ(dayDate.getFullYear(),dayDate.getMonth()+1,dayDate.getDate());return {year:getYearGZ(t.year,t.month,t.day),month:getMonthGZ(t.year,t.month,t.day),day:day,hour:getHourGZ(day,t.hour)}}
 var input={year:1990,month:5,day:7,hour:7,minute:0};
-var corr=(103.805-120)*4+equationOfTimeMinutes(1990,5,7);
+var corr=(103.805-120)*4+equationOfTimeMinutes(1990,5,7,input.hour,input.minute);
 var used=addMinutes(input,corr);
-JSON.stringify({used:used,pillars:buildPillars(used)});
+var wenZhenInput={year:1998,month:10,day:10,hour:1,minute:50};
+var wenZhenUsed=addMinutes(wenZhenInput,(103.9936-120)*4+equationOfTimeMinutes(1998,10,10,wenZhenInput.hour,wenZhenInput.minute));
+JSON.stringify({used:used,pillars:buildPillars(used),wenZhenUsed:wenZhenUsed,wenZhenPillars:buildPillars(wenZhenUsed)});
 `;
 const result = JSON.parse(vm.runInNewContext(sample, { Date, Math, JSON }));
 assert(result.used.year === 1990 && result.used.month === 5 && result.used.day === 7, 'sample true-solar date changed');
 assert(result.used.hour === 5 && Math.abs(result.used.minute - 59) <= 1, `sample true-solar time ${result.used.hour}:${result.used.minute} not close to 05:59`);
 assert(JSON.stringify(result.pillars) === JSON.stringify({ year: '庚午', month: '辛巳', day: '壬申', hour: '癸卯' }), `sample pillars mismatch: ${JSON.stringify(result.pillars)}`);
+assert(result.wenZhenUsed.hour === 0 && result.wenZhenUsed.minute === 59 && result.wenZhenPillars.hour === '丙子', `WenZhen reference true-solar time should remain in 子时, got ${JSON.stringify({used:result.wenZhenUsed,pillars:result.wenZhenPillars})}`);
 assert(html.indexOf('class="entry-card"') < html.indexOf('id="resultArea"'), 'input form should sit above the always-visible result area as a collapsed editor');
 assert(html.includes('<details id="entryPanel"'), 'input editor should be a collapsible details panel');
 assert(html.includes('data-view="basic"'), 'result layer should expose a basic information tab');
@@ -397,20 +400,32 @@ const forwardLuckChart = {
 };
 const startInfo = scriptContext.BaziEngine.luckStartInfo(forwardLuckChart);
 assert(startInfo.direction === '顺行' && startInfo.term === '芒种', `forward luck should start from next 芒种, got ${JSON.stringify(startInfo)}`);
-assert(startInfo.startAgeExact > 10 && startInfo.startAge === 11, `minute-calibrated 30-day luck offset should enter at virtual age 11, got ${JSON.stringify(startInfo)}`);
+assert(startInfo.startAgeExact > 10 && startInfo.startAge === 12 && startInfo.startYear === 2001, `minute-calibrated 30-day luck offset should enter after its eleventh elapsed year, got ${JSON.stringify(startInfo)}`);
 const forwardLuck = scriptContext.getLuckData(forwardLuckChart, new Date(2026, 6, 9, 12));
-assert(forwardLuck.startAge === 11 && scriptContext.luckStartYear(forwardLuckChart, forwardLuck.rows[0]) === 2000, 'luck start year should follow minute-calibrated virtual-age entry year');
-const beforeLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 3, 12));
-const afterLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 4, 12));
+assert(forwardLuck.startAge === 12 && scriptContext.luckStartYear(forwardLuckChart, forwardLuck.rows[0]) === 2001, 'luck start year should follow the exact term-to-birth duration');
+const wenZhenLuckChart = {
+  person: '问真八字对照',
+  gender: '男',
+  pillars: { year: '戊寅', month: '壬戌', day: '庚寅', hour: '丙子' },
+  dayStem: '庚',
+  dayElement: '金',
+  time: { used: { year: 1998, month: 10, day: 10, hour: 0, minute: 59 }, input: { year: 1998, month: 10, day: 10, hour: 1, minute: 50 }, enabled: true, correction: -51, location: { name: '云南省 曲靖市 师宗县', lng: 103.9936, lat: 24.8222 } },
+};
+const wenZhenStart = scriptContext.BaziEngine.luckStartInfo(wenZhenLuckChart);
+const wenZhenLuck = scriptContext.getLuckData(wenZhenLuckChart, new Date(2026, 7, 20, 12));
+assert(wenZhenStart.direction === '顺行' && wenZhenStart.term === '立冬' && wenZhenStart.termAt === '1998-11-07T15:08:42.073Z', `WenZhen reference term should use the published 1998 立冬 moment, got ${JSON.stringify(wenZhenStart)}`);
+assert(wenZhenLuck.startAge === 11 && scriptContext.luckStartYear(wenZhenLuckChart, wenZhenLuck.rows[0]) === 2008 && wenZhenLuck.rows[0].gz === '癸亥', `WenZhen reference first luck should be 2008 癸亥 at 11 sui, got ${JSON.stringify(wenZhenLuck.rows[0])}`);
+const beforeLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 4, 4, 1));
+const afterLiChun = scriptContext.getInquiryTimeInfo(new Date(2026, 1, 4, 4, 3));
 assert(beforeLiChun.flowYearNumber === 2025 && beforeLiChun.flowYearGz === '乙巳', `flow year before lichun mismatch: ${JSON.stringify(beforeLiChun)}`);
 assert(afterLiChun.flowYearNumber === 2026 && afterLiChun.flowYearGz === '丙午', `flow year after lichun mismatch: ${JSON.stringify(afterLiChun)}`);
-assert(scriptContext.BaziEngine.getFlowYearNumber({ year: 2026, month: 2, day: 4, hour: 10, minute: 15 }) === 2025, 'the minute before exact lichun should remain in the prior flow year');
-assert(scriptContext.BaziEngine.getFlowYearNumber({ year: 2026, month: 2, day: 4, hour: 10, minute: 17 }) === 2026, 'the minute after exact lichun should enter the new flow year');
+assert(scriptContext.BaziEngine.getFlowYearNumber({ year: 2026, month: 2, day: 4, hour: 4, minute: 1 }) === 2025, 'the minute before exact lichun should remain in the prior flow year');
+assert(scriptContext.BaziEngine.getFlowYearNumber({ year: 2026, month: 2, day: 4, hour: 4, minute: 3 }) === 2026, 'the minute after exact lichun should enter the new flow year');
 const flowMonths2026 = scriptContext.getFlowMonths(2026, '丁');
-assert(flowMonths2026[0].term === '立春' && flowMonths2026[0].dateLabel === '2026/2/4' && flowMonths2026[0].localTimeLabel === '2026/2/4 10:16' && flowMonths2026[0].gz === '庚寅' && flowMonths2026[0].startAt && flowMonths2026[0].endAt, `flow month lichun mismatch: ${JSON.stringify(flowMonths2026[0])}`);
-assert(flowMonths2026[11].term === '小寒' && flowMonths2026[11].dateLabel === '2027/1/6' && flowMonths2026[11].gz === '辛丑', `flow month xiaohan should cross Gregorian year: ${JSON.stringify(flowMonths2026[11])}`);
-assert(scriptContext.BaziEngine.buildPillars({ year: 2026, month: 2, day: 4, hour: 10, minute: 15 }).month === '己丑' && scriptContext.BaziEngine.buildPillars({ year: 2026, month: 2, day: 4, hour: 10, minute: 17 }).month === '庚寅', 'Bazi pillars should share the exact flow-month boundary');
-assert(scriptContext.BaziEngine.nearestMajorSolarTerm({ year: 2026, month: 2, day: 4, hour: 10, minute: 15 }).distanceHours < 2, 'near-boundary lookup should flag the lichun handoff');
+assert(flowMonths2026[0].term === '立春' && flowMonths2026[0].dateLabel === '2026/2/4' && flowMonths2026[0].localTimeLabel === '2026/2/4 04:01' && flowMonths2026[0].gz === '庚寅' && flowMonths2026[0].startAt && flowMonths2026[0].endAt, `flow month lichun mismatch: ${JSON.stringify(flowMonths2026[0])}`);
+assert(flowMonths2026[11].term === '小寒' && flowMonths2026[11].dateLabel === '2027/1/5' && flowMonths2026[11].gz === '辛丑', `flow month xiaohan should cross Gregorian year: ${JSON.stringify(flowMonths2026[11])}`);
+assert(scriptContext.BaziEngine.buildPillars({ year: 2026, month: 2, day: 4, hour: 4, minute: 1 }).month === '己丑' && scriptContext.BaziEngine.buildPillars({ year: 2026, month: 2, day: 4, hour: 4, minute: 3 }).month === '庚寅', 'Bazi pillars should share the exact flow-month boundary');
+assert(scriptContext.BaziEngine.nearestMajorSolarTerm({ year: 2026, month: 2, day: 4, hour: 4, minute: 1 }).distanceHours < 2, 'near-boundary lookup should flag the lichun handoff');
 assert(scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-selector"'), 'luck panel should render stacked selector');
 assert(!scriptContext.renderLuckPanel(scriptContext.currentBazi).includes('class="luck-origin"'), 'luck panel should not repeat origin comparison');
 const luckSelectorHtml = scriptContext.renderLuckSelector(scriptContext.currentBazi, luckContext);
@@ -1418,8 +1433,8 @@ assert(html.includes('function currentLuckPatternText'), 'structure UI should in
 assert(html.includes('function publicPatternLevel'), 'structure UI should include the agreed public level-label helper');
 assert(html.includes('这个分数评价的是八字原局本身') && html.includes('现实兑现边界：'), 'the page explanation and AI context should expose the agreed realization boundary');
 const yiMaoLuck = referenceLuck.rows.find((r) => r.gz === '乙卯');
-assert(referenceLuck.startAge === 3, `reference luck start age should match WenZhen 3 sui, got ${referenceLuck.startAge}`);
-assert(yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck) === 2025, `乙卯 luck should start in 2025, got ${yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck)}`);
+assert(referenceLuck.startAge === 4, `reference luck start age should use the exact term-to-birth duration, got ${referenceLuck.startAge}`);
+assert(yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck) === 2026, `乙卯 luck should start in 2026, got ${yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck)}`);
 const exactTermBazi = {
   person: '张黎',
   gender: '女',
@@ -1429,8 +1444,8 @@ const exactTermBazi = {
   time: { used: { year: 1994, month: 12, day: 22, hour: 12, minute: 44 }, input: { year: 1994, month: 12, day: 22, hour: 13, minute: 47 }, enabled: true, correction: -63, location: { name: '云南省 曲靖市 师宗县', lng: 103.9936, lat: 24.8222 } },
 };
 const exactTermLuck = scriptContext.getLuckData(exactTermBazi);
-assert(exactTermLuck.startAge === 5, `minute-calibrated term gap should be virtual 5 sui, got ${exactTermLuck.startAge}`);
-assert(scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0]) === 1998, `minute-calibrated term gap should start first luck in 1998, got ${scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0])}`);
+assert(exactTermLuck.startAge === 6, `minute-calibrated term gap should enter after the fifth elapsed year, got ${exactTermLuck.startAge}`);
+assert(scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0]) === 1999, `minute-calibrated term gap should start first luck in 1999, got ${scriptContext.luckStartYear(exactTermBazi, exactTermLuck.rows[0])}`);
 scriptContext.currentBazi = referenceBazi;
 scriptContext.resetLuckSelection();
 const referencePillarTable = scriptContext.renderPillarTable(referenceBazi, true);

@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `10cf892`（本次日运模块提交的父提交）
-- Changed: 新增独立日运日记与可折叠时间轴，接入可复算的日运 V3.1 解释核心、旧快照复算、日记与 AI 历史保留；现实落点改为“主领域、发生场景、具体事项”，五个模块入口统一为奇门、八字、六爻、紫微、日运。
-- Checks: `node .\check-daily-page.js`; `node .\check-bazi-page.js`; `node .\check-baselines.js`（18 个基线）；`node .\check-qimen-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-deepseek-client.js`; 相关 JavaScript `node --check`; 五页面导航顺序与唯一当前项检查；`git diff --check`；日运页面 320px/390px 无横向溢出且控制台无错误。
-- Next task: 推送后核对 GitHub Pages 构建与线上 `daily.html`，再用真实命主连续记录验证现实落点是否仍有泛化或重复。
-- Caution: 命理现实领域是传统规则的现代产品翻译，不代表统计概率或必然事件；日运页本地测试未发送日记或 API Key。
+- Last shared baseline: `ed03bef`（本次提交前）
+- Changed: 五个模块的 AI 共用客户端切换为 `deepseek-v4-flash` 思考模式；八字/日运改用节气时刻、真太阳时与虚岁起运年统一大运，已固定对照“1998-10-10 01:50、云南师宗、男”为 2008 年 11 岁起癸亥。
+- Checks: `node .\check-deepseek-client.js`; `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-daily-page.js`; `node .\check-baselines.js`（18 个基线）；`node --check .\bazi-engine.js`; `node --check .\daily-engine.js`; `git diff --check`。`http://127.0.0.1:8082/bazi.html` 已以固定对照资料实际排盘核验。
+- Next task: 推送后核对 GitHub Pages 构建，再在手机端确认新缓存版本的 AI 与八字大运页面。
+- Caution: DeepSeek API 请求未在本机发送真实 API Key；命理现实领域是传统规则的现代产品翻译，不代表统计概率或必然事件。
 
 ## Replace At Each Handoff
 

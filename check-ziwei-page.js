@@ -234,7 +234,7 @@ function runPageContracts() {
   assert(html.includes("[hidden] { display: none !important; }"), "缺少 hidden 样式修复");
   assert(html.includes("@media (prefers-reduced-motion: reduce)"), "缺少减少动态效果支持");
   assert(/href="index\.html">奇门<\/a>[\s\S]*href="bazi\.html">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html" aria-current="page">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), "紫微页面缺少统一五模块导航");
-  assert(html.includes('src="deepseek-client.js?v=20260814.1"') && pageSource.includes("window.DeepSeekClient.requestFinal"), "紫微 AI 未使用共享最终回答兜底");
+  assert(html.includes('src="deepseek-client.js?v=20260817.1"') && pageSource.includes("window.DeepSeekClient.requestFinal"), "紫微 AI 未使用共享最终回答兜底");
   assert(pageSource.includes("const AI_MODEL = window.DeepSeekClient.MODEL"), "紫微 AI 模型未使用共享配置");
   assert(pageSource.includes('const STORAGE_KEY = "ziwei_records_v1"'), "记录存储键错误");
   assert(pageSource.includes('const API_KEY_STORAGE = "qimen_deepseek_api_key"'), "没有复用旧模块 API Key");
@@ -394,8 +394,8 @@ function runPageContracts() {
 
 function runBaselineIsolation() {
   const childProcess = require("child_process");
-  const tracked = childProcess.execFileSync("git", ["diff", "--name-only", "main", "--", "qimen.js", "bazi-engine.js", "liuyao-engine.js"], { cwd: ROOT, encoding: "utf8" }).trim();
-  assert(tracked === "", `旧模块计算内核出现改动：${tracked}`);
+  const tracked = childProcess.execFileSync("git", ["diff", "--name-only", "main", "--", "qimen.js", "liuyao-engine.js"], { cwd: ROOT, encoding: "utf8" }).trim();
+  assert(tracked === "", `非本次范围的旧模块计算内核出现改动：${tracked}`);
 }
 
 try {

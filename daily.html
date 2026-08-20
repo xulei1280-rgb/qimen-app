@@ -336,7 +336,7 @@
           <section class="ai-sheet" aria-labelledby="aiTitle">
             <div class="section-heading"><div><p class="eyebrow">Reflection / 解读</p><h2 id="aiTitle">按需生成命理反馈</h2><p>已有结果按版本保留，不会因后来改日记而静默改写。</p></div></div>
             <div class="privacy-note"><strong>隐私提示：</strong>日记默认只在当前浏览器。点击生成后，仅勾选允许发送的当日事件会连同固定盘面事实发送给 DeepSeek；API Key 不进入导出文件。</div>
-            <div class="ai-toolbar"><div class="ai-model">deepseek-v4-pro<br>本地事实优先</div><button id="generateAiButton" class="primary" type="button" onclick="generateDailyAi()">生成今日详解</button></div>
+            <div class="ai-toolbar"><div class="ai-model">deepseek-v4-flash · 思考<br>本地事实优先</div><button id="generateAiButton" class="primary" type="button" onclick="generateDailyAi()">生成今日详解</button></div>
             <div id="aiHistory" class="ai-history"></div>
           </section>
         </div>
@@ -360,9 +360,9 @@
   </div>
 
   <script src="qimen.js"></script>
-  <script src="bazi-engine.js?v=20260817.2"></script>
+  <script src="bazi-engine.js?v=20260820.1"></script>
   <script src="daily-engine.js?v=20260817.4"></script>
-  <script src="deepseek-client.js?v=20260814.1"></script>
+  <script src="deepseek-client.js?v=20260817.1"></script>
   <script>
     var DAILY_DB_NAME='daily_journal_v1';
     var DAILY_DB_VERSION=2;

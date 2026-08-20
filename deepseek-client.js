@@ -6,7 +6,7 @@
   "use strict";
 
   var API_URL = "https://api.deepseek.com/v1/chat/completions";
-  var MODEL = "deepseek-v4-pro";
+  var MODEL = "deepseek-v4-flash";
 
   function extractAnswer(body) {
     var choice = body && body.choices && body.choices[0];

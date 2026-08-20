@@ -8,7 +8,7 @@ function mockResponse(body, ok = true, status = 200, statusText = "OK") {
 }
 
 async function run() {
-  assert.strictEqual(client.MODEL, "deepseek-v4-pro");
+  assert.strictEqual(client.MODEL, "deepseek-v4-flash");
   const directCalls = [];
   const direct = await client.requestFinal({
     apiKey: "sk-test",

@@ -162,11 +162,11 @@
     if(monthIndex<0)return {direction:info.direction,startAge:info.startAge,virtualAge:flowYear-birthYear+1,current:null};
     var age=flowYear-birthYear+1,current=null,rows=[];
     for(var i=0;i<10;i++){
-      var from=info.startAge+i*10,row={from:from,to:from+9,gz:GZ60[(monthIndex+direction*(i+1)+60)%60],startYear:birthYear+from-1};
+      var from=info.startAge+i*10,row={from:from,to:from+9,gz:GZ60[(monthIndex+direction*(i+1)+60)%60],startYear:(info.startYear||birthYear+info.startAge-1)+i*10};
       if(age>=row.from&&age<=row.to)current=row;
       rows.push(row);
     }
-    return {direction:info.direction,startAge:info.startAge,virtualAge:age,current:current,rows:rows};
+    return {direction:info.direction,startAge:info.startAge,virtualAge:age,approximateStart:!!info.approximateStart,current:current,rows:rows};
   }
   function dayCompletedGroups(dayLayer,others){
     var all=[dayLayer].concat(others),branches=all.map(function(item){return item.gz[1]});
@@ -380,7 +380,7 @@
       var months=engine.getFlowMonths(year,dayStem),nextMonths=engine.getFlowMonths(year+1,dayStem),source=layer('flowYear','流年',engine.getFlowYearGZ(year),dayStem,{year:year}),layers=[luckLayer,source],analysis=engine.analyzeTemporalInteractions(bazi,layers),classification=classifyPeriod(bazi,source,analysis,{level:'year',contextLayers:[luckLayer]});
       years.push(periodNode(profile,'year','year:'+year,source,months[0].startAt,nextMonths[0].startAt,classification,{flowYear:year,age:year-bazi.time.used.year+1,current:year===flowYear,parent:{label:'大运',gz:row.gz,from:row.from,to:row.to,startYear:row.startYear}}));
     }
-    return {referenceDate:date,currentFlowYear:flowYear,bigLuck:{gz:row.gz,from:row.from,to:row.to,startYear:row.startYear,endYear:row.startYear+9,direction:luck.direction,startAge:luck.startAge,approximateStart:true,current:!!luck.current},years:years};
+    return {referenceDate:date,currentFlowYear:flowYear,bigLuck:{gz:row.gz,from:row.from,to:row.to,startYear:row.startYear,endYear:row.startYear+9,direction:luck.direction,startAge:luck.startAge,approximateStart:luck.approximateStart,current:!!luck.current},years:years};
   }
   function buildTimelineMonths(profile,flowYear){
     if(!profile||!profile.bazi)throw new Error('请选择命主');

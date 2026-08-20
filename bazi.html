@@ -738,8 +738,8 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20260715.2"></script>
-<script src="deepseek-client.js?v=20260814.1"></script>
+<script src="bazi-engine.js?v=20260820.1"></script>
+<script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -972,7 +972,11 @@ function selectCustomLocation(){
   refreshSolarPreview();
 }
 function dayOfYear(y,m,d){var start=new Date(y,0,0);return Math.floor((new Date(y,m-1,d)-start)/86400000)}
-function equationOfTimeMinutes(y,m,d){var n=dayOfYear(y,m,d);var b=2*Math.PI*(n-81)/364;return 9.87*Math.sin(2*b)-7.53*Math.cos(b)-1.5*Math.sin(b)}
+function equationOfTimeMinutes(y,m,d,hour,minute){
+  var n=dayOfYear(y,m,d),clock=(Number(hour)||0)+(Number(minute)||0)/60;
+  var gamma=2*Math.PI/365*(n-1+(clock-12)/24);
+  return 229.18*(0.000075+0.001868*Math.cos(gamma)-0.032077*Math.sin(gamma)-0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma));
+}
 function addMinutes(t,mins){var dt=new Date(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(mins));return {year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()}}
 function minutesBetween(a,b){return Math.round((new Date(b.year,b.month-1,b.day,b.hour,b.minute)-new Date(a.year,a.month-1,a.day,a.hour,a.minute))/60000)}
 function normalizeSolarCorrectionData(data){
@@ -980,7 +984,7 @@ function normalizeSolarCorrectionData(data){
   if(!Number.isFinite(Number(out.longitudeCorrection))&&Number.isFinite(lng))out.longitudeCorrection=(lng-120)*4;
   if(!Number.isFinite(Number(out.equationCorrection))){
     if(Number.isFinite(Number(out.correction))&&Number.isFinite(Number(out.longitudeCorrection)))out.equationCorrection=Number(out.correction)-Number(out.longitudeCorrection);
-    else if(out.input)out.equationCorrection=equationOfTimeMinutes(out.input.year,out.input.month,out.input.day);
+    else if(out.input)out.equationCorrection=equationOfTimeMinutes(out.input.year,out.input.month,out.input.day,out.input.hour,out.input.minute);
   }
   if(!Number.isFinite(Number(out.correction))){
     if(Number.isFinite(Number(out.longitudeCorrection))&&Number.isFinite(Number(out.equationCorrection)))out.correction=Number(out.longitudeCorrection)+Number(out.equationCorrection);
@@ -998,7 +1002,7 @@ function getUsedTime(){
   var input=getInputTime();
   var enabled=document.getElementById('useTrueSolar').checked;
   var longitudeCorrection=(selectedLocation.lng-120)*4;
-  var equationCorrection=equationOfTimeMinutes(input.year,input.month,input.day);
+  var equationCorrection=equationOfTimeMinutes(input.year,input.month,input.day,input.hour,input.minute);
   var correction=longitudeCorrection+equationCorrection;
   return {input:input,used:enabled?addMinutes(input,correction):input,correction:correction,longitudeCorrection:longitudeCorrection,equationCorrection:equationCorrection,enabled:enabled,location:selectedLocation};
 }
@@ -1873,18 +1877,20 @@ function luckStartAge(data){
 }
 function getLuckData(data,referenceDate){
   var inquiry=getInquiryTimeInfo(referenceDate);
-  var dir=luckDirection(data),start=luckStartAge(data),monthIdx=GZ60.indexOf(data.pillars.month),nowYear=inquiry.flowYearNumber;
+  var startInfo=typeof BaziEngine!=='undefined'&&BaziEngine.luckStartInfo?BaziEngine.luckStartInfo(data):null;
+  var dir=luckDirection(data),start=startInfo?startInfo.startAge:luckStartAge(data),monthIdx=GZ60.indexOf(data.pillars.month),nowYear=inquiry.flowYearNumber;
+  var startYear=startInfo&&startInfo.startYear||data.time.used.year+start-1;
   var age=nowYear-data.time.used.year+1,rows=[],current=null,years=[];
   for(var i=0;i<10;i++){
     var idx=(monthIdx+dir*(i+1)+60)%60,gz=GZ60[idx],from=start+i*10,to=from+9;
-    var row={from:from,to:to,gz:gz,stemGod:tenGod(data.dayStem,gz[0]),branchWx:BRANCH_WX[gz[1]],active:age>=from&&age<=to};
+    var row={from:from,to:to,startYear:startYear+i*10,gz:gz,stemGod:tenGod(data.dayStem,gz[0]),branchWx:BRANCH_WX[gz[1]],active:age>=from&&age<=to};
     if(row.active)current=row;
     rows.push(row);
   }
   for(var y=nowYear;y<nowYear+6;y++)years.push({year:y,gz:typeof BaziEngine!=='undefined'?BaziEngine.getFlowYearGZ(y):getYearGZ(y,7,1)});
-  return {direction:dir>0?'顺行':'逆行',startAge:start,currentYear:nowYear,calendarYear:inquiry.time.year,virtualAge:age,current:current,rows:rows,years:years,inquiry:inquiry};
+  return {direction:dir>0?'顺行':'逆行',startAge:start,startYear:startYear,currentYear:nowYear,calendarYear:inquiry.time.year,virtualAge:age,current:current,rows:rows,years:years,inquiry:inquiry};
 }
-function luckStartYear(data,row){return data.time.used.year+row.from-1}
+function luckStartYear(data,row){return row&&row.startYear||data.time.used.year+row.from-1}
 function renderLuckCard(data,row){
   var startYear=luckStartYear(data,row);
   return '<article class="luck-card'+(row.active?' active':'')+'">'+
@@ -2046,7 +2052,7 @@ function renderLuckDetail(data,ctx){
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);
   return '<div class="section-title">大运流年细盘</div><div class="luck-professional">'+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'</div>'+
-    '<p class="hint-line">大运起运以节气近似估算，只作本地参考；正式断事仍建议结合具体流派和出生资料校验。</p>';
+    '<p class="hint-line">大运以真太阳时和节气时刻换算；不同流派的起运、交运口径可能不同，正式断事请结合出生资料校验。</p>';
 }
 function renderLuckPanel(data){
   return renderProfessionalLuckPanel(data);

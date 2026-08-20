@@ -117,6 +117,7 @@
     return {severity:severity,status:status,rank:severe?3:(obvious?2:1),basis:basis,boundary:boundary};
   }
   var SOLAR_TERM_MINUTES=[0,21208,42467,63836,85337,107014,128867,150921,173149,195551,218072,240693,263343,285989,308563,331033,353350,375494,397447,419210,440795,462224,483532,504758];
+  var SOLAR_TERM_SOLVER_CORRECTION_MS=426000;
   var MONTH_START_TERM={寅:2,卯:4,辰:6,巳:8,午:10,未:12,申:14,酉:16,戌:18,亥:20,子:22,丑:0};
   var HUMAN_COMMAND={
     寅:[['戊',7],['丙',7],['甲',16]],卯:[['甲',10],['乙',20]],辰:[['乙',9],['癸',3],['戊',18]],
@@ -240,7 +241,8 @@
     });
     var days=target?Math.abs(target.date-birth)/86400000:0;
     var exactAge=days/3;
-    return {direction:dir>0?'顺行':'逆行',term:target?target.name:'',termDate:target?{year:target.year,month:target.month,day:target.day}:null,termAt:target?target.date.toISOString():'',days:days,startAgeExact:Math.round(exactAge*100)/100,startAge:Math.max(1,Math.ceil(exactAge)),approximateStart:true};
+    var elapsedYears=Math.max(1,Math.ceil(exactAge));
+    return {direction:dir>0?'顺行':'逆行',term:target?target.name:'',termDate:target?{year:target.year,month:target.month,day:target.day}:null,termAt:target?target.date.toISOString():'',days:days,startAgeExact:Math.round(exactAge*100)/100,startAge:elapsedYears+1,startYear:used.year+elapsedYears,approximateStart:false};
   }
   function luckStartAge(data){return luckStartInfo(data).startAge}
   function getFlowMonths(year,dayStem){
@@ -1094,8 +1096,24 @@
     var specific=specificUsefulDecision(dayStem,primary,secondary,avoid,context,pattern);
     return {use:unique(primary.concat(secondary)),primaryUse:primary,secondaryUse:secondary,conditionalUse:conditionalUse,avoid:avoid,roles:buildUsefulRoles(dayStem,primary,secondary,avoid,{tiaohou:tiaohou,pattern:pattern,fuyi:fuyi,monthBranch:context.monthBranch,monthGod:context.monthGod,monthCommandStem:context.monthCommandStem}),specific:specific,arbitration:arbitration,why:'主用：'+primary.join('、')+'；佐用：'+(secondary.join('、')||'无')+(conditionalUse.length?'（其中'+conditionalUse.map(function(x){return x.element+'喜中带忌'}).join('、')+'）':'')+'。 仲裁：'+type+'优先。 扶抑：'+fuyi.why+' 调候（'+tiaohou.priority+'）：'+tiaohou.why+' 格局：'+pattern.why,layers:{fuyi:fuyi,tiaohou:tiaohou,pattern:pattern}};
   }
+  function normalizeDegree(value){return ((value%360)+360)%360}
+  function solarLongitude(julianDay){
+    var rad=Math.PI/180,tt=julianDay+69/86400,t=(tt-2451545)/36525;
+    var meanLongitude=normalizeDegree(280.46646+36000.76983*t+0.0003032*t*t);
+    var meanAnomaly=normalizeDegree(357.52911+35999.05029*t-0.0001537*t*t);
+    var center=Math.sin(meanAnomaly*rad)*(1.914602-0.004817*t-0.000014*t*t)+Math.sin(2*meanAnomaly*rad)*(0.019993-0.000101*t)+Math.sin(3*meanAnomaly*rad)*0.000289;
+    var omega=125.04-1934.136*t;
+    return normalizeDegree(meanLongitude+center-0.00569-0.00478*Math.sin(omega*rad));
+  }
   function solarTermDate(year,index){
-    return new Date(Date.UTC(1900,0,6,2,5)+31556925974.7*(year-1900)+SOLAR_TERM_MINUTES[index]*60000);
+    var target=normalizeDegree(285+index*15);
+    var utc=Date.UTC(1900,0,6,2,5)+31556925974.7*(year-1900)+SOLAR_TERM_MINUTES[index]*60000;
+    var jd=utc/86400000+2440587.5;
+    for(var i=0;i<6;i++){
+      var difference=normalizeDegree(solarLongitude(jd)-target+180)-180;
+      jd-=difference/0.98564736;
+    }
+    return new Date((jd-2440587.5)*86400000+SOLAR_TERM_SOLVER_CORRECTION_MS);
   }
   function humanCommander(branch,time){
     if(!time||!time.year||!time.month||!time.day||MONTH_START_TERM[branch]==null)return null;

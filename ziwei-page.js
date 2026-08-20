@@ -1293,7 +1293,7 @@
     const question = elements.aiQuestion.value.trim();
     if (!question) return;
     elements.askAi.disabled = true;
-    elements.aiState.textContent = "正在请求 deepseek-v4-pro…";
+    elements.aiState.textContent = "正在请求 deepseek-v4-flash（思考）…";
     try {
       await askAi(question);
       elements.aiQuestion.value = "";
