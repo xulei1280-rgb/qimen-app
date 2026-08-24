@@ -239,6 +239,7 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
+  assert(html.includes('src="ziwei-engine.js?v=20260825.1"') && html.includes('src="ziwei-page.js?v=20260825.1"'), "紫微改动脚本缺少发布缓存版本");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
   assert(html.includes("[hidden] { display: none !important; }"), "缺少 hidden 样式修复");
   assert(html.includes("@media (prefers-reduced-motion: reduce)"), "缺少减少动态效果支持");
