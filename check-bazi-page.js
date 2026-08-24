@@ -283,7 +283,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20260820.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="bazi-engine.js?v=20260820.2"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -360,6 +360,15 @@ assert(scriptContext.recordPersonFromTitle({ name: '张黎 丁酉日', bazi: { p
 assert(scriptContext.recordPersonFromTitle({ name: '事业盘 丁酉日', bazi: { person: '王五' } }) === '王五', 'saved record should keep explicit bazi.person');
 assert(scriptContext.BaziEngine, 'BaziEngine should load in VM');
 assert(typeof scriptContext.BaziEngine.analyzePattern === 'function', 'BaziEngine.analyzePattern should exist');
+assert(typeof scriptContext.BaziEngine.createBaziProfile === 'function' && typeof scriptContext.BaziEngine.buildBirthTime === 'function', 'BaziEngine should expose the shared birth-profile interface');
+const linkedProfile = scriptContext.BaziEngine.createBaziProfile({
+  person: '问真八字对照', gender: '男',
+  input: { year: 1998, month: 10, day: 10, hour: 1, minute: 50 },
+  location: { name: '云南省 曲靖市 师宗县', lng: 103.9936, lat: 24.8222 }, useTrueSolar: true,
+});
+assert(JSON.stringify(linkedProfile.time.used) === JSON.stringify({ year: 1998, month: 10, day: 10, hour: 0, minute: 59 }) && JSON.stringify(linkedProfile.pillars) === JSON.stringify({ year: '戊寅', month: '壬戌', day: '庚寅', hour: '丙子' }), `shared birth profile should keep the WenZhen fixture, got ${JSON.stringify(linkedProfile)}`);
+const linkedStart = scriptContext.BaziEngine.luckStartInfo(linkedProfile);
+assert(linkedStart.startYear === 2008 && linkedStart.startAge === 11, `shared birth profile should retain 2008 / 11岁 luck start, got ${JSON.stringify(linkedStart)}`);
 assert(typeof scriptContext.BaziEngine.analyzeTemporalInteractions === 'function', 'BaziEngine should expose temporal interaction arbitration');
 const contestedTemporal = scriptContext.BaziEngine.analyzeTemporalInteractions({ pillars: { year: '甲子', month: '己丑', day: '乙卯', hour: '甲辰' } }, [{ key: 'flowDay', label: '流日', gz: '己巳' }]);
 assert(contestedTemporal.effectiveRelations.filter((item) => item.kind === 'stem-combine' && item.effect === 'contest').length === 2 && contestedTemporal.arbitration.decisions.some((item) => item.includes('争合受阻')), 'a temporal stem involved in two combinations should be retained as contested and never transformed exclusively');

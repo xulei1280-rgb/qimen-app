@@ -240,6 +240,20 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 }
 .solar-bar button:hover{background:#f4ead8;border-color:var(--line-strong)}
 .solar-preview{color:#735f4a}
+.bazi-link{
+  width:min(100%,720px);margin:-8px auto 14px;padding:0 12px 10px;
+  border:1px solid rgba(45,111,91,.28);border-radius:6px;background:rgba(255,253,247,.66);font-size:12px;color:#51483d;
+}
+.bazi-link summary{padding:9px 0;cursor:pointer;font-weight:bold;color:var(--jade)}
+.bazi-link summary span{margin-left:6px;color:#8b7355;font-weight:normal}
+.bazi-link-tools,.bazi-link-form{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.bazi-link select,.bazi-link input{min-height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:5px;background:#fffdf8;color:var(--ink);padding:4px 7px;font-size:12px}
+.bazi-link select{flex:1;min-width:180px}.bazi-link input[type="number"]{width:98px}.bazi-link input[type="text"]{min-width:100px}
+.bazi-link button{min-height:30px;border:1px solid var(--line);border-radius:5px;background:#fffaf0;color:#5c4731;padding:4px 8px;cursor:pointer;font-size:12px;font-weight:bold}
+.bazi-link button:hover{background:#f4ead8;border-color:var(--line-strong)}
+.bazi-link-summary{margin-top:8px;padding-top:7px;border-top:1px dashed rgba(169,111,40,.3);line-height:1.6;color:#735f4a}
+.bazi-link-form{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(169,111,40,.3)}
+.bazi-link-form label{display:inline-flex;align-items:center;gap:4px;color:#5c4731}.bazi-link-form .wide{flex:1;min-width:180px}
 
 .status-strip{
   width:444px;
@@ -642,9 +656,10 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .time-bar>button{grid-column:span 2;order:5}
   .time-bar input,.time-bar select{width:100%!important;height:44px!important;min-width:0;min-height:44px;max-height:44px;font-size:12px!important;line-height:1.2;padding:4px 6px!important}
   .time-bar button{height:44px;font-size:11px!important;padding:6px 4px!important}
-  .solar-bar{width:100%;max-width:340px;margin:-6px auto 10px;padding:7px;gap:5px;font-size:11px}
+  .solar-bar,.bazi-link{width:100%;max-width:340px;margin:-6px auto 10px;padding:7px;gap:5px;font-size:11px}
   .solar-bar input[type="number"]{width:82px;font-size:11px}
-  .solar-bar select,.solar-bar button{font-size:11px}
+  .solar-bar select,.solar-bar button,.bazi-link select,.bazi-link input,.bazi-link button{font-size:11px}
+  .bazi-link-form label{width:100%}.bazi-link-form input[type="text"],.bazi-link-form .wide{width:100%;min-width:0}
   .solar-preview{flex:1 0 100%;text-align:center}
   .status-strip{width:100%;max-width:340px;margin:4px auto 10px}
   .plate-freshness{width:100%;max-width:340px;margin:-2px auto 10px}
@@ -728,6 +743,25 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
     <button onclick="useBrowserLocation()" title="使用浏览器定位读取经度，只保存在本机">📍 定位</button>
     <span class="solar-preview" id="solarPreview">未启用真太阳时</span>
   </div>
+  <details class="bazi-link" id="qimenBaziLink">
+    <summary>问事人八字（可选）<span id="qimenBaziLinkLabel">未关联，纯奇门分析</span></summary>
+    <div class="bazi-link-tools">
+      <select id="qimenBaziRecord" aria-label="选择已保存八字档案" onchange="selectQimenBaziRecord(this.value)"></select>
+      <button type="button" onclick="toggleQimenBaziForm()">新建八字</button>
+      <button type="button" onclick="clearQimenLinkedBazi()">清除关联</button>
+    </div>
+    <div class="bazi-link-summary" id="qimenBaziSummary">不关联时，AI 仅按当前奇门盘分析。</div>
+    <form class="bazi-link-form" id="qimenBaziForm" hidden onsubmit="createQimenBaziProfile(event)">
+      <input type="text" id="qimenBaziName" placeholder="姓名/标记（可选）">
+      <select id="qimenBaziGender" aria-label="八字性别"><option value="男">男</option><option value="女">女</option></select>
+      <label>出生日期 <input type="date" id="qimenBaziDate" required></label>
+      <label>出生时间 <input type="time" id="qimenBaziTime" required></label>
+      <input class="wide" type="text" id="qimenBaziLocation" placeholder="出生地点（可选）" value="自定义地点">
+      <label>东经 <input type="number" id="qimenBaziLongitude" step="0.0001" min="-180" max="180" value="103.9951" required></label>
+      <label><input type="checkbox" id="qimenBaziTrueSolar" checked> 真太阳时</label>
+      <button type="submit">保存并关联</button>
+    </form>
+  </details>
   <div class="plate-freshness" id="plateFreshness" hidden>时间或起盘设置已改变，请重新点击「起盘」。</div>
   <div class="status-strip" id="statusStrip" aria-live="polite"></div>
   <div class="board-wrap" id="board"></div>
@@ -802,6 +836,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 </div>
 
 <script src="qimen.js?v=20260703-jieqi1"></script>
+<script src="bazi-engine.js?v=20260820.2"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var currentCal='solar',selectedPalace=null,plateData=null;
@@ -817,9 +852,11 @@ var AI_MODE_STORAGE='qimen_ai_mode';
 var TRUE_SOLAR_STORAGE='qimen_true_solar_enabled';
 var LONGITUDE_STORAGE='qimen_longitude';
 var DISPLAY_MODE_STORAGE='analysis_display_mode';
+var BAZI_RECORDS_STORAGE='bazi_records';
 var plateInputFingerprint='';
 var qimenAiRequestSeq=0;
 var qimenAiPendingRequest=0,qimenAiTimer=null;
+var qimenLinkedBazi=null;
 
 function autoGrowQimenAiTextarea(el){
   if(!el)return;
@@ -865,6 +902,71 @@ function clearQimenAiPending(requestId){
   if(pending)pending.remove();
   setQimenAiPendingControls(false);
 }
+function cloneQimenBazi(value){return value?JSON.parse(JSON.stringify(value)):null}
+function getQimenBaziRecords(){
+  var records=getRecords(BAZI_RECORDS_STORAGE);
+  return Array.isArray(records)?records.filter(function(item){return item&&item.id!=null&&item.bazi&&item.bazi.pillars}):[];
+}
+function qimenBaziRecordTitle(record){
+  var b=record.bazi||{},p=b.pillars||{};
+  return record.name||((b.person||'未命名')+' '+[p.year,p.month,p.day,p.hour].filter(Boolean).join(' '));
+}
+function qimenBaziSnapshot(record){
+  return {sourceId:record.id,sourceName:qimenBaziRecordTitle(record),linkedAt:new Date().toISOString(),bazi:cloneQimenBazi(record.bazi)};
+}
+function qimenBaziLinkText(link){
+  if(!link||!link.bazi)return '未关联，纯奇门分析';
+  var b=link.bazi,p=b.pillars||{},who=b.person||link.sourceName||'问事人';
+  return '已关联：'+who+' · '+[p.year,p.month,p.day,p.hour].filter(Boolean).join('／')+'（本盘快照）';
+}
+function renderQimenBaziLink(){
+  var select=document.getElementById('qimenBaziRecord'),label=document.getElementById('qimenBaziLinkLabel'),summary=document.getElementById('qimenBaziSummary');
+  if(!select||!label||!summary)return;
+  var records=getQimenBaziRecords(),selected=qimenLinkedBazi&&qimenLinkedBazi.sourceId;
+  select.innerHTML='<option value="">不关联八字（纯奇门）</option>'+records.map(function(record){return '<option value="'+esc(record.id)+'">'+esc(qimenBaziRecordTitle(record))+'</option>'}).join('');
+  select.value=selected==null?'':String(selected);
+  if(select.value!==String(selected||''))select.value='';
+  label.textContent=qimenBaziLinkText(qimenLinkedBazi);
+  summary.textContent=qimenLinkedBazi&&qimenLinkedBazi.bazi?'此盘已冻结关联八字快照；以后编辑八字档案不会改写本盘和历史回答。':'不关联时，AI 仅按当前奇门盘分析。';
+}
+function selectQimenBaziRecord(id){
+  if(!id){clearQimenLinkedBazi();return}
+  var record=getQimenBaziRecords().find(function(item){return String(item.id)===String(id)});
+  if(!record){alert('找不到该八字档案，请重新选择。');renderQimenBaziLink();return}
+  qimenLinkedBazi=qimenBaziSnapshot(record);
+  renderQimenBaziLink();markPlateDirty();
+}
+function clearQimenLinkedBazi(){
+  qimenLinkedBazi=null;renderQimenBaziLink();markPlateDirty();
+}
+function toggleQimenBaziForm(){
+  var form=document.getElementById('qimenBaziForm');
+  if(!form)return;
+  form.hidden=!form.hidden;
+  if(!form.hidden){document.getElementById('qimenBaziLongitude').value=Number(getLongitude()).toFixed(4);document.getElementById('qimenBaziTrueSolar').checked=document.getElementById('useTrueSolar').checked;}
+}
+function createQimenBaziProfile(event){
+  event.preventDefault();
+  if(typeof BaziEngine==='undefined'||!BaziEngine.createBaziProfile){alert('八字计算接口未加载，请刷新页面后重试。');return}
+  var date=document.getElementById('qimenBaziDate').value,time=document.getElementById('qimenBaziTime').value,match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(date),clock=/^(\d{2}):(\d{2})$/.exec(time),lng=Number(document.getElementById('qimenBaziLongitude').value);
+  if(!match||!clock||!Number.isFinite(lng)||lng<-180||lng>180){alert('请填写有效的出生日期、时间和经度。');return}
+  var bazi=BaziEngine.createBaziProfile({person:document.getElementById('qimenBaziName').value.trim(),gender:document.getElementById('qimenBaziGender').value,input:{year:Number(match[1]),month:Number(match[2]),day:Number(match[3]),hour:Number(clock[1]),minute:Number(clock[2])},location:{name:document.getElementById('qimenBaziLocation').value.trim()||'自定义地点',lng:lng,lat:null},useTrueSolar:document.getElementById('qimenBaziTrueSolar').checked});
+  var records=getQimenBaziRecords(),now=Date.now(),record={id:now.toString(36),name:(bazi.person||'未命名')+' '+bazi.pillars.day+'日',createdAt:new Date(now).toLocaleString(),createdTs:now,updatedTs:now,bazi:bazi,aiHistory:[],luckSelection:null};
+  records.unshift(record);setRecords(BAZI_RECORDS_STORAGE,records);
+  qimenLinkedBazi=qimenBaziSnapshot(record);
+  document.getElementById('qimenBaziForm').hidden=true;
+  renderQimenBaziLink();markPlateDirty();
+}
+function qimenBaziLuckContext(bazi){
+  if(!bazi||!bazi.pillars||!bazi.time||!bazi.time.used||typeof BaziEngine==='undefined')return '';
+  var used=bazi.time&&bazi.time.used,start=BaziEngine.luckStartInfo(bazi),now={year:new Date().getFullYear(),month:new Date().getMonth()+1,day:new Date().getDate(),hour:new Date().getHours(),minute:new Date().getMinutes()},flowYear=BaziEngine.getFlowYearNumber(now),age=flowYear-(used?used.year:flowYear)+1,dir=BaziEngine.luckDirection(bazi),index=Math.max(0,Math.floor((age-start.startAge)/10)),monthIndex=GZ60.indexOf(bazi.pillars.month),luck=monthIndex>=0?GZ60[(monthIndex+dir*(index+1)+600)%60]:'';
+  return '当前大运：'+(luck||'待定')+'（'+start.direction+'，'+start.startYear+'起运，约'+start.startAge+'岁）\n当前流年：'+flowYear+' '+BaziEngine.getFlowYearGZ(flowYear)+'。';
+}
+function buildQimenBaziContext(link){
+  if(!link||!link.bazi)return '';
+  var b=link.bazi,p=b.pillars||{},pattern=b.patternAnalysis&&b.patternAnalysis.primary||b.pattern||'格局参考',useful=b.useful||{},use=(useful.use||[]).join('、')||'待定',avoid=(useful.avoid||[]).join('、')||'待定';
+  return '关联问事人八字背景（仅作长期阶段与个人倾向的辅助）：\n四柱：'+[p.year,p.month,p.day,p.hour].filter(Boolean).join('／')+'；日主：'+(b.dayStem||'')+'（'+(b.dayElement||'')+'）；旺衰：'+(b.strength||'待定')+'；格局喜用：'+pattern+'，喜 '+use+'，慎 '+avoid+'。\n'+qimenBaziLuckContext(b)+'\n规则：当前事项、决策与短期应期必须以奇门盘为主；八字只补充较长期趋势与阶段背景，不得把两者混成确定结论。\n';
+}
 
 (function init(){
   var m=document.getElementById('month'),d=document.getElementById('day'),h=document.getElementById('hour');
@@ -875,11 +977,11 @@ function clearQimenAiPending(requestId){
   document.getElementById('month').addEventListener('change',function(){updateDayOptions();refreshSolarPreview();markPlateDirty()});
   ['day','hour','minute'].forEach(function(id){document.getElementById(id).addEventListener('change',function(){refreshSolarPreview();markPlateDirty()})});
   ['gender','personName'].forEach(function(id){document.getElementById(id).addEventListener('change',markPlateDirty)});
-  document.getElementById('question').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();analyzeWithAI()}});
   setControlTitles();
   initDisplayMode();
   loadAiMode();
   loadSolarSettings();
+  renderQimenBaziLink();
   useCurrentTime();
   buildBoard();
 })();
@@ -933,7 +1035,8 @@ function currentPlateInputFingerprint(){
     gender:document.getElementById('gender').value,
     person:getPersonName(),
     trueSolar:document.getElementById('useTrueSolar').checked,
-    longitude:Number(getLongitude()).toFixed(5)
+    longitude:Number(getLongitude()).toFixed(5),
+    linkedBazi:qimenLinkedBazi?cloneQimenBazi(qimenLinkedBazi):null
   });
 }
 function setPlateActionsDisabled(disabled){
@@ -1283,6 +1386,7 @@ function doPaiPan(opts){
   plateData.personName=getPersonName();
   plateData.gender=document.getElementById('gender').value;
   plateData.currentCal=currentCal;
+  plateData.linkedBazi=cloneQimenBazi(qimenLinkedBazi);
   selectedPalace=null;
   document.querySelectorAll('.palace').forEach(function(p){p.classList.remove('selected')});
   renderPlate(plateData);
@@ -1399,6 +1503,7 @@ function renderSidePanel(data,focusNum){
     (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">输入时间</span><span class="info-value">'+formatTimeObj(data.inputTime)+'</span></div>':'')+
     '<div class="info-row"><span class="info-label">'+(data.trueSolar&&data.trueSolar.enabled?'起盘用时':'阳历时间')+'</span><span class="info-value">'+data.solarTime.year+'-'+pad(data.solarTime.month)+'-'+pad(data.solarTime.day)+' '+pad(data.solarTime.hour)+':'+pad(data.solarTime.minute||0)+'</span></div>'+
     (data.trueSolar&&data.trueSolar.enabled?'<div class="info-row"><span class="info-label">真太阳时</span><span class="info-value">东经 '+Number(data.trueSolar.longitude).toFixed(3)+'° · '+formatOffset(data.trueSolar.correction)+'</span></div>':'')+
+    '<div class="info-row"><span class="info-label">问事人八字</span><span class="info-value">'+esc(data.linkedBazi?qimenBaziLinkText(data.linkedBazi):'未关联')+'</span></div>'+
     '<div class="info-row"><span class="info-label">阴历时间</span><span class="info-value">'+gz.year+'年 '+gz.month+'月 '+gz.day+'日 '+gz.hour+'时</span></div>'+
     '<table class="gz-table"><tr><th>年柱</th><th>月柱</th><th>日柱</th><th>时柱</th></tr>'+
       '<tr class="gz-t"><td>'+gz.year[0]+'</td><td>'+gz.month[0]+'</td><td class="rizhu-td">'+gz.day[0]+'</td><td>'+gz.hour[0]+'</td></tr>'+
@@ -1445,6 +1550,7 @@ function buildPlateText(data){
     lines.push('时间：'+data.solarTime.year+'-'+pad(data.solarTime.month)+'-'+pad(data.solarTime.day)+' '+pad(data.solarTime.hour)+':'+pad(data.solarTime.minute||0));
   }
   lines.push('四柱：'+data.ganzhi.year+'年 '+data.ganzhi.month+'月 '+data.ganzhi.day+'日 '+data.ganzhi.hour+'时');
+  if(data.linkedBazi&&data.linkedBazi.bazi)lines.push('关联问事人八字（快照）：'+qimenBaziLinkText(data.linkedBazi));
   lines.push('局式：'+data.juInfo.juShi+'，'+data.juInfo.jieQi+' '+data.juInfo.yuan+'，'+data.juInfo.dun+'遁'+data.juInfo.ju+'局');
   lines.push('旬首：'+data.juInfo.xunShou+data.juInfo.xunShouYi+'；值符：'+data.juInfo.zhiFu+'；值使：'+data.juInfo.zhiShi+'门');
   lines.push('旬空：'+data.kongWang.join(' ')+'；马星：'+data.maXing+'；日主：'+data.riZhu);
@@ -1549,8 +1655,8 @@ async function analyzeWithAI(){
     palaces:'请逐宫细断，重点分析相关用神宫、日主宫、值符值使宫。',
     timing:'请重点看应期、时间窗口、动象和触发条件。'
   };
-  var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n本盘原始问事：'+originalQuestion+'\n本次问题：'+question+'\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
-  var systemPrompt='你是专业的奇门遁甲分析师。一个奇门盘只回答同一件事的连续追问。若“本次问题”不是围绕“本盘原始问事”的同一人、同一事、同一决策、同一关系或同一问题延伸，只回复：一个盘只能问同一件事。请重新起盘或回到原问题继续问。\n若属于同一件事，请根据问事类型、用户问题和所选分析模式自然组织回答，不要套用固定四段模板，也不要强制使用“用神落宫、全盘格局、关键宫位、综合建议”这些标题。需要详断时可以分段，需要简断或只看结论时直接给结论和关键依据。每段之间空一行，不用markdown符号。完成内部思考后，必须输出面向用户的最终解读正文。';
+  var prompt='你是奇门遁甲专家，请结合全盘信息综合分析用户的问题。\n重要规则：日主/用神落宫=天盘干为日主的宫位（不是地盘干）。\n本盘原始问事：'+originalQuestion+'\n本次问题：'+question+'\n问事类型：'+getQuestionTypeLabel(qType)+'；重点用神提示：'+getUseGodHints(qType).join('、')+'；分析模式：'+getAiModeLabel(aiMode)+'。\n求测人性别：'+gender+'\n局式：'+plateData.juInfo.juShi+'，'+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+'，旬首'+plateData.juInfo.xunShou+plateData.juInfo.xunShouYi+'，值符'+plateData.juInfo.zhiFu+'，值使'+plateData.juInfo.zhiShi+'门\n八字：'+plateData.ganzhi.year+'年 '+plateData.ganzhi.month+'月 '+plateData.ganzhi.day+'日 '+plateData.ganzhi.hour+'时，日主'+plateData.riZhu+'\n旬空：'+plateData.kongWang.join(' ')+' 马星：'+plateData.maXing+'\n风险提醒：'+getRiskWarnings(plateData,getJieQiNote(plateData.solarTime)).join('；')+'\n\n'+buildQimenBaziContext(plateData.linkedBazi)+'\n全盘信息：\n'+plateInfo+'\n'+(modeGuide[aiMode]||modeGuide.brief);
+  var systemPrompt='你是专业的奇门遁甲分析师。一个奇门盘只回答同一件事的连续追问。若“本次问题”不是围绕“本盘原始问事”的同一人、同一事、同一决策、同一关系或同一问题延伸，只回复：一个盘只能问同一件事。请重新起盘或回到原问题继续问。\n奇门是当前问题、决策与短期应期的主依据；如有提供问事人八字，八字只能补充长期趋势、所处阶段与个人倾向，不能替代奇门或混成确定结论。\n若属于同一件事，请根据问事类型、用户问题和所选分析模式自然组织回答，不要套用固定四段模板，也不要强制使用“用神落宫、全盘格局、关键宫位、综合建议”这些标题。需要详断时可以分段，需要简断或只看结论时直接给结论和关键依据。每段之间空一行，不用markdown符号。完成内部思考后，必须输出面向用户的最终解读正文。';
   var messages=[{role:'system',content:systemPrompt}];
   for(var i=0;i<aiHistory.length;i++){
     messages.push({role:'user',content:'追问：'+aiHistory[i].q});
@@ -1583,7 +1689,7 @@ async function analyzeWithAI(){
 function renderAIHistory(){
   if(!aiHistory.length)return '💡 输入问题后点击「AI 分析」获取全盘解读…';
   var h='';
-  if(aiTopic&&aiTopic.question)h+='<div style="font-size:11px;color:#8b7355;margin-bottom:10px">本盘问事：'+esc(aiTopic.question)+'</div>';
+  if(aiTopic&&aiTopic.question)h+='<div style="font-size:11px;color:#8b7355;margin-bottom:10px">本盘问事：'+esc(aiTopic.question)+(plateData&&plateData.linkedBazi?' · '+esc(qimenBaziLinkText(plateData.linkedBazi)):' · 未关联八字')+'</div>';
   h+='<div class="ai-history-tools"><button type="button" onclick="collapseAllAI()">一键收起</button></div>';
   for(var i=0;i<aiHistory.length;i++){
     h+='<details class="ai-turn" '+(aiCollapsed[i]?'':'open')+' ontoggle="rememberAiFold(this,'+i+')">'+
@@ -1770,6 +1876,7 @@ function loadHistory(id,kind){
   qimenAiRequestSeq++;
   clearQimenAiPending();
   plateData=item.data;
+  qimenLinkedBazi=cloneQimenBazi(plateData.linkedBazi);
   aiHistory=item.aiHistory?JSON.parse(JSON.stringify(item.aiHistory)):[];
   aiCollapsed={};
   aiTopic=item.aiTopic?JSON.parse(JSON.stringify(item.aiTopic)):(aiHistory[0]?{question:aiHistory[0].q,type:item.questionType||'general',person:item.person||'',createdAt:item.createdAt||''}:null);
@@ -1791,6 +1898,7 @@ function loadHistory(id,kind){
   document.getElementById('longitude').value=ts.longitude||getLongitude();
   saveSolarSettings();
   refreshSolarPreview();
+  renderQimenBaziLink();
   renderPlate(plateData);
   renderSidePanel(plateData);
   renderStatus(plateData);

@@ -738,7 +738,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20260820.1"></script>
+<script src="bazi-engine.js?v=20260820.2"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var currentBazi=null;
@@ -1000,6 +1000,7 @@ function formatSolarCorrection(data){
 }
 function getUsedTime(){
   var input=getInputTime();
+  if(typeof BaziEngine!=='undefined'&&BaziEngine.buildBirthTime)return BaziEngine.buildBirthTime(input,selectedLocation,document.getElementById('useTrueSolar').checked);
   var enabled=document.getElementById('useTrueSolar').checked;
   var longitudeCorrection=(selectedLocation.lng-120)*4;
   var equationCorrection=equationOfTimeMinutes(input.year,input.month,input.day,input.hour,input.minute);
@@ -1233,7 +1234,9 @@ function shenShaForPillar(data,gz){
   return out.length?out.join('<br>'):'';
 }
 function calculateBazi(){
-  var time=getUsedTime(),pillars=buildPillars(time.used),dayStem=pillars.day[0],scores=scoreWuxing(pillars),strength=assessStrength(dayStem,pillars,scores);
+  var time=getUsedTime();
+  if(typeof BaziEngine!=='undefined'&&BaziEngine.createBaziProfile)return BaziEngine.createBaziProfile({person:document.getElementById('personName').value.trim(),gender:document.querySelector('input[name="gender"]:checked').value,time:time});
+  var pillars=buildPillars(time.used),dayStem=pillars.day[0],scores=scoreWuxing(pillars),strength=assessStrength(dayStem,pillars,scores);
   var data={
     person:document.getElementById('personName').value.trim(),
     gender:document.querySelector('input[name="gender"]:checked').value,

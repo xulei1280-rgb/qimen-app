@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `ed03bef`（本次提交前）
-- Changed: 五个模块的 AI 共用客户端切换为 `deepseek-v4-flash` 思考模式；八字/日运改用节气时刻、真太阳时与虚岁起运年统一大运，已固定对照“1998-10-10 01:50、云南师宗、男”为 2008 年 11 岁起癸亥。
-- Checks: `node .\check-deepseek-client.js`; `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、8 个八纯卦纳甲 fixture）；`node .\check-ziwei-page.js`（30 个固定盘、1048 项断言）；`node .\check-daily-page.js`; `node .\check-baselines.js`（18 个基线）；`node --check .\bazi-engine.js`; `node --check .\daily-engine.js`; `git diff --check`。`http://127.0.0.1:8082/bazi.html` 已以固定对照资料实际排盘核验。
-- Next task: 推送后核对 GitHub Pages 构建，再在手机端确认新缓存版本的 AI 与八字大运页面。
-- Caution: DeepSeek API 请求未在本机发送真实 API Key；命理现实领域是传统规则的现代产品翻译，不代表统计概率或必然事件。
+- Last shared baseline: `5727739`
+- Changed: 奇门每张盘可选择或新建问事人八字档案；新档案同步保存至八字记录，盘面、自动/手动记录和 AI 对话冻结关联快照。AI 明确以奇门判断当前事项和短期应期为主，八字仅补充长期阶段背景。
+- Checks: `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-baselines.js`（18 个基线）；`node --check .\bazi-engine.js`; `node --check .\check-bazi-page.js`; `node --check .\check-qimen-page.js`; 页面内联脚本语法检查；`git diff --check`。`http://127.0.0.1:8082/index.html` 与 `http://127.0.0.1:8082/bazi.html` 已本地核验，奇门 1280px/390px 宽度无横向溢出。
+- Next task: 推送后核对 GitHub Pages 构建，并在手机端验证关联八字的新建、选择、清除及 AI 回答。
+- Caution: 八字档案与奇门关联均为同一浏览器本地数据；AI 请求才发送所关联快照。命理现实领域是传统规则的现代产品翻译，不代表统计概率或必然事件。
 
 ## Replace At Each Handoff
 
