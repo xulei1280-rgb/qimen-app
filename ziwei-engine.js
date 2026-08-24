@@ -391,13 +391,27 @@
       throw engineError("SNAPSHOT_ENGINE_MISMATCH", "快照与当前固定引擎版本不一致。 ");
     }
     const target = parseDate(targetDate, "目标日期");
+    const birth = parseDate(snapshot.effective.solarDate, "生效出生日期");
+    const dateNumber = (date) => Date.UTC(date.year, date.month - 1, date.day);
+    if (dateNumber(target) < dateNumber(birth)) {
+      throw engineError("TARGET_BEFORE_BIRTH", "目标日期不能早于生效出生日期。", {
+        targetDate: target.text,
+        birthDate: birth.text,
+      });
+    }
     const before = JSON.stringify(snapshot);
     const chart = createChart(snapshot.engineInput);
     const regenerated = normalizeNatal(chart);
     if (JSON.stringify(natalCore(regenerated)) !== snapshot.coreSignature) {
       throw engineError("NATAL_SNAPSHOT_MISMATCH", "重新生成的本命盘与冻结快照不一致，已停止计算。 ");
     }
-    const horoscope = chart.horoscope(`${target.year}-${target.month}-${target.day}`, 6);
+    let horoscope;
+    try {
+      horoscope = chart.horoscope(`${target.year}-${target.month}-${target.day}`, 6);
+      if (!horoscope?.decadal || !horoscope?.yearly) throw new Error("引擎没有返回完整的大限与流年");
+    } catch (error) {
+      throw engineError("HOROSCOPE_BUILD_FAILED", `无法计算目标日期运限：${error.message}`);
+    }
     const decadal = normalizeScope(horoscope.decadal);
     decadal.ageRange = [...chart.palaces[horoscope.decadal.index].decadal.range];
     const result = {

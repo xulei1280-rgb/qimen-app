@@ -1306,7 +1306,7 @@
             <div class="section-heading">
               <div>
                 <h2 id="ai-title">AI 连续追问</h2>
-                <p>仅解释冻结盘面；每条回答固定当时所选运限。</p>
+                <p>仅解释冻结盘面；如已选择运限，每条回答同时固定当时运限。</p>
               </div>
               <span class="rule-chip">deepseek-v4-flash · 思考</span>
             </div>
@@ -1316,7 +1316,7 @@
               <label class="field"><span>与旧模块共用本机 Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
               <div class="button-row"><button class="button" id="saveApiKey" type="button">保存到本机</button></div>
             </details>
-            <p class="privacy-note">发送内容：匿名本命盘、已选运限、当前问题和已有对话。不发送姓名、出生地点、经纬度、原始出生日期时间。你在问题里主动填写的信息仍会发送。</p>
+            <p class="privacy-note">发送内容：匿名本命盘、当前问题、已有对话，以及已经选择时的冻结运限。不发送姓名、出生地点、经纬度、原始出生日期时间。你在问题里主动填写的信息仍会发送。</p>
 
             <div class="conversation" id="conversation" aria-live="polite"></div>
             <form class="ai-form" id="aiForm">

@@ -150,6 +150,15 @@ function runEngineContracts() {
   checkDeepFrozen(solar, "snapshot");
   const horoscope = engine.getHoroscope(solar, "2025-08-16");
   checkDeepFrozen(horoscope, "horoscope");
+  let preBirthError = null;
+  try {
+    engine.getHoroscope(solar, "2000-08-15");
+  } catch (error) {
+    preBirthError = error;
+  }
+  assert(preBirthError?.code === "TARGET_BEFORE_BIRTH", "出生日前运限没有被明确拦截");
+  assert(preBirthError.details.birthDate === "2000-08-16" && preBirthError.details.targetDate === "2000-08-15", "出生日前运限错误缺少可核对日期");
+  assert(engine.getHoroscope(solar, "2000-08-16").nominalAge === 1, "出生当日运限不应被拦截");
 
   let confirmationError = null;
   try {
@@ -284,11 +293,24 @@ function runPageContracts() {
   assert(!serialized.includes(snapshot.input.clockTime), "AI 匿名盘包含原始出生时间");
   const horoscopeForAi = engine.getHoroscope(snapshot, "2025-08-16");
   const soulIndex = snapshot.natal.palaces.find((palace) => palace.name === "命宫").index;
-  const evidence = pageTest.buildAiEvidence(snapshot, horoscopeForAi, soulIndex);
-  assert(evidence.entries.length === 26 && new Set(evidence.entries.map((entry) => entry.id)).size === 26, "AI 证据目录编号不完整或重复");
+  const evidence = pageTest.buildAiEvidence(snapshot, horoscopeForAi, soulIndex, "comprehensive");
+  assert(evidence.entries.length === 28 && new Set(evidence.entries.map((entry) => entry.id)).size === 28, "AI 证据目录编号不完整或重复");
   assert(evidence.entries.filter((entry) => entry.id.startsWith("P")).length === 12, "AI 证据目录没有覆盖十二宫");
   assert(evidence.entries.some((entry) => entry.id === "R01" && entry.fact.includes("不限制全盘分析")), "所选宫位被错误设为排他分析范围");
   assert(evidence.entries.some((entry) => entry.id === "D01") && evidence.entries.some((entry) => entry.id === "Y01"), "AI 证据目录缺少大限或流年层");
+  for (const [id, scope] of [["D07", horoscopeForAi.decadal], ["Y07", horoscopeForAi.yearly]]) {
+    const mapping = evidence.entries.find((entry) => entry.id === id);
+    assert(mapping && mapping.fact.split("→本命").length === 13, `${id} 没有明确给出完整十二宫动态映射`);
+    for (const palace of snapshot.natal.palaces) {
+      const displayName = (name) => String(name).endsWith("宫") ? String(name) : `${name}宫`;
+      const expected = `${displayName(scope.palaceNames[palace.index])}→本命${displayName(palace.name)}(${palace.heavenlyStem}${palace.earthlyBranch},P${String(palace.index + 1).padStart(2, "0")})`;
+      assert(mapping.fact.includes(expected), `${id} 动态宫位没有准确映射到 ${expected}`);
+    }
+  }
+  for (const [mode, palaceName, label] of [["career", "官禄", "事业发展"], ["wealth", "财帛", "财富方式"], ["relationship", "夫妻", "感情关系"], ["wellbeing", "疾厄", "身心倾向"]]) {
+    const focusedEvidence = pageTest.buildAiEvidence(snapshot, horoscopeForAi, soulIndex, mode);
+    assert(focusedEvidence.entries.some((entry) => entry.id === "R02" && entry.fact.includes(`本宫:${palaceName}宫`) && entry.fact.includes(`分析主题:${label}`)), `${label}模式没有自动补充${palaceName}宫三方四正`);
+  }
   assert(!JSON.stringify(evidence).includes("87.6168") && !JSON.stringify(evidence).includes(snapshot.input.sourceDate) && !JSON.stringify(evidence).includes(snapshot.input.clockTime), "AI 证据目录泄露出生隐私");
   const messages = pageTest.buildAiMessages("测试问题", [{ question: "上一问", answer: "上一答 [D01]" }], snapshot, horoscopeForAi, soulIndex, "comprehensive");
   assert(messages.some((message) => message.content === "上一问") && messages.some((message) => message.content.includes("上一答")), "连续对话上下文缺失");
@@ -326,11 +348,23 @@ function runPageContracts() {
   assert(presetQuestions.length === 6 && presetQuestions.some((question) => question.includes("整张命盘")) && presetQuestions.some((question) => question.includes("当前大限")) && presetQuestions.some((question) => question.includes("当前流年")), "AI 预设问法没有覆盖全盘、本命、大限和流年");
   assert(presetQuestions.some((question) => question.includes("命宫") && question.includes("三方四正")), "AI 预设问法没有跟随所选宫位");
   assert(!JSON.stringify(presetQuestions).includes(snapshot.input.sourceDate) && !JSON.stringify(presetQuestions).includes(snapshot.input.clockTime), "AI 预设问法泄露原始出生资料");
+  const natalEvidence = pageTest.buildAiEvidence(snapshot, null, soulIndex, "natal");
+  assert(natalEvidence.includesHoroscope === false && !natalEvidence.entries.some((entry) => /^[DY]/.test(entry.id)), "纯本命证据错误包含运限层");
+  const natalMessages = pageTest.buildAiMessages("只看本命", [], snapshot, null, soulIndex, "natal");
+  assert(natalMessages.some((message) => message.content.includes("仅本命；未提供大限与流年")) && natalMessages.at(-1).content.includes("未选择运限"), "纯本命请求没有明确禁止推断运限");
+  assert(!natalMessages.at(-1).content.includes("运限只用于说明当下") && natalMessages.at(-1).content.includes("不要推断未提供的运限"), "纯本命分析模式仍含有相互矛盾的运限说明");
+  const natalPresets = pageTest.aiPresetQuestions(snapshot, null, soulIndex, "natal");
+  assert(natalPresets.length === 6 && !natalPresets.some((question) => question.includes("当前大限") || question.includes("当前流年")), "纯本命预设问题仍强制要求运限");
   const validAnswer = [
     "## 总论", "全盘主线 [P01] [D01] [Y01]", "## 关键结构", "结构一 [P02] [P03]", "## 本命基础", "本命说明 [N01]", "## 运限合参", "运限说明 [D02] [Y02]", "## 支持与制约", "支持与反证 [P04] [P05]", "## 现实观察", "现实观察 [R01]", "## 不确定边界", "传统解读不是确定事件 [N01]",
   ].join("\n");
   const validAnswerCheck = pageTest.validateAiAnswer(validAnswer, evidence);
   assert(validAnswerCheck.valid, `合格 AI 回答未通过结构与证据校验：${validAnswerCheck.errors.join("；")}`);
+  const validNatalAnswer = [
+    "## 总论", "本命主线 [P01] [P02]", "## 关键结构", "结构一 [P03] [P04]", "## 本命基础", "本命说明 [N01]", "## 运限合参", "未提供大限和流年，不作推断。", "## 支持与制约", "支持与反证 [P05] [P06]", "## 现实观察", "现实观察 [R01]", "## 不确定边界", "传统解读不是确定事件 [N01]",
+  ].join("\n");
+  const validNatalAnswerCheck = pageTest.validateAiAnswer(validNatalAnswer, natalEvidence);
+  assert(validNatalAnswerCheck.valid, `纯本命回答被错误要求引用运限：${validNatalAnswerCheck.errors.join("；")}`);
   const invalidAnswer = validAnswer.replace("[Y01]", "[Z99]");
   assert(!pageTest.validateAiAnswer(invalidAnswer, evidence).valid && pageTest.validateAiAnswer(invalidAnswer, evidence).errors.some((error) => error.includes("不存在的证据")), "虚构证据编号未被拦截");
   const answerMarkup = pageTest.renderAiAnswer(validAnswer, evidence.references);
