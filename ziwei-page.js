@@ -11,6 +11,14 @@
   const EARTHLY_BRANCH_ORDER = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
   const TIME_BRANCH_LABELS = ["早子时", "丑时", "寅时", "卯时", "辰时", "巳时", "午时", "未时", "申时", "酉时", "戌时", "亥时", "晚子时"];
   const MUTAGEN_LABELS = ["禄", "权", "科", "忌"];
+  const NATAL_AXES = [
+    ["R10", "命迁轴", "命宫", "迁移"],
+    ["R11", "兄友轴", "兄弟", "仆役"],
+    ["R12", "夫官轴", "夫妻", "官禄"],
+    ["R13", "子田轴", "子女", "田宅"],
+    ["R14", "财福轴", "财帛", "福德"],
+    ["R15", "父疾轴", "父母", "疾厄"],
+  ];
   const CHART_ZOOM_MIN = 0.75;
   const CHART_ZOOM_MAX = 1.5;
   const CHART_ZOOM_STEP = 0.1;
@@ -47,7 +55,7 @@
     "你是紫微斗数盘面解读助手。你只能解释用户提供的冻结盘面，以及用户已经选择时才提供的冻结运限；不能自行安星、修改宫位、推算未提供的字段或补造证据。",
     "本盘固定 iztro default（以《紫微斗数全书》为基础）的四化、亮度与安星规则；不得混入中州派或其他门派表格。",
     "紫微用于观察整张命盘：用户可以同时询问全盘或多个生活领域，不得套用六爻的一事一问限制。分析模式只是观察重点，不是排他范围。",
-    "先抓主线再展开：本命定基础；提供运限时，再以大限定阶段、流年看触发。优先三方四正、星曜组合、亮度、四化和辅煞关系，不得逐宫流水账或逐星套话。",
+    "先抓主线再展开：本命定基础；提供运限时，再以大限定阶段、流年看触发。优先三方四正、六组对宫轴、星曜组合、亮度、四化和辅煞关系，不得逐宫流水账或逐星套话。",
     "每次回答必须严格使用七个二级标题：『## 总论』『## 关键结构』『## 本命基础』『## 运限合参』『## 支持与制约』『## 现实观察』『## 不确定边界』。关键结构最多三项，按重要性排序。",
     "每项盘面事实后必须引用提供的证据编号，例如 [P01]、[D01]、[Y01]；只能引用证据目录中真实存在的编号。支持与制约必须同时出现，不能把禄权科一概视为吉，也不能把忌煞一概视为凶。",
     "若证据不足，直接说证据不足。不得声称科学证实、权威定论、必然吉凶，不替代医疗、法律、投资等专业意见。",
@@ -909,6 +917,12 @@
       const focalRelations = palaceRelations(palaces, focal.index);
       add("R02", "主题三方四正", `分析主题:${aiModeLabel(requestedMode)}；本宫:${palaceDisplayName(focalRelations.target.name)}；对宫:${palaceDisplayName(focalRelations.opposite.name)}；三合位:${palaceDisplayName(focalRelations.wealth.name)}、${palaceDisplayName(focalRelations.career.name)}。`, focal.index);
     }
+    for (const [id, label, leftName, rightName] of NATAL_AXES) {
+      const left = palaces.find((palace) => palace.name === leftName);
+      const right = palaces.find((palace) => palace.name === rightName);
+      const evidenceId = (palace) => `P${String(palace.index + 1).padStart(2, "0")}`;
+      add(id, "本命对宫轴", `${label}:${palaceDisplayName(left.name)}(${left.heavenlyStem}${left.earthlyBranch},${evidenceId(left)})↔${palaceDisplayName(right.name)}(${right.heavenlyStem}${right.earthlyBranch},${evidenceId(right)})；两宫互为对宫。`);
+    }
     if (horoscope) {
       add("D01", "大限总览", `目标日期:${horoscope.targetSolarDate}；虚岁:${horoscope.nominalAge}；当前大限:${horoscope.decadal.ageRange[0]}-${horoscope.decadal.ageRange[1]}岁；大限命宫:${palaceDisplayName(horoscope.decadal.palaceName)}；宫干支:${horoscope.decadal.heavenlyStem}${horoscope.decadal.earthlyBranch}`, horoscope.decadal.palaceIndex);
       add("Y01", "流年总览", `目标日期:${horoscope.targetSolarDate}；目标农历:${horoscope.targetLunarDate}；流年命宫:${palaceDisplayName(horoscope.yearly.palaceName)}；宫干支:${horoscope.yearly.heavenlyStem}${horoscope.yearly.earthlyBranch}`, horoscope.yearly.palaceIndex);
@@ -943,7 +957,7 @@
     };
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: `以下是按重要层级整理的冻结证据目录（JSON）。目录包含本命十二宫完整星曜和三方四正；选择运限时还包含大限、流年的完整十二宫映射、四化与流曜。不要重新排盘：\n${JSON.stringify(context)}` },
+      { role: "user", content: `以下是按重要层级整理的冻结证据目录（JSON）。目录包含本命十二宫完整星曜、三方四正和六组对宫轴；选择运限时还包含大限、流年的完整十二宫映射、四化与流曜。不要重新排盘：\n${JSON.stringify(context)}` },
       { role: "assistant", content: horoscope ? "我会从整张命盘提炼主线，按本命—大限—流年合参，并用证据编号标注支持与制约。" : "我会只依据本命冻结证据提炼主线，不推断未提供的大限和流年。" },
     ];
     for (const turn of history) {

@@ -52,6 +52,8 @@
       nominalAge: "natural_year; target lunar year minus birth lunar year plus one",
       leapMonth: "days 1-15 use previous month; days 16-end use next month",
       ratHour: "early and late rat separated; late rat advances logical lunar day",
+      timeBranchBoundary: "[00:00,01:00) early rat; [01:00,03:00) ox; then two-hour half-open intervals; [21:00,23:00) pig; [23:00,24:00) late rat",
+      decadalStemMethod: "use natal palace heavenly stem; no direction-based re-layout",
       mutagenSystem: "iztro default based on Zi Wei Dou Shu Quan Shu",
       brightnessSystem: "iztro default",
       algorithm: "default; do not mix Zhongzhou tables",

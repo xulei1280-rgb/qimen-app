@@ -127,6 +127,8 @@ function runFixtures() {
       assert(natal[key] === expected, `${fixture.id} 本命字段 ${key} 不符\n实际: ${natal[key]}\n预期: ${expected}`);
     }
     assert(stable(compactHoroscope(horoscope)) === stable(fixture.expected.horoscope), `${fixture.id} 运限不符`);
+    const natalDecadalPalace = snapshot.natal.palaces.find((palace) => palace.index === horoscope.decadal.palaceIndex);
+    assert(horoscope.decadal.heavenlyStem === natalDecadalPalace.heavenlyStem, `${fixture.id} 大限宫干没有沿用本命原宫干`);
     assert(stable(snapshot) === before, `${fixture.id} 运限修改了本命盘`);
   }
 }
@@ -140,6 +142,8 @@ function runEngineContracts() {
   assert(rules.rules.nominalAge.startsWith("natural_year"), "虚岁规则错误");
   assert(rules.rules.leapMonth.includes("1-15"), "闰月规则错误");
   assert(rules.rules.ratHour.includes("early and late rat separated"), "子时规则错误");
+  assert(rules.rules.timeBranchBoundary.includes("[01:00,03:00) ox") && rules.rules.timeBranchBoundary.includes("[23:00,24:00) late rat"), "时辰整点边界没有明确冻结");
+  assert(rules.rules.decadalStemMethod === "use natal palace heavenly stem; no direction-based re-layout", "大限宫干口径没有明确冻结");
   assert(rules.rules.algorithm.includes("do not mix Zhongzhou"), "门派隔离规则错误");
   assert(stable(Object.keys(engine).sort()) === stable(["buildNatal", "getHoroscope", "getRuleMeta"].sort()), "公开接口发生意外变化");
   checkDeepFrozen(rules, "ruleMeta");
@@ -172,6 +176,28 @@ function runEngineContracts() {
   assert(confirmed.calendar.solarDate === "2024-05-31" && confirmed.calendar.timeLabel === "晚子时", "确认后的真太阳时盘错误");
   const unchangedBranch = engine.buildNatal({ calendarType: "solar", date: "2024-06-01", time: "01:05", gender: "female", timeBasis: "trueSolar", longitude: 121.4737 });
   assert(unchangedBranch.calendar.timeLabel === "丑时", "不跨时辰盘不应要求确认");
+
+  const timeIntervals = [
+    [0, "早子时", "00:00", "00:59"],
+    [1, "丑时", "01:00", "02:59"],
+    [2, "寅时", "03:00", "04:59"],
+    [3, "卯时", "05:00", "06:59"],
+    [4, "辰时", "07:00", "08:59"],
+    [5, "巳时", "09:00", "10:59"],
+    [6, "午时", "11:00", "12:59"],
+    [7, "未时", "13:00", "14:59"],
+    [8, "申时", "15:00", "16:59"],
+    [9, "酉时", "17:00", "18:59"],
+    [10, "戌时", "19:00", "20:59"],
+    [11, "亥时", "21:00", "22:59"],
+    [12, "晚子时", "23:00", "23:59"],
+  ];
+  for (const [timeIndex, label, start, end] of timeIntervals) {
+    for (const time of [start, end]) {
+      const boundary = engine.buildNatal({ calendarType: "solar", date: "2000-08-16", time, gender: "male", timeBasis: "beijing" });
+      assert(boundary.effective.timeIndex === timeIndex && boundary.calendar.timeLabel === label, `${time} 没有按已声明边界归入${label}`);
+    }
+  }
 }
 
 function createPageSandbox(pageSource) {
@@ -239,7 +265,8 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="ziwei-engine.js?v=20260825.1"') && html.includes('src="ziwei-page.js?v=20260825.1"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="ziwei-engine.js?v=20260825.2"') && html.includes('src="ziwei-page.js?v=20260825.2"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
   assert(html.includes("[hidden] { display: none !important; }"), "缺少 hidden 样式修复");
   assert(html.includes("@media (prefers-reduced-motion: reduce)"), "缺少减少动态效果支持");
@@ -295,7 +322,7 @@ function runPageContracts() {
   const horoscopeForAi = engine.getHoroscope(snapshot, "2025-08-16");
   const soulIndex = snapshot.natal.palaces.find((palace) => palace.name === "命宫").index;
   const evidence = pageTest.buildAiEvidence(snapshot, horoscopeForAi, soulIndex, "comprehensive");
-  assert(evidence.entries.length === 28 && new Set(evidence.entries.map((entry) => entry.id)).size === 28, "AI 证据目录编号不完整或重复");
+  assert(evidence.entries.length === 34 && new Set(evidence.entries.map((entry) => entry.id)).size === 34, "AI 证据目录编号不完整或重复");
   assert(evidence.entries.filter((entry) => entry.id.startsWith("P")).length === 12, "AI 证据目录没有覆盖十二宫");
   assert(evidence.entries.some((entry) => entry.id === "R01" && entry.fact.includes("不限制全盘分析")), "所选宫位被错误设为排他分析范围");
   assert(evidence.entries.some((entry) => entry.id === "D01") && evidence.entries.some((entry) => entry.id === "Y01"), "AI 证据目录缺少大限或流年层");
@@ -312,12 +339,21 @@ function runPageContracts() {
     const focusedEvidence = pageTest.buildAiEvidence(snapshot, horoscopeForAi, soulIndex, mode);
     assert(focusedEvidence.entries.some((entry) => entry.id === "R02" && entry.fact.includes(`本宫:${palaceName}宫`) && entry.fact.includes(`分析主题:${label}`)), `${label}模式没有自动补充${palaceName}宫三方四正`);
   }
+  for (const [id, label, leftName, rightName] of [["R10", "命迁轴", "命宫", "迁移"], ["R11", "兄友轴", "兄弟", "仆役"], ["R12", "夫官轴", "夫妻", "官禄"], ["R13", "子田轴", "子女", "田宅"], ["R14", "财福轴", "财帛", "福德"], ["R15", "父疾轴", "父母", "疾厄"]]) {
+    const left = snapshot.natal.palaces.find((palace) => palace.name === leftName);
+    const right = snapshot.natal.palaces.find((palace) => palace.name === rightName);
+    const axis = evidence.entries.find((entry) => entry.id === id);
+    const opposite = pageTest.palaceRelations(snapshot.natal.palaces, left.index).opposite;
+    assert(opposite.index === right.index, `${label} 两宫不是对宫关系`);
+    assert(axis?.fact.includes(label) && axis.fact.includes(left.heavenlyStem + left.earthlyBranch) && axis.fact.includes(right.heavenlyStem + right.earthlyBranch), `${label} 证据缺少两宫干支`);
+  }
   assert(!JSON.stringify(evidence).includes("87.6168") && !JSON.stringify(evidence).includes(snapshot.input.sourceDate) && !JSON.stringify(evidence).includes(snapshot.input.clockTime), "AI 证据目录泄露出生隐私");
   const messages = pageTest.buildAiMessages("测试问题", [{ question: "上一问", answer: "上一答 [D01]" }], snapshot, horoscopeForAi, soulIndex, "comprehensive");
   assert(messages.some((message) => message.content === "上一问") && messages.some((message) => message.content.includes("上一答")), "连续对话上下文缺失");
   assert(messages.some((message) => message.content.includes("历史回答仅用于保持对话语义") && !message.content.includes("[D01]")), "历史运限证据编号污染当前冻结盘");
   assert(messages[0].content.includes("## 总论") && messages[0].content.includes("## 支持与制约") && messages[0].content.includes("## 不确定边界"), "AI 七段输出结构约束缺失");
   assert(messages[0].content.includes("整张命盘") && messages[0].content.includes("不得套用六爻的一事一问"), "AI 被错误限制为单一主题");
+  assert(messages[0].content.includes("六组对宫轴") && messages.some((message) => message.content.includes('"decadalStemMethod":"use natal palace heavenly stem; no direction-based re-layout"')), "AI 没有收到对宫轴或大限宫干规则");
   assert(messages[0].content.includes("不得混入中州派"), "AI 门派隔离约束缺失");
   assert(messages.some((message) => message.content.includes("evidenceCatalog")) && messages.at(-1).content.includes("综合总览"), "AI 缺少分层证据或分析模式上下文");
   assert(!JSON.stringify(messages).includes("87.6168"), "AI 请求包含经度");
