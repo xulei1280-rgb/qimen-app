@@ -3,6 +3,7 @@
 
   var VERSION='LIUYAO-NAJIA-2026.08.12-v1';
   var RELATION_VERSION='LIUYAO-RELATION-2026.08.12-v1';
+  var ASSESSMENT_VERSION='LIUYAO-ASSESSMENT-2026.09.05-v1';
   var STEMS='甲乙丙丁戊己庚辛壬癸'.split('');
   var BRANCHES='子丑寅卯辰巳午未申酉戌亥'.split('');
   var ELEMENTS={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
@@ -340,8 +341,165 @@
     return {version:RELATION_VERSION,focus:focus,nodes:nodes,edges:edges};
   }
 
+  function seasonalState(monthElement,element){
+    if(monthElement===element)return '旺';
+    if(GENERATES[monthElement]===element)return '相';
+    if(GENERATES[element]===monthElement)return '休';
+    if(CONTROLS[element]===monthElement)return '囚';
+    return '死';
+  }
+
+  function actorRole(focusElement,element){
+    if(GENERATES[element]===focusElement)return '原神';
+    if(CONTROLS[element]===focusElement)return '忌神';
+    var sourceElement=Object.keys(GENERATES).find(function(key){return GENERATES[key]===focusElement});
+    var adverseElement=Object.keys(CONTROLS).find(function(key){return CONTROLS[key]===focusElement});
+    if(CONTROLS[element]===sourceElement&&GENERATES[element]===adverseElement)return '仇神';
+    if(element===focusElement)return '同类';
+    if(GENERATES[focusElement]===element)return '泄神';
+    return '旁神';
+  }
+
+  function buildUseGodAssessment(input){
+    input=input||{};
+    var plate=input.plate,relations=buildUseGodRelations(input),focus=relations.focus;
+    var line=plate.lines.find(function(item){return item.position===focus.position});
+    var monthBranch=plate.calendar.monthBuild||(plate.calendar.monthGZ||'')[1],dayBranch=plate.calendar.dayBranch||(plate.calendar.dayGZ||'')[1];
+    var monthElement=ELEMENTS[monthBranch],dayElement=ELEMENTS[dayBranch],season=seasonalState(monthElement,focus.element),support=[],constraint=[],condition=[],timing=[],chains=[];
+    var sourceElement=Object.keys(GENERATES).find(function(key){return GENERATES[key]===focus.element});
+    var adverseElement=Object.keys(CONTROLS).find(function(key){return CONTROLS[key]===focus.element});
+    var enemyElement=Object.keys(GENERATES).find(function(key){return GENERATES[key]===adverseElement});
+    function uniquePush(list,text){if(text&&list.indexOf(text)<0)list.push(text)}
+    function branchFacts(branch){
+      var facts=[];
+      if((plate.calendar.voidBranches||[]).indexOf(branch)>=0)facts.push('旬空');
+      return facts.concat(branchRelation(monthBranch,branch,'月'),branchRelation(dayBranch,branch,'日')).filter(function(value,index,list){return list.indexOf(value)===index});
+    }
+    function recordFocusFact(term){
+      var label='用神'+focus.lineLabel+' '+focus.stem+focus.branch+focus.element;
+      if(term==='临月'||term==='临日'||term==='月生'||term==='日生')uniquePush(support,label+'得'+term);
+      else if(term==='月克'||term==='日克'||term==='月破')uniquePush(constraint,label+'逢'+term);
+      else if(term==='日冲'){
+        var focusStrong=season==='旺'||season==='相'||dayElement===focus.element||GENERATES[dayElement]===focus.element;
+        if(!focus.hidden&&!line.moving&&focusStrong&&focusFacts.indexOf('月破')<0)uniquePush(condition,label+'得月日扶持而受日冲，按暗动条件看待');
+        else if(!focus.hidden&&!line.moving)uniquePush(constraint,label+'休囚受日冲，按日破条件看待');
+        else uniquePush(condition,label+'受日冲，仍须结合发动、旺衰与空破判断');
+      }
+      else if(term==='旬空')uniquePush(timing,label+'旬空，当前条件未实，待出空或冲空');
+      else uniquePush(condition,label+'逢'+term);
+    }
+    var focusFacts=branchFacts(focus.branch);
+    focusFacts.forEach(recordFocusFact);
+    if(season==='旺'||season==='相')uniquePush(support,'用神'+focus.element+'在'+monthBranch+'月为'+season);
+    else if(season==='囚'||season==='死')uniquePush(constraint,'用神'+focus.element+'在'+monthBranch+'月为'+season);
+    else uniquePush(condition,'用神'+focus.element+'在'+monthBranch+'月为休');
+    if(focusFacts.indexOf('月破')>=0)uniquePush(timing,'用神月破，先看出月、填实或逢合的条件');
+    if(focusFacts.indexOf('日冲')>=0)uniquePush(timing,'用神受日冲，须结合旺衰分辨暗动或日破');
+
+    var actors=[];
+    function addActor(sourceLine,item,hidden){
+      if(!hidden&&!focus.hidden&&sourceLine.position===focus.position)return;
+      var facts=branchFacts(item.branch),actorSeason=seasonalState(monthElement,item.element),dayClash=CLASH[dayBranch]===item.branch,monthBroken=CLASH[monthBranch]===item.branch;
+      var actorStrong=actorSeason==='旺'||actorSeason==='相'||dayElement===item.element||GENERATES[dayElement]===item.element;
+      var actionState=hidden?'伏藏':(sourceLine.moving?'明动':(dayClash&&actorStrong&&!monthBroken?'暗动':(dayClash?'日破':'静爻')));
+      var active=actionState==='明动'||actionState==='暗动',role=actorRole(focus.element,item.element),name=sourceLine.label+(hidden?'伏神':'')+' '+item.stem+item.branch+item.element;
+      var actor={id:(hidden?'hidden-':'line-')+sourceLine.position,position:sourceLine.position,lineLabel:sourceLine.label,hidden:hidden,relative:item.relative,stem:item.stem,branch:item.branch,element:item.element,role:role,seasonalState:actorSeason,actionState:actionState,active:active,facts:facts,changeFacts:hidden?[]:(sourceLine.moving?sourceLine.changeFacts.slice():[])};
+      actors.push(actor);
+      if(active&&role==='原神')uniquePush(support,name+actionState+'，原神生用神');
+      if(active&&role==='忌神')uniquePush(constraint,name+actionState+'，忌神克用神');
+      if(active&&role==='仇神')uniquePush(constraint,name+actionState+'，仇神克原神并生忌神');
+      if(active&&role==='同类')uniquePush(support,name+actionState+'，与用神同类相扶');
+      if(active&&role==='泄神')uniquePush(condition,name+actionState+'，为用神所生，存在耗泄条件');
+      if(actionState==='日破')uniquePush(condition,name+'受日冲且未达旺相，按日破条件看待');
+      if(facts.indexOf('旬空')>=0&&active)uniquePush(timing,name+'发动而旬空，作用可能待出空或冲空落实');
+      if(facts.indexOf('月破')>=0&&active)uniquePush(timing,name+'发动而月破，作用受当月条件限制');
+      if(hidden)uniquePush(condition,name+'伏藏，须结合飞神与提拔条件，不按明动爻直接作用');
+      actor.changeFacts.forEach(function(term){
+        if(term==='回头生'||term==='化进')uniquePush(role==='原神'?support:condition,name+term);
+        else if(term==='回头克'||term==='回头冲'||term==='化退')uniquePush(role==='原神'?constraint:condition,name+term);
+        else uniquePush(condition,name+term);
+      });
+    }
+    plate.lines.forEach(function(sourceLine){
+      addActor(sourceLine,sourceLine.original,false);
+      if(sourceLine.hidden)addActor(sourceLine,sourceLine.hidden,true);
+    });
+    actors.sort(function(a,b){return a.position-b.position||(a.hidden?1:-1)});
+
+    if(!focus.hidden&&line.moving){
+      line.changeFacts.forEach(function(term){
+        var text='用神'+focus.lineLabel+'发动'+term;
+        if(term==='回头生'||term==='化进')uniquePush(support,text);
+        else if(term==='回头克'||term==='回头冲'||term==='化退')uniquePush(constraint,text);
+        else uniquePush(condition,text);
+      });
+      var changedFacts=branchFacts(line.changed.branch);
+      if(changedFacts.indexOf('旬空')>=0){uniquePush(constraint,'用神变爻'+line.changed.stem+line.changed.branch+'化空');uniquePush(timing,'用神化空，待变爻出空或冲空再观察落实')}
+      if(changedFacts.indexOf('月破')>=0){uniquePush(constraint,'用神变爻'+line.changed.stem+line.changed.branch+'化破');uniquePush(timing,'用神化破，待出月、填实或逢合再观察')}
+    }
+
+    var activeSources=actors.filter(function(actor){return actor.active&&actor.role==='原神'}),activeAdverse=actors.filter(function(actor){return actor.active&&actor.role==='忌神'}),activeEnemies=actors.filter(function(actor){return actor.active&&actor.role==='仇神'});
+    if(activeSources.length&&activeAdverse.length){
+      var chain='原神与忌神同动，构成忌神贪生原神、原神转生用神的连续相生条件';
+      chains.push({type:'greed-generates-forgets-control',label:'贪生忘克条件',evidence:chain});uniquePush(support,chain);
+    }
+    if(activeEnemies.length){
+      var enemyChain='仇神发动，形成克原神并生忌神的连续制约条件';
+      chains.push({type:'enemy-supports-adverse',label:'仇神助忌',evidence:enemyChain});uniquePush(constraint,enemyChain);
+    }
+    if(focus.hidden){
+      var flying=actors.find(function(actor){return !actor.hidden&&actor.position===focus.position});
+      if(flying){
+        if(GENERATES[flying.element]===focus.element)uniquePush(support,'飞神'+flying.stem+flying.branch+'生伏神用神');
+        else if(CONTROLS[flying.element]===focus.element)uniquePush(constraint,'飞神'+flying.stem+flying.branch+'克伏神用神');
+        else uniquePush(condition,'伏神用神与飞神'+flying.stem+flying.branch+'无直接生克，仍待提拔条件');
+      }
+    }
+
+    var tendency=support.length&&constraint.length?'mixed':(support.length?'supported':(constraint.length?'constrained':'undetermined'));
+    var tendencyLabel={mixed:'生扶与制约并见',supported:'生扶条件较清楚',constrained:'受制条件较明显',undetermined:'关键作用尚未充分发动'}[tendency];
+    if(!timing.length)timing.push('本内核未形成可唯一定位的应期条件，不强行给出具体日期');
+    var evidence=[],serial={useGod:0,support:0,constraint:0,condition:0,timing:0,priority:0},prefix={useGod:'U',support:'S',constraint:'C',condition:'N',timing:'T',priority:'P'};
+    function addEvidence(kind,text){serial[kind]++;evidence.push({id:prefix[kind]+String(serial[kind]).padStart(2,'0'),kind:kind,text:text})}
+    addEvidence('useGod','固定用神：'+focus.lineLabel+' '+(focus.hidden?'伏神 ':'')+focus.relative+' '+focus.stem+focus.branch+'（'+focus.element+'），月令状态为'+season);
+    support.forEach(function(text){addEvidence('support',text)});
+    constraint.forEach(function(text){addEvidence('constraint',text)});
+    condition.forEach(function(text){addEvidence('condition',text)});
+    timing.forEach(function(text){addEvidence('timing',text)});
+    var priority=[
+      '月建与日辰作为外部时令，可作用于动爻、静爻、变爻与伏神；卦爻不能反制日月。',
+      '明动爻及符合旺相条件的日冲静爻可进入直接作用层；普通静爻只作结构背景。',
+      '变爻只回头作用于本位动爻，不直接越位生克其他爻。',
+      '旬空、月破不简单删除发动作用，改列为待出空、冲空、出月或填实的条件。'
+    ];
+    priority.forEach(function(text){addEvidence('priority',text)});
+    return {version:ASSESSMENT_VERSION,ruleBasis:'增删卜易主线：月建、日辰、动变、用原忌仇与暗动；只输出传统事实倾向，不输出吉凶分数',focus:focus,seasonal:{monthBranch:monthBranch,monthElement:monthElement,state:season},roles:{sourceElement:sourceElement,adverseElement:adverseElement,enemyElement:enemyElement},actors:actors,chains:chains,arbitration:{tendency:tendency,label:tendencyLabel,support:support,constraint:constraint,conditions:condition},timingConditions:timing,priorityRules:priority,evidence:evidence};
+  }
+
+  function validateAiInterpretation(input){
+    input=input||{};
+    var text=String(input.answer||''),kernel=input.kernel||{},plate=input.plate,errors=[];
+    if(!kernel.fixedUseGod||!kernel.assessment||!Array.isArray(kernel.evidenceCatalog)||!plate||!Array.isArray(plate.lines))throw new Error('AI 校验需要固定用神、规则内核、证据目录和盘面');
+    var validIds=new Set(kernel.evidenceCatalog.map(function(item){return item.id}));
+    var references=Array.from(new Set(Array.from(text.matchAll(/\[([A-Z]\d{2})\]/g)).map(function(match){return match[1]})));
+    if(text.indexOf('一个卦只能问同一件事，请重新起卦')>=0)return {valid:true,errors:[],references:[],topicRefusal:true};
+    var useGod=kernel.fixedUseGod;
+    if(text.indexOf(useGod.lineLabel)<0||text.indexOf(useGod.relative)<0||text.indexOf(useGod.stemBranch)<0)errors.push('没有按冻结用神写明爻位、六亲和干支');
+    if(text.indexOf(kernel.assessment.arbitration.label)<0)errors.push('没有采用内核的力量倾向');
+    if(references.indexOf('U01')<0||references.length<3)errors.push('有效内核证据引用不足');
+    var invalid=references.filter(function(id){return !validIds.has(id)});
+    if(invalid.length)errors.push('引用了不存在的证据 '+invalid.join('、'));
+    if(/[七八九十]爻/.test(text))errors.push('出现了盘面不存在的爻位');
+    plate.lines.filter(function(line){return !line.moving}).forEach(function(line){
+      var claim=new RegExp(line.label+'[^。；\\n]{0,12}(发动|为动爻)');
+      var negative=new RegExp(line.label+'[^。；\\n]{0,12}(未发动|没有发动|不发动|并非动爻|为静爻)');
+      if(claim.test(text)&&!negative.test(text))errors.push('把静爻'+line.label+'写成了动爻');
+    });
+    return {valid:errors.length===0,errors:errors,references:references};
+  }
+
   var api={
-    version:VERSION,relationVersion:RELATION_VERSION,drawLine:drawLine,validateLines:validateLines,buildPlate:buildPlate,buildUseGodRelations:buildUseGodRelations,
+    version:VERSION,relationVersion:RELATION_VERSION,assessmentVersion:ASSESSMENT_VERSION,drawLine:drawLine,validateLines:validateLines,buildPlate:buildPlate,buildUseGodRelations:buildUseGodRelations,buildUseGodAssessment:buildUseGodAssessment,validateAiInterpretation:validateAiInterpretation,
     constants:{trigrams:TRIGRAMS,hexagrams:HEXAGRAMS,palaces:PALACES,relatives:RELATIVES,lineLabels:LINE_LABELS,gz60:GZ60}
   };
   root.LiuyaoEngine=api;

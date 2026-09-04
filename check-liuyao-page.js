@@ -13,6 +13,9 @@ assert.throws(()=>engine.validateLines([7,7,7,7,7,5]),/上爻只能/);
 assert.deepStrictEqual(Array.from({length:8},(_,i)=>engine.drawLine(i)),[6,7,7,7,8,8,8,9]);
 assert.strictEqual(typeof engine.buildUseGodRelations,'function');
 assert.match(engine.relationVersion,/LIUYAO-RELATION/);
+assert.strictEqual(typeof engine.buildUseGodAssessment,'function');
+assert.match(engine.assessmentVersion,/LIUYAO-ASSESSMENT/);
+assert.strictEqual(typeof engine.validateAiInterpretation,'function');
 
 const pureFixtures={
   '111111':['甲子','甲寅','甲辰','壬午','壬申','壬戌'],
@@ -65,6 +68,7 @@ Object.entries(spiritStart).forEach(([stem,spirit])=>{
 let hiddenCount=0,hiddenGraphChecked=false;
 const relationTypes=new Set(),relationTerms=new Set();
 const relationDirections={towardFocus:false,fromFocus:false,symmetric:false,multiple:false};
+const assessmentCoverage={season:new Set(),role:new Set(),action:new Set(),tendency:new Set(),chain:new Set()};
 for(let value=0;value<4096;value++){
   let n=value;
   const lines=[];
@@ -94,12 +98,25 @@ for(let value=0;value<4096;value++){
       });
     });
     relation.focus.statuses.forEach(item=>relationTerms.add(item.term));
+    const assessment=engine.buildUseGodAssessment({plate,useGod:{position:line.position,hidden:false}});
+    assert.strictEqual(assessment.focus.position,line.position);
+    assert.ok(assessment.evidence.some(item=>item.id==='U01'));
+    assert.strictEqual(new Set(assessment.evidence.map(item=>item.id)).size,assessment.evidence.length);
+    assert.ok(['mixed','supported','constrained','undetermined'].includes(assessment.arbitration.tendency));
+    assert.ok(assessment.roles.sourceElement&&assessment.roles.adverseElement&&assessment.roles.enemyElement);
+    assessmentCoverage.season.add(assessment.seasonal.state);
+    assessmentCoverage.tendency.add(assessment.arbitration.tendency);
+    assessment.actors.forEach(actor=>{assessmentCoverage.role.add(actor.role);assessmentCoverage.action.add(actor.actionState)});
+    assessment.chains.forEach(chain=>assessmentCoverage.chain.add(chain.type));
     assert.strictEqual(JSON.stringify(plate),before,'关系分析不得修改盘面快照');
     if(line.hidden&&!hiddenGraphChecked){
       const hiddenRelation=engine.buildUseGodRelations({plate,useGod:{position:line.position,hidden:true}});
       assert.ok(hiddenRelation.focus.roles.includes('伏神'));
       assert.ok(hiddenRelation.nodes.some(node=>node.id==='line-'+line.position&&node.roles.includes('飞神')));
       assert.ok(!hiddenRelation.nodes.some(node=>node.kind==='change'),'伏神不应虚构变爻');
+      const hiddenAssessment=engine.buildUseGodAssessment({plate,useGod:{position:line.position,hidden:true}});
+      assert.strictEqual(hiddenAssessment.focus.hidden,true);
+      assert.ok(hiddenAssessment.actors.some(actor=>!actor.hidden&&actor.position===line.position),'伏神判断必须保留飞神');
       hiddenGraphChecked=true;
     }
   });
@@ -113,6 +130,22 @@ assert.ok(relationDirections.multiple,'应覆盖同一节点的多重关系');
 ['generate','control','clash','combine','same','advance','retreat','none'].forEach(type=>assert.ok(relationTypes.has(type),'应覆盖关系 '+type));
 ['月破','日冲','旬空','回头生','回头克','回头冲','化合','伏吟','化进','化退'].forEach(term=>assert.ok(relationTerms.has(term),'应覆盖关系标签 '+term));
 assert.throws(()=>engine.buildUseGodRelations({plate:plateForCode('111111'),useGod:{position:0}}),/用神爻位/);
+assert.deepStrictEqual([...assessmentCoverage.season].sort(),['休','囚','旺','死','相'].sort());
+['原神','忌神','仇神','同类','泄神'].forEach(role=>assert.ok(assessmentCoverage.role.has(role),'应覆盖六爻角色 '+role));
+['明动','暗动','静爻','伏藏'].forEach(action=>assert.ok(assessmentCoverage.action.has(action),'应覆盖作用状态 '+action));
+['mixed','supported','constrained','undetermined'].forEach(tendency=>assert.ok(assessmentCoverage.tendency.has(tendency),'应覆盖内核倾向 '+tendency));
+['greed-generates-forgets-control','enemy-supports-adverse'].forEach(chain=>assert.ok(assessmentCoverage.chain.has(chain),'应覆盖作用链 '+chain));
+const dayBrokenPlate=engine.buildPlate({lines:[7,7,7,7,7,7],monthGZ:'癸酉',dayGZ:'甲子'});
+assert.ok(dayBrokenPlate.lines.some(line=>engine.buildUseGodAssessment({plate:dayBrokenPlate,useGod:{position:line.position}}).actors.some(actor=>actor.actionState==='日破')),'休囚静爻受日冲应标为日破');
+assert.throws(()=>engine.buildUseGodAssessment({plate:plateForCode('111111'),useGod:{position:0}}),/用神爻位/);
+const validatorPlate=plateForCode('111111');
+const validatorAssessment=engine.buildUseGodAssessment({plate:validatorPlate,useGod:{position:1}});
+const validatorKernel={fixedUseGod:{lineLabel:validatorAssessment.focus.lineLabel,relative:validatorAssessment.focus.relative,stemBranch:validatorAssessment.focus.stem+validatorAssessment.focus.branch},assessment:validatorAssessment,evidenceCatalog:validatorAssessment.evidence.concat([{id:'B01'},{id:'B02'}])};
+const validAnswer=validatorAssessment.arbitration.label+'；固定用神为'+validatorKernel.fixedUseGod.lineLabel+validatorKernel.fixedUseGod.relative+validatorKernel.fixedUseGod.stemBranch+'。[U01][B01][B02]';
+assert.strictEqual(engine.validateAiInterpretation({answer:validAnswer,kernel:validatorKernel,plate:validatorPlate}).valid,true);
+assert.strictEqual(engine.validateAiInterpretation({answer:validAnswer+' 二爻发动。',kernel:validatorKernel,plate:validatorPlate}).valid,false,'静爻不得被 AI 写成动爻');
+assert.strictEqual(engine.validateAiInterpretation({answer:validAnswer+' [Z99]',kernel:validatorKernel,plate:validatorPlate}).valid,false,'AI 不得引用不存在的证据');
+assert.strictEqual(engine.validateAiInterpretation({answer:'一个卦只能问同一件事，请重新起卦',kernel:validatorKernel,plate:validatorPlate}).valid,true,'换题拒答允许不附盘面证据');
 
 const html=fs.readFileSync('./liuyao.html','utf8');
 assert.match(html,/id="blankPlate"/);
@@ -137,15 +170,26 @@ assert.match(html,/function saveUseGod\(\)/);
 assert.match(html,/function suggestedUseGod\(\)/);
 assert.match(html,/function inferUseGodTarget\(record\)/);
 assert.match(html,/function ruleSuggestedUseGod\(\)/);
+assert.match(html,/function suggestedUseGod\(\)\{return ruleSuggestedUseGod\(\)\}/);
+assert.doesNotMatch(html,/function aiSuggestedUseGod\(\)/);
 assert.match(html,/function applyUseGodSuggestion\(\)/);
 assert.match(html,/function updateUseGodSelection\(\)/);
 assert.match(html,/系统建议，也可以手动纠错/);
 assert.match(html,/手工选择参考表/);
 assert.match(html,/旺衰用于后续判断，不用于反推用神身份/);
 assert.match(html,/男问妻财，女问官鬼/);
-assert.match(html,/用神选择必须明确写出爻位、六亲和干支/);
+assert.match(html,/明确写出固定用神的爻位、六亲和干支/);
 assert.match(html,/function renderUseGodRelations\(\)/);
 assert.match(html,/LiuyaoEngine\.buildUseGodRelations/);
+assert.match(html,/LiuyaoEngine\.buildUseGodAssessment/);
+assert.match(html,/function buildAiKernelContext\(\)/);
+assert.match(html,/function validateLiuyaoAiAnswer\(answer,kernel\)/);
+assert.match(html,/LiuyaoEngine\.validateAiInterpretation/);
+assert.match(html,/fixedUseGod/);
+assert.match(html,/evidenceCatalog/);
+assert.match(html,/初稿未通过盘面校验，正在纠正/);
+assert.match(html,/kernelVersion:kernel\.assessment\.version/);
+assert.match(html,/一个卦只能问同一件事，请重新起卦/);
 assert.match(html,/function showUseGodRelation\(nodeId,index\)/);
 assert.match(html,/id="relationMap"/);
 assert.match(html,/建议用神 · 未确认/);
@@ -207,7 +251,7 @@ assert.match(html,/DeepSeekClient\.requestFinal\(\{apiKey:key,messages:messages,
 assert.match(html,/requestId!==aiRequestSeq/);
 assert.match(html,/@media\(max-width:620px\)/);
 assert.match(html,/min-height:44px/);
-assert.match(html,/<script src="liuyao-engine\.js/);
+assert.match(html,/<script src="liuyao-engine\.js\?v=20260905\.1/);
 [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].filter(match=>match[1].trim()).forEach(match=>new Function(match[1]));
 
 const qimen=fs.readFileSync('./index.html','utf8');
@@ -218,4 +262,4 @@ assert.match(bazi,/href="ziwei\.html">紫微<\/a>/);
 assert.match(qimen,/href="daily\.html">日运<\/a>/);
 assert.match(bazi,/href="daily\.html">日运<\/a>/);
 
-console.log('liuyao page checks ok: 4096 inputs, 64 hexagrams, 8 pure najia fixtures');
+console.log('liuyao page checks ok: 4096 inputs, 64 hexagrams, relations and use-god assessment');

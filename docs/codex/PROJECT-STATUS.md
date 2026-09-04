@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `b470ff0`
-- Changed: 紫微低风险 P1 完成：公开并冻结“大限宫干沿用本命原宫干”及01:00起丑、03:00起寅、23:00起晚子的整点规则；AI 证据新增命迁、兄友、夫官、子田、财福、父疾六组对宫轴。排盘结果、历史快照和旧模块均未修改。
-- Checks: `node .\check-ziwei-page.js`（30 个固定盘、1159 项断言，包含30盘大限宫干及26个时辰边界点）；`node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`; `node .\check-baselines.js`（18 个基线）；`node .\check-deepseek-client.js`; `node --check .\ziwei-engine.js`; `node --check .\ziwei-page.js`; `node --check .\check-ziwei-page.js`; `git diff --check`。本地 `http://127.0.0.1:8082/ziwei.html` 已确认加载新规则说明和 `20260825.2` 脚本版本。
-- Next task: 用户在 Pages 或本地实际使用紫微 AI；出现解盘问题后按当时冻结证据复核。
-- Caution: 本次只冻结现行口径，没有采用资料作者的晚子时、闰月或大限宫干替代算法。`check-daily-page.js` 仍因既有 V3.1 资源版本断言失败，日运及共享 AI 文件均未在本次修改。
+- Last shared baseline: `b6dfef3`
+- Changed: 六爻新增独立的用神状态判断内核，按冻结月日、用原忌仇、明动/暗动、空破和动变生成带编号证据；AI 固定采用规则建议或人工确认的用神，回答须引用真实证据并通过本地校验，失败自动纠正一次且不保存不合格结果。`buildPlate()`、旧记录结构及奇门、八字、紫微计算均未修改。
+- Checks: `node .\check-ziwei-page.js`; `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、关系与用神判断）；`node .\check-baselines.js`（18 个基线）；`node .\check-deepseek-client.js`; `node --check .\liuyao-engine.js`; `node --check .\check-liuyao-page.js`; `git diff --check`。
+- Next task: 用户在 Pages 以已知卦例核对用神内核，并用真实 DeepSeek Key 验证首答、自动纠正及连续追问。
+- Caution: 判断内核是《增删卜易》主线的第一版可核查事实层，不包含墓绝、三刑等全部流派规则，也不能保证现实预测准确。`check-daily-page.js` 仍因既有 V3.1 资源版本断言失败，日运文件未在本次修改。
 
 ## Replace At Each Handoff
 

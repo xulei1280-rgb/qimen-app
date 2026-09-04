@@ -95,7 +95,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 .orbit-node{cursor:pointer;outline:none}.orbit-node-card{fill:rgba(255,252,245,.97);stroke:#aa9270;stroke-width:1.2;rx:16;filter:url(#orbitSoftShadow)}.orbit-node-dot{fill:#9d7c51}.orbit-node.month .orbit-node-dot{fill:var(--cinnabar)}.orbit-node.day .orbit-node-dot{fill:var(--jade)}.orbit-node.change .orbit-node-dot{fill:var(--orbit-change)}.orbit-node-title{fill:#6d5030;font-size:12px;font-weight:900;text-anchor:middle}.orbit-node-main{fill:#2d2822;font-size:15px;font-weight:900;text-anchor:middle}.orbit-node-meta{fill:#74685b;font-size:11px;text-anchor:middle}.orbit-node:hover .orbit-node-card,.orbit-node:focus-visible .orbit-node-card{stroke:var(--jade);stroke-width:2;filter:url(#orbitNodeGlow)}
 .orbit-focus-disc{fill:rgba(244,250,246,.97);stroke:var(--jade);stroke-width:2.2;filter:url(#orbitFocusShadow)}.orbit-focus-ring{fill:none;stroke:#6e8f82;stroke-width:1.2;stroke-dasharray:3 7;opacity:.8}.orbit-focus-core{fill:rgba(255,253,248,.84);stroke:#b99d76;stroke-width:1}.orbit-focus-kicker{fill:#8c683f;font-size:11px;font-weight:900;text-anchor:middle}.orbit-focus-title{fill:#264d40;font-size:26px;font-weight:900;letter-spacing:.18em;text-anchor:middle}.orbit-focus-main{fill:#332b23;font-size:15px;font-weight:900;text-anchor:middle}.orbit-focus-meta{fill:#6d6256;font-size:12px;text-anchor:middle}.orbit-focus-status{fill:var(--cinnabar);font-size:11px;font-weight:900;text-anchor:middle}
 .relation-orbit.has-highlight .orbit-edge-group:not(.is-highlight),.relation-orbit.has-highlight .orbit-node:not(.is-highlight),.relation-orbit.has-highlight .orbit-label:not(.is-highlight){opacity:.24}.relation-orbit.has-highlight .is-highlight{opacity:1;filter:saturate(1.08)}
-.orbit-mobile-hint{display:none;margin:8px 0 0;text-align:center;color:var(--muted);font-size:11px}.relation-rule-note{margin:9px 0 0;text-align:center;color:var(--muted);font-size:11px;line-height:1.55}.legacy-judgment{border:1px solid #ddceb2;border-radius:10px;background:#fbf5e9}.legacy-judgment>summary{display:flex;align-items:center;min-height:44px;padding:9px 12px;cursor:pointer;color:#65462b;font-weight:800}.legacy-judgment-body{padding:0 12px 12px}.legacy-judgment .append-list{margin-bottom:0}
+.orbit-mobile-hint{display:none;margin:8px 0 0;text-align:center;color:var(--muted);font-size:11px}.relation-rule-note{margin:9px 0 0;text-align:center;color:var(--muted);font-size:11px;line-height:1.55}.kernel-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.kernel-tendency{border:1px solid #9eb9ad;background:#edf6f1;color:var(--jade);border-radius:999px;padding:6px 10px;font-weight:900}.kernel-season{border:1px solid var(--line);background:#fffdf8;border-radius:999px;padding:6px 10px;color:#65462b}.kernel-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.kernel-column{border:1px solid #dfd0b7;background:#fffdf8;border-radius:10px;padding:10px 12px}.kernel-column.support{border-left:4px solid var(--jade)}.kernel-column.constraint{border-left:4px solid var(--cinnabar)}.kernel-column h4{margin:0 0 6px;font-size:13px}.kernel-column ul{margin:0;padding-left:18px}.kernel-column li{margin:4px 0;color:#5f5549;font-size:12px;line-height:1.55}.kernel-evidence-id{color:#8b6540;font-family:ui-monospace,monospace;font-weight:800}.kernel-details{margin-top:9px;border:1px dashed #d4c09e;border-radius:9px;background:#fbf5e9}.kernel-details summary{cursor:pointer;min-height:44px;padding:8px 10px;display:flex;align-items:center;color:#65462b;font-weight:800}.kernel-details-body{padding:0 10px 10px;font-size:12px;color:var(--muted);line-height:1.65}.legacy-judgment{border:1px solid #ddceb2;border-radius:10px;background:#fbf5e9}.legacy-judgment>summary{display:flex;align-items:center;min-height:44px;padding:9px 12px;cursor:pointer;color:#65462b;font-weight:800}.legacy-judgment-body{padding:0 12px 12px}.legacy-judgment .append-list{margin-bottom:0}
 @keyframes trace-relation{from{stroke-dashoffset:34;opacity:.18}to{stroke-dashoffset:0;opacity:1}}
 .ai-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.ai-quick button{min-height:44px;border:1px solid var(--line);background:#fffaf0;color:#65462b;border-radius:999px;padding:7px 11px;font-size:12px}.ai-quick button:disabled{opacity:.5;cursor:not-allowed}
 .ai-turn{border:1px solid #dcc8a8;border-radius:10px;margin-top:10px;background:#fff}.ai-turn summary{cursor:pointer;padding:10px 12px;font-weight:800;color:#65462b}.ai-answer{padding:0 12px 14px;white-space:pre-wrap;line-height:1.75;font-family:system-ui,sans-serif;font-size:14px}
@@ -109,7 +109,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 @media(max-width:620px){
   .shell{width:min(100% - 16px,1180px);padding-top:18px}.card{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cast-methods{grid-template-columns:repeat(2,minmax(0,1fr))}.cast-methods button:nth-child(3){grid-column:1/-1}.manual-grid{grid-template-columns:1fr 1fr}
   .summary{grid-template-columns:1fr 38px 1fr}.gua-name{font-size:17px}.gua-symbol{font-size:34px}
-  .plate{overflow-x:auto}.research-grid,.review-grid{grid-template-columns:1fr}.research-grid .full,.review-grid .full{grid-column:auto}.plate-tools{align-items:flex-start}.focus-switch{width:100%}.focus-switch button{flex:1}.plate-actions{width:100%}.plate-actions button{flex:1}.reading-path{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:3px}.reading-path li{flex:0 0 150px;scroll-snap-align:start}.relation-map{padding:8px}.relation-legend{justify-content:flex-start;padding:0 6px}.relation-orbit-scroll{scroll-snap-type:x proximity}.relation-orbit{min-width:720px;scroll-snap-align:center}.relation-orbit-canvas{min-height:557px}.orbit-mobile-hint{display:block}
+  .plate{overflow-x:auto}.research-grid,.review-grid,.kernel-grid{grid-template-columns:1fr}.research-grid .full,.review-grid .full{grid-column:auto}.plate-tools{align-items:flex-start}.focus-switch{width:100%}.focus-switch button{flex:1}.plate-actions{width:100%}.plate-actions button{flex:1}.reading-path{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:3px}.reading-path li{flex:0 0 150px;scroll-snap-align:start}.relation-map{padding:8px}.relation-legend{justify-content:flex-start;padding:0 6px}.relation-orbit-scroll{scroll-snap-type:x proximity}.relation-orbit{min-width:720px;scroll-snap-align:center}.relation-orbit-canvas{min-height:557px}.orbit-mobile-hint{display:block}
   .history-tools{grid-template-columns:1fr 1fr}.history-tools input{grid-column:1/-1}.history-filter-grid{grid-template-columns:1fr 1fr}.history-item{grid-template-columns:1fr}.history-actions{justify-content:flex-end}.module-nav a{flex:1;justify-content:center}
 }
 @media(max-width:900px) and (orientation:portrait){
@@ -229,14 +229,14 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 
 <script src="qimen.js"></script>
 <script src="bazi-engine.js?v=20260715.2"></script>
-<script src="liuyao-engine.js?v=20260812.2"></script>
+<script src="liuyao-engine.js?v=20260905.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var API_KEY_STORAGE='qimen_deepseek_api_key';
 var RECORDS_STORAGE='liuyao_records_v1';
 var DISPLAY_STORAGE='liuyao_display_mode';
 var TEXT_SIZE_STORAGE='liuyao_large_text';
-var currentRecord=null,currentPlate=null,currentUseGodRelations=null,stepLines=[],stepMeta=null,aiRequestSeq=0,openedFromHistory=false,currentPlateFocus='all',preferredDisplayMode='standard';
+var currentRecord=null,currentPlate=null,currentUseGodRelations=null,currentUseGodAssessment=null,stepLines=[],stepMeta=null,aiRequestSeq=0,openedFromHistory=false,currentPlateFocus='all',preferredDisplayMode='standard';
 var LINE_NAMES=['初爻','二爻','三爻','四爻','五爻','上爻'];
 var LINE_VALUE_LABELS={6:'老阴 · 动',7:'少阳 · 静',8:'少阴 · 静',9:'老阳 · 动'};
 var TOPIC_LABELS={career:'事业工作',wealth:'财运交易',love:'感情关系',cooperation:'合作谈判',travel:'出行迁动',lost:'寻找失物',other:'其他具体事项'};
@@ -296,7 +296,7 @@ function renderQuestionSummary(){
     '<div class="summary-actions"><button class="secondary" type="button" onclick="startNewCast()">重新起卦</button><span id="questionSummaryStatus" class="status" role="status" aria-live="polite">'+(openedFromHistory?'历史快照 · 不重新计算':'已自动保存')+'</span></div>';
 }
 function resetCastView(focusQuestion){
-  aiRequestSeq++;currentRecord=null;currentPlate=null;currentUseGodRelations=null;openedFromHistory=false;currentPlateFocus='all';stepLines=[];stepMeta=null;lockForm(false);
+  aiRequestSeq++;currentRecord=null;currentPlate=null;currentUseGodRelations=null;currentUseGodAssessment=null;openedFromHistory=false;currentPlateFocus='all';stepLines=[];stepMeta=null;lockForm(false);
   document.getElementById('askerMode').value='self';document.getElementById('gender').value='男';document.getElementById('personName').value='';document.getElementById('questionType').value='career';document.getElementById('question').value='';document.getElementById('questionGuidance').hidden=true;document.getElementById('questionScopeConfirm').checked=false;renderQuestionTemplates();useCurrentTime();
   document.getElementById('stepBox').hidden=true;document.getElementById('manualBox').hidden=true;document.getElementById('btnStep').textContent='逐爻摇卦';document.querySelectorAll('#manualGrid select').forEach(function(select){select.value=''});setStatus('castStatus','');
   document.getElementById('resultArea').innerHTML='';document.getElementById('resultArea').hidden=true;document.getElementById('blankPlate').hidden=false;document.getElementById('questionSummary').hidden=true;document.getElementById('questionSummary').innerHTML='';document.getElementById('questionEditor').hidden=false;document.getElementById('castHome').classList.remove('has-plate');
@@ -452,17 +452,7 @@ function ruleSuggestedUseGod(){
   var item=hidden?chosen.hidden:chosen.original;
   return {position:chosen.position,label:chosen.label,relative:item.relative,stemBranch:item.stem+item.branch,hidden:hidden,reason:target.reason+' '+basis+' 旺衰用于后续判断，不用于反推用神身份。',source:'系统规则建议',confidence:confidence}
 }
-function aiSuggestedUseGod(){
-  if(!currentRecord||!currentPlate)return null;
-  var history=Array.isArray(currentRecord.aiHistory)?currentRecord.aiHistory:[],answer=history.length?String(history[history.length-1].answer||''):'';
-  if(!answer)return null;
-  var lines=answer.split(/\n+/),sentence=lines.find(function(line){return line.indexOf('用神')>=0})||answer.slice(0,500),match=null;
-  currentPlate.lines.forEach(function(line){if(!match&&(sentence.indexOf(line.label)>=0||sentence.indexOf(line.original.stem+line.original.branch)>=0))match={line:line,item:line.original,hidden:false};if(!match&&line.hidden&&sentence.indexOf(line.hidden.stem+line.hidden.branch)>=0)match={line:line,item:line.hidden,hidden:true}});
-  if(!match){['父母','兄弟','子孙','妻财','官鬼'].some(function(relative){if(sentence.indexOf(relative)<0)return false;var found=currentPlate.lines.filter(function(line){return line.original.relative===relative});if(found.length===1){match=found[0];return true}return false})}
-  if(match&&!match.line)match={line:match,item:match.original,hidden:false};
-  return match?{position:match.line.position,label:match.line.label,relative:match.item.relative,stemBranch:match.item.stem+match.item.branch,hidden:match.hidden,reason:sentence.trim().slice(0,180),source:'AI 补充建议',confidence:'需核对'}:null
-}
-function suggestedUseGod(){return aiSuggestedUseGod()||ruleSuggestedUseGod()}
+function suggestedUseGod(){return ruleSuggestedUseGod()}
 function activeUseGod(){return currentRecord&&currentRecord.useGod||suggestedUseGod()}
 function factButtons(facts,position,kind){
   if(!facts||!facts.length)return '';
@@ -549,13 +539,22 @@ function orbitDefinitions(){
 }
 function renderUseGodRelations(){
   var useGod=activeUseGod(),confirmed=currentRecord&&currentRecord.useGod;
-  if(!useGod){currentUseGodRelations=null;return '<section class="research-section" id="relationMap"><div class="card-title"><div><div class="eyebrow">用神关系图</div><h3>先确定用神</h3></div></div><div class="relation-empty">系统暂时无法唯一定位用神。请在上方按参考表选择并确认用神，关系图会立即生成。</div></section>'}
-  try{currentUseGodRelations=LiuyaoEngine.buildUseGodRelations({plate:currentPlate,useGod:{position:useGod.position,hidden:useGod.hidden}})}catch(error){currentUseGodRelations=null;return '<section class="research-section" id="relationMap"><div class="relation-empty">关系图生成失败：'+esc(error.message)+'</div></section>'}
+  if(!useGod){currentUseGodRelations=null;currentUseGodAssessment=null;return '<section class="research-section" id="relationMap"><div class="card-title"><div><div class="eyebrow">用神关系图</div><h3>先确定用神</h3></div></div><div class="relation-empty">系统暂时无法唯一定位用神。请在上方按参考表选择并确认用神，关系图会立即生成。</div></section>'}
+  try{var input={plate:currentPlate,useGod:{position:useGod.position,hidden:useGod.hidden}};currentUseGodRelations=LiuyaoEngine.buildUseGodRelations(input);currentUseGodAssessment=LiuyaoEngine.buildUseGodAssessment(input)}catch(error){currentUseGodRelations=null;currentUseGodAssessment=null;return '<section class="research-section" id="relationMap"><div class="relation-empty">关系图生成失败：'+esc(error.message)+'</div></section>'}
   var relation=currentUseGodRelations,focus=relation.focus,state=confirmed?(confirmed.selectionSource==='manual'?'手动纠正 · 已保存':'用神已确认'):'建议用神 · 未确认';
   var positions=orbitPositions(relation.nodes),edgeMarkup=relation.edges.map(function(edge,index){return renderOrbitEdge(edge,positions[edge.nodeId],index,focus)}),paths=edgeMarkup.map(function(item){return item.path}).join(''),labels=edgeMarkup.map(function(item){return item.labels}).join('');
   var nodes=relation.nodes.map(function(node,index){return renderOrbitNode(node,positions[node.id],edgeMarkup[index].primaryIndex)}).join(''),focusDetails=[].concat(focus.roles||[]).concat((focus.statuses||[]).map(function(item){return item.term})).join(' · ')||'中心用神',stars=[[54,98],[151,326],[224,503],[354,129],[486,519],[641,367],[789,129],[686,552],[63,552],[778,504]].map(function(point){return '<circle class="orbit-star" cx="'+point[0]+'" cy="'+point[1]+'" r="2"></circle>'}).join('');
   var svg='<svg class="relation-orbit-canvas" viewBox="0 0 840 650" role="group" aria-label="以用神为中心的生克冲合关系星图">'+orbitDefinitions()+'<rect class="orbit-field" x="4" y="4" width="832" height="642" rx="20"></rect><ellipse class="orbit-ring" cx="420" cy="325" rx="338" ry="264"></ellipse><ellipse class="orbit-ring inner" cx="420" cy="325" rx="246" ry="190"></ellipse>'+stars+'<circle class="orbit-halo" cx="420" cy="325" r="142"></circle>'+paths+'<g class="orbit-focus" aria-label="中心用神：'+esc(focus.lineLabel+' '+focus.relative+focus.stem+focus.branch+focus.element)+'"><circle class="orbit-focus-disc" cx="420" cy="325" r="99"></circle><circle class="orbit-focus-ring" cx="420" cy="325" r="87"></circle><circle class="orbit-focus-core" cx="420" cy="325" r="68"></circle><text class="orbit-focus-kicker" x="420" y="279">'+esc(state)+'</text><text class="orbit-focus-title" x="420" y="311">用 神</text><text class="orbit-focus-main" x="420" y="339">'+esc(focus.lineLabel+' · '+(focus.hidden?'伏神 ':'')+focus.relative)+'</text><text class="orbit-focus-meta" x="420" y="361">'+esc(focus.stem+focus.branch+' · '+focus.element)+'</text><text class="orbit-focus-status" x="420" y="382">'+esc(focusDetails)+'</text></g>'+nodes+labels+'</svg>';
-  return '<section class="research-section" id="relationMap" aria-labelledby="relationMapTitle"><div class="card-title"><div><div class="eyebrow">用神关系图</div><h3 id="relationMapTitle">以用神为中心，看清谁生谁克</h3></div><span class="pro-only relation-state">规则 '+esc(relation.version)+'</span></div><div class="relation-map"><div class="relation-legend" aria-label="关系图图例"><strong>箭头指向被生／被克者</strong><span class="legend-item legend-generate"><i class="legend-line"></i>生</span><span class="legend-item legend-control"><i class="legend-line"></i>克</span><span class="legend-item legend-clash"><i class="legend-line"></i>冲破</span><span class="legend-item legend-combine"><i class="legend-line"></i>合／同支</span></div><div class="relation-orbit-scroll" tabindex="0" aria-label="用神关系星图，手机可左右滑动查看"><div class="relation-orbit">'+svg+'</div></div><p class="orbit-mobile-hint">左右滑动查看完整关系盘</p></div><p class="relation-rule-note">沿箭头阅读生克方向；冲、合、同支使用双向线。点击节点、连线或文字可查看干支五行依据。</p></section>'
+  return '<section class="research-section" id="relationMap" aria-labelledby="relationMapTitle"><div class="card-title"><div><div class="eyebrow">用神关系图</div><h3 id="relationMapTitle">以用神为中心，看清谁生谁克</h3></div><span class="pro-only relation-state">规则 '+esc(relation.version)+'</span></div><div class="relation-map"><div class="relation-legend" aria-label="关系图图例"><strong>箭头指向被生／被克者</strong><span class="legend-item legend-generate"><i class="legend-line"></i>生</span><span class="legend-item legend-control"><i class="legend-line"></i>克</span><span class="legend-item legend-clash"><i class="legend-line"></i>冲破</span><span class="legend-item legend-combine"><i class="legend-line"></i>合／同支</span></div><div class="relation-orbit-scroll" tabindex="0" aria-label="用神关系星图，手机可左右滑动查看"><div class="relation-orbit">'+svg+'</div></div><p class="orbit-mobile-hint">左右滑动查看完整关系盘</p></div><p class="relation-rule-note">沿箭头阅读生克方向；冲、合、同支使用双向线。点击节点、连线或文字可查看干支五行依据。</p></section>'+renderUseGodAssessment()
+}
+function renderAssessmentEvidence(kind,emptyText){
+  var items=(currentUseGodAssessment&&currentUseGodAssessment.evidence||[]).filter(function(item){return item.kind===kind});
+  return '<ul>'+(items.length?items.map(function(item){return '<li><span class="kernel-evidence-id">['+esc(item.id)+']</span> '+esc(item.text)+'</li>'}).join(''):'<li>'+esc(emptyText)+'</li>')+'</ul>'
+}
+function renderUseGodAssessment(){
+  var data=currentUseGodAssessment;if(!data)return '';
+  var roles='原神 '+data.roles.sourceElement+' · 忌神 '+data.roles.adverseElement+' · 仇神 '+data.roles.enemyElement,actors=data.actors.filter(function(actor){return actor.active||actor.hidden}).map(function(actor){return actor.lineLabel+(actor.hidden?'伏神':'')+' '+actor.relative+actor.stem+actor.branch+'：'+actor.role+' · '+actor.actionState}).join('；')||'没有明动、暗动或伏藏的重点爻';
+  return '<section class="research-section kernel-assessment" id="useGodAssessment" aria-labelledby="useGodAssessmentTitle"><div class="card-title"><div><div class="eyebrow">规则内核</div><h3 id="useGodAssessmentTitle">先由程序判关系，再交给 AI 解释</h3></div><span class="pro-only relation-state">规则 '+esc(data.version)+'</span></div><div class="kernel-summary"><span class="kernel-tendency">'+esc(data.arbitration.label)+'</span><span class="kernel-season">月令旺衰：'+esc(data.seasonal.state)+'</span><span class="kernel-season">'+esc(roles)+'</span></div><div class="kernel-grid"><div class="kernel-column support"><h4>生扶证据</h4>'+renderAssessmentEvidence('support','暂未见直接生扶')+'</div><div class="kernel-column constraint"><h4>制约证据</h4>'+renderAssessmentEvidence('constraint','暂未见直接制约')+'</div></div><details class="kernel-details"><summary>查看条件、应期线索与作用顺序</summary><div class="kernel-details-body"><b>条件：</b>'+esc(data.arbitration.conditions.join('；')||'无额外条件')+'<br><b>应期：</b>'+esc(data.timingConditions.join('；'))+'<span class="pro-only"><br><b>重点爻：</b>'+esc(actors)+'<br><b>作用顺序：</b>'+esc(data.priorityRules.join('；'))+'</span></div></details><p class="relation-rule-note">这里只判断传统规则中的力量方向，不直接保证事情成败，也不生成吉凶分数。</p></section>'
 }
 function setUseGodRelationHighlight(nodeId){var root=document.querySelector('.relation-orbit');if(!root)return;root.classList.toggle('has-highlight',!!nodeId);root.querySelectorAll('.orbit-edge-group,.orbit-node,.orbit-label').forEach(function(item){item.classList.toggle('is-highlight',!!nodeId&&item.dataset.relationNode===nodeId)})}
 function previewUseGodRelation(nodeId,active){var root=document.querySelector('.relation-orbit');if(!root)return;setUseGodRelationHighlight(active?nodeId:(root.dataset.selectedNode||''))}
@@ -626,27 +625,51 @@ async function copyCurrentPlate(){try{await navigator.clipboard.writeText(plateT
 function renderAiHistory(){
   var history=currentRecord&&Array.isArray(currentRecord.aiHistory)?currentRecord.aiHistory:[];
   if(!history.length)return '<div class="hint">成卦后由 AI 按用神、世应、日月与动变给出可核查的证据链。传统术数仅供参考。</div>';
-  return history.map(function(turn,index){return '<details class="ai-turn" open><summary>第'+(index+1)+'问 · '+esc(turn.question)+'</summary><div class="ai-answer">'+nl(turn.answer)+'</div></details>'}).join('');
+  return history.map(function(turn,index){return '<details class="ai-turn" open><summary>第'+(index+1)+'问 · '+esc(turn.question)+(turn.kernelVersion?' · 内核已校验':'')+'</summary><div class="ai-answer">'+nl(turn.answer)+'</div></details>'}).join('');
 }
-function aiPlateContext(){
-  return JSON.stringify({engineVersion:currentPlate.version,question:currentRecord.question,questionType:TOPIC_LABELS[currentRecord.questionType],asker:currentRecord.asker,castTime:currentRecord.castTime,primary:currentPlate.primary,changed:currentPlate.changed,palace:currentPlate.palace,tags:currentPlate.tags,lines:currentPlate.lines},null,2);
+function buildAiKernelContext(){
+  var selected=activeUseGod();if(!selected)throw new Error('系统无法唯一定位用神，请先按参考表手动选择并保存');
+  var line=currentPlate.lines.find(function(item){return item.position===selected.position}),item=selected.hidden?line&&line.hidden:line&&line.original;
+  if(!line||!item)throw new Error('当前用神与冻结盘面不一致，请重新选择用神');
+  var useGod={position:line.position,lineLabel:line.label,hidden:!!selected.hidden,relative:item.relative,stemBranch:item.stem+item.branch,element:item.element,confirmed:!!currentRecord.useGod,selectionSource:currentRecord.useGod&&currentRecord.useGod.selectionSource||selected.source||'系统规则建议',reason:currentRecord.useGod&&currentRecord.useGod.reason||selected.reason||''};
+  var input={plate:currentPlate,useGod:{position:useGod.position,hidden:useGod.hidden}},assessment=LiuyaoEngine.buildUseGodAssessment(input),relations=LiuyaoEngine.buildUseGodRelations(input),evidence=assessment.evidence.slice();
+  evidence.push({id:'B01',kind:'plate',text:'本卦'+currentPlate.primary.fullName+'，变卦'+currentPlate.changed.fullName+'，'+(currentPlate.lines.some(function(value){return value.moving})?'存在动爻':'六爻皆静')});
+  var shi=currentPlate.lines.find(function(value){return value.shi}),ying=currentPlate.lines.find(function(value){return value.ying});
+  evidence.push({id:'B02',kind:'plate',text:'世爻为'+shi.label+' '+shi.original.relative+shi.original.stem+shi.original.branch+'；应爻为'+ying.label+' '+ying.original.relative+ying.original.stem+ying.original.branch});
+  var relationIndex=0;relations.edges.forEach(function(edge){edge.relations.forEach(function(relation){if(relation.type==='none')return;relationIndex++;evidence.push({id:'R'+String(relationIndex).padStart(2,'0'),kind:'relation',text:relation.label+'：'+relation.evidence})})});
+  return {fixedUseGod:useGod,assessment:assessment,relations:relations,evidenceCatalog:evidence};
+}
+function aiPlateContext(kernel){
+  return JSON.stringify({engineVersion:currentPlate.version,assessmentVersion:kernel.assessment.version,question:currentRecord.question,questionType:TOPIC_LABELS[currentRecord.questionType],asker:currentRecord.asker,castTime:currentRecord.castTime,primary:currentPlate.primary,changed:currentPlate.changed,palace:currentPlate.palace,tags:currentPlate.tags,lines:currentPlate.lines,fixedUseGod:kernel.fixedUseGod,useGodAssessment:kernel.assessment,useGodRelations:kernel.relations,evidenceCatalog:kernel.evidenceCatalog},null,2);
+}
+function validateLiuyaoAiAnswer(answer,kernel){
+  return LiuyaoEngine.validateAiInterpretation({answer:answer,kernel:kernel,plate:currentPlate})
 }
 async function analyzeWithAI(){
   if(!currentRecord||!currentPlate)return;
   var follow=document.getElementById('aiQuestion').value.trim()||currentRecord.question;
+  var kernel;try{kernel=buildAiKernelContext()}catch(error){setStatus('aiStatus',error.message,true);return}
   var key=localStorage.getItem(API_KEY_STORAGE)||'';
   if(!key){key=prompt('请输入 DeepSeek API Key（只保存在本机浏览器）')||'';if(key.trim())localStorage.setItem(API_KEY_STORAGE,key.trim())}
   if(!key.trim()){setStatus('aiStatus','未填写 DeepSeek API Key',true);return}
   var requestId=++aiRequestSeq,recordIdAtStart=currentRecord.id,button=document.getElementById('btnAI'),keepAIStatus=false;button.disabled=true;button.textContent='分析中…';setStatus('aiStatus','正在核对用神、世应、日月和动变');
-  var system='你是谨慎的传统纳甲六爻分析师。一个卦只回答同一人、同一事、同一决策的连续追问；若用户换了问题，只回复“一个卦只能问同一件事，请重新起卦”。只能引用提供的结构化盘面，不得虚构动爻、六亲、纳甲、世应、旬空、月破或旺衰。不得用吉凶分数。医疗、法律和高风险投资只能提供传统象意与风险提示，不得替代专业意见。回答依次包含：结论与倾向、用神选择及理由、支持证据、反向证据、世应日月动变、可能应期条件、流派分歧或不确定处、现实行动建议。用神选择必须明确写出爻位、六亲和干支，便于用户在盘面核对。';
+  var system='你是谨慎的传统纳甲六爻解释员。程序已经完成排盘、固定用神和规则判断，你只能解释给出的内核结果，不得重新选择用神、重新计算旺衰或创造盘面关系。历史回答只用于保持同一问题的语义，若其中用神与本次 fixedUseGod 不同，必须忽略旧用神。一个卦只回答同一人、同一事、同一决策的连续追问；若用户换了问题，只回复“一个卦只能问同一件事，请重新起卦”。涉及盘面的判断必须引用 evidenceCatalog 中存在的编号，格式如 [U01]；必须原样写出 useGodAssessment.arbitration.label，并明确写出固定用神的爻位、六亲和干支。不得虚构动爻、六亲、纳甲、世应、旬空、月破、旺衰或应期，不得用吉凶分数。回答依次包含：结论与倾向、固定用神、支持证据、反向证据、世应日月动变、可能应期条件、不确定处、现实行动建议。医疗、法律和高风险投资只能提供传统象意与风险提示，不得替代专业意见。';
   var messages=[{role:'system',content:system}];
   (currentRecord.aiHistory||[]).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
-  messages.push({role:'user',content:'本卦原始问题：'+currentRecord.question+'\n本次问题：'+follow+'\n盘面事实（JSON）：\n'+aiPlateContext()});
+  messages.push({role:'user',content:'本卦原始问题：'+currentRecord.question+'\n本次问题：'+follow+'\n固定用神：'+kernel.fixedUseGod.lineLabel+' '+(kernel.fixedUseGod.hidden?'伏神 ':'')+kernel.fixedUseGod.relative+kernel.fixedUseGod.stemBranch+'。'+(kernel.fixedUseGod.confirmed?'用户已确认，不得改选。':'系统规则候选尚未人工确认，仍不得在本次回答中改选；请提示用户可在页面手动纠正。')+'\n规则内核与证据目录（JSON）：\n'+aiPlateContext(kernel)});
   try{
     var result=await DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','思考已完成，正在获取最终解读')}});
     if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart)return;
-    var answer=result.answer;
-    currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString()});if(!persistCurrent('aiStatus'))keepAIStatus=true;var suggestion=suggestedUseGod();if(suggestion){currentPlateFocus='useGod';renderPlate();setStatus('useGodStatus','AI 已提出候选，请核对理由后确认')}else{document.getElementById('aiHistory').innerHTML=renderAiHistory();document.getElementById('aiQuickQuestions').innerHTML=renderAiQuickQuestions();document.getElementById('aiQuestion').value=''};
+    var answer=result.answer,validation=validateLiuyaoAiAnswer(answer,kernel);
+    if(!validation.valid){
+      setStatus('aiStatus','初稿未通过盘面校验，正在纠正');
+      var retryMessages=messages.concat([{role:'assistant',content:answer},{role:'user',content:'上面的草稿未通过本地校验：'+validation.errors.join('；')+'。请不要增加新事实，按 fixedUseGod 和 evidenceCatalog 重新完整回答。'}]);
+      result=await DeepSeekClient.requestFinal({apiKey:key,messages:retryMessages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','正在获取纠正后的最终解读')}});
+      if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart)return;
+      answer=result.answer;validation=validateLiuyaoAiAnswer(answer,kernel);
+    }
+    if(!validation.valid)throw new Error('AI 回答未通过盘面校验：'+validation.errors.join('；')+'。本次内容未保存');
+    currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString(),kernelVersion:kernel.assessment.version,useGodSnapshot:kernel.fixedUseGod,assessmentSnapshot:kernel.assessment,evidenceRefs:validation.references});if(!persistCurrent('aiStatus'))keepAIStatus=true;currentPlateFocus='useGod';renderPlate();setStatus('useGodStatus',kernel.fixedUseGod.confirmed?'AI 已按已确认用神完成内核校验':'AI 已按系统候选用神完成内核校验，请继续核对或手动纠正');
   }catch(error){if(requestId===aiRequestSeq){keepAIStatus=true;setStatus('aiStatus','AI 请求失败：'+error.message,true)}}
   finally{if(requestId===aiRequestSeq&&currentRecord&&currentRecord.id===recordIdAtStart){button.disabled=false;button.textContent='AI 解卦';if(!keepAIStatus)setStatus('aiStatus','')}}
 }
