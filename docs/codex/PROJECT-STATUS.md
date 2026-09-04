@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `b6e0e33`
-- Changed: 六爻修复 AI 拒答句绕过、证据与段落事实不绑定、改用神后旧请求/旧回答串入、弱而化退的忌神误计直克、自身疾病用神误选、日月反制文案与历史快照未验真；新 AI 记录不再重复保存整份判断快照。`buildPlate()`、记录 schema 及奇门、八字、紫微计算均未修改。
-- Checks: `node .\check-ziwei-page.js`; `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、关系、用神判断及定点漏洞）；`node .\check-baselines.js`（18 个基线）；`node .\check-deepseek-client.js`; `node --check .\liuyao-engine.js`; `node --check .\check-liuyao-page.js`; `git diff --check`。
-- Next task: 用户在本地以真实 DeepSeek Key 验证首答与改用神后旧请求作废，再决定是否推送 Pages。
-- Caution: 程序现在可核对 AI 所引证据编号与明示盘面事实，但不能数学证明所有自然语言推论。内核仍不包含墓绝、三刑等全部流派规则，也不能保证现实预测准确。`check-daily-page.js` 仍有既有 V3.1 资源版本断言问题，日运文件未在本次修改。
+- Last shared baseline: `db10da1`（P1 本地 `main`，尚未推送）
+- Changed: 六爻判断内核升级至 v3：补入旺相静爻作用休囚用神、休囚动爻仍可作用、发动逢空破延期而不删除、生旺墓绝、动墓及强弱限定；弱而化退墓绝或回头受制者不再误计直接作用，仇神作用链须有有效忌神承接，三刑明确不单独改写倾向。`buildPlate()`、记录 schema、AI 提示词及奇门、八字、紫微计算均未修改。
+- Checks: `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、关系、用神判断、生旺墓绝及动静定点卦例）；`node .\check-baselines.js`（18 个基线）；`node .\check-deepseek-client.js`; `node --check .\liuyao-engine.js`; `node --check .\check-liuyao-page.js`; `git diff --check`。提交后再运行 `node .\check-ziwei-page.js`。
+- Next task: 用来源明确、问题和结果均已冻结的真实卦例建立回放集，区分“排盘事实正确”“规则链一致”和“现实结果命中”，再决定是否继续补规则或推送 Pages。
+- Caution: 当前只是可复现的传统规则内核，不等于现实预测准确率保证，也未覆盖所有流派。`check-daily-page.js` 仍有既有 V3.1 资源版本断言问题，日运文件未在本次修改。
 
 ## Replace At Each Handoff
 

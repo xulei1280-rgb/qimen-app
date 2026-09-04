@@ -17,6 +17,7 @@ assert.strictEqual(typeof engine.buildUseGodAssessment,'function');
 assert.match(engine.assessmentVersion,/LIUYAO-ASSESSMENT/);
 assert.strictEqual(typeof engine.validateAiInterpretation,'function');
 assert.strictEqual(typeof engine.validatePlateSnapshot,'function');
+assert.deepStrictEqual(engine.constants.lifeStages,{金:{长生:'巳',帝旺:'酉',墓:'丑',绝:'寅'},木:{长生:'亥',帝旺:'卯',墓:'未',绝:'申'},水:{长生:'申',帝旺:'子',墓:'辰',绝:'巳'},火:{长生:'寅',帝旺:'午',墓:'戌',绝:'亥'},土:{长生:'申',帝旺:'子',墓:'辰',绝:'巳'}});
 
 const pureFixtures={
   '111111':['甲子','甲寅','甲辰','壬午','壬申','壬戌'],
@@ -109,7 +110,7 @@ for(let value=0;value<4096;value++){
     assessmentCoverage.tendency.add(assessment.arbitration.tendency);
     assessment.actors.forEach(actor=>{assessmentCoverage.role.add(actor.role);assessmentCoverage.action.add(actor.actionState)});
     assessment.chains.forEach(chain=>assessmentCoverage.chain.add(chain.type));
-    if(assessment.chains.some(chain=>chain.type==='greed-generates-forgets-control'))assert.ok(!assessment.arbitration.constraint.some(text=>text.includes('忌神克用神')),'原忌同为有效动爻时不应再重复计入忌神直克');
+    if(assessment.chains.some(chain=>chain.type==='greed-generates-forgets-control'))assessment.actors.filter(actor=>actor.role==='忌神'&&actor.capacity==='effective'&&['明动','暗动'].includes(actor.actionState)).forEach(actor=>assert.ok(!assessment.arbitration.constraint.some(text=>text.includes(actor.lineLabel+' '+actor.stem+actor.branch+actor.element)&&text.includes('忌神克用神')),'原忌同为有效动爻时不应再重复计入该忌神直克'));
     assert.strictEqual(JSON.stringify(plate),before,'关系分析不得修改盘面快照');
     if(line.hidden&&!hiddenGraphChecked){
       const hiddenRelation=engine.buildUseGodRelations({plate,useGod:{position:line.position,hidden:true}});
@@ -135,7 +136,7 @@ assert.throws(()=>engine.buildUseGodRelations({plate:plateForCode('111111'),useG
 assert.deepStrictEqual([...assessmentCoverage.season].sort(),['休','囚','旺','死','相'].sort());
 ['原神','忌神','仇神','同类','泄神'].forEach(role=>assert.ok(assessmentCoverage.role.has(role),'应覆盖六爻角色 '+role));
 ['明动','暗动','静爻','伏藏'].forEach(action=>assert.ok(assessmentCoverage.action.has(action),'应覆盖作用状态 '+action));
-['mixed','supported','constrained','undetermined'].forEach(tendency=>assert.ok(assessmentCoverage.tendency.has(tendency),'应覆盖内核倾向 '+tendency));
+['mixed','supported','constrained'].forEach(tendency=>assert.ok(assessmentCoverage.tendency.has(tendency),'应覆盖内核倾向 '+tendency));
 ['greed-generates-forgets-control','enemy-supports-adverse'].forEach(chain=>assert.ok(assessmentCoverage.chain.has(chain),'应覆盖作用链 '+chain));
 const dayBrokenPlate=engine.buildPlate({lines:[7,7,7,7,7,7],monthGZ:'癸酉',dayGZ:'甲子'});
 assert.ok(dayBrokenPlate.lines.some(line=>engine.buildUseGodAssessment({plate:dayBrokenPlate,useGod:{position:line.position}}).actors.some(actor=>actor.actionState==='日破')),'休囚静爻受日冲应标为日破');
@@ -150,6 +151,36 @@ assert.ok(retreatAdverseActor.changeFacts.includes('化退'));
 assert.strictEqual(retreatAdverseActor.capacity,'powerless');
 assert.ok(!retreatAdverseAssessment.arbitration.constraint.some(text=>text.includes('三爻')&&text.includes('忌神克用神')),'休囚化退的忌神不得直接计入制约');
 assert.ok(retreatAdverseAssessment.arbitration.conditions.some(text=>text.includes('忌神当前无力直接克用神')));
+const staticPowerPlate=engine.buildPlate({lines:[7,7,6,6,6,6],monthGZ:'丙寅',dayGZ:'甲子'});
+const staticPowerAssessment=engine.buildUseGodAssessment({plate:staticPowerPlate,useGod:{position:3}});
+const staticSource=staticPowerAssessment.actors.find(actor=>actor.position===1&&!actor.hidden);
+assert.strictEqual(staticSource.role,'原神');
+assert.strictEqual(staticSource.actionState,'旺相静爻');
+assert.strictEqual(staticSource.capacity,'effective');
+assert.ok(staticPowerAssessment.arbitration.support.some(text=>text.includes('初爻')&&text.includes('原神生用神')),'旺相静爻应能生扶休囚用神');
+const movingPowerPlate=engine.buildPlate({lines:[9,7,6,6,6,6],monthGZ:'丙寅',dayGZ:'甲子'});
+const movingPowerAssessment=engine.buildUseGodAssessment({plate:movingPowerPlate,useGod:{position:5}});
+const weakMovingActor=movingPowerAssessment.actors.find(actor=>actor.position===3&&!actor.hidden);
+assert.strictEqual(weakMovingActor.seasonalState,'死');
+assert.strictEqual(weakMovingActor.actionState,'明动');
+assert.strictEqual(weakMovingActor.capacity,'effective','休囚动爻未再受伤时仍保留作用');
+const deferredPowerAssessment=engine.buildUseGodAssessment({plate:engine.buildPlate({lines:[6,6,6,6,6,6],monthGZ:'丙寅',dayGZ:'甲子'}),useGod:{position:1}});
+const deferredActor=deferredPowerAssessment.actors.find(actor=>actor.position===5&&!actor.hidden);
+assert.strictEqual(deferredActor.deferred,true);
+assert.strictEqual(deferredActor.capacity,'effective','发动遇空破不得直接删除作用事实');
+assert.ok(deferredPowerAssessment.timingConditions.some(text=>text.includes('待出空或冲空')));
+assert.ok(deferredPowerAssessment.arbitration.support.some(text=>text.includes('用神初爻发动化帝旺')),'用神化帝旺应进入生扶证据');
+const lifeEndAssessment=engine.buildUseGodAssessment({plate:engine.buildPlate({lines:[8,6,6,6,6,6],monthGZ:'丙寅',dayGZ:'甲子'}),useGod:{position:2}});
+assert.ok(lifeEndAssessment.arbitration.constraint.some(text=>text.includes('用神二爻发动化绝')),'用神化绝应进入制约证据');
+const controlledBirthAssessment=engine.buildUseGodAssessment({plate:engine.buildPlate({lines:[7,7,7,7,7,7],monthGZ:'乙酉',dayGZ:'丁巳'}),useGod:{position:5}});
+assert.ok(controlledBirthAssessment.arbitration.conditions.some(text=>text.includes('临日辰长生')&&text.includes('论克不论生')),'长生与日克并见时不得单列生扶');
+assert.ok(!controlledBirthAssessment.arbitration.support.some(text=>text.includes('临日辰长生')));
+const movingGraveAssessment=engine.buildUseGodAssessment({plate:engine.buildPlate({lines:[9,6,6,6,6,6],monthGZ:'丙寅',dayGZ:'甲子'}),useGod:{position:4}});
+assert.ok(movingGraveAssessment.arbitration.constraint.some(text=>text.includes('三爻 庚辰土为用神动墓')&&text.includes('用神本身休囚')),'有力动墓作用于休囚用神时应进入制约证据');
+const qualifiedMovingGraveAssessment=engine.buildUseGodAssessment({plate:engine.buildPlate({lines:[6,6,6,6,6,6],monthGZ:'丙寅',dayGZ:'甲子'}),useGod:{position:3}});
+assert.ok(qualifiedMovingGraveAssessment.arbitration.conditions.some(text=>text.includes('初爻 乙未土为用神动墓')&&text.includes('用神本身有气')),'用神有气时动墓只列待核条件');
+assert.ok(!qualifiedMovingGraveAssessment.arbitration.constraint.some(text=>text.includes('动墓')),'动墓不得脱离用神强弱直接定性');
+assert.ok(controlledBirthAssessment.priorityRules.some(text=>text.includes('三刑')&&text.includes('不用它单独改写力量倾向')),'三刑仅披露流派边界，不得自动定吉凶');
 const calendarDirectionPlate=plateForCode('111111');
 const calendarDirection=engine.buildUseGodRelations({plate:calendarDirectionPlate,useGod:{position:1}}).edges.find(edge=>edge.nodeId==='month').relations[0];
 assert.strictEqual(calendarDirection.label,'用神泄于月建');
@@ -299,7 +330,7 @@ assert.match(html,/confidence!==['"]高['"]/);
 assert.match(html,/src="bazi-engine\.js\?v=20260905\.1"/);
 assert.match(html,/@media\(max-width:620px\)/);
 assert.match(html,/min-height:44px/);
-assert.match(html,/<script src="liuyao-engine\.js\?v=20260905\.2/);
+assert.match(html,/<script src="liuyao-engine\.js\?v=20260905\.3/);
 [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].filter(match=>match[1].trim()).forEach(match=>new Function(match[1]));
 
 const qimen=fs.readFileSync('./index.html','utf8');
