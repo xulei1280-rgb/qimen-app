@@ -228,8 +228,8 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 </dialog>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20260715.2"></script>
-<script src="liuyao-engine.js?v=20260905.1"></script>
+<script src="bazi-engine.js?v=20260905.1"></script>
+<script src="liuyao-engine.js?v=20260905.2"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var API_KEY_STORAGE='qimen_deepseek_api_key';
@@ -366,6 +366,7 @@ function normalizeRecord(record){
   if(!record)return record;
   if(!record.judgment||typeof record.judgment!=='object')record.judgment={initial:null,additions:[]};
   if(!Array.isArray(record.judgment.additions))record.judgment.additions=[];
+  if(!Array.isArray(record.aiHistory))record.aiHistory=[];
   if(!record.review||typeof record.review!=='object')record.review={status:'pending',observedAt:'',result:'',conclusion:''};
   return record
 }
@@ -392,16 +393,23 @@ function toggleLargeText(){setLargeText(!document.body.classList.contains('large
 function syncResponsiveDisplay(){setDisplayMode(preferredDisplayMode,false);centerRelationOrbit()}
 function lineGraphic(line){return '<div class="yao '+(line.yinYang==='阳'?'yang':'yin')+'"><span></span><span></span></div><b class="move-mark">'+(line.moving?(line.value===9?'○':'×'):'')+'</b>'}
 function inferUseGodTarget(record){
-  var q=String(record&&record.question||''),type=record&&record.questionType,gender=record&&record.asker&&record.asker.gender;
+  var q=String(record&&record.question||''),type=record&&record.questionType,asker=record&&record.asker||{},gender=asker.gender;
   var documentWords=/合同|协议|签约|文书|证件|证书|手续|批文|通知|录取|考试|申请|签证|车票|机票|房屋|房产|车辆|车子/;
   var moneyWords=/钱|财|收入|工资|薪资|奖金|回款|货款|欠款|利润|收益|投资|交易|生意|买卖|价格|分成|货物|物品|手机|首饰|钱包/;
-  var childWords=/孩子|子女|宝宝|怀孕|胎儿|宠物|猫|狗|医药|药物|治疗|康复|娱乐|休假/;
+  var childWords=/孩子|子女|宝宝|怀孕|胎儿|宠物|猫|狗|娱乐|休假/;
+  var medicineWords=/这个药|医药|药物|药效|疗效|用药|吃药|治疗方案|医生|医师|求医/;
+  var healthWords=/生病|疾病|病情|症状|身体|健康|康复|痊愈|手术|住院|我的病|我这个病/;
   var peerWords=/兄弟|姐妹|同事|朋友|同行|竞争|对手|分利|分账/;
   var jobWords=/工作|职位|岗位|升职|晋升|求职|任职|事业|上班|领导|老板/;
   if(type==='lost'){
     if(documentWords.test(q))return {kind:'relative',value:'父母',reason:'失物问题提到证件、文书、房屋或车辆，传统上先取父母爻。'};
     if(/宠物|猫|狗|鸟|鱼/.test(q))return {kind:'relative',value:'子孙',reason:'寻找宠物，传统上先取子孙爻。'};
     return {kind:'relative',value:'妻财',reason:'一般钱物、随身物品或货物失踪，传统上先取妻财爻。'}
+  }
+  if(medicineWords.test(q))return {kind:'relative',value:'子孙',reason:'问题的核心是药物、疗效、治疗方案或求医，传统上先取子孙爻核对医药因素。'};
+  if(healthWords.test(q)){
+    if(asker.mode==='self')return {kind:'role',value:'shi',reason:'本人问自身疾病、健康或康复，先以世爻代表求测人；药物或医生另看子孙爻。'};
+    return null
   }
   if(type==='love'){
     if(gender==='男')return {kind:'relative',value:'妻财',affinity:'ying',reason:'按传统纳甲惯例，男问感情对象先取妻财爻，并结合应爻核对对方。'};
@@ -445,9 +453,9 @@ function ruleSuggestedUseGod(){
   else if(candidates.length>1){
     var moving=candidates.filter(function(line){return line.moving});if(moving.length===1){chosen=moving[0];basis='同类六亲多现，先列唯一发动的一爻为候选。';confidence='中'}
     if(!chosen&&target.affinity){var affinity=candidates.filter(function(line){return target.affinity==='ying'?line.ying:line.shi});if(affinity.length===1){chosen=affinity[0];basis='同类六亲多现，先列与'+(target.affinity==='ying'?'应':'世')+'爻重合的一爻为候选。';confidence='中'}}
-    if(!chosen){chosen=candidates[0];basis='同类六亲多现且没有唯一动爻或世应依据，暂按初爻到上爻列出第一个候选，建议手动核对。';confidence='低'}
+    if(!chosen)return null
   }else{
-    var hiddenCandidates=currentPlate.lines.filter(function(line){return line.hidden&&line.hidden.relative===target.value});if(!hiddenCandidates.length)return null;chosen=hiddenCandidates[0];hidden=true;basis='本卦明爻没有'+target.value+'，系统在'+chosen.label+'找到伏神'+chosen.hidden.relative+chosen.hidden.stem+chosen.hidden.branch+'。';confidence=hiddenCandidates.length===1?'中':'低'
+    var hiddenCandidates=currentPlate.lines.filter(function(line){return line.hidden&&line.hidden.relative===target.value});if(hiddenCandidates.length!==1)return null;chosen=hiddenCandidates[0];hidden=true;basis='本卦明爻没有'+target.value+'，系统在'+chosen.label+'找到唯一伏神'+chosen.hidden.relative+chosen.hidden.stem+chosen.hidden.branch+'。';confidence='中'
   }
   var item=hidden?chosen.hidden:chosen.original;
   return {position:chosen.position,label:chosen.label,relative:item.relative,stemBranch:item.stem+item.branch,hidden:hidden,reason:target.reason+' '+basis+' 旺衰用于后续判断，不用于反推用神身份。',source:'系统规则建议',confidence:confidence}
@@ -475,11 +483,11 @@ function setPlateFocus(mode){
 function renderUseGodBox(){
   var suggestion=suggestedUseGod(),confirmed=currentRecord.useGod,chosen=confirmed||suggestion,chosenKey=chosen?String(chosen.position)+(chosen.hidden?'h':''):'',options=currentPlate.lines.slice().reverse().map(function(line){var role=line.shi?' · 世':line.ying?' · 应':'',mainKey=String(line.position),html='<option value="'+mainKey+'" '+(chosenKey===mainKey?'selected':'')+'>'+esc(line.label+' · '+line.original.relative+' '+line.original.stem+line.original.branch+role)+'</option>';if(line.hidden){var hiddenKey=mainKey+'h';html+='<option value="'+hiddenKey+'" '+(chosenKey===hiddenKey?'selected':'')+'>'+esc(line.label+'伏神 · '+line.hidden.relative+' '+line.hidden.stem+line.hidden.branch+role)+'</option>'}return html}).join('');
   var reason=confirmed&&confirmed.reason||suggestion&&suggestion.reason||'',note=confirmed?'已确认并保存，可手动改选 · '+formatIso(confirmed.confirmedAt):(suggestion?suggestion.source+'已定位候选，请核对或改选':'系统无法唯一定位，请按参考表手动选择');
-  var suggestionHtml=suggestion?'<div class="use-god-suggestion"><div class="use-god-suggestion-head"><strong>'+esc(suggestion.source)+'：'+esc(suggestion.label)+' · '+(suggestion.hidden?'伏神 ':'')+esc(suggestion.relative+suggestion.stemBranch)+'</strong><span class="confidence">置信度 '+esc(suggestion.confidence)+'</span></div><p>'+esc(suggestion.reason)+'</p><button class="secondary" type="button" onclick="applyUseGodSuggestion()">采用这项建议</button></div>':'<div class="use-god-suggestion"><div class="use-god-suggestion-head"><strong>暂未自动定位</strong><span class="confidence">需要人工选择</span></div><p>问题中缺少可识别的对象。请参考下表选择六亲或世应，再从下拉框选择对应爻。</p></div>';
+  var suggestionHtml=suggestion?'<div class="use-god-suggestion"><div class="use-god-suggestion-head"><strong>'+esc(suggestion.source)+'：'+esc(suggestion.label)+' · '+(suggestion.hidden?'伏神 ':'')+esc(suggestion.relative+suggestion.stemBranch)+'</strong><span class="confidence">置信度 '+esc(suggestion.confidence)+'</span></div><p>'+esc(suggestion.reason)+'</p><button class="secondary" type="button" onclick="applyUseGodSuggestion()">采用这项建议</button></div>':'<div class="use-god-suggestion"><div class="use-god-suggestion-head"><strong>暂未自动定位</strong><span class="confidence">需要人工选择</span></div><p>问题对象不够明确，或相同六亲多现而没有唯一依据。请参考下表选择六亲或世应，再从下拉框选择对应爻。</p></div>';
   return '<div class="research-section"><div class="card-title"><div><div class="eyebrow">用神定位</div><h3>系统建议，也可以手动纠错</h3></div></div>'+suggestionHtml+'<div class="research-grid"><label>用神所在爻<select id="useGodLine" onchange="updateUseGodSelection()"><option value="">请选择</option>'+options+'</select></label><label class="full">选择理由<textarea id="useGodReason" rows="2" maxlength="500" placeholder="说明为什么以此爻为用神">'+esc(reason)+'</textarea></label></div><div class="research-actions"><button class="action" type="button" onclick="saveUseGod()">确认并保存用神</button><button class="secondary" type="button" onclick="setPlateFocus(\'useGod\')">在盘面定位</button><span id="useGodStatus" class="action-status" role="status" aria-live="polite">'+esc(note)+'</span></div></div>'
 }
 function renderUseGodReference(){
-  var rows=[['工作、职位、升迁','官鬼','岗位、任职、升职'],['钱财、回款、收益、货物','妻财','工资、交易、利润、一般失物'],['合同、证件、考试、房屋车辆','父母','协议、录取、手续、票证'],['子女、宠物、医药、休闲','子孙','孩子、宠物、药物、娱乐'],['兄弟、同事、朋友、竞争','兄弟','同行、竞争者、分利'],['求测人自己 / 另一方','世爻 / 应爻','自己看世，对方或合作对象看应'],['感情对象（传统惯例）','男问妻财，女问官鬼','性别不明时可先看应爻']];
+  var rows=[['工作、职位、升迁','官鬼','岗位、任职、升职'],['钱财、回款、收益、货物','妻财','工资、交易、利润、一般失物'],['合同、证件、考试、房屋车辆','父母','协议、录取、手续、票证'],['本人的疾病、健康、康复','世爻','本人状态看世；药物、疗效、求医另看子孙'],['子女、宠物、医药、休闲','子孙','孩子、宠物、药物、娱乐'],['兄弟、同事、朋友、竞争','兄弟','同行、竞争者、分利'],['求测人自己 / 另一方','世爻 / 应爻','自己看世，对方或合作对象看应'],['感情对象（传统惯例）','男问妻财，女问官鬼','性别不明时可先看应爻']];
   return '<div class="research-section use-god-reference"><h4>手工选择参考表</h4><div class="reference-table-wrap"><table class="reference-table"><thead><tr><th>问题对象</th><th>通常先取</th><th>常见例子</th></tr></thead><tbody>'+rows.map(function(row){return '<tr><td>'+esc(row[0])+'</td><td><b>'+esc(row[1])+'</b></td><td>'+esc(row[2])+'</td></tr>'}).join('')+'</tbody></table></div><p class="reference-note">先按问题对象确定六亲，再在盘中选择对应爻。同类六亲多现时，系统优先列出唯一动爻或与世应直接相关者；仍有歧义时必须人工核对。空、破、旺、衰用于判断状态，不等于它不是用神。</p></div>'
 }
 function useGodChoiceKey(item){return item?String(item.position)+(item.hidden?'h':''):''}
@@ -494,7 +502,7 @@ function saveUseGod(){
   var choice=document.getElementById('useGodLine').value,useHidden=/h$/.test(choice),position=parseInt(choice,10),reason=document.getElementById('useGodReason').value.trim(),line=currentPlate.lines.find(function(item){return item.position===position}),suggestion=suggestedUseGod();
   if(!line||(useHidden&&!line.hidden)){setStatus('useGodStatus','请选择用神所在爻',true);return}if(!reason){setStatus('useGodStatus','请写明选择理由',true);return}
   var item=useHidden?line.hidden:line.original,selected={position:position,hidden:useHidden};
-  currentRecord.useGod={position:position,label:line.label,relative:item.relative,stemBranch:item.stem+item.branch,hidden:useHidden,selectionSource:suggestion&&useGodChoiceKey(suggestion)===useGodChoiceKey(selected)?'suggestion-confirmed':'manual',reason:reason,confirmedAt:new Date().toISOString()};currentPlateFocus='useGod';renderPlate();if(persistCurrent('useGodStatus'))setStatus('useGodStatus','用神已确认并保存')
+  aiRequestSeq++;currentRecord.useGod={position:position,label:line.label,relative:item.relative,stemBranch:item.stem+item.branch,hidden:useHidden,selectionSource:suggestion&&useGodChoiceKey(suggestion)===useGodChoiceKey(selected)?'suggestion-confirmed':'manual',reason:reason,confirmedAt:new Date().toISOString()};currentPlateFocus='useGod';renderPlate();if(persistCurrent('useGodStatus'))setStatus('useGodStatus','用神已确认并保存；旧用神的 AI 请求已作废')
 }
 function formatIso(value){if(!value)return '';try{return new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value))+' 北京时间'}catch(error){return value}}
 function orbitNodeCopy(node){
@@ -553,7 +561,7 @@ function renderAssessmentEvidence(kind,emptyText){
 }
 function renderUseGodAssessment(){
   var data=currentUseGodAssessment;if(!data)return '';
-  var roles='原神 '+data.roles.sourceElement+' · 忌神 '+data.roles.adverseElement+' · 仇神 '+data.roles.enemyElement,actors=data.actors.filter(function(actor){return actor.active||actor.hidden}).map(function(actor){return actor.lineLabel+(actor.hidden?'伏神':'')+' '+actor.relative+actor.stem+actor.branch+'：'+actor.role+' · '+actor.actionState}).join('；')||'没有明动、暗动或伏藏的重点爻';
+  var capacityLabels={effective:'当前可作用',conditional:'需条件',delayed:'待空破解除',powerless:'当前无力',inactive:'结构背景'},roles='原神 '+data.roles.sourceElement+' · 忌神 '+data.roles.adverseElement+' · 仇神 '+data.roles.enemyElement,actors=data.actors.filter(function(actor){return actor.active||actor.hidden}).map(function(actor){return actor.lineLabel+(actor.hidden?'伏神':'')+' '+actor.relative+actor.stem+actor.branch+'：'+actor.role+' · '+actor.actionState+' · '+(capacityLabels[actor.capacity]||actor.capacity)}).join('；')||'没有明动、暗动或伏藏的重点爻';
   return '<section class="research-section kernel-assessment" id="useGodAssessment" aria-labelledby="useGodAssessmentTitle"><div class="card-title"><div><div class="eyebrow">规则内核</div><h3 id="useGodAssessmentTitle">先由程序判关系，再交给 AI 解释</h3></div><span class="pro-only relation-state">规则 '+esc(data.version)+'</span></div><div class="kernel-summary"><span class="kernel-tendency">'+esc(data.arbitration.label)+'</span><span class="kernel-season">月令旺衰：'+esc(data.seasonal.state)+'</span><span class="kernel-season">'+esc(roles)+'</span></div><div class="kernel-grid"><div class="kernel-column support"><h4>生扶证据</h4>'+renderAssessmentEvidence('support','暂未见直接生扶')+'</div><div class="kernel-column constraint"><h4>制约证据</h4>'+renderAssessmentEvidence('constraint','暂未见直接制约')+'</div></div><details class="kernel-details"><summary>查看条件、应期线索与作用顺序</summary><div class="kernel-details-body"><b>条件：</b>'+esc(data.arbitration.conditions.join('；')||'无额外条件')+'<br><b>应期：</b>'+esc(data.timingConditions.join('；'))+'<span class="pro-only"><br><b>重点爻：</b>'+esc(actors)+'<br><b>作用顺序：</b>'+esc(data.priorityRules.join('；'))+'</span></div></details><p class="relation-rule-note">这里只判断传统规则中的力量方向，不直接保证事情成败，也不生成吉凶分数。</p></section>'
 }
 function setUseGodRelationHighlight(nodeId){var root=document.querySelector('.relation-orbit');if(!root)return;root.classList.toggle('has-highlight',!!nodeId);root.querySelectorAll('.orbit-edge-group,.orbit-node,.orbit-label').forEach(function(item){item.classList.toggle('is-highlight',!!nodeId&&item.dataset.relationNode===nodeId)})}
@@ -572,7 +580,7 @@ function renderLegacyJudgment(){
   return '<details class="research-section legacy-judgment" id="legacyJudgment"><summary>历史初判（只读）</summary><div class="legacy-judgment-body"><p class="hint">这是旧版本保存的内容，仅为避免历史数据丢失，不再允许修改或追加。</p><div class="frozen-note"><dl><dt>冻结时间</dt><dd>'+esc(formatIso(initial.frozenAt))+'</dd><dt>结论倾向</dt><dd>'+esc(initial.tendency)+'</dd><dt>支持证据</dt><dd>'+esc(initial.evidence)+'</dd><dt>反向证据</dt><dd>'+esc(initial.counterEvidence)+'</dd><dt>预计应期</dt><dd>'+esc(initial.expectedTiming)+'</dd></dl></div>'+(additions?'<div class="append-list">'+additions+'</div>':'')+'</div></details>'
 }
 var TERM_MEANINGS={
-  '旬空':'本爻地支落在起卦日所属旬的空亡范围，表示条件暂未落实；空不等于永久不存在。','月破':'本爻地支与月建相冲，表示当月环境对它不利。','月合':'月建与本爻地支六合。','月生':'月建五行生本爻五行。','爻生月':'本爻五行生月建五行。','月克':'月建五行克本爻五行。','爻克月':'本爻五行克月建五行。','临月':'本爻地支与月建相同。','日冲':'本爻地支与日辰相冲。','日合':'日辰与本爻地支六合。','日生':'日辰五行生本爻五行。','爻生日':'本爻五行生日辰五行。','日克':'日辰五行克本爻五行。','爻克日':'本爻五行克日辰五行。','临日':'本爻地支与日辰相同。','伏吟':'本爻变化前后地支相同，常用于描述反复、停滞或原状延续。','回头冲':'变爻地支回头冲原爻地支。','化合':'变爻地支与原爻地支六合。','回头生':'变爻五行回头生原爻五行。','回头克':'变爻五行回头克原爻五行。','化进':'原爻地支变化到同五行的进神。','化退':'原爻地支变化到同五行的退神。','六合':'本卦属于传统六合卦标签。','六冲':'本卦属于传统六冲卦标签。','游魂':'本卦在八宫序列中属于游魂卦。','归魂':'本卦在八宫序列中属于归魂卦。','反吟':'本卦与变卦对应爻形成整体反冲关系。','内卦反吟':'内卦三爻形成反吟关系。','外卦反吟':'外卦三爻形成反吟关系。','内卦伏吟':'内卦三爻变化前后地支相同。','外卦伏吟':'外卦三爻变化前后地支相同。'};
+  '旬空':'本爻地支落在起卦日所属旬的空亡范围，表示条件暂未落实；空不等于永久不存在。','月破':'本爻地支与月建相冲，表示当月环境对它不利。','月合':'月建与本爻地支六合。','月生':'月建五行生本爻五行。','爻生月':'本爻五行生月建五行，只表示本爻耗泄，不表示反制月建。','月克':'月建五行克本爻五行。','爻克月':'本爻五行克月建五行，只表示本爻耗力，不表示反制月建。','临月':'本爻地支与月建相同。','日冲':'本爻地支与日辰相冲。','日合':'日辰与本爻地支六合。','日生':'日辰五行生本爻五行。','爻生日':'本爻五行生日辰五行，只表示本爻耗泄，不表示反制日辰。','日克':'日辰五行克本爻五行。','爻克日':'本爻五行克日辰五行，只表示本爻耗力，不表示反制日辰。','临日':'本爻地支与日辰相同。','伏吟':'本爻变化前后地支相同，常用于描述反复、停滞或原状延续。','回头冲':'变爻地支回头冲原爻地支。','化合':'变爻地支与原爻地支六合。','回头生':'变爻五行回头生原爻五行。','回头克':'变爻五行回头克原爻五行。','化进':'原爻地支变化到同五行的进神。','化退':'原爻地支变化到同五行的退神。','六合':'本卦属于传统六合卦标签。','六冲':'本卦属于传统六冲卦标签。','游魂':'本卦在八宫序列中属于游魂卦。','归魂':'本卦在八宫序列中属于归魂卦。','反吟':'本卦与变卦对应爻形成整体反冲关系。','内卦反吟':'内卦三爻形成反吟关系。','外卦反吟':'外卦三爻形成反吟关系。','内卦伏吟':'内卦三爻变化前后地支相同。','外卦伏吟':'外卦三爻变化前后地支相同。'};
 function showTerm(term,position,kind){
   var line=position&&currentPlate&&currentPlate.lines.find(function(item){return item.position===position}),meaning=TERM_MEANINGS[term]||'这是排盘引擎根据当前卦象生成的传统关系标签。',reason='';
   if(line){reason=line.label+'本爻为 '+line.original.stem+line.original.branch+'（'+line.original.element+'）';if(kind==='change')reason+='，变为 '+line.changed.stem+line.changed.branch+'（'+line.changed.element+'）';if(term.indexOf('月')>=0)reason+='；月建为 '+currentPlate.calendar.monthGZ;if(term.indexOf('日')>=0)reason+='；日辰为 '+currentPlate.calendar.dayGZ;reason+='。引擎依据这些干支、五行与冲合关系标记为“'+term+'”。'}else reason='该标签来自本卦、变卦和八宫归属的确定性计算，不是 AI 补写。';
@@ -625,17 +633,34 @@ async function copyCurrentPlate(){try{await navigator.clipboard.writeText(plateT
 function renderAiHistory(){
   var history=currentRecord&&Array.isArray(currentRecord.aiHistory)?currentRecord.aiHistory:[];
   if(!history.length)return '<div class="hint">成卦后由 AI 按用神、世应、日月与动变给出可核查的证据链。传统术数仅供参考。</div>';
-  return history.map(function(turn,index){return '<details class="ai-turn" open><summary>第'+(index+1)+'问 · '+esc(turn.question)+(turn.kernelVersion?' · 内核已校验':'')+'</summary><div class="ai-answer">'+nl(turn.answer)+'</div></details>'}).join('');
+  var currentKey=useGodSnapshotKey(activeUseGod());
+  return history.map(function(turn,index){
+    var turnKey=useGodSnapshotKey(turn.useGodSnapshot),state='旧版解读';
+    if(turnKey&&currentKey&&turnKey!==currentKey)state='基于旧用神';
+    else if(turn.kernelVersion&&turn.useGodSnapshot){
+      try{var oldKernel=buildAiKernelContext(turn.useGodSnapshot),checked=validateLiuyaoAiAnswer(turn.answer,oldKernel);state=checked.valid?(checked.topicRefusal?'已拒绝换题':'证据编号已核对'):'旧答待重验'}catch(error){state='旧答待重验'}
+    }
+    return '<details class="ai-turn" open><summary>第'+(index+1)+'问 · '+esc(turn.question)+' · '+state+'</summary><div class="ai-answer">'+nl(turn.answer)+'</div></details>'
+  }).join('');
 }
-function buildAiKernelContext(){
-  var selected=activeUseGod();if(!selected)throw new Error('系统无法唯一定位用神，请先按参考表手动选择并保存');
+function useGodSnapshotKey(item){return item?String(item.position)+(item.hidden?'h':'')+'|'+String(item.relative||'')+'|'+String(item.stemBranch||''):''}
+function buildAiKernelContext(selectedOverride){
+  var selected=selectedOverride||activeUseGod();if(!selected)throw new Error('系统无法唯一定位用神，请先按参考表手动选择并保存');
+  if(!selectedOverride&&!currentRecord.useGod&&selected.confidence!=='高')throw new Error('当前用神只是中低置信候选，请先人工确认或改选后再请求 AI');
   var line=currentPlate.lines.find(function(item){return item.position===selected.position}),item=selected.hidden?line&&line.hidden:line&&line.original;
   if(!line||!item)throw new Error('当前用神与冻结盘面不一致，请重新选择用神');
-  var useGod={position:line.position,lineLabel:line.label,hidden:!!selected.hidden,relative:item.relative,stemBranch:item.stem+item.branch,element:item.element,confirmed:!!currentRecord.useGod,selectionSource:currentRecord.useGod&&currentRecord.useGod.selectionSource||selected.source||'系统规则建议',reason:currentRecord.useGod&&currentRecord.useGod.reason||selected.reason||''};
+  var useGod={position:line.position,lineLabel:line.label,hidden:!!selected.hidden,relative:item.relative,stemBranch:item.stem+item.branch,element:item.element,confirmed:selectedOverride?!!selected.confirmed:!!currentRecord.useGod,selectionSource:selected.selectionSource||currentRecord.useGod&&currentRecord.useGod.selectionSource||selected.source||'系统规则建议',reason:selected.reason||currentRecord.useGod&&currentRecord.useGod.reason||''};
   var input={plate:currentPlate,useGod:{position:useGod.position,hidden:useGod.hidden}},assessment=LiuyaoEngine.buildUseGodAssessment(input),relations=LiuyaoEngine.buildUseGodRelations(input),evidence=assessment.evidence.slice();
   evidence.push({id:'B01',kind:'plate',text:'本卦'+currentPlate.primary.fullName+'，变卦'+currentPlate.changed.fullName+'，'+(currentPlate.lines.some(function(value){return value.moving})?'存在动爻':'六爻皆静')});
   var shi=currentPlate.lines.find(function(value){return value.shi}),ying=currentPlate.lines.find(function(value){return value.ying});
   evidence.push({id:'B02',kind:'plate',text:'世爻为'+shi.label+' '+shi.original.relative+shi.original.stem+shi.original.branch+'；应爻为'+ying.label+' '+ying.original.relative+ying.original.stem+ying.original.branch});
+  evidence.push({id:'B03',kind:'calendar',text:'月建'+currentPlate.calendar.monthGZ+'，日辰'+currentPlate.calendar.dayGZ+'，旬空'+currentPlate.calendar.voidBranches.join('')});
+  currentPlate.lines.forEach(function(value,index){
+    var identities=[];if(value.shi)identities.push('世爻');if(value.ying)identities.push('应爻');
+    var lineText=value.label+'：'+value.original.relative+value.original.stem+value.original.branch+'（'+value.original.element+'），'+(value.moving?'明动、为动爻':'未发动、为静爻')+(identities.length?'，身份'+identities.join('、'):'')+(value.facts.length?'，本爻事实'+value.facts.join('、'):'');
+    if(value.moving)lineText+='；变爻'+value.changed.relative+value.changed.stem+value.changed.branch+'（'+value.changed.element+'）'+(value.changeFacts.length?'，动变关系'+value.changeFacts.join('、'):'');
+    evidence.push({id:'L'+String(index+1).padStart(2,'0'),kind:'line',text:lineText})
+  });
   var relationIndex=0;relations.edges.forEach(function(edge){edge.relations.forEach(function(relation){if(relation.type==='none')return;relationIndex++;evidence.push({id:'R'+String(relationIndex).padStart(2,'0'),kind:'relation',text:relation.label+'：'+relation.evidence})})});
   return {fixedUseGod:useGod,assessment:assessment,relations:relations,evidenceCatalog:evidence};
 }
@@ -652,26 +677,29 @@ async function analyzeWithAI(){
   var key=localStorage.getItem(API_KEY_STORAGE)||'';
   if(!key){key=prompt('请输入 DeepSeek API Key（只保存在本机浏览器）')||'';if(key.trim())localStorage.setItem(API_KEY_STORAGE,key.trim())}
   if(!key.trim()){setStatus('aiStatus','未填写 DeepSeek API Key',true);return}
-  var requestId=++aiRequestSeq,recordIdAtStart=currentRecord.id,button=document.getElementById('btnAI'),keepAIStatus=false;button.disabled=true;button.textContent='分析中…';setStatus('aiStatus','正在核对用神、世应、日月和动变');
+  var requestId=++aiRequestSeq,recordIdAtStart=currentRecord.id,useGodKeyAtStart=useGodSnapshotKey(kernel.fixedUseGod),button=document.getElementById('btnAI'),keepAIStatus=false;button.disabled=true;button.textContent='分析中…';setStatus('aiStatus','正在核对用神、世应、日月和动变');
   var system='你是谨慎的传统纳甲六爻解释员。程序已经完成排盘、固定用神和规则判断，你只能解释给出的内核结果，不得重新选择用神、重新计算旺衰或创造盘面关系。历史回答只用于保持同一问题的语义，若其中用神与本次 fixedUseGod 不同，必须忽略旧用神。一个卦只回答同一人、同一事、同一决策的连续追问；若用户换了问题，只回复“一个卦只能问同一件事，请重新起卦”。涉及盘面的判断必须引用 evidenceCatalog 中存在的编号，格式如 [U01]；必须原样写出 useGodAssessment.arbitration.label，并明确写出固定用神的爻位、六亲和干支。不得虚构动爻、六亲、纳甲、世应、旬空、月破、旺衰或应期，不得用吉凶分数。回答依次包含：结论与倾向、固定用神、支持证据、反向证据、世应日月动变、可能应期条件、不确定处、现实行动建议。医疗、法律和高风险投资只能提供传统象意与风险提示，不得替代专业意见。';
   var messages=[{role:'system',content:system}];
-  (currentRecord.aiHistory||[]).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
+  (currentRecord.aiHistory||[]).filter(function(turn){
+    if(useGodSnapshotKey(turn.useGodSnapshot)!==useGodKeyAtStart)return false;
+    try{var checked=validateLiuyaoAiAnswer(turn.answer,buildAiKernelContext(turn.useGodSnapshot));return checked.valid&&!checked.topicRefusal}catch(error){return false}
+  }).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
   messages.push({role:'user',content:'本卦原始问题：'+currentRecord.question+'\n本次问题：'+follow+'\n固定用神：'+kernel.fixedUseGod.lineLabel+' '+(kernel.fixedUseGod.hidden?'伏神 ':'')+kernel.fixedUseGod.relative+kernel.fixedUseGod.stemBranch+'。'+(kernel.fixedUseGod.confirmed?'用户已确认，不得改选。':'系统规则候选尚未人工确认，仍不得在本次回答中改选；请提示用户可在页面手动纠正。')+'\n规则内核与证据目录（JSON）：\n'+aiPlateContext(kernel)});
   try{
     var result=await DeepSeekClient.requestFinal({apiKey:key,messages:messages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','思考已完成，正在获取最终解读')}});
-    if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart)return;
+    if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart||useGodSnapshotKey(activeUseGod())!==useGodKeyAtStart)return;
     var answer=result.answer,validation=validateLiuyaoAiAnswer(answer,kernel);
     if(!validation.valid){
       setStatus('aiStatus','初稿未通过盘面校验，正在纠正');
       var retryMessages=messages.concat([{role:'assistant',content:answer},{role:'user',content:'上面的草稿未通过本地校验：'+validation.errors.join('；')+'。请不要增加新事实，按 fixedUseGod 和 evidenceCatalog 重新完整回答。'}]);
       result=await DeepSeekClient.requestFinal({apiKey:key,messages:retryMessages,maxTokens:16384,onRetry:function(){setStatus('aiStatus','正在获取纠正后的最终解读')}});
-      if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart)return;
+      if(requestId!==aiRequestSeq||!currentRecord||currentRecord.id!==recordIdAtStart||useGodSnapshotKey(activeUseGod())!==useGodKeyAtStart)return;
       answer=result.answer;validation=validateLiuyaoAiAnswer(answer,kernel);
     }
     if(!validation.valid)throw new Error('AI 回答未通过盘面校验：'+validation.errors.join('；')+'。本次内容未保存');
-    currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString(),kernelVersion:kernel.assessment.version,useGodSnapshot:kernel.fixedUseGod,assessmentSnapshot:kernel.assessment,evidenceRefs:validation.references});if(!persistCurrent('aiStatus'))keepAIStatus=true;currentPlateFocus='useGod';renderPlate();setStatus('useGodStatus',kernel.fixedUseGod.confirmed?'AI 已按已确认用神完成内核校验':'AI 已按系统候选用神完成内核校验，请继续核对或手动纠正');
+    currentRecord.aiHistory=currentRecord.aiHistory||[];currentRecord.aiHistory.push({question:follow,answer:answer.trim().replace(/\*\*/g,''),createdAt:new Date().toISOString(),kernelVersion:kernel.assessment.version,useGodSnapshot:kernel.fixedUseGod,evidenceRefs:validation.references});if(!persistCurrent('aiStatus'))keepAIStatus=true;currentPlateFocus='useGod';renderPlate();setStatus('useGodStatus',kernel.fixedUseGod.confirmed?'AI 已按已确认用神完成证据编号核对':'AI 已按高置信系统候选用神完成证据编号核对，仍可手动纠正');
   }catch(error){if(requestId===aiRequestSeq){keepAIStatus=true;setStatus('aiStatus','AI 请求失败：'+error.message,true)}}
-  finally{if(requestId===aiRequestSeq&&currentRecord&&currentRecord.id===recordIdAtStart){button.disabled=false;button.textContent='AI 解卦';if(!keepAIStatus)setStatus('aiStatus','')}}
+  finally{if(requestId===aiRequestSeq&&currentRecord&&currentRecord.id===recordIdAtStart&&useGodSnapshotKey(activeUseGod())===useGodKeyAtStart){button.disabled=false;button.textContent='AI 解卦';if(!keepAIStatus)setStatus('aiStatus','')}}
 }
 function showHome(name){
   var cast=name==='cast';document.getElementById('castHome').hidden=!cast;document.getElementById('historyHome').hidden=cast;document.getElementById('tabCast').classList.toggle('active',cast);document.getElementById('tabHistory').classList.toggle('active',!cast);document.getElementById('tabCast').setAttribute('aria-selected',String(cast));document.getElementById('tabHistory').setAttribute('aria-selected',String(!cast));if(!cast)renderHistory()
@@ -686,13 +714,17 @@ function renderHistory(){
   box.innerHTML=records.map(function(record){var plate=record.plateSnapshot||{},primary=plate.primary||{},changed=plate.changed||{},movingCount=plate.lines?plate.lines.filter(function(line){return line.moving}).length:0,markers=[];if(record.useGod)markers.push('用神已定');if(record.judgment&&record.judgment.initial)markers.push('有历史初判');return '<article class="history-item"><div><h3>'+esc(record.question||'未命名卦例')+'</h3><div class="history-meta">'+esc(record.castTime&&record.castTime.input||'')+' · '+esc(TOPIC_LABELS[record.questionType]||record.questionType||'未分类')+' · '+esc(SOURCE_LABELS[record.source]||record.source)+' · '+esc(primary.fullName||'')+(movingCount?' 之 '+esc(changed.fullName||''):' · 静卦')+' · '+((record.review&&record.review.status)==='verified'?'已验证':'待验证')+(markers.length?' · '+esc(markers.join(' · ')):'')+'</div></div><div class="history-actions"><button class="secondary" type="button" onclick="openRecord(\''+esc(record.id)+'\')">打开</button><button class="danger" type="button" onclick="deleteRecord(\''+esc(record.id)+'\')">删除</button></div></article>'}).join('');
 }
 function openRecord(id){
-  var record=readRecords('historyStatus').find(function(item){return item.id===id});if(!record)return;aiRequestSeq++;currentRecord=normalizeRecord(record);currentPlate=record.plateSnapshot;openedFromHistory=true;currentPlateFocus='all';renderPlate();showHome('cast');document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'})
+  var record=readRecords('historyStatus').find(function(item){return item.id===id});if(!record)return;if(!validImportedRecord(record)){setStatus('historyStatus','这条历史记录的盘面快照与原始六爻不一致，已拒绝打开',true);return}aiRequestSeq++;currentRecord=normalizeRecord(record);currentPlate=record.plateSnapshot;openedFromHistory=true;currentPlateFocus='all';renderPlate();showHome('cast');document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'})
 }
 function deleteRecord(id){if(!confirm('删除这条卦例？删除后只能通过之前导出的备份恢复。'))return;var records=readRecords('historyStatus').filter(function(item){return item.id!==id});try{writeRecords(records);if(currentRecord&&currentRecord.id===id)resetCastView(false);renderHistory()}catch(error){setStatus('historyStatus','删除失败：'+error.message,true)}}
 function exportRecords(){
   var payload={schemaVersion:1,exportedAt:new Date().toISOString(),records:readRecords()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='liuyao-records-'+nowShanghai().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)
 }
-function validImportedRecord(record){try{return !!(record&&record.schemaVersion===1&&/^[A-Za-z0-9._-]{1,100}$/.test(record.id)&&typeof record.question==='string'&&LiuyaoEngine.validateLines(record.lines)&&record.plateSnapshot&&record.plateSnapshot.version)}catch(error){return false}}
+function validStoredUseGod(record){
+  if(!record.useGod)return true;var position=Number(record.useGod.position),line=record.plateSnapshot&&record.plateSnapshot.lines&&record.plateSnapshot.lines.find(function(item){return item.position===position}),item=record.useGod.hidden?line&&line.hidden:line&&line.original;
+  return !!(item&&record.useGod.relative===item.relative&&record.useGod.stemBranch===item.stem+item.branch)
+}
+function validImportedRecord(record){try{return !!(record&&record.schemaVersion===1&&/^[A-Za-z0-9._-]{1,100}$/.test(record.id)&&typeof record.question==='string'&&LiuyaoEngine.validateLines(record.lines)&&record.plateSnapshot&&record.plateSnapshot.version&&JSON.stringify(record.lines)===JSON.stringify(record.plateSnapshot.input&&record.plateSnapshot.input.lines)&&LiuyaoEngine.validatePlateSnapshot(record.plateSnapshot)&&validStoredUseGod(record))}catch(error){return false}}
 function importRecords(input){
   var file=input.files&&input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){try{var parsed=JSON.parse(reader.result),incoming=Array.isArray(parsed)?parsed:parsed.records;if(!Array.isArray(incoming))throw new Error('文件中没有记录列表');incoming=incoming.filter(validImportedRecord);var map={};readRecords().concat(incoming).forEach(function(record){var old=map[record.id];if(!old||String(record.updatedAt)>String(old.updatedAt))map[record.id]=record});writeRecords(Object.keys(map).map(function(id){return map[id]}));setStatus('historyStatus','导入完成：识别 '+incoming.length+' 条有效记录');renderHistory()}catch(error){setStatus('historyStatus','导入失败：'+error.message,true)}finally{input.value=''}};reader.readAsText(file)
 }

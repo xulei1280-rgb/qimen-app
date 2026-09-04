@@ -27,11 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
-- Last shared baseline: `b6dfef3`
-- Changed: 六爻新增独立的用神状态判断内核，按冻结月日、用原忌仇、明动/暗动、空破和动变生成带编号证据；AI 固定采用规则建议或人工确认的用神，回答须引用真实证据并通过本地校验，失败自动纠正一次且不保存不合格结果。`buildPlate()`、旧记录结构及奇门、八字、紫微计算均未修改。
-- Checks: `node .\check-ziwei-page.js`; `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、关系与用神判断）；`node .\check-baselines.js`（18 个基线）；`node .\check-deepseek-client.js`; `node --check .\liuyao-engine.js`; `node --check .\check-liuyao-page.js`; `git diff --check`。
-- Next task: 用户在 Pages 以已知卦例核对用神内核，并用真实 DeepSeek Key 验证首答、自动纠正及连续追问。
-- Caution: 判断内核是《增删卜易》主线的第一版可核查事实层，不包含墓绝、三刑等全部流派规则，也不能保证现实预测准确。`check-daily-page.js` 仍因既有 V3.1 资源版本断言失败，日运文件未在本次修改。
+- Last shared baseline: `b6e0e33`
+- Changed: 六爻修复 AI 拒答句绕过、证据与段落事实不绑定、改用神后旧请求/旧回答串入、弱而化退的忌神误计直克、自身疾病用神误选、日月反制文案与历史快照未验真；新 AI 记录不再重复保存整份判断快照。`buildPlate()`、记录 schema 及奇门、八字、紫微计算均未修改。
+- Checks: `node .\check-ziwei-page.js`; `node .\check-qimen-page.js`; `node .\check-bazi-page.js`; `node .\check-liuyao-page.js`（4096 种输入、64 卦、关系、用神判断及定点漏洞）；`node .\check-baselines.js`（18 个基线）；`node .\check-deepseek-client.js`; `node --check .\liuyao-engine.js`; `node --check .\check-liuyao-page.js`; `git diff --check`。
+- Next task: 用户在本地以真实 DeepSeek Key 验证首答与改用神后旧请求作废，再决定是否推送 Pages。
+- Caution: 程序现在可核对 AI 所引证据编号与明示盘面事实，但不能数学证明所有自然语言推论。内核仍不包含墓绝、三刑等全部流派规则，也不能保证现实预测准确。`check-daily-page.js` 仍有既有 V3.1 资源版本断言问题，日运文件未在本次修改。
 
 ## Replace At Each Handoff
 
