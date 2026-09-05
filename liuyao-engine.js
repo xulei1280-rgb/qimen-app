@@ -3,7 +3,7 @@
 
   var VERSION='LIUYAO-NAJIA-2026.08.12-v1';
   var RELATION_VERSION='LIUYAO-RELATION-2026.09.05-v2';
-  var ASSESSMENT_VERSION='LIUYAO-ASSESSMENT-2026.09.05-v3';
+  var ASSESSMENT_VERSION='LIUYAO-ASSESSMENT-2026.09.05-v4';
   var STEMS='甲乙丙丁戊己庚辛壬癸'.split('');
   var BRANCHES='子丑寅卯辰巳午未申酉戌亥'.split('');
   var ELEMENTS={子:'水',丑:'土',寅:'木',卯:'木',辰:'土',巳:'火',午:'火',未:'土',申:'金',酉:'金',戌:'土',亥:'水'};
@@ -432,6 +432,8 @@
       if(hidden){capacity='conditional';capacityReason='伏藏不按明动爻直接作用'}
       else if(actionState==='日破'){capacity='powerless';capacityReason='日破，当前不进入直接作用层'}
       else if(!active){capacity='inactive';capacityReason='普通静爻只作结构背景'}
+      else if(delayed&&(!strong||actionState==='旺相静爻')){capacity='powerless';capacityReason=actionState==='旺相静爻'?'静爻逢空破，当前不直接作用':'休囚又逢空破且无动变生扶，当前无力直接作用'}
+      else if(!strong&&facts.indexOf('日克')>=0){capacity='powerless';capacityReason='休囚发动又受日克，当前无力直接作用'}
       else if(adverseChange&&!strong){capacity='powerless';capacityReason='休囚且动变受制（回头克冲、化退墓绝），当前无力直接作用'}
       else {capacity='effective';capacityReason=actionState==='旺相静爻'?'旺相静爻可作用于休囚用神':(delayed?'发动遇空破，保留作用事实并列为待填实条件':(adverseChange?'发动且本身有气，当前作用保留，后续动变转弱':'动而有因，即使休囚仍保留直接作用'))}
       var actor={id:(hidden?'hidden-':'line-')+sourceLine.position,position:sourceLine.position,lineLabel:sourceLine.label,hidden:hidden,relative:item.relative,stem:item.stem,branch:item.branch,element:item.element,role:role,seasonalState:actorSeason,actionState:actionState,active:active,capacity:capacity,capacityReason:capacityReason,deferred:delayed,facts:facts,changeFacts:changeFacts};
@@ -448,7 +450,7 @@
       if(facts.indexOf('月破')>=0&&active)uniquePush(timing,name+'发动而月破，作用受当月条件限制');
       if(hidden)uniquePush(condition,name+'伏藏，须结合飞神与提拔条件，不按明动爻直接作用');
       actor.changeFacts.forEach(function(term){
-        if(term==='回头生'||term==='化进'||term==='化长生'||term==='化帝旺')uniquePush(role==='原神'&&!adverseChange?support:condition,name+term+(adverseChange?'，但同时有回头受制或化退墓绝，不单独作生扶':''));
+        if(term==='回头生'||term==='化进'||term==='化长生'||term==='化帝旺')uniquePush(role==='原神'&&capacity==='effective'&&!adverseChange?support:condition,name+term+(adverseChange?'，但同时有回头受制或化退墓绝，不单独作生扶':''));
         else if(term==='回头克'||term==='回头冲'||term==='化退'||term==='化墓'||term==='化绝')uniquePush(role==='原神'?constraint:condition,name+term);
         else uniquePush(condition,name+term);
       });
@@ -482,7 +484,7 @@
       if(changedFacts.indexOf('月破')>=0){uniquePush(constraint,'用神变爻'+line.changed.stem+line.changed.branch+'化破');uniquePush(timing,'用神化破，待出月、填实或逢合再观察')}
     }
 
-    function dynamicallyEffective(actor){return actor.capacity==='effective'&&(actor.actionState==='明动'||actor.actionState==='暗动')}
+    function dynamicallyEffective(actor){return actor.capacity==='effective'&&!actor.deferred&&(actor.actionState==='明动'||actor.actionState==='暗动')}
     var activeSources=actors.filter(function(actor){return dynamicallyEffective(actor)&&actor.role==='原神'}),activeAdverse=actors.filter(function(actor){return dynamicallyEffective(actor)&&actor.role==='忌神'}),activeEnemies=actors.filter(function(actor){return dynamicallyEffective(actor)&&actor.role==='仇神'});
     if(activeSources.length&&activeAdverse.length){
       activeAdverse.forEach(function(actor){
@@ -505,6 +507,14 @@
       }
     }
 
+    // 只落实原书大过之鼎的明确组合，不把单一月破泛化成“无根”。
+    var rootImpaired=!focus.hidden&&!line.moving&&!focusStrong&&focusFacts.indexOf('月破')>=0&&focusFacts.indexOf('日克')>=0;
+    var decisiveRule=rootImpaired?'weak-static-month-break-day-control':null;
+    if(rootImpaired){
+      support.splice(0).forEach(function(text){uniquePush(condition,text+'；但用神休囚静而月破日克，生扶难落实')});
+      chains.forEach(function(chain){chain.effective=false;chain.evidence+='；用神休囚静而月破日克，本链不计入已落实生扶'});
+      uniquePush(constraint,'用神休囚静而月破日克，按主线用神无根条件优先处理，外部生扶不能直接抵消');
+    }
     var tendency=support.length&&constraint.length?'mixed':(support.length?'supported':(constraint.length?'constrained':'undetermined'));
     var tendencyLabel={mixed:'生扶与制约并见',supported:'生扶条件较清楚',constrained:'受制条件较明显',undetermined:'关键作用尚未充分发动'}[tendency];
     if(!timing.length)timing.push('本内核未形成可唯一定位的应期条件，不强行给出具体日期');
@@ -519,12 +529,13 @@
       '月建与日辰作为外部时令，可作用于动爻、静爻、变爻与伏神；卦爻不能反制日月。',
       '明动爻与旺相暗动爻进入直接作用层；旺相静爻只对休囚用神保留作用，其馀静爻作结构背景。',
       '变爻只回头作用于本位动爻，不直接越位生克其他爻。',
-      '旬空、月破不简单删除发动作用，改列为待出空、冲空、出月或填实的条件。',
+      '有气发动逢空破保留待填实作用；休囚又逢空破或日克、无生扶者不计直接作用；待填实爻不用于消除当前忌神直克。',
+      '休囚静用神同时月破日克时，优先记录生扶难落实；单一月破或日克不触发此规则。',
       '长生、帝旺、墓、绝须与日月生克、旺衰和动变同看；不将单一生墓绝标签直接翻译为吉凶。',
       '三刑在主线原书中被明言为独立得验少，本版不用它单独改写力量倾向。'
     ];
     priority.forEach(function(text){addEvidence('priority',text)});
-    return {version:ASSESSMENT_VERSION,ruleBasis:'增删卜易主线：月建、日辰、动静、动变、用原忌仇、暗动及生旺墓绝；只输出传统事实倾向，不输出吉凶分数',focus:focus,seasonal:{monthBranch:monthBranch,monthElement:monthElement,state:season,dayLifeStage:focusDayStage},roles:{sourceElement:sourceElement,adverseElement:adverseElement,enemyElement:enemyElement},actors:actors,chains:chains,arbitration:{tendency:tendency,label:tendencyLabel,support:support,constraint:constraint,conditions:condition},timingConditions:timing,priorityRules:priority,evidence:evidence};
+    return {version:ASSESSMENT_VERSION,ruleBasis:'增删卜易主线：月建、日辰、动静、动变、用原忌仇、暗动及生旺墓绝；只输出传统事实倾向，不输出吉凶分数',focus:focus,seasonal:{monthBranch:monthBranch,monthElement:monthElement,state:season,dayLifeStage:focusDayStage},roles:{sourceElement:sourceElement,adverseElement:adverseElement,enemyElement:enemyElement},actors:actors,chains:chains,arbitration:{tendency:tendency,label:tendencyLabel,support:support,constraint:constraint,conditions:condition,decisiveRule:decisiveRule},timingConditions:timing,priorityRules:priority,evidence:evidence};
   }
 
   function stableStringify(value){
@@ -558,6 +569,40 @@
     if(invalid.length)errors.push('引用了不存在的证据 '+invalid.join('、'));
     var factPattern=/用神|世爻|应爻|月建|日辰|本卦|变卦|初爻|二爻|三爻|四爻|五爻|上爻|兄弟|父母|子孙|妻财|官鬼|旬空|月破|日冲|回头生|回头克|回头冲|化进|化退|化长生|化帝旺|化墓|化绝|动墓|伏吟|六合|六冲|明动|暗动|旺相静爻|静爻|动爻|日破|旺|相|休|囚|死/;
     var lineNames=['初爻','二爻','三爻','四爻','五爻','上爻'],relatives=['兄弟','父母','子孙','妻财','官鬼'],terms=['旬空','月破','日冲','回头生','回头克','回头冲','化进','化退','化长生','化帝旺','化墓','化绝','动墓','伏吟','六合','六冲','明动','暗动','旺相静爻','静爻','动爻','日破'];
+    var shiLine=plate.lines.find(function(value){return value.shi}),yingLine=plate.lines.find(function(value){return value.ying}),focusLine=plate.lines.find(function(value){return value.label===useGod.lineLabel});
+    var namedLines={'世爻':shiLine,'应爻':yingLine,'用神':focusLine};
+    function namedItem(name){var value=namedLines[name];return value&&(name==='用神'&&useGod.hidden?value.hidden:value.original)}
+    // 编号只能证明来源存在；主谓对应关系另与冻结盘面核对。
+    var compact=text.replace(/\*\*/g,'').replace(/[ \t]/g,'');
+    Array.from(compact.matchAll(/(世爻|应爻|用神)(?:为|是|位于|在|：|:)?(初爻|二爻|三爻|四爻|五爻|上爻)/g)).forEach(function(match){
+      if(!namedLines[match[1]]||namedLines[match[1]].label!==match[2])errors.push(match[1]+'与爻位对应错误');
+    });
+    Array.from(compact.matchAll(/(初爻|二爻|三爻|四爻|五爻|上爻)(?:为|是|持|居)(世爻|应爻|世|应)/g)).forEach(function(match){
+      var name=match[2][0]==='世'?'世爻':'应爻';if(!namedLines[name]||namedLines[name].label!==match[1])errors.push(name+'与爻位对应错误');
+    });
+    Array.from(compact.matchAll(/(世爻|应爻|用神)(?:为|是|：|:)?(兄弟|父母|子孙|妻财|官鬼)?([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g)).forEach(function(match){
+      var item=namedItem(match[1]);if(!item||(match[2]&&item.relative!==match[2])||item.stem+item.branch!==match[3])errors.push(match[1]+'与六亲干支对应错误');
+    });
+    Array.from(compact.matchAll(/(初爻|二爻|三爻|四爻|五爻|上爻)(?:(伏神|变爻|本爻)|变为|化为)?[：:·、]?(兄弟|父母|子孙|妻财|官鬼)([甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥])/g)).forEach(function(match){
+      var value=plate.lines.find(function(row){return row.label===match[1]}),isChange=match[2]==='变爻'||/变为|化为/.test(match[0]);
+      var item=value&&(isChange?(value.moving?value.changed:null):(match[2]==='伏神'?value.hidden:value.original));
+      if(!item||item.relative!==match[3]||item.stem+item.branch!==match[4])errors.push(match[1]+'与六亲干支对应错误');
+    });
+    function entityElement(name){
+      if(name==='月建')return ELEMENTS[plate.calendar.monthGZ[1]];
+      if(name==='日辰')return ELEMENTS[plate.calendar.dayGZ[1]];
+      var value=namedItem(name)||((plate.lines.find(function(row){return row.label===name})||{}).original);return value&&value.element;
+    }
+    Array.from(compact.matchAll(/(月建|日辰|世爻|应爻|用神|初爻|二爻|三爻|四爻|五爻|上爻)(生扶|克制|相生|相克|生|克)(月建|日辰|世爻|应爻|用神|初爻|二爻|三爻|四爻|五爻|上爻)/g)).forEach(function(match){
+      var from=entityElement(match[1]),to=entityElement(match[3]),rule=/生/.test(match[2])?GENERATES:CONTROLS;
+      if(rule[from]!==to)errors.push('生克方向与冻结五行不符：'+match[0]);
+    });
+    compact.split(/[。！？!?；;\n，,]/).forEach(function(clause){
+      var certainty=/(一定|必定|必然|肯定|保证|百分之百|100%|绝对)(?:会|能|可以|是|将|能在|在)?[^。]{0,16}(成功|失败|成事|成交|收到|收回|回款|录取|复合|康复|痊愈|发生|实现|得到|到账)/;
+      var certainMatch=clause.match(certainty);
+      if(certainMatch&&!/(不能|无法|不应|不要|不得|并非|未必|不代表|不|没有)(?:说|认为|断言|据此)?$/.test(clause.slice(0,certainMatch.index)))errors.push('不得把传统条件解释为必然发生的现实结果');
+      if(/(明天|后天|下周|下个月|\d{1,2}月\d{1,2}[日号]).{0,12}(会|将|必|能).{0,8}(成功|回款|到账|录取|复合|康复|发生)/.test(clause)&&!/(可能|或许|若|如果|待|观察|不能|无法|不确定|未必)/.test(clause))errors.push('具体应期不得写成无条件的现实预言');
+    });
     text.split(/\n+/).map(function(part){return part.trim()}).filter(Boolean).forEach(function(paragraph){
       var plain=paragraph.replace(/^#{1,6}\s*/,'').replace(/^[-*•]\s*/,'');
       if(/^[^：:]{1,16}[：:]?$/.test(plain)&&!factPattern.test(plain))return;
@@ -574,7 +619,7 @@
     plate.lines.filter(function(line){return !line.moving}).forEach(function(line){
       var claim=new RegExp(line.label+'[^。；\\n]{0,12}(发动|为动爻)');
       var negative=new RegExp(line.label+'[^。；\\n]{0,12}(未发动|没有发动|不发动|并非动爻|为静爻)');
-      if(claim.test(text)&&!negative.test(text))errors.push('把静爻'+line.label+'写成了动爻');
+      if(text.split(/[。；\n，,]/).some(function(clause){return claim.test(clause)&&!negative.test(clause)}))errors.push('把静爻'+line.label+'写成了动爻');
     });
     return {valid:errors.length===0,errors:Array.from(new Set(errors)),references:references};
   }

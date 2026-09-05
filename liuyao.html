@@ -229,7 +229,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 
 <script src="qimen.js"></script>
 <script src="bazi-engine.js?v=20260905.1"></script>
-<script src="liuyao-engine.js?v=20260905.3"></script>
+<script src="liuyao-engine.js?v=20260905.4"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var API_KEY_STORAGE='qimen_deepseek_api_key';
@@ -401,16 +401,28 @@ function inferUseGodTarget(record){
   var healthWords=/生病|疾病|病情|症状|身体|健康|康复|痊愈|手术|住院|我的病|我这个病/;
   var peerWords=/兄弟|姐妹|同事|朋友|同行|竞争|对手|分利|分账/;
   var jobWords=/工作|职位|岗位|升职|晋升|求职|任职|事业|上班|领导|老板/;
+  // 先辨问事目标和人物关系；多主体问题交给人工确认。
+  if(/欠.*钱|欠款|回款|货款|还钱|讨债|收款/.test(q))return {kind:'relative',value:'妻财',reason:'问题核心是款项能否收回，先取妻财爻；债务人的身份另行参考。'};
   if(type==='lost'){
     if(documentWords.test(q))return {kind:'relative',value:'父母',reason:'失物问题提到证件、文书、房屋或车辆，传统上先取父母爻。'};
     if(/宠物|猫|狗|鸟|鱼/.test(q))return {kind:'relative',value:'子孙',reason:'寻找宠物，传统上先取子孙爻。'};
     return {kind:'relative',value:'妻财',reason:'一般钱物、随身物品或货物失踪，传统上先取妻财爻。'}
   }
+  if(medicineWords.test(q)&&healthWords.test(q))return null;
   if(medicineWords.test(q))return {kind:'relative',value:'子孙',reason:'问题的核心是药物、疗效、治疗方案或求医，传统上先取子孙爻核对医药因素。'};
   if(healthWords.test(q)){
+    var subjects=q.match(/父亲|母亲|爸爸|妈妈|丈夫|老公|妻子|老婆|儿子|女儿|孩子|兄弟|姐妹|哥哥|弟弟|姐姐|妹妹|朋友|同事/g)||[];
+    if(subjects.length>1||asker.mode!=='self')return null;
+    if(subjects.length===1){
+      if(!new RegExp('^(?:请问|想问|我想问|我想知道)?(?:我(?:的)?|家里(?:的)?)?'+subjects[0]+'(?:的)?(?:病|健康|身体|手术|住院|能否|能不能|能康复)').test(q))return null;
+      var subject=subjects[0],relative=/父亲|母亲|爸爸|妈妈/.test(subject)?'父母':(/儿子|女儿|孩子/.test(subject)?'子孙':(/丈夫|老公/.test(subject)?'官鬼':(/妻子|老婆/.test(subject)?'妻财':'兄弟')));
+      return {kind:'relative',value:relative,reason:'问的是'+subject+'的健康，先按其与求测人的关系取'+relative+'爻，而非将本人求测等同于本人患病。'}
+    }
+    if(/他|她|对方|别人|患者|病人/.test(q))return null;
     if(asker.mode==='self')return {kind:'role',value:'shi',reason:'本人问自身疾病、健康或康复，先以世爻代表求测人；药物或医生另看子孙爻。'};
     return null
   }
+  if(childWords.test(q)&&documentWords.test(q))return null;
   if(type==='love'){
     if(gender==='男')return {kind:'relative',value:'妻财',affinity:'ying',reason:'按传统纳甲惯例，男问感情对象先取妻财爻，并结合应爻核对对方。'};
     if(gender==='女')return {kind:'relative',value:'官鬼',affinity:'ying',reason:'按传统纳甲惯例，女问感情对象先取官鬼爻，并结合应爻核对对方。'};
@@ -637,6 +649,7 @@ function renderAiHistory(){
   return history.map(function(turn,index){
     var turnKey=useGodSnapshotKey(turn.useGodSnapshot),state='旧版解读';
     if(turnKey&&currentKey&&turnKey!==currentKey)state='基于旧用神';
+    else if(turn.kernelVersion&&turn.kernelVersion!==LiuyaoEngine.assessmentVersion)state='旧版规则解读';
     else if(turn.kernelVersion&&turn.useGodSnapshot){
       try{var oldKernel=buildAiKernelContext(turn.useGodSnapshot),checked=validateLiuyaoAiAnswer(turn.answer,oldKernel);state=checked.valid?(checked.topicRefusal?'已拒绝换题':'证据编号已核对'):'旧答待重验'}catch(error){state='旧答待重验'}
     }
@@ -679,8 +692,10 @@ async function analyzeWithAI(){
   if(!key.trim()){setStatus('aiStatus','未填写 DeepSeek API Key',true);return}
   var requestId=++aiRequestSeq,recordIdAtStart=currentRecord.id,useGodKeyAtStart=useGodSnapshotKey(kernel.fixedUseGod),button=document.getElementById('btnAI'),keepAIStatus=false;button.disabled=true;button.textContent='分析中…';setStatus('aiStatus','正在核对用神、世应、日月和动变');
   var system='你是谨慎的传统纳甲六爻解释员。程序已经完成排盘、固定用神和规则判断，你只能解释给出的内核结果，不得重新选择用神、重新计算旺衰或创造盘面关系。历史回答只用于保持同一问题的语义，若其中用神与本次 fixedUseGod 不同，必须忽略旧用神。一个卦只回答同一人、同一事、同一决策的连续追问；若用户换了问题，只回复“一个卦只能问同一件事，请重新起卦”。涉及盘面的判断必须引用 evidenceCatalog 中存在的编号，格式如 [U01]；必须原样写出 useGodAssessment.arbitration.label，并明确写出固定用神的爻位、六亲和干支。不得虚构动爻、六亲、纳甲、世应、旬空、月破、旺衰或应期，不得用吉凶分数。回答依次包含：结论与倾向、固定用神、支持证据、反向证据、世应日月动变、可能应期条件、不确定处、现实行动建议。医疗、法律和高风险投资只能提供传统象意与风险提示，不得替代专业意见。';
+  system+=' 请明确区分求测人与问题涉及的人。已有固定用神时遵从该用神；若主体信息存在歧义，应提示人工确认。arbitration.decisiveRule 非空时，必须解释该优先规则及其限制，不能用已降为条件的生扶推翻它。世爻、应爻、用神与爻位、六亲和干支必须逐一对应，不能将同一证据中的不同爻交换。应期只能写成带条件的可能性，不得承诺一定成功、必定到账等现实结果。';
   var messages=[{role:'system',content:system}];
   (currentRecord.aiHistory||[]).filter(function(turn){
+    if(turn.kernelVersion!==kernel.assessment.version)return false;
     if(useGodSnapshotKey(turn.useGodSnapshot)!==useGodKeyAtStart)return false;
     try{var checked=validateLiuyaoAiAnswer(turn.answer,buildAiKernelContext(turn.useGodSnapshot));return checked.valid&&!checked.topicRefusal}catch(error){return false}
   }).forEach(function(turn){messages.push({role:'user',content:turn.question});messages.push({role:'assistant',content:turn.answer})});
