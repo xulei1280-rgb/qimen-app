@@ -461,6 +461,15 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .analysis-box{border:1px solid #eadfc9;background:#fffaf0;border-radius:13px;padding:12px;line-height:1.7}
 .analysis-box strong{display:block;color:#9b2f22;margin-bottom:5px}
 .analysis-box .relation-list{margin-top:0}
+.luck-outlook-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 12px 12px}
+.fortune-outcome{display:block;margin-top:6px;font-size:12px;font-weight:800;line-height:1.5}
+.outlook-tag{display:inline-block;border:1px solid currentColor;border-radius:6px;padding:1px 6px;margin:0 4px 4px 0;font-size:12px;font-weight:800}
+.outlook-positive{color:#286447;background:#edf6ed}
+.outlook-negative{color:#9b2f22;background:#fff0eb}
+.outlook-mixed{color:#8a5b17;background:#fff5dc}
+.outlook-neutral,.outlook-pending,.outlook-unavailable{color:#6e6254;background:#f5f1e9}
+.outlook-evidence{padding-left:20px;margin:6px 0}
+.outlook-note{font-size:12px;color:#786a59;margin:6px 0 0}
 .selected-stack{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 12px}
 .quick-ai{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}
 .quick-ai button{
@@ -573,6 +582,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
   .origin-col:nth-child(2){border-right:0}
   .origin-col:nth-child(-n+2){border-bottom:1px solid #f0e3cb}
   .luck-detail-grid{grid-template-columns:1fr}
+  .luck-outlook-summary{grid-template-columns:1fr}
   .bazi-tabs{position:sticky;top:0;z-index:30;margin:0 -2px 14px;padding:6px 2px 8px;background:#fffdf8;box-shadow:0 5px 12px rgba(67,58,49,.08)}
   .fortune-scroll.year-grid,.fortune-scroll.month-grid{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
   .fortune-scroll .fortune-item{min-width:0;border-radius:10px;padding:8px 7px}
@@ -738,7 +748,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20260820.2"></script>
+<script src="bazi-engine.js?v=20261010.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script>
 var currentBazi=null;
@@ -746,6 +756,7 @@ var currentBaziView='structure';
 var aiHistory=[];
 var aiCollapsed={};
 var luckSelection={luck:null,year:null,month:null};
+var selectedLuckOutlookCache=null;
 var activeBaziRecordId=null;
 var editingActiveRecord=false;
 var API_KEY_STORAGE='qimen_deepseek_api_key';
@@ -1943,6 +1954,7 @@ function getSelectedLuckContext(data){
 }
 function selectedLuckContextText(data){
   var ctx=getSelectedLuckContext(data),luck=ctx.luck;
+  var outlook=getSelectedLuckOutlook(data,ctx),yearOutlook=outlook.years[ctx.yearIndex];
   var currentLuck=luck.current?(luck.current.gz+'（'+luck.current.from+'-'+luck.current.to+'岁，'+luckStartYear(data,luck.current)+'起，'+luck.current.stemGod+' / '+luck.current.branchWx+'）'):'当前年龄未落入本地估算表';
   var selectedLuck=ctx.luckRow?(ctx.luckRow.gz+'（第'+(ctx.luckIndex+1)+'步，'+ctx.luckRow.from+'-'+ctx.luckRow.to+'岁，'+luckStartYear(data,ctx.luckRow)+'起，'+ctx.luckRow.stemGod+' / '+ctx.luckRow.branchWx+'）'):'未选择大运';
   var selectedYear=ctx.flowYear?(ctx.flowYear.year+' '+ctx.flowYear.gz+'（'+ctx.flowYear.stemGod+' / '+ctx.flowYear.branchWx+'）'):'未选择流年';
@@ -1951,8 +1963,30 @@ function selectedLuckContextText(data){
   return [
     '当前问事运势：'+luck.currentYear+'年 '+luck.inquiry.flowYearGz+'；当前大运 '+currentLuck,
     '用户当前运势选择：大运 '+selectedLuck+'；流年 '+selectedYear+'；流月 '+selectedMonth,
-    '选中运势关系：'+(rels.length?rels.join('；'):'暂无明显合冲刑害破')
+    '选中运势关系：'+(rels.length?rels.join('；'):'暂无明显合冲刑害破'),
+    '选中大运本地判断：本运对原局 '+outlook.natal.label+'；较上一运 '+outlook.previous.label+(outlook.previousGz?'（上一运 '+outlook.previousGz+'）':''),
+    outlookContextText('本运对原局',outlook.natal),
+    outlookContextText('较上一运',outlook.previous),
+    yearOutlook?'选中流年本地判断：年度综合 '+yearOutlook.annual.label+'；对本运 '+yearOutlook.increment.label+'\n'+outlookContextText('年度综合',yearOutlook.annual)+'\n'+outlookContextText('对本运',yearOutlook.increment):'流年本地判断：待判',
+    '规则边界：本地标签是命理条件参考，AI只解释依据，不改写标签；当前所处大运与选中大运分别识别，回答选中岁运问题采用选中组合。流月不改变年度或大运标签。',
+    '时间口径：流年立春换年；按所选大运背景评估，交运边界年份的全年归属需结合交运日期确认。'
   ].join('\n');
+}
+function getSelectedLuckOutlook(data,ctx){
+  var previous=ctx.luckIndex>0?ctx.luck.rows[ctx.luckIndex-1].gz:null;
+  var key=JSON.stringify([data.pillars,data.dayStem,data.gender,data.time&&data.time.used,ctx.luckRow.gz,previous,ctx.years.map(function(year){return [year.year,year.gz]})]);
+  if(selectedLuckOutlookCache&&selectedLuckOutlookCache.key===key)return selectedLuckOutlookCache.value;
+  var value;
+  if(typeof BaziEngine!=='undefined'&&BaziEngine.evaluateLuckOutlook)value=BaziEngine.evaluateLuckOutlook(data,ctx.luckRow.gz,previous,ctx.years);
+  else{
+    var pending={label:'待判',direction:'pending',evidence:[],reservations:[],life:[],uncertainty:['本地岁运评估引擎未加载']};
+    value={ruleVersion:'unavailable',previousGz:previous,natal:pending,previous:previous?pending:Object.assign({},pending,{label:'无上一柱可比较',direction:'unavailable'}),years:ctx.years.map(function(year){return {year:year.year,gz:year.gz,annual:pending,increment:pending}})};
+  }
+  selectedLuckOutlookCache={key:key,value:value};return value;
+}
+function outlookContextText(label,result){
+  var describe=function(item){return item.text+(item.ruleId?'【'+item.ruleId+'】':'')+(item.source?'；来源：'+item.source.title+(item.source.url?' '+item.source.url:''):'')+(item.conditions&&item.conditions.length?'；核对条件：'+item.conditions.join('、'):'')+(item.counterEvidence&&item.counterEvidence.length?'；反证与救应：'+item.counterEvidence.join('、'):'')};
+  return label+'依据：'+(result.evidence.map(describe).join('；')||'无可用比较依据')+'；生活解释：'+(result.life.join('；')||'不作生活事件推断')+(result.reservations.length?'；保留因素：'+result.reservations.map(describe).join('；'):'')+(result.uncertainty.length?'；不确定处：'+result.uncertainty.join('；'):'');
 }
 function buildAiContextSnapshot(data){
   data=refreshPatternAnalysis(data);
@@ -1996,15 +2030,16 @@ function renderLuckOrigin(data){
         '<div class="origin-meta">藏干 '+hiddenText(data.dayStem,gz[1]).replace(/<br>/g,' / ')+'<br>五行 '+STEM_WX[gz[0]]+' / '+BRANCH_WX[gz[1]]+'</div></div>';
     }).join('')+'</div></section>';
 }
-function fortuneButton(label,meta,gz,stemGod,branchGod,part,index,active,extraClass){
+function fortuneButton(label,meta,gz,stemGod,branchGod,part,index,active,extraClass,outcome){
   return '<button type="button" class="fortune-item '+(extraClass||'')+(active?' active':'')+'" data-luck-part="'+part+'" data-luck-index="'+index+'" onclick="selectLuckPart(\''+part+'\','+index+')">'+
     '<span class="fortune-label">'+label+'</span>'+(meta?'<span class="fortune-meta">'+meta+'</span>':'<span class="fortune-meta"></span>')+
     '<span class="fortune-pillar"><b class="wx-'+STEM_WX[gz[0]]+'">'+gz[0]+'</b><small>'+stemGod+'</small></span>'+
-    '<span class="fortune-pillar"><b class="wx-'+BRANCH_WX[gz[1]]+'">'+gz[1]+'</b><small>'+branchGod+'</small></span></button>';
+    '<span class="fortune-pillar"><b class="wx-'+BRANCH_WX[gz[1]]+'">'+gz[1]+'</b><small>'+branchGod+'</small></span>'+(outcome?'<span class="fortune-outcome outlook-'+outcome.direction+'">'+esc(outcome.label)+'</span>':'')+'</button>';
 }
 function renderLuckSelector(data,ctx){
+  var outlook=getSelectedLuckOutlook(data,ctx);
   var luckBtns=ctx.luck.rows.map(function(r,i){return fortuneButton(luckStartYear(data,r)+'年',r.from+'岁',r.gz,r.stemGod,branchMainGod(data.dayStem,r.gz[1]),'luck',i,i===ctx.luckIndex,'')}).join('');
-  var yearBtns=ctx.years.map(function(y,i){return fortuneButton(y.year+'年','',y.gz,y.stemGod,branchMainGod(data.dayStem,y.gz[1]),'year',i,i===ctx.yearIndex,'')}).join('');
+  var yearBtns=ctx.years.map(function(y,i){return fortuneButton(y.year+'年','',y.gz,y.stemGod,branchMainGod(data.dayStem,y.gz[1]),'year',i,i===ctx.yearIndex,'',outlook.years[i].annual)}).join('');
   var monthBtns=ctx.months.map(function(m,i){return fortuneButton(m.term,m.dateLabel,m.gz,m.stemGod,branchMainGod(data.dayStem,m.gz[1]),'month',i,i===ctx.monthIndex,'month-item')}).join('');
   return '<section class="luck-selector"><div class="luck-block-title">运势选择<span>先大运，再流年，再流月</span></div>'+
     '<div class="fortune-row"><h4>大运</h4><div class="fortune-scroll luck-scroll">'+luckBtns+'</div></div>'+
@@ -2041,16 +2076,37 @@ function selectedRelationTags(data,ctx){
   return out.filter(function(x,i,a){return a.indexOf(x)===i});
 }
 function renderLuckDetail(data,ctx){
+  var outlook=getSelectedLuckOutlook(data,ctx),yearOutlook=outlook.years[ctx.yearIndex];
   var rels=selectedRelationTags(data,ctx),tags=(rels.length?rels:['暂无明显合冲刑害破']).map(function(x){return '<span class="tag">'+x+'</span>'}).join('');
   var monthTag=ctx.flowMonth?'<span class="tag">流月 '+ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel+' '+ctx.flowMonth.gz+' '+ctx.flowMonth.stemGod+'</span>':'';
   var monthLine=ctx.flowMonth?'；流月：'+ctx.flowMonth.stemGod+' / '+ctx.flowMonth.branchWx+'。':'。';
   return '<section class="luck-detail-panel"><div class="luck-block-title">详细信息<span>当前选择的组合关系</span></div>'+
     '<div class="selected-stack"><span class="tag">大运 '+ctx.luckRow.gz+' '+ctx.luckRow.stemGod+'</span><span class="tag">流年 '+ctx.flowYear.year+' '+ctx.flowYear.gz+' '+ctx.flowYear.stemGod+'</span>'+monthTag+'</div>'+
+    '<div class="luck-outlook-summary">'+
+    renderOutlookBox('选中大运 '+ctx.luckRow.gz+' · 本运对原局',outlook.natal)+
+    renderOutlookBox('较上一运'+(outlook.previousGz?' '+outlook.previousGz:''),outlook.previous)+
+    renderOutlookBox(ctx.flowYear.year+' '+ctx.flowYear.gz+' · 年度综合',yearOutlook.annual)+
+    renderOutlookBox('该流年对本运的影响',yearOutlook.increment)+
+    '</div><p class="hint-line">本运对原局比较发挥条件；较上一运比较两柱阶段条件，上升不表示十年逐年上涨。年度综合看完整组合，对本运看流年的增量作用。</p>'+
+    '<p class="hint-line">'+((ctx.yearIndex===0||ctx.yearIndex===ctx.years.length-1)?'交运边界年份：':'')+'按所选大运背景评估；全年归属需结合交运日期确认。流年立春换年。规则 '+esc(outlook.ruleVersion)+'；标签为命理条件参考。</p>'+
     '<div class="luck-detail-grid">'+
     '<div class="analysis-box"><strong>十神五行</strong>大运：'+ctx.luckRow.stemGod+' / '+ctx.luckRow.branchWx+'；流年：'+ctx.flowYear.stemGod+' / '+ctx.flowYear.branchWx+monthLine+'</div>'+
     '<div class="analysis-box"><strong>合冲关系</strong><div class="relation-list">'+tags+'</div></div>'+
-    '<div class="analysis-box"><strong>判断提示</strong>大运看阶段背景，流年看当年触发，流月看短期应期；先看是否冲动日支、月令和用神，再看财官印食的现实主题。</div>'+
+    '<div class="analysis-box"><strong>判断提示</strong>大运看阶段背景，流年会增强、削弱或改变年度表现，两者结合原局判断；合冲关系须复核是否有效，不能直接等同吉凶。流月只作短期关系参考，不改变上述标签。</div>'+
     '</div></section>';
+}
+function renderOutlookBox(title,result){
+  var list=function(items){return items.length?'<ul class="outlook-evidence">'+items.map(function(item){
+    var source=item.source&&/^https:\/\//.test(item.source.url||'')?'<div class="outlook-note">出处：<a href="'+esc(item.source.url)+'" target="_blank" rel="noopener noreferrer">'+esc(item.source.title)+'</a></div>':'';
+    var conditions=item.conditions&&item.conditions.length?'<details class="outlook-note"><summary>查看作用条件</summary>'+item.conditions.map(function(text){return '<div>'+esc(text)+'</div>'}).join('')+'</details>':'';
+    return '<li>'+esc(item.text)+(item.counterEvidence&&item.counterEvidence.length?'<div class="outlook-note">反证与救应：'+esc(item.counterEvidence.join('；'))+'</div>':'')+conditions+source+'</li>';
+  }).join('')+'</ul>':''};
+  var positive=result.evidence.filter(function(item){return item.direction==='positive'}),negative=result.evidence.filter(function(item){return item.direction==='negative'}),neutral=result.evidence.filter(function(item){return item.direction==='neutral'});
+  return '<div class="analysis-box"><strong>'+esc(title)+'</strong><span class="outlook-tag outlook-'+result.direction+'">'+esc(result.label)+'</span>'+
+    (positive.length?'<div>有利依据</div>'+list(positive):'')+(negative.length?'<div>不利依据</div>'+list(negative):'')+list(neutral)+
+    (result.life.length?'<p>'+esc(result.life.join(' '))+'</p>':'')+
+    (result.reservations.length?'<div class="outlook-note">保留因素'+list(result.reservations)+'</div>':'')+
+    (result.uncertainty.length?'<p class="outlook-note">'+esc(result.uncertainty.join('；'))+'</p>':'')+'</div>';
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);

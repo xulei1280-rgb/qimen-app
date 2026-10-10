@@ -283,7 +283,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20260820.2"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="bazi-engine.js?v=20261010.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -1505,4 +1505,202 @@ assert(scriptContext.aiCollapsed[0] === true && scriptContext.aiCollapsed[1] ===
 scriptContext.collapseAllBaziAi();
 assert(scriptContext.aiCollapsed[0] === true && scriptContext.aiCollapsed[1] === true, 'collapse all should fold every AI turn');
 
-console.log('bazi page checks ok');
+// New outlooks compare causal conditions, not the old clipped pattern-grade action.
+const outlookEngine = scriptContext.BaziEngine;
+const outlookConditionChart = {
+  pillars: { year: '戊辰', month: '戊辰', day: '甲申', hour: '己巳' },
+  dayStem: '甲', gender: '男',
+  time: { used: { year: 1993, month: 4, day: 1, hour: 10, minute: 0 } },
+}; // Synthetic condition combination, not a historical prediction record.
+const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 + index, gz: outlookEngine.getFlowYearGZ(2020 + index) }));
+const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
+const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
+// Legacy state-rank expectations are replaced by independently specified causal cases.
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261010.2', 'the revised causal rules must be versioned');
+assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
+assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
+const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
+assert(sameOutlook.previous.direction === 'neutral' || sameOutlook.previous.direction === 'pending', 'identical states cannot create an improvement or deterioration');
+const firstOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', null, []);
+assert(firstOutlook.previous.label === '无上一柱可比较', 'the first luck must not default to neutral');
+
+// Isolated theoretical ten-god conditions test branches without using personal event labels.
+const coreContext = { GZ60: vm.runInContext('GZ60', scriptContext) };
+vm.createContext(coreContext);
+vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__outlookRules={core:outlookCore,compare:compareOutlookContexts,label:labelOutlook};root.BaziEngine=api;'), coreContext);
+const rules = coreContext.__outlookRules;
+function coreFixture(family, entries, strength='中和', rooted=true) {
+  const profiles = {};
+  const pillarsByPosition = ['year','month','day','hour','luck','flowYear'];
+  Object.entries(entries).forEach(([god, p]) => {
+    const position=p.position === undefined ? 1 : p.position;
+    const rootPosition=p.command?1:position;
+    const roots=Array.from({length:p.roots === undefined ? 1 : p.roots}, (_,i) => ({pillar:pillarsByPosition[(rootPosition+i)%6],position:(rootPosition+i)%6,stem:p.stem||'甲',branch:'辰',hiddenIndex:p.hiddenIndex||0,rootPower:1,usable:true,attacks:p.damaged?['冲']:[],transformedAway:false}));
+    profiles[god]={monthCommand:!!p.command,stemEntries:p.clear===false?[]:[{pillar:pillarsByPosition[position],position,stem:p.stem||'甲',temporal:position>3,usable:p.usable!==false,effect:p.usable===false?'bind':'none'}],branchEntries:roots};
+  });
+  return {pillars:{year:'甲子',month:'戊辰',day:'甲寅',hour:'丙午'},profiles,scores:{木:20,火:20,土:20,金:20,水:20},strength,
+    strengthScore:{dimensions:{roots:{items:rooted?[{pillar:'day',usable:true,attacked:false,changedByGroup:false,transformedAway:false}]:[]}}},
+    regularPattern:{authority:{key:family},checks:[]},rawMainPattern:'理论'+family+'主线',interactions:{stemCombines:[],branchPairs:[]},patternDisease:{items:[]}};
+}
+const coreAnalysis={monthCommand:{ambiguous:false}};
+function findTask(ctx,id,analysis=coreAnalysis) { return rules.core(ctx,analysis).tasks.find(item=>item.id===id); }
+const protectedBase=coreFixture('官',{'比肩':{position:3},'正官':{position:2},'伤官':{position:0}});
+const protectedSeal=coreFixture('官',{'比肩':{position:3},'正官':{position:2},'伤官':{position:0},'正印':{position:1}});
+assert(findTask(protectedBase,'hurt-officer').state === -1, 'rooted clear hurt reaching the used officer is a real unresolved mechanism');
+assert(findTask(protectedSeal,'hurt-officer').state === 0, 'rooted reachable seal with sufficient support must resolve that same officer-hurt mechanism');
+const boundSeal=coreFixture('官',{'比肩':{position:3},'正官':{position:2},'伤官':{position:0},'正印':{position:1,usable:false}});
+assert(findTask(boundSeal,'hurt-officer').state === -1, 'a bound seal cannot protect the officer just by existing');
+const sealImprovement=rules.compare(protectedBase,protectedSeal,coreAnalysis);
+assert(sealImprovement.evidence.some(x=>x.taskId==='hurt-officer'&&x.direction==='positive'), 'the rescue must yield its causal evidence without any formation-rank change');
+const missingDisease=Object.assign({},protectedBase,{patternDisease:{items:[]}});
+assert(!rules.compare(protectedBase,missingDisease,coreAnalysis).evidence.some(x=>x.direction==='positive'), 'a disappeared disease row with unchanged causes is not improvement');
+
+const killHeavy=coreFixture('杀',{'比肩':{position:3},'食神':{position:0},'七杀':{position:1,command:true},'正财':{position:2}});
+const foodHeavy=coreFixture('杀',{'比肩':{position:2},'食神':{position:1,command:true},'七杀':{position:0}});
+assert(findTask(killHeavy,'food-kill').reason.includes('杀较重'), 'kill heavy / food light must ask for food, not generic seal help');
+assert(findTask(foodHeavy,'food-kill').reason.includes('食较重'), 'food heavy / kill light must ask for kill or food adjustment, not more food');
+const crossedPower=coreFixture('杀',{'比肩':{position:2},'食神':{position:1,roots:2},'七杀':{position:0,command:true}});
+assert(findTask(crossedPower,'food-kill').state === null, 'crossed command/root advantages remain unconfirmed, without an invented ratio');
+
+const foodRobbed=coreFixture('杀',{'比肩':{position:3},'食神':{position:0},'七杀':{position:1},'偏印':{position:2}});
+const foodSaved=coreFixture('杀',{'比肩':{position:3},'食神':{position:0},'七杀':{position:1},'偏印':{position:2},'正财':{position:3,command:true}});
+assert(findTask(foodRobbed,'food-kill').state === -1, 'rooted accessible seal robbing required food must break its control route');
+assert(findTask(foodSaved,'food-kill').counterEvidence.some(x=>x.includes('已结算救应')), 'actual wealth restraining seal must be evaluated before a blanket wealth-is-bad rule');
+
+const matchingHurt=coreFixture('伤',{'比肩':{position:2},'伤官':{position:0,command:true},'正印':{position:1}},'偏弱');
+const rootlessSeal=coreFixture('伤',{'比肩':{position:2},'伤官':{position:0,command:true},'正印':{position:1,roots:0}},'偏弱');
+assert(findTask(matchingHurt,'hurt-seal').state === 1, 'strong rooted hurt, weak but rooted body and deep accessible seal support matching');
+assert(findTask(rootlessSeal,'hurt-seal').state !== 1, 'visible rootless seal must not count as effective matching');
+const excessSeal=coreFixture('伤',{'比肩':{position:3},'伤官':{position:0},'正印':{position:1,command:true},'正官':{position:2}},'强');
+assert(findTask(excessSeal,'hurt-seal').state === -1, 'strong rooted body, lighter hurt and heavier seal are an excessive-control counterexample');
+
+const weakWealth=coreFixture('财',{'比肩':{position:2},'正财':{position:1,command:true}},'偏弱');
+const dividedWealth=coreFixture('财',{'比肩':{position:2,command:true,roots:2},'正财':{position:1}},'强');
+assert(findTask(weakWealth,'wealth-sharing').state === 0, 'body support must not become automatic wealth theft');
+assert(findTask(dividedWealth,'wealth-sharing').state === -1, 'rooted excessive peer reaching lighter wealth without rescue must remain a real counterexample');
+const rootsOnlyWealth=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:1}},'强');
+assert(findTask(rootsOnlyWealth,'wealth-sharing').state===null, 'root counts alone cannot confirm dominance and turn peers into actual wealth theft');
+const lightPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1},'正财':{position:0,command:true}},'偏弱');
+const heavyPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1,command:true},'正财':{position:0}},'强');
+assert(findTask(lightPrint,'wealth-tunes-seal').state === 0 && findTask(heavyPrint,'wealth-tunes-seal').state === 1, 'wealth tuning heavy print must be distinct from wealth hurting needed light print');
+
+for (const family of ['官','财','印','食','杀','伤','刃','禄']) {
+  const context=coreFixture(family,{'比肩':{position:2},'正财':{position:0},'正官':{position:1},'正印':{position:3},'食神':{position:1},'七杀':{position:0},'伤官':{position:3}});
+  const core=rules.core(context,coreAnalysis);
+  assert(core.tasks.length>0 && core.tasks.every(x=>x.ruleId&&x.source&&x.conditions.length), 'each month-command family needs actual source-bearing tasks: '+family);
+}
+const specialAnalysis={monthCommand:{ambiguous:false},specialPatternQualification:{name:'从格：从杀格',target:'金'}};
+const specialFollowing=coreFixture('杀',{'七杀':{position:1,command:true}},'弱',false);
+specialFollowing.currentSpecialDetail={name:'从格：从杀格',type:'从格',target:'金',flowChecks:[{label:'所从气势及出口',met:true}]};
+const specialBroken=coreFixture('杀',{'七杀':{position:1,command:true},'比肩':{position:2},'正印':{position:3}},'中和',true);
+assert(findTask(specialFollowing,'special-reversal',specialAnalysis).state===0 && findTask(specialBroken,'special-reversal',specialAnalysis).state===-1, 'special reversal needs the actual restored body root, not a qualification toggle');
+const specialThresholdOnly=coreFixture('杀',{'七杀':{position:1,command:true}},'弱',false);
+assert(findTask(specialThresholdOnly,'special-flow',specialAnalysis).state===null, 'qualification loss without physical counterevidence must remain pending');
+const ordinaryCarry=coreFixture('财',{'比肩':{position:2},'正财':{position:1}},'中和');
+const thresholdCarry=Object.assign({},ordinaryCarry,{strength:'偏弱'});
+assert(rules.compare(ordinaryCarry,thresholdCarry,coreAnalysis).direction==='pending', 'a numerical strength/carrying change alone cannot decide the direction');
+
+const pendingFood=rules.compare(killHeavy,crossedPower,coreAnalysis);
+assert(pendingFood.direction==='pending' && pendingFood.uncertainty.some(x=>x.includes('食神制杀')), 'changed consequential unconfirmed food/kill balance has priority over mixed or favorable clues');
+// Other primary routes: an outlet/control needs an actual usable participant, with its counterexample beside it.
+const externalUse={'比肩':{position:3},'正官':{position:2},'食神':{position:1},'正财':{position:0}};
+const foodOutlet=coreFixture('食',externalUse,'强');
+const foodBlocked=coreFixture('食',Object.assign({},externalUse,{'食神':{position:1,usable:false}}),'强');
+assert(findTask(foodOutlet,'output-wealth').state===1 && findTask(foodBlocked,'output-wealth').state===0, 'food earning an outlet must be distinguished from the same food bound out of use');
+const foodTransformed=coreFixture('食',externalUse,'强');
+foodTransformed.profiles['食神'].stemEntries[0].usable=false;foodTransformed.profiles['食神'].stemEntries[0].effect='transform';
+foodTransformed.profiles['食神'].branchEntries[0].transformedAway=true;foodTransformed.profiles['食神'].branchEntries[0].usable=false;
+assert(rules.compare(foodOutlet,foodTransformed,coreAnalysis).direction==='pending', 'a used outlet transformed into another role requires a common reference, not automatic decline');
+const bladeControl=coreFixture('刃',externalUse,'强');
+const bladeBlocked=coreFixture('刃',Object.assign({},externalUse,{'正官':{position:2,usable:false}}),'强');
+assert(findTask(bladeControl,'officer-blade').state===1 && findTask(bladeBlocked,'officer-blade').state===0, 'official control of blade needs a usable officer rather than a name');
+const fortuneOutlet=coreFixture('禄',externalUse,'强');
+const fortuneBlocked=coreFixture('禄',Object.assign({},externalUse,{'食神':{position:1,usable:false}}),'强');
+assert(findTask(fortuneOutlet,'body-output').state===1 && findTask(fortuneBlocked,'body-output').state===0, 'lu taking output must lose that outlet when its participant is bound');
+const damagedPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1,damaged:true}},'偏弱');
+assert(findTask(damagedPrint,'seal-body').state===null, 'a surviving but entirely attacked root is a clue, not proof of fully effective body support');
+const rootLostPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1,roots:0}},'偏弱');
+assert(findTask(rootLostPrint,'seal-body').state===0, 'visible print with no usable root cannot independently supply effective support');
+const supportedDay=coreFixture('印',{'比肩':{position:2,clear:false},'正印':{position:1}},'偏弱');
+assert(findTask(supportedDay,'seal-body').state===1, 'the actual visible daymaster is the object of print support even without another visible peer');
+const winterBase=Object.assign({},protectedBase,{pillars:Object.assign({},protectedBase.pillars,{month:'壬子'}),scores:{水:80,火:0,木:5,土:5,金:10}});
+const sealWithClimateClue=Object.assign({},protectedSeal,{pillars:winterBase.pillars,scores:winterBase.scores});
+const climateClueComparison=rules.compare(winterBase,sealWithClimateClue,coreAnalysis);
+assert(climateClueComparison.direction==='positive' && climateClueComparison.reservations.some(x=>x.taskId==='climate'), 'an unconfirmed auxiliary climate clue must not override confirmed officer protection');
+
+const foodToSeal=coreFixture('杀',{'七杀':{position:1},'正印':{position:2},'比肩':{position:3}},'中和');
+assert(findTask(foodToSeal,'kill-seal').state===1 && findTask(foodToSeal,'handle-kill').state===1, 'a reachable seal feeding rooted body provides an alternative solution to the same killing pressure');
+assert(!rules.compare(foodRobbed,foodToSeal,coreAnalysis).evidence.some(x=>x.taskId==='food-kill'&&x.direction==='negative'), 'an effective replacement route must not be punished for the vanished name of the former route');
+const mixedHurt=coreFixture('伤',{'比肩':{position:3},'伤官':{position:0},'正印':{position:1,command:true},'正官':{position:2}},'强');
+assert(rules.compare(matchingHurt,mixedHurt,coreAnalysis).direction==='mixed', 'a new effective officer route and excessive suppression of used hurt are independent opposing consequences');
+
+for(const specialType of ['化气格','专旺格']) {
+  const name=specialType==='化气格'?'化气格：甲己化土':'专旺格：曲直格';
+  const target=specialType==='化气格'?'土':'木';
+  const analysis={monthCommand:{ambiguous:false},specialPatternQualification:{name,type:specialType,target,source:['项目既有严格资格及《滴天髓阐微》对应篇']}};
+  const following=coreFixture('财',specialType==='化气格'?{'正财':{position:1,command:true}}:{'比肩':{position:1,command:true}},'中和',false);
+  following.currentSpecialDetail={name,type:specialType,target,flowChecks:[{label:'资格后的顺势链',met:true}]};
+  assert(findTask(following,'special-flow',analysis).state===1, specialType+' needs rooted clear target beyond the qualification switch');
+  const qualifiedButRootless=coreFixture('财',specialType==='化气格'?{'正财':{position:1,roots:0}}:{'比肩':{position:1,roots:0}},'中和',false);
+  qualifiedButRootless.currentSpecialDetail=following.currentSpecialDetail;
+  assert(findTask(qualifiedButRootless,'special-flow',analysis).state===null, specialType+' must not turn a qualification flag into confirmed flow without roots');
+  const broken=coreFixture('财',{'正官':{position:1,command:true},'比肩':{position:2}},'中和',specialType==='化气格');
+  assert(findTask(broken,'special-reversal',analysis).state===-1, specialType+' loss needs actual restored origin root or effective opposition');
+}
+const footLimited=coreFixture('财',{'比肩':{position:2,stem:'甲'},'偏财':{position:4,stem:'戊',hiddenIndex:2}},'中和');
+footLimited.pillars.luck='戊寅';footLimited.profiles['偏财'].branchEntries[0].branch='寅';
+assert(findTask(footLimited,'carry-wealth').state===null && findTask(footLimited,'carry-wealth').conditions.some(x=>x.includes('截脚')), 'internal restraint of the sole rooted temporal wealth requires review, without a fixed penalty');
+const footBridged=coreFixture('财',{'比肩':{position:2,stem:'甲'},'偏财':{position:4,stem:'戊',hiddenIndex:2},'食神':{position:0,stem:'丙',hiddenIndex:1}},'中和');
+footBridged.pillars.luck='戊寅';footBridged.profiles['偏财'].branchEntries[0].branch='寅';footBridged.profiles['食神'].branchEntries[0].branch='寅';
+assert(findTask(footBridged,'carry-wealth').state===1 && findTask(footBridged,'carry-wealth').conditions.some(x=>x.includes('透清通根之火承接')), 'rooted clear fire can bridge wood restraining temporal earth; the pillar name alone is not bad');
+assert(rules.label({direction:'mixed'},'annual').label==='吉凶并见' && rules.label({direction:'mixed'},'increment').label==='利弊并存', 'annual overall and annual increment must use their respective mixed labels');
+assert(!engine.includes('function outlookElements(') && !engine.includes('var ranks={已破:0'), 'the old generic element and rank direction shortcuts must be removed');
+const missingOutlook = outlookEngine.evaluateLuckOutlook({ pillars: { day: '甲子' }, dayStem: '甲' }, '壬寅', null, outlookYearRows);
+assert(missingOutlook.natal.label === '待判' && missingOutlook.years.every((year) => year.annual.label === '待判'), 'missing natal inputs must not become neutral');
+const mismatchedOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', 'not-a-pillar', [{ year: 2026, gz: '甲子' }]);
+assert(mismatchedOutlook.previous.label === '待判' && mismatchedOutlook.years[0].annual.label === '待判', 'invalid previous luck or mismatched annual stem-branch must remain pending');
+assert(JSON.stringify(outlookConditionChart) === outlookInputSnapshot, 'outlook evaluation must not mutate its chart');
+const staleScoreChart = Object.assign({}, outlookConditionChart, { scores: { 木:100,火:100,土:0,金:0,水:100 }, patternAnalysis: { mainPattern:'stale' } });
+assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅', '庚午', outlookYearRows)) === JSON.stringify(outlookHelp), 'saved scores or saved analysis must not become the natal comparison baseline');
+const natalBeforeOutlook = JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart));
+const realChartOutlook = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '甲子', '癸亥', outlookYearRows);
+assert(realChartOutlook.years.length === 10 && JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart)) === natalBeforeOutlook, 'a real calendar reference should expose ten annual results without changing its natal analysis');
+vm.runInContext('GZ60', scriptContext).forEach((gz) => {
+  const reviewed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, gz, '癸亥', [{ year: 2026, gz: '丙午' }]);
+  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && ['偏吉','平','偏凶','吉凶并见','待判'].includes(reviewed.years[0].annual.label), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
+  if(reviewed.years[0].annual.direction==='pending')assert(reviewed.years[0].annual.uncertainty.length>0, 'pending needs the actual missing condition');
+  const reversed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '癸亥', gz, []);
+  const opposite = { positive:'negative', negative:'positive', neutral:'neutral', mixed:'mixed', pending:'pending' };
+  assert(reversed.previous.direction === opposite[reviewed.previous.direction], `swapping the same two independent luck states must reverse improvement/deterioration for ${gz}`);
+});
+const annualWeighted = outlookEngine.strengthScore('甲', Object.assign({}, outlookConditionChart.pillars, { luck: '壬寅', flowYear: '丙午' }), { outlookFlowYear: true });
+assert(annualWeighted.parts.some((item) => item.label === '流年干') && annualWeighted.parts.some((item) => item.label === '流年支') && Math.abs(annualWeighted.parts.reduce((sum, item) => sum + item.weight, 0) - 100) < 0.00001, 'annual carrying review must include both annual components on a normalized scale');
+const legacyWeighted = outlookEngine.strengthScore('甲', Object.assign({}, outlookConditionChart.pillars, { luck: '壬寅', flowYear: '丙午' }));
+assert(!legacyWeighted.parts.some((item) => item.label === '流年干'), 'the new annual weight option must not silently change existing strength callers');
+
+scriptContext.currentBazi = wenZhenLuckChart;
+scriptContext.restoreLuckSelection({ luck: 1, year: 0, month: null });
+const selectedOutlookContext = scriptContext.getSelectedLuckContext(wenZhenLuckChart);
+const selectedOutlook = scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, selectedOutlookContext);
+const summaryBeforeMonth = JSON.stringify(selectedOutlook);
+const selectedOutlookHtml = scriptContext.renderLuckDetail(wenZhenLuckChart, selectedOutlookContext);
+assert(selectedOutlookHtml.includes('本运对原局') && selectedOutlookHtml.includes('较上一运') && selectedOutlookHtml.includes('年度综合') && selectedOutlookHtml.includes('该流年对本运的影响'), 'detail must expose all four comparison scopes');
+assert(selectedOutlookHtml.includes('交运边界年份') && selectedOutlookHtml.includes('全年归属需结合交运日期确认'), 'the first selected year must disclose the boundary-year scope');
+assert((scriptContext.renderLuckSelector(wenZhenLuckChart, selectedOutlookContext).match(/fortune-outcome/g) || []).length === 10, 'each annual button should expose a textual outcome');
+scriptContext.luckSelection.month = 3;
+assert(JSON.stringify(scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, scriptContext.getSelectedLuckContext(wenZhenLuckChart))) === summaryBeforeMonth, 'month selection must not change any luck or annual verdict');
+scriptContext.luckSelection.year = 4;
+const changedYearOutlook = scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, scriptContext.getSelectedLuckContext(wenZhenLuckChart));
+assert(JSON.stringify(changedYearOutlook.natal) === JSON.stringify(selectedOutlook.natal) && JSON.stringify(changedYearOutlook.previous) === JSON.stringify(selectedOutlook.previous), 'year selection must not change either decade comparison');
+const selectedOutlookText = scriptContext.selectedLuckContextText(wenZhenLuckChart);
+assert(selectedOutlookText.includes('本运对原局 ' + selectedOutlook.natal.label) && selectedOutlookText.includes('较上一运 ' + selectedOutlook.previous.label) && selectedOutlookText.includes('年度综合 ' + selectedOutlook.years[4].annual.label) && selectedOutlookText.includes('AI只解释依据，不改写标签'), 'AI context must carry the same selected labels and rule authority as the page');
+scriptContext.restoreLuckSelection({ luck: 0, year: 0, month: null });
+const firstSelectionContext = scriptContext.getSelectedLuckContext(wenZhenLuckChart);
+assert(scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, firstSelectionContext).previous.label === '无上一柱可比较', 'selection restores must compare to chronology, not the last clicked luck');
+const otherChart = Object.assign({}, wenZhenLuckChart, { pillars: { year: '庚午', month: '辛巳', day: '壬申', hour: '癸卯' }, dayStem: '壬' });
+const otherOutlook = scriptContext.getSelectedLuckOutlook(otherChart, scriptContext.getSelectedLuckContext(otherChart));
+assert(otherOutlook !== selectedOutlook && JSON.stringify(scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, selectedOutlookContext)) === summaryBeforeMonth, 'single-entry cache must not leak across charts or restore a wrong luck');
+const hostileOutlookBox = scriptContext.renderOutlookBox('<img src=x>', { label: '待判', direction: 'pending', evidence: [{ direction: 'neutral', text: '<script>x</script>' }], reservations: [], uncertainty: [], life: [] });
+assert(!hostileOutlookBox.includes('<script>') && hostileOutlookBox.includes('&lt;img'), 'new evidence rendering must escape labels and prose');
+
+console.log('bazi page checks ok (including luck outlooks)');

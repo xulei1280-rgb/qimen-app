@@ -25,6 +25,17 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Delivery — 2026-10-10
+
+- Owner: current local checkout; shared baseline `9b68080` on `main`.
+- Changed: 本地岁运判断 `luck-outlook-20261010.2`，按具体任用、根透、救应与关键不确定条件替换状态排名和五行增减方向；既有页面增加条件与来源，AI 上下文复用同一证据。详情见 `docs/specs/2026-10-09-bazi-luck-rule-audit.md` 第 13 节。
+- Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`; `node check-bazi-page.js`; `node check-baselines.js`（18 基线）; `git diff --check`；实际本地浏览器的大运、年度、证据展开及 390px 窄屏检查。全部通过。
+- Delivery: 2026-10-10 用户授权提交并推送本次八字岁运实现与文档；不包含本地 `.agents/` 技能文件。
+- Next task: 验收发布页面的四项岁运结论、证据展开及来源；复杂输入仍按已说明的关键条件保留待判。
+- Caution: 规则检查不证明现实预测准确率；关键条件不足保留待判，未调用真实 AI API。以下是上一轮已发布模块的历史交接记录。
+
+### Previous Published Handoff
+
 - Owner: P1
 - Working branch: `main` (use the I-drive checkout only)
 - Last shared baseline: `b6e0e33`; release code baseline: `2909d8b`（包含 `db10da1`、`2488459`、`2909d8b` 三次六爻修复）
