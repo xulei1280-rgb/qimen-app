@@ -283,7 +283,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20261010.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="bazi-engine.js?v=20261010.2"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -1516,7 +1516,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261010.2', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261010.3', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
@@ -1580,6 +1580,22 @@ assert(findTask(weakWealth,'wealth-sharing').state === 0, 'body support must not
 assert(findTask(dividedWealth,'wealth-sharing').state === -1, 'rooted excessive peer reaching lighter wealth without rescue must remain a real counterexample');
 const rootsOnlyWealth=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:1}},'强');
 assert(findTask(rootsOnlyWealth,'wealth-sharing').state===null, 'root counts alone cannot confirm dominance and turn peers into actual wealth theft');
+const sharingWithOutlet=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:1},'食神':{position:0}},'强');
+assert(findTask(sharingWithOutlet,'output-wealth').state===1 && findTask(sharingWithOutlet,'wealth-sharing').state===0, 'a confirmed outlet accepting peers must settle sharing rescue before an uncertain peer/wealth balance');
+assert(findTask(sharingWithOutlet,'wealth-sharing').counterEvidence.some(x=>x.includes('已核对有效')), 'sharing rescue must expose the already checked outlet conditions');
+const rescuedSharing=rules.compare(rootsOnlyWealth,sharingWithOutlet,coreAnalysis);
+assert(rescuedSharing.direction==='positive' && rescuedSharing.reservations.some(x=>x.taskId==='wealth-sharing'&&x.text.includes('各可行解释不改变')), 'a possible old sharing harm becoming resolved cannot reverse an independently confirmed outlet improvement');
+assert(rules.compare(sharingWithOutlet,rootsOnlyWealth,coreAnalysis).direction==='negative', 'the same bounded-risk comparison must reverse when the two states swap');
+const sharingWithBoundOutlet=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:1},'食神':{position:0,usable:false}},'强');
+const sharingWithUnconfirmedOutlet=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:1},'食神':{position:0},'正印':{position:3,command:true}},'强');
+for(const context of [sharingWithBoundOutlet,sharingWithUnconfirmedOutlet]) {
+  assert(findTask(context,'output-wealth').state!==1 && findTask(context,'wealth-sharing').state===null, 'an unusable outlet or unconfirmed remedy cannot silently resolve sharing');
+}
+const sharingWithOfficer=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:0},'正官':{position:1,roots:2,command:true}},'强');
+const sharingWithBrokenOfficer=coreFixture('财',{'比肩':{position:2,roots:2},'正财':{position:0},'正官':{position:1,roots:2,command:true},'伤官':{position:3}},'强');
+assert(findTask(sharingWithOfficer,'wealth-sharing').state===0 && findTask(sharingWithBrokenOfficer,'wealth-sharing').state===null, 'official rescue must be reachable and remain free of unresolved hurt, with no alternative earning outlet');
+const noWealthUse=coreFixture('财',{'比肩':{position:2,roots:2}},'强');
+assert(rules.compare(noWealthUse,rootsOnlyWealth,coreAnalysis).direction==='pending', 'a newly possible sharing harm may oppose confirmed carrying improvement and must still block a final direction');
 const lightPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1},'正财':{position:0,command:true}},'偏弱');
 const heavyPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1,command:true},'正财':{position:0}},'强');
 assert(findTask(lightPrint,'wealth-tunes-seal').state === 0 && findTask(heavyPrint,'wealth-tunes-seal').state === 1, 'wealth tuning heavy print must be distinct from wealth hurting needed light print');
@@ -1633,6 +1649,16 @@ assert(findTask(foodToSeal,'kill-seal').state===1 && findTask(foodToSeal,'handle
 assert(!rules.compare(foodRobbed,foodToSeal,coreAnalysis).evidence.some(x=>x.taskId==='food-kill'&&x.direction==='negative'), 'an effective replacement route must not be punished for the vanished name of the former route');
 const mixedHurt=coreFixture('伤',{'比肩':{position:3},'伤官':{position:0},'正印':{position:1,command:true},'正官':{position:2}},'强');
 assert(rules.compare(matchingHurt,mixedHurt,coreAnalysis).direction==='mixed', 'a new effective officer route and excessive suppression of used hurt are independent opposing consequences');
+const hiddenOfficer=coreFixture('伤',{'比肩':{position:2},'伤官':{position:0,command:true},'正印':{position:1},'正官':{position:3,clear:false,damaged:true}},'偏弱');
+const damagedOfficer=coreFixture('伤',{'比肩':{position:2},'伤官':{position:0,command:true},'正印':{position:1},'正官':{position:3,damaged:true}},'偏弱');
+assert(findTask(hiddenOfficer,'carry-officer').state===0 && rules.compare(matchingHurt,hiddenOfficer,coreAnalysis).direction==='neutral', 'an unexposed non-command officer is not a newly used load; its damaged hidden root alone must not block otherwise unchanged main use');
+assert(findTask(damagedOfficer,'carry-officer').state===null && rules.compare(matchingHurt,damagedOfficer,coreAnalysis).direction==='pending', 'a clear rooted officer whose only root is attacked remains a consequential unknown');
+const mixedWithUnknownKill=coreFixture('伤',{'比肩':{position:3},'伤官':{position:0},'正印':{position:1,command:true},'正官':{position:2},'七杀':{position:0,damaged:true}},'强');
+const mixedWithRisk=rules.compare(matchingHurt,mixedWithUnknownKill,coreAnalysis);
+assert(findTask(mixedWithUnknownKill,'handle-kill').state===null && mixedWithRisk.direction==='mixed' && mixedWithRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.text.includes('各可行解释不改变')), 'a new ordinary-route unknown must be checked for consequence instead of unconditionally overriding already independent mixed effects');
+const mixedWithRemovedRisk=rules.compare(mixedWithUnknownKill,matchingHurt,coreAnalysis);
+assert(mixedWithRemovedRisk.direction==='mixed', 'the same new or removed nondecisive unknown must preserve mixed effects on reversed comparison');
+assert(mixedWithRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.conditions.includes('变化前：未见对应实际作用')) && mixedWithRemovedRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.conditions.includes('变化后：未见对应实际作用')), 'new or removed unknowns must expose the actual missing side instead of copying the old conditions to both sides');
 
 for(const specialType of ['化气格','专旺格']) {
   const name=specialType==='化气格'?'化气格：甲己化土':'专旺格：曲直格';

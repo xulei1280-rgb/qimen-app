@@ -2402,7 +2402,7 @@
     var activationStatus=recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持')));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261010.2';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261010.3';
   function outlookPending(reason){
     return {direction:'pending',evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'证据不足'};
   }
@@ -2487,11 +2487,13 @@
     function task(id,label,state,keys,reason,life,ruleId,counter){
       var conditions=unique(keys.reduce(function(out,key){return out.concat(g[key].facts)},[]).concat(reason));
       var taskSource=ruleId==='LK-10'?{title:(analysis.specialPatternQualification.source||['《滴天髓阐微》从象、化象与独象']).join('；'),url:'https://zh.wikisource.org/zh-hans/滴天髓阐微'}:source;
-      tasks.push({id:id,label:label,state:state,ruleId:ruleId||'LK-02',source:taskSource,conditions:conditions,counterEvidence:counter||[],
+      // LK-03 checks a specific harmful mechanism; its rescue is neutral here, with benefits checked by the usable paths.
+      tasks.push({id:id,label:label,state:state,possibleStates:ruleId==='LK-03'?[-1,0]:[-1,0,1],ruleId:ruleId||'LK-02',source:taskSource,conditions:conditions,counterEvidence:counter||[],
         reason:reason,life:life||'相关发挥条件发生变化，仍需结合尚存的限制。',signature:JSON.stringify(keys.map(function(key){return g[key].signature}).concat(reason))});
     }
     function capacity(load){
       if(!load.present)return {state:0,reason:'未见当前所用的压力对象'};
+      if(!load.usable)return {state:0,reason:'对象未透清得令或未通根，尚未建立实际任用，不据其存在新增承载压力'};
       if(load.uncertain)return {state:null,reason:'所用对象根气受损或运柱内部制约，任用强度尚未确认'};
       var support=outlookLink(context,g.I,g.B)===1||g.B.usable&&cleanDay.length>0;
       if(!dayRoots.length&&!support)return {state:-1,reason:'任用对象存在，但日主无可用根且未见有效印比承接'};
@@ -2558,13 +2560,17 @@
     }
     function wealthSharing(){
       if(!g.W.present||!g.B.present){task('wealth-sharing','比劫扶身与实际分财',0,['B','W','O','U'],'未见实际分财对象或参与者','','LK-03');return}
-      var link=outlookLink(context,g.B,g.W),balance=outlookRelative(g.B,g.W),state=0,reason='未确认实际分财，不以见比劫直接设破点';
-      if(link===1&&strong&&balance===1){
-        var rescue=outlookLink(context,g.O,g.B)===1&&outlookRelative(g.O,g.B)!==null&&outlookRelative(g.O,g.B)>=0||outlookLink(context,g.U,g.W)===1&&outlookLink(context,g.B,g.U)===1;
-        state=rescue?0:-1;reason=rescue?'有实际官制比劫或食伤承接生财，分财先结算救应':'身有根且偏强、比劫根透占优并可达财，财受有效分夺';
+      var link=outlookLink(context,g.B,g.W),balance=outlookRelative(g.B,g.W),state=0,reason='未确认实际分财，不以见比劫直接设破点',counter=[];
+      var officerBalance=outlookRelative(g.O,g.B),officerRescue=outlookLink(context,g.O,g.B)===1&&officerBalance!==null&&officerBalance>=0&&breaker('H','O','I').state===0;
+      var outputRescue=tasks.some(function(x){return x.id==='output-wealth'&&x.state===1})&&outlookLink(context,g.B,g.U)===1;
+      if(link===1&&(officerRescue||outputRescue)){
+        reason=officerRescue?'官有实际制比劫路径且未留伤官破坏，分财先结算救应':'食伤实际承接比劫，生财路径的承载、破坏及救应已核对有效，分财先结算救应';
+        counter.push(reason);
+      }else if(link===1&&strong&&balance===1){
+        state=-1;reason='身有根且偏强、比劫根透占优并可达财，财受有效分夺';
       }else if(link===1&&weak)reason='日主需承财支持，比劫先核扶身，不能同时自动认夺财';
       else if(link===1&&balance===null)state=null,reason='实际分财的轻重尚未确认';
-      task('wealth-sharing','比劫扶身与实际分财',state,['B','W','O','U'],reason,'竞争、合作及资源分配上的矛盾发生变化。','LK-03');
+      task('wealth-sharing','比劫扶身与实际分财',state,['B','W','O','U'],reason,'竞争、合作及资源分配上的矛盾发生变化。','LK-03',counter);
     }
     function outputWealth(){
       path('output-wealth','食伤生财的有效出口','U','W',{keys:['I','B'],condition:function(){return capacity(g.W)},breaks:[['I','U','W']],life:'表达产出转化为可利用资源的条件发生变化。'});
@@ -2670,6 +2676,10 @@
         counterEvidence:beforeTask?beforeTask.counterEvidence.map(function(x){return '变化前：'+x}).concat(task.counterEvidence.map(function(x){return '变化后：'+x})):task.counterEvidence,
         taskId:task.id};
     }
+    function addRisk(a,b){
+      var task=b||a;
+      risks.push({task:task,before:a,after:b,message:task.label+'：轻重、任用或救应尚未确认；变化前：'+(a?a.reason:'未见对应实际作用')+'；变化后：'+(b?b.reason:'未见对应实际作用')});
+    }
     ids.forEach(function(id){
       if(['food-kill','kill-seal','blade-kill','hurt-kill'].indexOf(id)>=0&&left.tasks.some(function(x){return x.id==='handle-kill'})&&right.tasks.some(function(x){return x.id==='handle-kill'}))return;
       var a=left.tasks.find(function(x){return x.id===id}),b=right.tasks.find(function(x){return x.id===id}),task=b||a;
@@ -2687,16 +2697,19 @@
             return;
           }
         }
-        if(existing.state!==null&&!analysis.specialPatternQualification&&left.route===right.route){
-          var direction=a?(existing.state>0?'negative':'positive'):(existing.state>0?'positive':'negative');
-          evidence.push(evidenceItem(task,direction,task.label+'：'+(a?'原作用条件不再适用，已核对对应对象':'新增实际作用')+'；'+task.reason));
+        if(!analysis.specialPatternQualification&&left.route===right.route){
+          if(existing.state===null)addRisk(a,b);
+          else {
+            var direction=a?(existing.state>0?'negative':'positive'):(existing.state>0?'positive':'negative');
+            evidence.push(evidenceItem(task,direction,task.label+'：'+(a?'原作用条件不再适用，已核对对应对象':'新增实际作用')+'；'+task.reason));
+          }
         }else {uncertainty.push(task.label+'：路径转移或新增作用尚未建立可靠共同参照；'+existing.reason);reservations.push(evidenceItem(existing,'neutral',task.label+'：'+existing.reason))}
         return;
       }
       if(a.auxiliary&&b.auxiliary){reservations.push(evidenceItem(task,'neutral',task.label+'：未证实影响主要任用，作为辅助条件保留；'+task.reason));return}
       if(a.state===null||b.state===null){
         if(a.signature===b.signature)reservations.push(evidenceItem(task,'neutral',task.label+'：未定条件在两侧相同，不据此制造升降；'+task.reason));
-        else risks.push({task:task,before:a.state,after:b.state,message:task.label+'：变化后的轻重、任用或救应未确认；'+task.reason});
+        else addRisk(a,b);
         return;
       }
       if(a.applicable===false||b.applicable===false){
@@ -2721,10 +2734,18 @@
     if(analysis.monthCommand&&analysis.monthCommand.ambiguous)uncertainty.push('原局月令取用未定，无法可靠归纳整体方向');
     var positive=evidence.some(function(x){return x.direction==='positive'}),negative=evidence.some(function(x){return x.direction==='negative'});
     risks.forEach(function(risk){
-      var outcomes=[],a=risk.before===null?[-1,0,1]:[risk.before],b=risk.after===null?[-1,0,1]:[risk.after];
+      // A disease can be active or resolved; its absence is not an independent benefit.
+      var choices=function(task){return !task?[0]:(task.state===null?task.possibleStates:[task.state])};
+      var outcomes=[],a=choices(risk.before),b=choices(risk.after);
       a.forEach(function(x){b.forEach(function(y){var p=positive||y>x,n=negative||y<x;outcomes.push(p&&n?'mixed':(p?'positive':(n?'negative':'neutral')))} )});
-      if(unique(outcomes).length===1)reservations.push(evidenceItem(risk.task,'neutral',risk.message+'；各可行解释不改变已确认方向'));
-      else {uncertainty.push(risk.message);reservations.push(evidenceItem(risk.task,'neutral',risk.message))}
+      var stable=unique(outcomes).length===1,item=evidenceItem(risk.task,'neutral',risk.message+(stable?'；各可行解释不改变已确认方向':''),risk.after?risk.before:null);
+      if(!risk.before||!risk.after){
+        var prefix=risk.before?'变化前：':'变化后：';
+        item.conditions=item.conditions.map(function(x){return prefix+x}).concat((risk.before?'变化后：':'变化前：')+'未见对应实际作用');
+        item.counterEvidence=item.counterEvidence.map(function(x){return prefix+x});
+      }
+      reservations.push(item);
+      if(!stable)uncertainty.push(risk.message);
     });
     var known=left.tasks.concat(right.tasks).some(function(x){return x.state!==null&&x.state!==0});
     if(!known&&!evidence.length)uncertainty.push('尚未确认主要任用路径，不能把空证据当作持平');

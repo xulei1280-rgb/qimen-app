@@ -25,14 +25,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
-### Bazi Luck Delivery — 2026-10-10
+### Bazi Luck Pending Refinement — 2026-10-10
 
-- Owner: current local checkout; shared baseline `9b68080` on `main`.
-- Changed: 本地岁运判断 `luck-outlook-20261010.2`，按具体任用、根透、救应与关键不确定条件替换状态排名和五行增减方向；既有页面增加条件与来源，AI 上下文复用同一证据。详情见 `docs/specs/2026-10-09-bazi-luck-rule-audit.md` 第 13 节。
-- Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`; `node check-bazi-page.js`; `node check-baselines.js`（18 基线）; `git diff --check`；实际本地浏览器的大运、年度、证据展开及 390px 窄屏检查。全部通过。
-- Delivery: 2026-10-10 用户授权提交并推送本次八字岁运实现与文档；不包含本地 `.agents/` 技能文件。
-- Next task: 验收发布页面的四项岁运结论、证据展开及来源；复杂输入仍按已说明的关键条件保留待判。
-- Caution: 规则检查不证明现实预测准确率；关键条件不足保留待判，未调用真实 AI API。以下是上一轮已发布模块的历史交接记录。
+- Owner: current local checkout; previous published baseline `24a22c3`; delivery on `main`.
+- Changed: 岁运判断 `luck-outlook-20261010.3`，先确认实际任用、先结算有效救应，再按未定项的实际可能作用判断是否阻断方向。详情见 `docs/specs/2026-10-09-bazi-luck-rule-audit.md` 第 14 节。
+- Checks: `node --check bazi-engine.js`; `node --check check-bazi-page.js`; `node check-bazi-page.js`; `node check-baselines.js`（18 基线）; `git diff --check`；真实本地浏览器的新资源、相邻大运、年度标签与证据展开。全部通过。
+- Delivery: 2026-10-10 用户授权提交推送本次待判优化及对应文档；当前交接以本文件所在提交为准；不包含本地 `.agents/` 技能文件。
+- Next task: 验收发布页面的四项结论、待判原因及作用条件展开。
+- Caution: 关键未定项可能改变结论时仍待判；条件检查不证明现实预测准确率，未调用真实 AI API。以下是此前已发布模块的历史交接记录。
 
 ### Previous Published Handoff
 
