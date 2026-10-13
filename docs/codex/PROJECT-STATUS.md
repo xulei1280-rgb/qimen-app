@@ -25,6 +25,15 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi UI Local Preview — 2026-10-14
+
+- Owner: current local checkout; branch `codex/bazi-ui-preview-20261014`.
+- Changed: 八字页纸色与墨绿界面；分清模块导航、出生信息、命盘摘要与分析；完整格局依据按需展开；加入编辑与结果出现动效、键盘及减少动态效果适配。计算引擎和 AI 分析语义保持原样。
+- Checks: `node check-bazi-page.js`；`git diff --check`；本地真实浏览器桌面及 390px 视口的出生时间、地址搜索、排盘、标准/专业、依据展开、大运流年选择和局部表格滚动。浏览器无错误日志。
+- Delivery: 本地预览，未推送或发布。技能 `impeccable`、`emil-design-eng` 安装在用户级技能目录，不随项目提交。
+- Next task: 用户验收八字界面的视觉、层级和动效，再决定是否推广或发布。
+- Caution: 手机验证为浏览器视口模拟；未调用真实 AI API。机械设计扫描中的纸色提示为本次选定风格，紧凑表格保留数据字号；正文对比度提示已修正。
+
 ### Bazi Luck Pending Refinement — 2026-10-10
 
 - Owner: current local checkout; previous published baseline `24a22c3`; delivery on `main`.
