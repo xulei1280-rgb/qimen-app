@@ -468,6 +468,9 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .outlook-neutral,.outlook-pending,.outlook-unavailable{color:#6e6254;background:#f5f1e9}
 .outlook-evidence{padding-left:20px;margin:6px 0}
 .outlook-note{font-size:12px;color:#786a59;margin:6px 0 0}
+.outlook-details{margin-top:8px;font-size:13px;line-height:1.7}
+.outlook-details>summary{cursor:pointer;color:var(--muted);font-size:12px}
+.luck-extra{margin:0 12px 12px}
 .selected-stack{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px 12px}
 .quick-ai{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}
 .quick-ai button{
@@ -876,6 +879,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
   button:active:not(:focus-visible){transform:none}
 }
 </style>
+<link rel="stylesheet" href="bazi-premium.css?v=20261101.1">
 </head>
 <body>
 <a class="skip-link" href="#homeTabs">跳到排盘与记录</a>
@@ -984,8 +988,9 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20261010.2"></script>
+<script src="bazi-engine.js?v=20261014.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
+<script src="bazi-premium.js?v=20261101.1" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1609,7 +1614,7 @@ function renderPillarTable(data,includeTransit){
     if(ctx.flowMonth)order.unshift(['flowMonth','流月',ctx.flowMonth.gz,ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel]);
   }
   function cells(fn){return order.map(function(o){return '<td>'+fn(o[2],o[0])+'</td>'}).join('')}
-  return '<div class="section-title">四柱排盘</div>'+(includeTransit?'<p class="table-scroll-hint">左右滑动，对照流月、流年、大运与四柱</p>':'')+'<div class="pillar-table-wrap"'+(includeTransit?' data-transit':'')+'><table class="pillar-table">'+
+  var table='<div class="section-title">四柱排盘</div>'+(includeTransit?'<p class="table-scroll-hint">左右滑动，对照流月、流年、大运与四柱</p>':'')+'<div class="pillar-table-wrap"'+(includeTransit?' data-transit':'')+'><table class="pillar-table">'+
     '<tr><th class="row-label">日期</th>'+order.map(function(o){return '<th>'+o[1]+(o[3]?'<small>'+o[3]+'</small>':'')+'</th>'}).join('')+'</tr>'+
     '<tr><th class="row-label">主星</th>'+cells(function(gz,k){return k==='day'?'元男/元女':tenGod(data.dayStem,gz[0])})+'</tr>'+
     '<tr><th class="row-label">天干</th>'+cells(function(gz){return '<div class="stem wx-'+STEM_WX[gz[0]]+'">'+gz[0]+'</div>'})+'</tr>'+
@@ -1621,6 +1626,7 @@ function renderPillarTable(data,includeTransit){
     '<tr><th class="row-label">纳音</th>'+cells(function(gz){return NAYIN[gz]||''})+'</tr>'+
     '<tr><th class="row-label">神煞</th>'+cells(function(gz){return shenShaForPillar(data,gz)})+'</tr>'+
     '</table></div>';
+  return includeTransit?'<details class="outlook-details"><summary>四柱：'+esc([data.pillars.year,data.pillars.month,data.pillars.day,data.pillars.hour].join(' '))+' · 展开排盘对照</summary>'+table+'</details>':table;
 }
 function renderBasicInfo(data){
   var p=data.pillars;
@@ -2293,7 +2299,7 @@ function renderLuckSelector(data,ctx){
   return '<section class="luck-selector"><div class="luck-block-title">运势选择<span>先大运，再流年，再流月</span></div>'+
     '<div class="fortune-row"><h4>大运</h4><div class="fortune-scroll luck-scroll">'+luckBtns+'</div></div>'+
     '<div class="fortune-row"><h4>流年</h4><div class="fortune-scroll fortune-grid year-grid">'+yearBtns+'</div></div>'+
-    '<div class="fortune-row"><h4>流月</h4><div class="fortune-scroll fortune-grid month-grid">'+monthBtns+'</div></div></section>';
+    '<details class="fortune-row outlook-details"'+(ctx.flowMonth?' open':'')+'><summary>流月 · 短期参考</summary><div class="fortune-scroll fortune-grid month-grid">'+monthBtns+'</div></details></section>';
 }
 function stemPairRelation(a,b){
   var he={'甲己':'合土','乙庚':'合金','丙辛':'合水','丁壬':'合木','戊癸':'合火'},chong={'甲庚':'冲','乙辛':'冲','丙壬':'冲','丁癸':'冲'};
@@ -2329,20 +2335,21 @@ function renderLuckDetail(data,ctx){
   var rels=selectedRelationTags(data,ctx),tags=(rels.length?rels:['暂无明显合冲刑害破']).map(function(x){return '<span class="tag">'+x+'</span>'}).join('');
   var monthTag=ctx.flowMonth?'<span class="tag">流月 '+ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel+' '+ctx.flowMonth.gz+' '+ctx.flowMonth.stemGod+'</span>':'';
   var monthLine=ctx.flowMonth?'；流月：'+ctx.flowMonth.stemGod+' / '+ctx.flowMonth.branchWx+'。':'。';
-  return '<section class="luck-detail-panel"><div class="luck-block-title">详细信息<span>当前选择的组合关系</span></div>'+
+  return '<section class="luck-detail-panel"><div class="luck-block-title">岁运判断<span>大运看阶段，流年看年度变化</span></div>'+
     '<div class="selected-stack"><span class="tag">大运 '+ctx.luckRow.gz+' '+ctx.luckRow.stemGod+'</span><span class="tag">流年 '+ctx.flowYear.year+' '+ctx.flowYear.gz+' '+ctx.flowYear.stemGod+'</span>'+monthTag+'</div>'+
     '<div class="luck-outlook-summary">'+
     renderOutlookBox('选中大运 '+ctx.luckRow.gz+' · 本运对原局',outlook.natal)+
     renderOutlookBox('较上一运'+(outlook.previousGz?' '+outlook.previousGz:''),outlook.previous)+
     renderOutlookBox(ctx.flowYear.year+' '+ctx.flowYear.gz+' · 年度综合',yearOutlook.annual)+
     renderOutlookBox('该流年对本运的影响',yearOutlook.increment)+
-    '</div><p class="hint-line">本运对原局比较发挥条件；较上一运比较两柱阶段条件，上升不表示十年逐年上涨。年度综合看完整组合，对本运看流年的增量作用。</p>'+
+    '</div>'+((ctx.yearIndex===0||ctx.yearIndex===ctx.years.length-1)?'<p class="hint-line">交运边界年份：全年归属需结合交运日期确认。</p>':'')+
+    '<details class="outlook-details luck-extra"><summary>合冲关系与判断口径</summary><p class="hint-line">本运对原局比较发挥条件；较上一运比较两柱阶段条件，上升不表示十年逐年上涨。年度综合看完整组合，对本运看流年的增量作用。倾向标签仅概括已确认依据，关键分歧仍待复核。</p>'+
     '<p class="hint-line">'+((ctx.yearIndex===0||ctx.yearIndex===ctx.years.length-1)?'交运边界年份：':'')+'按所选大运背景评估；全年归属需结合交运日期确认。流年立春换年。规则 '+esc(outlook.ruleVersion)+'；标签为命理条件参考。</p>'+
     '<div class="luck-detail-grid">'+
     '<div class="analysis-box"><strong>十神五行</strong>大运：'+ctx.luckRow.stemGod+' / '+ctx.luckRow.branchWx+'；流年：'+ctx.flowYear.stemGod+' / '+ctx.flowYear.branchWx+monthLine+'</div>'+
     '<div class="analysis-box"><strong>合冲关系</strong><div class="relation-list">'+tags+'</div></div>'+
     '<div class="analysis-box"><strong>判断提示</strong>大运看阶段背景，流年会增强、削弱或改变年度表现，两者结合原局判断；合冲关系须复核是否有效，不能直接等同吉凶。流月只作短期关系参考，不改变上述标签。</div>'+
-    '</div></section>';
+    '</div><p class="hint-line">大运以真太阳时和节气时刻换算；不同流派的起运、交运口径可能不同，正式断事请结合出生资料校验。</p></details></section>';
 }
 function renderOutlookBox(title,result){
   var list=function(items){return items.length?'<ul class="outlook-evidence">'+items.map(function(item){
@@ -2351,16 +2358,19 @@ function renderOutlookBox(title,result){
     return '<li>'+esc(item.text)+(item.counterEvidence&&item.counterEvidence.length?'<div class="outlook-note">反证与救应：'+esc(item.counterEvidence.join('；'))+'</div>':'')+conditions+source+'</li>';
   }).join('')+'</ul>':''};
   var positive=result.evidence.filter(function(item){return item.direction==='positive'}),negative=result.evidence.filter(function(item){return item.direction==='negative'}),neutral=result.evidence.filter(function(item){return item.direction==='neutral'});
-  return '<div class="analysis-box"><strong>'+esc(title)+'</strong><span class="outlook-tag outlook-'+result.direction+'">'+esc(result.label)+'</span>'+
-    (positive.length?'<div>有利依据</div>'+list(positive):'')+(negative.length?'<div>不利依据</div>'+list(negative):'')+list(neutral)+
-    (result.life.length?'<p>'+esc(result.life.join(' '))+'</p>':'')+
+  var direction=result.tendency||result.direction;
+  var brief={positive:'可发挥的有利条件增加。',negative:'推进事务的限制增多。',neutral:'主要发挥条件大体延续。',mixed:'有利条件与不利牵制同时存在。',pending:'主要作用条件尚不明确。',unavailable:'从下一柱起可比较前后变化。'}[direction];
+  if(result.life.length&&['positive','negative','neutral'].indexOf(direction)>=0)brief=result.life[0];
+  if(result.tendency)brief+=' 仍有关键分歧，需复核。';
+  var detail=(positive.length?'<div>有利依据</div>'+list(positive):'')+(negative.length?'<div>不利依据</div>'+list(negative):'')+list(neutral)+
     (result.reservations.length?'<div class="outlook-note">保留因素'+list(result.reservations)+'</div>':'')+
-    (result.uncertainty.length?'<p class="outlook-note">'+esc(result.uncertainty.join('；'))+'</p>':'')+'</div>';
+    (result.uncertainty.length?'<p class="outlook-note">待复核：'+esc(result.uncertainty.join('；'))+'</p>':'');
+  return '<div class="analysis-box"><strong>'+esc(title)+'</strong><span class="outlook-tag outlook-'+result.direction+'">'+esc(result.label)+'</span>'+
+    '<p>'+esc(brief)+'</p>'+(detail?'<details class="outlook-details"><summary>查看判断依据</summary>'+detail+'</details>':'')+'</div>';
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);
-  return '<div class="section-title">大运流年细盘</div><div class="luck-professional">'+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'</div>'+
-    '<p class="hint-line">大运以真太阳时和节气时刻换算；不同流派的起运、交运口径可能不同，正式断事请结合出生资料校验。</p>';
+  return '<div class="section-title">大运流年</div><div class="luck-professional">'+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'</div>';
 }
 function renderLuckPanel(data){
   return renderProfessionalLuckPanel(data);
