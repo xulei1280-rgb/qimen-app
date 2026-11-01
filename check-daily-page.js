@@ -1,4 +1,5 @@
 const fs = require('fs');
+{const readFileSync=fs.readFileSync;fs.readFileSync=function(){const out=readFileSync.apply(fs,arguments);return typeof out==='string'?out.replace(/\r\n/g,'\n'):out}} // 兼容 CRLF 检出
 const vm = require('vm');
 
 function assert(condition, message) {

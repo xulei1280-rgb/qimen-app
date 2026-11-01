@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("fs");
+{const readFileSync=fs.readFileSync;fs.readFileSync=function(){const out=readFileSync.apply(fs,arguments);return typeof out==='string'?out.replace(/\r\n/g,'\n'):out}} // 兼容 CRLF 检出
 const path = require("path");
 const vm = require("vm");
 
@@ -465,8 +466,24 @@ function runPageContracts() {
 
 function runBaselineIsolation() {
   const childProcess = require("child_process");
-  const tracked = childProcess.execFileSync("git", ["diff", "--name-only", "main", "--", "qimen.js", "liuyao-engine.js"], { cwd: ROOT, encoding: "utf8" }).trim();
+  const tracked = childProcess.execFileSync("git", ["diff", "--name-only", "main", "--", "qimen.js"], { cwd: ROOT, encoding: "utf8" }).trim();
   assert(tracked === "", `非本次范围的旧模块计算内核出现改动：${tracked}`);
+  // 2026-11-01 六爻规则升级后，liuyao-engine.js 允许新增标签与断卦规则，但装卦内核（纳甲、六亲、世应、六神、伏神、变卦）必须与 main 完全一致。
+  const vm = require("vm");
+  const loadEngine = (source) => { const sandbox = { module: { exports: {} } }; sandbox.globalThis = sandbox; vm.runInNewContext(source, sandbox); return sandbox.module.exports; };
+  const baseEngine = loadEngine(childProcess.execFileSync("git", ["show", "main:liuyao-engine.js"], { cwd: ROOT, encoding: "utf8" }));
+  const liveEngine = loadEngine(fs.readFileSync(path.join(ROOT, "liuyao-engine.js"), "utf8"));
+  const coreOf = (plate) => { const copy = JSON.parse(JSON.stringify(plate)); delete copy.tags; delete copy.tagVersion; delete copy.patterns; return JSON.stringify(copy); };
+  const pillarsList = [{ monthGZ: "戊戌", dayGZ: "己卯" }, { monthGZ: "丙寅", dayGZ: "甲子" }, { monthGZ: "壬午", dayGZ: "癸亥" }];
+  let coreChecked = 0;
+  for (let mask = 0; mask < 4096; mask += 7) {
+    const lines = [0, 1, 2, 3, 4, 5].map((index) => [6, 7, 8, 9][(mask >> (index * 2)) & 3]);
+    for (const pillars of pillarsList) {
+      assert(coreOf(baseEngine.buildPlate({ lines, ...pillars })) === coreOf(liveEngine.buildPlate({ lines, ...pillars })), `六爻装卦内核与 main 不一致：${lines.join("")} ${pillars.dayGZ}`);
+      coreChecked++;
+    }
+  }
+  assert(coreChecked > 1700, "六爻装卦内核对照样本不足");
 }
 
 try {
