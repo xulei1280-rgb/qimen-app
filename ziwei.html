@@ -1139,7 +1139,7 @@
     }
   </style>
   <link rel="stylesheet" href="premium-base.css?v=20261101.2">
-  <link rel="stylesheet" href="ziwei-premium.css?v=20261102.5">
+  <link rel="stylesheet" href="ziwei-premium.css?v=20261102.10">
 </head>
 <body class="zw">
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -1181,7 +1181,7 @@
     <section class="panel input-panel zw-entry" id="entryCard" aria-labelledby="input-title">
       <div class="zw-entry-summary" id="entrySummary" hidden>
         <div><small>出生资料</small><strong id="entrySummaryText"></strong></div>
-        <button class="button" id="entryEdit" type="button" aria-controls="entryBody" aria-expanded="false">修改</button>
+        <div class="button-row"><button class="button" id="entryEdit" type="button" aria-controls="entryBody" aria-expanded="false">修改当前命盘</button><button class="button" id="entrySave" type="button" hidden>保存命盘</button><button class="button" id="newBirth" type="button">新建命盘</button></div>
       </div>
       <div class="zw-entry-body" id="entryBody">
         <div class="panel-heading">
@@ -1189,6 +1189,7 @@
           <p>姓名只保存在本机，不会发给 AI。</p>
         </div>
         <form id="birthForm" novalidate>
+          <label class="field name-field"><span>姓名或本地标记（可选）</span><input class="chart-input" id="personLabel" name="personLabel" autocomplete="off" maxlength="40" placeholder="例如：自己、家人"></label>
           <fieldset>
             <legend>性别</legend>
             <div class="radio-row">
@@ -1228,12 +1229,6 @@
             <input class="chart-input" id="birthTime" type="time" required>
           </label>
 
-          <details class="zw-more" id="entryMore">
-            <summary>更多选项 <small>姓名标记 · 真太阳时与出生地点</small></summary>
-            <label class="field">
-              <span>姓名或本地标记（可选）</span>
-              <input id="personLabel" name="personLabel" autocomplete="off" maxlength="40" placeholder="例如：测试盘 A">
-            </label>
 
             <fieldset>
               <legend>时间口径 <button type="button" class="zw-help zw-help-inline" data-zw-term="真太阳时" aria-label="真太阳时是什么意思">?</button></legend>
@@ -1262,11 +1257,11 @@
               <div class="solar-preview" id="solarPreview" role="status" aria-live="polite">请选择出生地点后预览真太阳时。</div>
               <p class="privacy-note">城市预设采用中心坐标；需要更精确时可填写实际经度。当前算法使用经度和日期均时差，纬度仅用于地点核对，不参与修正。</p>
             </div>
-          </details>
-
           <div class="button-row">
+            <label class="save-choice"><input id="autoSaveBuild" type="checkbox" checked> 排盘后保存 <small>修改已保存命盘会更新原记录</small></label>
             <button class="button primary" type="submit">排出命盘</button>
-            <button class="button" id="resetBirth" type="button">清空</button>
+            <button class="button" id="saveBirth" type="button" hidden>保存命盘</button>
+            <button class="button" id="resetBirth" type="button">新建命盘</button>
           </div>
           <p class="input-state" id="inputState">尚未排盘</p>
         </form>
@@ -1362,15 +1357,14 @@
               <h2 id="ai-title">AI 连续追问</h2>
               <p>仅解释冻结盘面；如已选择运限，每条回答同时固定当时运限。</p>
             </div>
-            <span class="rule-chip">deepseek-v4-flash · 思考</span>
+            <div class="ai-header-tools"><button class="button api-key-button" id="openApiKey" type="button" aria-haspopup="dialog" aria-controls="apiKeyDialog">设置 API Key</button></div>
           </div>
 
           <div class="conversation" id="conversation" aria-live="polite"></div>
           <form class="ai-form" id="aiForm">
-            <details class="zw-ai-settings" id="aiSettings">
-              <summary>分析方式与设置 <small id="aiModeSummary">综合总览</small></summary>
+            <div class="zw-ai-settings" id="aiSettings" role="group" aria-label="解读类型与方式">
               <div class="ai-mode-row">
-                <label class="field"><span>分析方式</span><select id="aiMode" aria-describedby="aiModeHelp">
+                <label class="field"><span>解读类型 / 方向</span><select id="aiMode" aria-describedby="aiModeHelp">
                   <option value="comprehensive" selected>综合总览</option>
                   <option value="natal">本命结构</option>
                   <option value="career">事业发展</option>
@@ -1379,17 +1373,12 @@
                   <option value="wellbeing">身心倾向</option>
                   <option value="decadal">当前大限</option>
                   <option value="yearly">指定流年</option>
-                  <option value="conclusion">只看结论</option>
                 </select></label>
-                <p id="aiModeHelp">默认从整张命盘提炼主线。专题模式只改变观察重点，不会限制为一事一问，也不会重新排盘。</p>
+                <label class="field"><span>解读方式</span><select id="aiStyle" aria-describedby="aiModeHelp"><option value="brief" selected>简断</option><option value="detail">详断</option><option value="conclusion">只看结论</option><option value="palaces">逐宫细断</option><option value="timing">运限重点</option></select></label>
+                <p id="aiModeHelp" style="grid-column:1/-1">方向决定看什么，方式决定展开程度；可以合参多个领域，不限制为一事一问，也不重新排盘。“运限重点”需先查看目标运限，不推断未提供的月份或具体日期。</p>
               </div>
-              <details class="key-box">
-                <summary>DeepSeek API Key</summary>
-                <label class="field"><span>与旧模块共用本机 Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
-                <div class="button-row"><button class="button" id="saveApiKey" type="button">保存到本机</button></div>
-              </details>
               <p class="privacy-note">发送内容：匿名本命盘、当前问题、已有对话，以及已经选择时的冻结运限。不发送姓名、出生地点、经纬度、原始出生日期时间。你在问题里主动填写的信息仍会发送。</p>
-            </details>
+            </div>
             <div class="ai-presets" aria-labelledby="aiPresetLabel">
               <span id="aiPresetLabel">预设问法 · 点击后仍可修改</span>
               <div class="ai-preset-list" id="aiPresetQuestions"></div>
@@ -1424,6 +1413,16 @@
     </details>
   </main>
 
+  <dialog id="apiKeyDialog" aria-labelledby="api-key-title">
+    <div class="dialog-body">
+      <h2 id="api-key-title">DeepSeek API Key</h2>
+      <p class="privacy-note">与其他模块共用本机 Key，仅保存到当前浏览器。</p>
+      <label class="field"><span>API Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+      <p class="privacy-note" id="apiKeyStatus" role="alert"></p>
+      <div class="button-row"><button class="button primary" id="saveApiKey" type="button">保存到本机</button><button class="button" id="closeApiKey" type="button">关闭</button></div>
+    </div>
+  </dialog>
+
   <dialog id="timeConfirmDialog" aria-labelledby="time-confirm-title">
     <div class="dialog-body">
       <h2 id="time-confirm-title">真太阳时跨越时辰</h2>
@@ -1444,9 +1443,9 @@
   <script src="vendor/iztro/2.5.8/iztro.min.js"></script>
   <script src="ziwei-engine.js?v=20261102.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
-  <script src="ziwei-page.js?v=20261102.4"></script>
+  <script src="ziwei-page.js?v=20261102.9"></script>
   <script src="premium-base.js?v=20261101.2"></script>
-  <script src="ziwei-premium.js?v=20261102.2"></script>
+  <script src="ziwei-premium.js?v=20261102.5"></script>
   <script src="ziwei-glossary.js?v=20261102.2"></script>
 </body>
 </html>

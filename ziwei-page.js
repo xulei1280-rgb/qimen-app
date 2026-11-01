@@ -34,6 +34,21 @@
     yearly: "指定流年：说明该年最值得关注的领域、触发条件和反向证据，必须回到本命与大限判断。",
     conclusion: "只看结论：保留完整证据链，但全文尽量控制在 500 字以内，先给最重要结论和现实建议。",
   });
+  const AI_STYLE_GUIDES = Object.freeze({
+    brief: ["简断", "正文尽量控制在 500 字以内，先给主线，重点清楚，不逐星展开。"],
+    detail: ["详断", "正文约 800–1200 字，围绕重点展开成立依据、制约条件和现实建议；六个标题保持不变，各段可按需要展开，不受简断的句数限制。"],
+    conclusion: ["只看结论", "正文尽量控制在 300 字以内；六个标题仍保留，每段只写核心结论或行动建议，最后保留可核对的依据。"],
+    palaces: ["逐宫细断", "先总论，再在“重点关注”中按十二宫逐宫简述并合参三方四正，不逐星套话；其余段落提炼共性，正文尽量控制在 1500 字以内。"],
+    timing: ["运限重点", "以已提供的大限和指定流年为重点，说明阶段主线、触发条件、机会和风险；缺少流月、流日证据时不得推断具体月份、日期或必然应期。正文尽量控制在 800 字以内。"],
+  });
+
+  function normalizeAiStyle(value) {
+    return Object.hasOwn(AI_STYLE_GUIDES, value) ? value : "brief";
+  }
+
+  function aiStyleLabel(value) {
+    return AI_STYLE_GUIDES[normalizeAiStyle(value)][0];
+  }
   // 2026-11-02 白话五段 + 依据：正文给完全不懂紫微的人看，证据编号只集中在最后的“依据”里。
   const REQUIRED_AI_SECTIONS = Object.freeze(["一句话总结", "重点关注", "顺的地方", "要留意的", "建议怎么做", "依据"]);
   const AI_BODY_SECTIONS = Object.freeze(REQUIRED_AI_SECTIONS.slice(0, 5));
@@ -137,6 +152,7 @@
     conversation: $("conversation"),
     aiForm: $("aiForm"),
     aiMode: $("aiMode"),
+    aiStyle: $("aiStyle"),
     aiPresetQuestions: $("aiPresetQuestions"),
     aiQuestion: $("aiQuestion"),
     askAi: $("askAi"),
@@ -408,27 +424,51 @@
     elements.inputState.className = "input-state dirty";
   }
 
-  function clearCurrentRecordBinding() {
-    state.currentRecordId = null;
-    renderRecords();
+  function syncRecordControls() {
+    const saved = Boolean(currentRecord());
+    $("saveBirth").hidden = $("entrySave").hidden = !state.snapshot || saved;
+    elements.birthForm.querySelector('button[type="submit"]').textContent = saved ? "更新并保存当前命盘" : "排出命盘";
+    if (state.snapshot && !state.dirtyBirth) {
+      elements.inputState.textContent = `${saved ? "已保存" : "未保存预览"}：${state.snapshot.calendar.solarDate} ${state.snapshot.calendar.timeLabel}`;
+      elements.inputState.className = "input-state";
+    }
+  }
+
+  function aiBusy() {
+    if (!elements.askAi.disabled) return false;
+    setStatus("AI 正在解读，请等待回答完成后再修改、切换或新建命盘。", "error");
+    return true;
   }
 
   function buildFromForm(confirmedTimeShift) {
+    if (aiBusy()) return;
     const input = collectBirthInput(confirmedTimeShift);
     try {
       if (input.timeBasis === "trueSolar" && !state.selectedLocation) throw new Error("请选择出生地点后再使用真太阳时排盘。");
       const snapshot = engine.buildNatal(input);
+      const existing = currentRecord();
+      const changed = existing && JSON.stringify(existing.natalSnapshot.input) !== JSON.stringify(snapshot.input);
+      if (changed && existing.aiHistory.length && !window.confirm("出生资料已改变。更新当前命盘会覆盖原出生资料，并清空该盘的旧 AI 问答，避免旧解读混入新盘；此操作无法撤销。确定更新吗？（取消可保留原盘，或点击新建命盘）")) return;
+      let saved = null;
+      if (existing || $("autoSaveBuild").checked) {
+        saved = makeRecord(snapshot, existing, Boolean(changed));
+        const previous = state.records;
+        state.records = existing ? previous.map((record) => record.id === existing.id ? saved : record) : [saved, ...previous];
+        if (!saveRecords()) { state.records = previous; return; }
+      }
       state.snapshot = snapshot;
-      state.horoscope = null;
+      state.horoscope = saved?.currentHoroscope || null;
       state.selectedPalaceIndex = snapshot.natal.palaces.find((palace) => palace.name === "命宫")?.index ?? 0;
       state.dirtyBirth = false;
       state.dirtyHoroscope = false;
       state.pendingBirthInput = null;
-      clearCurrentRecordBinding();
+      state.currentRecordId = saved?.id || null;
+      elements.aiQuestion.value = "";
+      elements.aiState.textContent = "";
       renderSnapshot();
-      elements.inputState.textContent = `已排盘：${snapshot.calendar.solarDate} ${snapshot.calendar.timeLabel}`;
+      elements.inputState.textContent = `${saved ? "已保存" : "未保存预览"}：${snapshot.calendar.solarDate} ${snapshot.calendar.timeLabel}`;
       elements.inputState.className = "input-state";
-      setStatus("本命盘已生成。可直接进行本命 AI 解读，也可先选择目标日期查看运限。", "success");
+      setStatus(saved ? "命盘已保存到本地；修改会更新同一份记录，另起一份请点击“新建命盘”。" : "命盘仅供预览，尚未保存；可点击“保存命盘”，AI 解读前也会自动保存。", "success");
       elements.chartPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) {
       if (error.code === "TIME_BRANCH_CONFIRMATION_REQUIRED") {
@@ -597,6 +637,7 @@
     renderHoroscope();
     renderConversation();
     renderRecords();
+    syncRecordControls();
     notifyView("snapshot");
   }
 
@@ -684,9 +725,17 @@
   }
 
   function calculateHoroscope() {
+    if (aiBusy()) return;
     if (!state.snapshot) return;
     try {
-      state.horoscope = engine.getHoroscope(state.snapshot, elements.targetDate.value);
+      const horoscope = engine.getHoroscope(state.snapshot, elements.targetDate.value);
+      const record = currentRecord();
+      if (record) {
+        const previous = state.records;
+        state.records = previous.map((item) => item.id === record.id ? { ...item, currentHoroscope: clone(horoscope) } : item);
+        if (!saveRecords()) { state.records = previous; return; }
+      }
+      state.horoscope = horoscope;
       state.dirtyHoroscope = false;
       renderHoroscope();
       setStatus(`已固定 ${state.horoscope.targetSolarDate} 的大限与流年。`, "success");
@@ -735,7 +784,7 @@
         typeof turn.id === "string" &&
         typeof turn.question === "string" &&
         typeof turn.answer === "string" &&
-        turn.horoscopeSnapshot,
+        (turn.horoscopeSnapshot === null || (turn.horoscopeSnapshot && typeof turn.horoscopeSnapshot === "object")),
       ),
     );
   }
@@ -813,27 +862,42 @@
     };
   }
 
-  function createRecordIfNeeded() {
-    let record = currentRecord();
-    if (record) return record;
+  function makeRecord(snapshot, existing = null, changed = false) {
     const now = new Date().toISOString();
-    record = {
+    return {
+      ...existing,
       schemaVersion: 1,
-      id: randomId("ziwei"),
-      title: elements.personLabel.value.trim() || `${state.snapshot.calendar.solarDate} 命盘`,
+      id: existing?.id || randomId("ziwei"),
+      title: elements.personLabel.value.trim() || `${snapshot.calendar.solarDate} 命盘`,
       localBirthData: localBirthData(),
-      natalSnapshot: clone(state.snapshot),
-      currentHoroscope: state.horoscope ? clone(state.horoscope) : null,
-      aiHistory: [],
-      createdAt: now,
+      natalSnapshot: clone(snapshot),
+      currentHoroscope: existing && !changed ? existing.currentHoroscope : null,
+      aiHistory: existing && !changed ? existing.aiHistory : [],
+      createdAt: existing?.createdAt || now,
       updatedAt: now,
       lastOpenedAt: now,
     };
-    state.records.unshift(record);
+  }
+
+  function createRecordIfNeeded() {
+    const existing = currentRecord();
+    if (existing) return existing;
+    const record = makeRecord(state.snapshot);
+    record.currentHoroscope = state.horoscope ? clone(state.horoscope) : null;
+    const previous = state.records;
+    state.records = [record, ...previous];
+    if (!saveRecords()) { state.records = previous; throw new Error(state.storageError); }
     state.currentRecordId = record.id;
-    if (!saveRecords()) throw new Error(state.storageError);
     renderRecords();
+    syncRecordControls();
     return record;
+  }
+
+  function saveCurrentChart() {
+    if (aiBusy()) return;
+    if (!state.snapshot || state.dirtyBirth) { setStatus("请先点击排盘，确认当前出生资料后再保存。", "error"); return; }
+    try { createRecordIfNeeded(); setStatus("当前命盘已保存到本地记录。", "success"); }
+    catch (error) { setStatus(error.message, "error"); }
   }
 
   function anonymousNatal(snapshot) {
@@ -959,27 +1023,31 @@
     };
   }
 
-  function buildAiMessages(question, history, snapshot, horoscope, selectedPalaceIndex, requestedMode) {
+  function buildAiMessages(question, history, snapshot, horoscope, selectedPalaceIndex, requestedMode, requestedStyle) {
     const mode = normalizeAiMode(requestedMode);
+    const style = normalizeAiStyle(requestedStyle);
+    const styleGuide = `解读方式：${aiStyleLabel(style)}。${AI_STYLE_GUIDES[style][1]}`;
     const evidence = buildAiEvidence(snapshot, horoscope, selectedPalaceIndex, mode);
     const anonymous = anonymousNatal(snapshot);
     const context = {
       analysisMode: { id: mode, guide: aiModeGuide(mode, Boolean(horoscope)) },
+      readingStyle: { id: style, guide: styleGuide },
       analysisScope: horoscope ? "本命＋已选大限＋已选流年" : "仅本命；未提供大限与流年，不得推断运限",
       frozenMeta: { engine: anonymous.engine, rules: anonymous.rules },
       evidenceCatalog: evidence.entries,
     };
     const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: `${SYSTEM_PROMPT}\n本次输出篇幅与展开程度遵循：${styleGuide} 六个标题及证据规则始终保留，详断/逐宫细断可突破默认每段 2–3 句。方向与方式不限制用户同时询问多个生活领域。${!horoscope ? "未提供运限：即使问题要求应期，也不得推断任何未提供的大限、流年、流月或流日。" : ""}` },
       { role: "user", content: `以下是按重要层级整理的冻结证据目录（JSON）。目录包含本命十二宫完整星曜、三方四正和六组对宫轴；选择运限时还包含大限、流年的完整十二宫映射、四化与流曜。不要重新排盘：\n${JSON.stringify(context)}` },
       { role: "assistant", content: horoscope ? "我会从整张命盘提炼主线，按本命—大限—流年合参，正文用白话写，证据编号只放在最后的依据里。" : "我会只依据本命冻结证据提炼主线，不推断未提供的大限和流年；正文用白话写，证据编号只放在最后的依据里。" },
     ];
     for (const turn of history) {
-      const priorMeta = [turn.mode ? `模式:${turn.mode}` : "", turn.horoscopeSnapshot?.targetSolarDate ? `当时目标日期:${turn.horoscopeSnapshot.targetSolarDate}` : ""].filter(Boolean).join("；");
+      const priorMeta = [turn.mode ? `模式:${turn.mode}` : "", turn.style ? `解读方式:${aiStyleLabel(turn.style)}` : "", turn.horoscopeSnapshot?.targetSolarDate ? `当时目标日期:${turn.horoscopeSnapshot.targetSolarDate}` : ""].filter(Boolean).join("；");
       messages.push({ role: "user", content: `${priorMeta ? `历史追问（${priorMeta}）\n` : ""}${turn.question}` });
       messages.push({ role: "assistant", content: `历史回答仅用于保持对话语义，不能把其中证据编号当作本次证据：\n${turn.answer.replace(/\[[A-Z]\d{2}\]/g, "")}` });
     }
     messages.push({ role: "user", content: `本次分析模式：${aiModeGuide(mode, Boolean(horoscope))}\n当前查看宫位：${evidence.selectedPalace}（只是观察焦点，不限制全盘）\n${horoscope ? `已选运限：${evidence.targetDate}` : "未选择运限：只分析本命；“重点关注”须写明未提供运限，不能推断。"}\n用户问题：${question}\n请先完成内部核对，再严格按六个标题用白话输出；正文不写证据编号，编号只放在“依据”；不要复述整份数据。` });
+    messages[messages.length - 1].content += `\n${styleGuide}`;
     return messages;
   }
 
@@ -988,35 +1056,85 @@
     const mode = normalizeAiMode(requestedMode);
     const palace = snapshot.natal.palaces.find((item) => item.index === Number(selectedPalaceIndex));
     const palaceName = palace ? palaceDisplayName(palace.name) : "所选宫位";
-    const modeQuestion = {
-      comprehensive: horoscope ? "请从整张命盘提炼最重要的三项结构，并综合说明事业、财富、关系与当前运限。" : "请从整张命盘提炼最重要的三项结构，并综合说明事业、财富、关系与身心倾向。",
-      natal: "请分析本命盘的稳定底色、主要优势、核心制约和现实兑现条件。",
-      career: horoscope ? "请综合本命与当前运限，分析事业发展的主要路线、优势、代价和观察点。" : "请从本命盘分析事业发展的主要路线、优势、代价和观察点。",
-      wealth: horoscope ? "请综合本命与当前运限，分析财富取得方式、承载条件和主要风险。" : "请从本命盘分析财富取得方式、承载条件和主要风险。",
-      relationship: horoscope ? "请综合本命与当前运限，分析关系模式、核心需求、冲突点和现实观察点。" : "请从本命盘分析关系模式、核心需求、冲突点和现实观察点。",
-      wellbeing: "请只从传统盘面角度说明身心压力倾向、生活观察点和不能下结论的部分。",
-      decadal: "请说明当前十年大限的主线、机会、代价，以及本命能否承接。",
-      yearly: "请说明指定流年最值得关注的领域、触发条件和反向证据。",
-      conclusion: "请用简明结论概括当前命盘最重要的三点和现实建议，但保留证据编号。",
+    return {
+      comprehensive: [
+        horoscope ? "请从整张命盘提炼最重要的三项结构，综合说明事业、财富、关系与当前运限。" : "请从整张命盘提炼最重要的三项结构，综合说明事业、财富、关系与身心倾向。",
+        "请把全盘的优势与制约放在一起比较，说明最值得发挥和最需留意的各是什么。",
+        horoscope ? "当前大限给整张命盘带来的核心主题是什么？哪些生活领域会相互牵动？" : "请找出本命中最重要的两组相互支持结构，说明需要哪些现实条件才能发挥。",
+        horoscope ? "当前流年应优先关注哪些领域？请按重要性排序，并区分机会、风险和触发条件。" : "请从本命盘找出最需留意的制约结构，说明它可能怎样影响现实选择。",
+        `请结合${palaceName}及其三方四正，解释这个宫位在整张命盘中的作用，别只看单宫。`,
+        "请综合各领域给我三条现实建议，并指出整盘结论中仍需核对的不确定之处。",
+      ],
+      natal: [
+        "请只从本命结构分析我的稳定底色、主要优势、核心制约和现实兑现条件。",
+        "命宫、身宫和命迁轴怎样共同体现性格与做事方式？请同时说明优点和代价。",
+        "本命的生年四化分别落在哪些生活领域？哪些动力和牵挂可能长期反复出现？",
+        "请合参六组对宫轴，找出本命中最重要的两组张力，说明怎样取得平衡。",
+        `请从本命角度解释${palaceName}与三方四正的组合，不借未来年份替它下结论。`,
+        "哪些本命优势需要环境配合才能兑现？请列出可用经历核对的条件，避免只贴性格标签。",
+      ],
+      career: [
+        horoscope ? "请合参本命与当前运限，分析事业发展的主线、可发挥的优势和需要付出的代价。" : "请合参本命的命、官、财、迁，分析事业发展的主线、优势和代价。",
+        "从官禄宫及其关联结构看，我更适合怎样的工作方式、职责和组织环境？不要武断指定职业。",
+        "事业上哪些能力更值得长期积累？哪些沟通、合作或执行习惯可能拖后腿？",
+        horoscope ? "当前大限与流年对事业的支持和压力分别是什么？考虑变动前应先核对哪些现实条件？" : "本命中哪些条件有助于事业变动，哪些因素更支持稳定积累？请给出判断依据。",
+        "工作中的收入、外部机会与合作关系如何相互影响？请不要只凭官禄单宫判断事业。",
+        `若把${palaceName}作为补充观察点，它对事业路线有什么提示？请给出三条可执行的工作建议。`,
+      ],
+      wealth: [
+        horoscope ? "请合参本命与当前运限，分析财富取得方式、积累条件和主要风险，不作收益保证。" : "请从本命财帛、福德、官禄与田宅的联系，分析财富取得方式和积累条件。",
+        "财帛宫及其三方四正更支持怎样的赚钱方式？请区分能力所得、合作资源与额外风险。",
+        "从财福轴看，我在消费、储蓄和金钱安全感上可能有哪些倾向？哪些需要现实核对？",
+        horoscope ? "当前大限和流年在收入、支出与资金安排上有哪些支持或制约？不推断确定赚赔。" : "本命中影响守财与资金承载能力的主要结构是什么？请同时说明支持和制约。",
+        "事业收入、家庭资产与人情合作可能怎样相互牵动？请指出应先厘清的责任和边界。",
+        `结合${palaceName}对财富议题的关联，给出三条财务习惯与风险管理建议，不推荐具体投资。`,
+      ],
+      relationship: [
+        horoscope ? "请结合本命与当前运限，解释关系模式、情感需求和相处中最值得关注的主题。" : "请从本命夫妻宫、命宫与福德宫的联系，解释关系模式和情感需求。",
+        "夫妻宫与夫官轴呈现怎样的相处需求和事业关系平衡？不要据此断言婚姻必然好坏。",
+        "在亲密关系中，我可能如何表达关心、处理分歧？哪些优点容易在压力下变成负担？",
+        horoscope ? "当前大限和流年对关系沟通有哪些支持、压力与触发条件？不推断必婚、必离或对方想法。" : "本命中哪些关系摩擦可能反复出现？请说明成立条件，而不是给伴侣贴标签。",
+        "家庭、金钱、社交与工作安排，哪些更可能牵动关系？请说明适合提前沟通的边界。",
+        `把${palaceName}作为补充，给出三条改善相处的实际做法，并指出仍需双方沟通确认的部分。`,
+      ],
+      wellbeing: [
+        "请只从传统盘面解释压力与生活状态倾向，不作医学诊断，不推断具体疾病。",
+        "福德、疾厄与命宫的关联，能提供哪些关于休息、情绪负担和生活节奏的观察线索？",
+        "哪些工作、关系或家庭责任可能成为压力来源？请说明盘面条件，避免把压力等同疾病。",
+        horoscope ? "当前大限与流年中，有哪些生活负担或节奏变化值得留意？只谈观察与调适，不作健康预测。" : "本命中有哪些容易透支或反复操心的倾向？请给出可在日常生活中核对的表现。",
+        "命盘中哪些支持结构可能有助于恢复与调节？请转化为休息、沟通和寻求支持的建议。",
+        `结合${palaceName}与身心议题的关联，区分可参考的生活建议和术数无法判断、应咨询专业人士的问题。`,
+      ],
+      decadal: [
+        "请说明当前十年大限的核心主线，并解释本命的哪些条件能承接、哪些条件会制约它。",
+        "大限命宫及其三方四正把重点放在哪些生活领域？请按重要性排序，不作逐星罗列。",
+        "大限四化把资源、责任、表现与牵挂带到哪里？请连同化星和所在宫位解释。",
+        "当前大限与本命有哪些相互支持或抵牾的结构？哪些看似机会的事也伴随代价？",
+        "已选流年怎样承接或触发当前大限？请区分十年的稳定主题和这一年的短期重点。",
+        `结合${palaceName}在本命中的基础作用，为当前大限提出三条阶段性安排，并说明需现实验证的条件。`,
+      ],
+      yearly: [
+        "请综合本命、大限与指定流年，给出这一年最值得关注的三件事，区分机会与压力。",
+        "指定流年的命宫及其三方四正，将注意力引向哪些生活领域？不要脱离本命承载条件。",
+        "流年四化分别触动哪些宫位和化星？请说明支持、制约与可能的现实观察点。",
+        "这一年的事业、财富和关系重点怎样相互牵动？哪些选择需要先处理资源或责任冲突？",
+        "请找出指定流年主要判断的反向证据，说明哪些条件不成立时应降低判断信心。",
+        `结合${palaceName}的本命基础，给出指定流年的行动优先级；未提供流月流日，不推断具体月日。`,
+      ],
+      conclusion: [
+        "请用白话概括全盘最重要的一个结论，说明它为何值得优先关注。",
+        "请各用一句话说明命盘中最能发挥的优势和最需管理的代价。",
+        "如果只抓三个生活重点，应怎样排列优先级？请保留简短依据。",
+        horoscope ? "请用简短结论区分当前大限主线与指定流年的触发重点。" : "请仅从本命给出简短建议，不推断尚未提供的运限。",
+        `关于${palaceName}，最值得记住的一条提醒是什么？请避免孤立判断。`,
+        "请给出现在能做的一项行动，并说明这个建议的适用条件和不确定性。",
+      ],
     }[mode];
-    return [
-      modeQuestion,
-      "请概括本命盘最突出的三项结构，并按重要性排序，逐项列出支持和制约证据。",
-      ...(horoscope ? [
-        "当前大限的核心主题是什么？请分别说明支持证据、制约因素和现实观察点。",
-        "当前流年最值得留意哪些领域？请区分机会、风险和触发条件。",
-      ] : [
-        "请从本命十二宫中找出最重要的两组相互支持结构，并说明成立条件。",
-        "请从本命盘找出最需要留意的制约结构，并给出可现实核对的观察点。",
-      ]),
-      `请结合${palaceName}及其三方四正，说明这个宫位在全盘${horoscope ? "和当前运限" : ""}中的位置。`,
-      "请检查最主要结论的反向证据，并说明哪些内容仍需现实验证。",
-    ];
   }
 
   function renderAiPresetQuestions() {
     const questions = aiPresetQuestions(state.snapshot, state.horoscope, state.selectedPalaceIndex, elements.aiMode.value);
-    const disabled = !state.snapshot || (!state.horoscope && ["decadal", "yearly"].includes(normalizeAiMode(elements.aiMode.value)));
+    const disabled = !state.snapshot || (!state.horoscope && (["decadal", "yearly"].includes(normalizeAiMode(elements.aiMode.value)) || normalizeAiStyle(elements.aiStyle.value) === "timing"));
     elements.aiPresetQuestions.innerHTML = questions.map((question, index) => `<button type="button" data-ai-preset="${index}"${disabled ? ' disabled title="该分析模式需要先查看目标运限"' : ""}>${escapeHtml(question.replace(/[？。]$/, ""))}</button>`).join("");
     elements.aiPresetQuestions.querySelectorAll("[data-ai-preset]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1144,12 +1262,15 @@
     const apiKey = elements.apiKey.value.trim();
     if (!apiKey) throw new Error("请先填写并保存 DeepSeek API Key。");
     if (!state.snapshot) throw new Error("请先排出本命盘。");
+    if (state.dirtyBirth) throw new Error("出生资料已修改，请先更新命盘，再进行 AI 解读。");
     const mode = normalizeAiMode(elements.aiMode.value);
+    const style = normalizeAiStyle(elements.aiStyle.value);
     const horoscope = state.horoscope;
     if (!horoscope && ["decadal", "yearly"].includes(mode)) throw new Error("当前分析模式需要先选择目标日期并点击“查看运限”。");
+    if (!horoscope && style === "timing") throw new Error("“运限重点”需要先选择目标日期并点击“查看运限”。");
     const record = createRecordIfNeeded();
     const evidence = buildAiEvidence(state.snapshot, horoscope, state.selectedPalaceIndex, mode);
-    const messages = buildAiMessages(question, record.aiHistory, state.snapshot, horoscope, state.selectedPalaceIndex, mode);
+    const messages = buildAiMessages(question, record.aiHistory, state.snapshot, horoscope, state.selectedPalaceIndex, mode, style);
     let answer = await requestAiCompletion(messages);
     let validation = validateAiAnswer(answer, evidence);
     if (!validation.valid) {
@@ -1167,6 +1288,7 @@
       question,
       answer,
       mode,
+      style,
       model: AI_MODEL,
       createdAt: now,
       horoscopeSnapshot: horoscope ? clone(horoscope) : null,
@@ -1192,7 +1314,7 @@
     }
     elements.conversation.innerHTML = history.map((turn, index) => `
       <details class="turn" data-turn-id="${escapeHtml(turn.id)}" ${state.collapsedTurns.has(`${record.id}:${turn.id}`) ? "" : "open"}>
-        <summary class="turn-question"><span class="turn-heading"><b>第 ${index + 1} 问</b><span class="turn-toggle"></span><button class="text-button turn-delete" type="button" data-delete-turn="${escapeHtml(turn.id)}">删除</button></span><small>${escapeHtml(turn.mode ? `分析模式 · ${aiModeLabel(turn.mode)} · ` : "问题 · ")}${escapeHtml(turn.horoscopeSnapshot?.targetSolarDate || "未选运限")}</small><strong>${escapeHtml(turn.question)}</strong></summary>
+        <summary class="turn-question"><span class="turn-heading"><b>第 ${index + 1} 问</b><span class="turn-toggle"></span><button class="text-button turn-delete" type="button" data-delete-turn="${escapeHtml(turn.id)}">删除</button></span><small>${escapeHtml(turn.mode ? `解读方向 · ${aiModeLabel(turn.mode)} · ` : "问题 · ")}${escapeHtml(turn.style ? `${aiStyleLabel(turn.style)} · ` : "")}${escapeHtml(turn.horoscopeSnapshot?.targetSolarDate || "未选运限")}</small><strong>${escapeHtml(turn.question)}</strong></summary>
         <div class="turn-answer"><small>${escapeHtml(turn.model)} · ${escapeHtml(formatDateTime(turn.createdAt))}</small>${Array.isArray(turn.formatWarning) && turn.formatWarning.length ? `<p class="ai-format-note" title="${escapeHtml(turn.formatWarning.join("；"))}">未完全按格式/依据不全，仅供参考</p>` : ""}${renderAiAnswer(normalizeAiAnswer(turn.answer), turn.evidenceRefs)}</div>
       </details>`).join("");
     elements.conversation.querySelectorAll("details[data-turn-id]").forEach((details) => {
@@ -1245,7 +1367,7 @@
     const query = elements.recordSearch.value.trim().toLowerCase();
     const records = filterRecords(state.records, query);
     if (!records.length) {
-      elements.recordList.innerHTML = `<p class="privacy-note">${query ? "没有匹配记录。" : "第一次调用 AI 时会自动建立记录。"}</p>`;
+      elements.recordList.innerHTML = `<p class="privacy-note">${query ? "没有匹配记录。" : "勾选“排盘后保存”或点击“保存命盘”后，命盘会显示在这里。"}</p>`;
       return;
     }
     elements.recordList.innerHTML = records.map((record) => `
@@ -1277,6 +1399,7 @@
   }
 
   function openRecord(recordId) {
+    if (aiBusy()) return;
     const record = state.records.find((item) => item.id === recordId);
     if (!record) return;
     state.currentRecordId = record.id;
@@ -1287,13 +1410,14 @@
     state.dirtyHoroscope = false;
     record.lastOpenedAt = new Date().toISOString();
     populateBirthForm(record.localBirthData || {});
-    if (state.horoscope) elements.targetDate.value = state.horoscope.targetDate;
+    if (state.horoscope) elements.targetDate.value = state.horoscope.targetSolarDate;
     saveRecords();
     renderSnapshot();
     setStatus(`已重新打开“${record.title}”。`, "success");
   }
 
   function deleteRecord(recordId) {
+    if (aiBusy()) return;
     const record = state.records.find((item) => item.id === recordId);
     if (!record || !window.confirm(`确定删除“${record.title}”及其全部问答？`)) return;
     const previous = state.records;
@@ -1305,9 +1429,12 @@
     if (state.currentRecordId === recordId) state.currentRecordId = null;
     renderRecords();
     renderConversation();
+    syncRecordControls();
   }
 
   function resetPage() {
+    if (aiBusy()) return;
+    if (state.snapshot && (!currentRecord() || state.dirtyBirth) && !window.confirm("当前有未保存的命盘或出生资料修改。确定放弃这些未保存内容并新建命盘？已保存记录不会删除。")) return;
     elements.birthForm.reset();
     elements.solarDate.value = "1990-01-01";
     elements.birthTime.value = "12:00";
@@ -1321,6 +1448,9 @@
     state.dirtyBirth = false;
     state.dirtyHoroscope = false;
     state.selectedLocation = null;
+    state.pendingBirthInput = null;
+    elements.aiQuestion.value = "";
+    elements.aiState.textContent = "";
     elements.locationSearch.value = "";
     selectLocation(null, false);
     syncConditionalFields();
@@ -1334,7 +1464,10 @@
     elements.inputState.className = "input-state";
     setStatus("请填写出生资料并点击“排出命盘”。修改输入不会自动改盘。", "");
     renderRecords();
+    renderConversation();
+    syncRecordControls();
     notifyView("reset");
+    elements.personLabel.focus();
   }
 
   elements.birthForm.addEventListener("submit", (event) => {
@@ -1372,6 +1505,9 @@
     }
   });
   elements.resetBirth.addEventListener("click", resetPage);
+  $("newBirth").addEventListener("click", resetPage);
+  $("saveBirth").addEventListener("click", saveCurrentChart);
+  $("entrySave").addEventListener("click", saveCurrentChart);
   elements.targetDate.addEventListener("input", () => {
     if (!state.horoscope) return;
     state.dirtyHoroscope = true;
@@ -1387,15 +1523,20 @@
     elements.timeConfirmDialog.close();
     buildFromForm(true);
   });
+  $("openApiKey").addEventListener("click", () => { $("apiKeyStatus").textContent = ""; $("apiKeyDialog").showModal(); });
+  $("closeApiKey").addEventListener("click", () => $("apiKeyDialog").close());
   elements.saveApiKey.addEventListener("click", () => {
     try {
       localStorage.setItem(API_KEY_STORAGE, elements.apiKey.value.trim());
+      $("apiKeyDialog").close();
       setStatus("DeepSeek API Key 已保存到当前浏览器，不会导出。", "success");
     } catch (error) {
+      $("apiKeyStatus").textContent = `API Key 保存失败：${error.message}`;
       setStatus(`API Key 保存失败：${error.message}`, "error");
     }
   });
   elements.aiMode.addEventListener("change", renderAiPresetQuestions);
+  elements.aiStyle.addEventListener("change", renderAiPresetQuestions);
   elements.aiForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const question = elements.aiQuestion.value.trim();
@@ -1443,6 +1584,8 @@
     LOCATIONS,
     anonymousNatal,
     normalizeAiMode,
+    normalizeAiStyle,
+    aiStyleLabel,
     aiModeLabel,
     buildAiEvidence,
     buildAiMessages,

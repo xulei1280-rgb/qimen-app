@@ -283,7 +283,7 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="ziwei-engine.js?v=20261102.1"') && html.includes('src="ziwei-page.js?v=20261102.4"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="ziwei-engine.js?v=20261102.1"') && html.includes('src="ziwei-page.js?v=20261102.9"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
@@ -293,6 +293,8 @@ function runPageContracts() {
   assert(html.includes('src="deepseek-client.js?v=20260817.1"') && pageSource.includes("window.DeepSeekClient.requestFinal"), "紫微 AI 未使用共享最终回答兜底");
   assert(pageSource.includes("const AI_MODEL = window.DeepSeekClient.MODEL"), "紫微 AI 模型未使用共享配置");
   assert(pageSource.includes('const STORAGE_KEY = "ziwei_records_v1"'), "记录存储键错误");
+  assert(html.includes('id="autoSaveBuild"') && html.includes('id="newBirth"') && html.includes('id="entrySave"'), "缺少自动保存、新建或手动保存命盘入口");
+  assert(html.includes('id="personLabel"') && !html.includes('id="entryMore"') && !html.includes('class="zw-more"'), "出生资料仍有更多选项折叠层");
   assert(!html.includes('id="exportRecords"') && !html.includes('id="importRecords"'), "记录区仍有导入导出入口");
   assert(pageSource.includes('<details class="turn"') && pageSource.includes('<summary class="turn-question">') && pageSource.includes('state.collapsedTurns'), "AI 回答缺少原生折叠及会话内状态保持");
   assert(pageSource.includes('data-delete-turn=') && pageSource.includes('event.stopPropagation()') && pageSource.includes('if (!saveRecords()) Object.assign(record, previous)'), "AI 删除入口或存储失败回滚缺失");
@@ -302,6 +304,7 @@ function runPageContracts() {
   assert(html.includes('id="locationSearch"') && html.includes('id="solarPreview"'), "真太阳时地点选择或预览缺失");
   assert(html.includes('id="aiPresetQuestions"') && html.includes(".ai-preset-list"), "AI 预设问法界面缺失");
   assert(html.includes('id="aiMode"') && ["comprehensive", "natal", "career", "wealth", "relationship", "wellbeing", "decadal", "yearly", "conclusion"].every((mode) => html.includes(`value="${mode}"`)), "AI 分析模式不完整");
+  assert(html.includes('id="openApiKey"') && html.includes('<dialog id="apiKeyDialog"') && !html.includes('<details class="zw-ai-settings"') && !html.includes('id="aiModeSummary"'), "AI 设置仍折叠或缺少右上角 Key 设置弹窗");
   assert(pageSource.includes('elements.aiQuestion.value = questions[') && !pageSource.includes('button.addEventListener("click", () => askAi'), "AI 预设问法应只填充输入框而不自动发送");
   assert(pageSource.includes('elements.aiMode.addEventListener("change", renderAiPresetQuestions)') && !pageSource.includes('elements.aiMode.addEventListener("change", buildFromForm'), "切换 AI 模式不应重新排盘");
   assert(pageSource.includes("data-evidence-palace") && pageSource.includes("selectPalace(palaceIndex)"), "AI 证据不能定位回命盘宫位");
@@ -403,7 +406,28 @@ function runPageContracts() {
   }
   assert(pageTest.normalizeAiMode("yearly") === "yearly" && pageTest.normalizeAiMode("invalid") === "comprehensive", "AI 分析模式合法化错误");
   assert(pageTest.aiModeLabel("comprehensive") === "综合总览", "AI 分析模式标签错误");
+  assert(html.includes('id="aiStyle"') && pageTest.normalizeAiStyle("invalid") === "brief", "AI 解读方式或默认值缺失");
+  for (const style of ["brief", "detail", "conclusion", "palaces", "timing"]) {
+    const messages = pageTest.buildAiMessages("事业和感情一起看", [], snapshot, horoscopeForAi, soulIndex, "career", style);
+    const context = JSON.parse(messages[1].content.split("\n").slice(1).join("\n"));
+    assert(context.readingStyle.id === style && context.analysisMode.id === "career", "解读方向与方式未独立发送");
+    assert(messages.at(-1).content.includes(pageTest.aiStyleLabel(style)), "解读方式未影响最终请求");
+    assert(messages[0].content.includes("六个标题") && messages[0].content.includes("不限制用户同时询问多个生活领域"), "解读方式破坏证据结构或全盘合参边界");
+  }
   const presetQuestions = pageTest.aiPresetQuestions(snapshot, horoscopeForAi, soulIndex, "comprehensive");
+  const directions = ["comprehensive", "natal", "career", "wealth", "relationship", "wellbeing", "decadal", "yearly"];
+  for (const timing of [null, horoscopeForAi]) {
+    const seen = new Set();
+    for (const direction of directions) {
+      const questions = pageTest.aiPresetQuestions(snapshot, timing, soulIndex, direction);
+      assert(questions.length === 6 && new Set(questions).size === 6, `${direction} 缺少六个独立问法`);
+      for (const question of questions) {
+        assert(!seen.has(question), `${direction} 仍复用其他方向的预设问法`);
+        seen.add(question);
+      }
+      assert(!JSON.stringify(questions).includes(snapshot.input.sourceDate) && !JSON.stringify(questions).includes(snapshot.input.clockTime), `${direction} 问法泄露出生资料`);
+    }
+  }
   assert(presetQuestions.length === 6 && presetQuestions.some((question) => question.includes("整张命盘")) && presetQuestions.some((question) => question.includes("当前大限")) && presetQuestions.some((question) => question.includes("当前流年")), "AI 预设问法没有覆盖全盘、本命、大限和流年");
   assert(presetQuestions.some((question) => question.includes("命宫") && question.includes("三方四正")), "AI 预设问法没有跟随所选宫位");
   assert(!JSON.stringify(presetQuestions).includes(snapshot.input.sourceDate) && !JSON.stringify(presetQuestions).includes(snapshot.input.clockTime), "AI 预设问法泄露原始出生资料");

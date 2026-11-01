@@ -181,11 +181,11 @@
     const UI = root.PremiumUI || null;
     const els = {
       main: $("main"), status: $("statusBanner"), entryCard: $("entryCard"), entryBody: $("entryBody"), entrySummary: $("entrySummary"),
-      entrySummaryText: $("entrySummaryText"), entryEdit: $("entryEdit"), entryMore: $("entryMore"), personLabel: $("personLabel"),
+      entrySummaryText: $("entrySummaryText"), entryEdit: $("entryEdit"), personLabel: $("personLabel"),
       overview: $("zwOverview"), tabs: $("zwTabs"), layers: $("zwLayers"), legend: $("zwLegend"), grid: $("chartGrid"),
       viewport: $("chartViewport"), chartPanel: $("chartPanel"), detailCard: $("detailCard"), flyDetail: $("zwFlyDetail"),
       sheetPrev: $("sheetPrev"), sheetNext: $("sheetNext"), sheetClose: $("sheetClose"), timeline: $("zwTimeline"),
-      targetDate: $("targetDate"), horoscopeButton: $("horoscopeButton"), aiMode: $("aiMode"), aiModeSummary: $("aiModeSummary"),
+      targetDate: $("targetDate"), horoscopeButton: $("horoscopeButton"),
       infoBtn: $("zwInfoBtn"), info: $("zwInfo"), emptyState: $("emptyState"),
     };
     if (!els.grid || !els.main) return;
@@ -597,12 +597,7 @@
     }
     if (root.ResizeObserver) new root.ResizeObserver(() => draw(false)).observe(els.grid);
 
-    /* AI 设置摘要 */
-    const syncMode = () => { if (els.aiMode && els.aiModeSummary) els.aiModeSummary.textContent = els.aiMode.options[els.aiMode.selectedIndex]?.text || ""; };
-    if (els.aiMode) els.aiMode.addEventListener("change", syncMode);
-    syncMode();
-
-    if (UI) UI.smoothDetails(".zw-more,.zw-ai-settings,.zw-footer,.key-box");
+    if (UI) UI.smoothDetails(".zw-footer");
 
     /* 接收 ziwei-page.js 广播 */
     root.addEventListener("ziwei:view", (event) => {

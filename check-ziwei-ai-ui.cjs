@@ -23,6 +23,38 @@ const {chromium} = require('C:/Users/Administrator/.cache/codex-runtimes/codex-p
       await page.locator('[data-zw-tab="ai"]').click();
     }
     await openRecord();
+    const savedBefore=await page.evaluate(()=>localStorage.getItem('ziwei_records_v1'));
+    assert.ok(await page.locator('#aiStyle').isVisible());
+    assert.equal(await page.locator('#aiPanel .rule-chip').count(),0,'remove model badge from header');
+    const buttonColor=await page.locator('#openApiKey').evaluate(e=>getComputedStyle(e).backgroundColor);
+    assert.notEqual(buttonColor,'rgba(0, 0, 0, 0)','API button needs visible fill');
+    const usedPresets=new Set();
+    for(const direction of ['comprehensive','natal','career','wealth','relationship','wellbeing','decadal','yearly']) {
+      await page.locator('#aiMode').selectOption(direction);
+      const questions=await page.locator('#aiPresetQuestions button').allTextContents();
+      assert.equal(questions.length,6);
+      for(const question of questions){assert.ok(!usedPresets.has(question));usedPresets.add(question)}
+      await page.locator('#aiPresetQuestions button').nth(5).click();
+      assert.equal(await page.locator('#aiQuestion').inputValue(),(await page.locator('#aiPresetQuestions button').nth(5).innerText())+'。');
+    }
+    assert.equal(await page.locator('#aiSettings').evaluate(e=>e.tagName),'DIV');
+    assert.equal(await page.locator('#apiKey').isVisible(),false);
+    await page.locator('#openApiKey').click();
+    assert.ok(await page.locator('#apiKeyDialog').isVisible());
+    await page.locator('#apiKey').fill('test-local-key');
+    await page.locator('#saveApiKey').click();
+    assert.equal(await page.locator('#apiKeyDialog').isVisible(),false);
+    assert.equal(await page.evaluate(()=>localStorage.getItem('qimen_deepseek_api_key')),'test-local-key');
+    await page.locator('#openApiKey').click();await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#apiKeyDialog').isVisible(),false);
+    assert.equal(await page.locator('#openApiKey').evaluate(e=>e===document.activeElement),true);
+    for(const style of ['detail','conclusion','palaces','timing','brief']) {
+      await page.locator('#aiStyle').selectOption(style);
+      const label=await page.locator('#aiStyle option:checked').innerText();
+      assert.ok(label.length>0);
+    }
+    await page.locator('#aiMode').selectOption('career');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('ziwei_records_v1')),savedBefore,'settings must not recalculate or alter saved records');
     const first=page.locator('details[data-turn-id="turn-1"]');
     assert.equal(await first.getAttribute('open'),'');
     await first.locator('summary').focus(); await page.keyboard.press('Enter');
@@ -48,6 +80,10 @@ const {chromium} = require('C:/Users/Administrator/.cache/codex-runtimes/codex-p
     await page.waitForTimeout(50);
     assert.equal(await page.locator('.turn-answer').isVisible(),false);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    assert.ok(await page.locator('#aiMode').isVisible());
+    await page.locator('#openApiKey').click();assert.ok(await page.locator('#apiKeyDialog').isVisible());
+    assert.ok(await page.locator('#apiKeyDialog').evaluate(e=>e.getBoundingClientRect().width<=innerWidth));
+    await page.locator('#closeApiKey').click();
     assert.deepEqual(errors,[]);
     console.log('PASS AI UI: keyboard fold/unfold, rerender state, cancel/delete/persist, quota rollback, removed import/export, mobile; no AI request.');
   } finally { await browser.close(); }
