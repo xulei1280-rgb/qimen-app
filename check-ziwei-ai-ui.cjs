@@ -1,13 +1,13 @@
 // Isolated browser storage; never reads the user's existing records or calls AI.
 const assert = require('node:assert/strict');
-const {chromium} = require('C:/Users/Administrator/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {chromium, launchOptions, url} = require('./check-playwright-env.cjs');
 (async () => {
-  const browser = await chromium.launch({channel:'msedge',headless:true});
+  const browser = await chromium.launch(launchOptions);
   try {
     const page = await browser.newPage({viewport:{width:1440,height:1000}});
     const errors=[]; page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api.deepseek.com/**',r=>r.abort());
-    await page.goto(process.argv[2] || 'http://127.0.0.1:8084/ziwei.html');
+    await page.goto(process.argv[2] || url('ziwei.html'));
     await page.evaluate(() => {
       const snapshot=ZiweiEngine.buildNatal({calendarType:'solar',date:'1993-07-14',time:'08:20',gender:'male',timeBasis:'beijing'});
       const horoscope=ZiweiEngine.getHoroscope(snapshot,'2026-11-02');

@@ -318,6 +318,9 @@ assert(html.includes('<details id="entryPanel"'), 'input editor should be a coll
 assert(html.includes('data-view="basic"'), 'result layer should expose a basic information tab');
 assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'buildBazi should enter the result layer after charting');
 assert(/function buildBazi\(\)[\s\S]*autoSaveBuild[\s\S]*saveBaziRecord/.test(html), 'buildBazi should auto-save when the checkbox is enabled');
+assert(/id="autoSaveBuild" type="checkbox" checked/.test(html), 'auto-save should default on');
+assert(/id="useTrueSolar" type="checkbox" onchange=/.test(html) && html.includes('时间校对：'), 'true solar correction should default off and have an explanatory label');
+assert(html.includes('id="birthLocationField"') && html.includes('locationField.hidden=!enabled'), 'birth address should only be shown for true solar time');
 assert(/function buildBazi\(\)[\s\S]*editingActiveRecord[\s\S]*saveBaziRecord/.test(html), 'editing a saved bazi should sync the saved record after rebuilding');
 assert(html.includes('修改时间和地址') && html.includes('onclick="editCurrentBaziInput()"'), 'basic info should expose an edit time/location action');
 assert(!html.includes('id="personName" type="text" value="测试"'), 'bazi name input should not default to 测试');

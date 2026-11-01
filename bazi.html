@@ -82,6 +82,7 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .entry-card[open] summary::after{content:'收起'}
 .basic-dashboard{display:grid;gap:16px;margin-bottom:16px}
 .field{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:center;margin-bottom:18px}
+#birthLocationField[hidden]{display:none!important}
 .field>label{font-size:15px;color:#222}
 .field input[type=text],.display-field,.editor-panel input,.editor-panel select,.ai-controls textarea,.ai-controls select,.ai-followup textarea{
   width:100%;
@@ -703,6 +704,8 @@ h1{font-family:"Noto Serif CJK SC","Source Han Serif SC","Songti SC",SimSun,seri
 .segmented input{margin:0}
 .options{gap:20px;margin:24px 0 12px 96px;flex-wrap:wrap;font-size:13px;color:var(--ink)}
 .options label{min-height:36px;cursor:pointer}
+.options-label{align-self:center;color:var(--muted)}
+.option-save{margin-left:auto}
 .solar-preview{margin-left:96px;font-size:12px;color:var(--muted);line-height:1.9;background:#f6f8f3;padding:12px 14px;border-radius:6px}
 .solar-preview b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .build-btn{margin:24px 0 0 96px;width:calc(100% - 96px);min-height:50px;border-radius:6px;background:var(--black);color:#fff;font-size:15px;font-weight:600}
@@ -931,7 +934,13 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
       <div id="timeEditor" class="editor-panel" hidden></div>
     </div>
 
-    <div class="field">
+    <div class="options">
+      <span class="options-label">时间校对：</span>
+      <label><input id="useTrueSolar" type="checkbox" onchange="refreshSolarPreview()"> 真太阳时</label>
+      <label class="option-save"><input id="autoSaveBuild" type="checkbox" checked> 排盘后保存</label>
+    </div>
+
+    <div class="field" id="birthLocationField" hidden>
       <label>出生地址</label>
       <button id="birthLocationDisplay" class="display-field" type="button" aria-label="编辑出生地址" aria-controls="locationPanel" aria-expanded="false" onclick="toggleLocationPanel()">云南省 曲靖市 麒麟区</button>
       <div id="locationPanel" class="editor-panel" hidden>
@@ -948,17 +957,12 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
       </div>
     </div>
 
-    <div class="options">
-      <label><input id="useTrueSolar" type="checkbox" checked onchange="refreshSolarPreview()"> 真太阳时</label>
-      <label><input id="autoSaveBuild" type="checkbox"> 排盘后保存</label>
-    </div>
-
     <div id="solarPreview" class="solar-preview"></div>
     <button id="btnBuild" class="build-btn" type="button" onclick="buildBazi()">开始排盘</button>
     </div><aside class="entry-guide" aria-label="排盘使用说明">
       <h2>使用顺序</h2>
       <ol>
-        <li><b>确认出生信息</b><p>填写出生时间与地点，姓名可以留空。</p></li>
+        <li><b>确认出生信息</b><p>填写出生时间，姓名可以留空；勾选真太阳时后核对出生地点。</p></li>
         <li><b>查看四柱与格局</b><p>先读主要结论，再按需展开完整判断依据。</p></li>
         <li><b>继续看岁运与分析</b><p>切换大运流年，或进入 AI 分析继续提问。</p></li>
       </ol>
@@ -1268,11 +1272,20 @@ function getUsedTime(){
   return {input:input,used:enabled?addMinutes(input,correction):input,correction:correction,longitudeCorrection:longitudeCorrection,equationCorrection:equationCorrection,enabled:enabled,location:selectedLocation};
 }
 function refreshSolarPreview(){
+  var enabled=document.getElementById('useTrueSolar').checked;
+  var locationField=document.getElementById('birthLocationField');
+  if(locationField)locationField.hidden=!enabled;
+  if(!enabled){
+    var panel=document.getElementById('locationPanel');
+    if(panel)panel.hidden=true;
+    var trigger=document.getElementById('birthLocationDisplay');
+    if(trigger)trigger.ariaExpanded='false';
+  }
   if(!document.getElementById('birthYear'))return;
   var data=getUsedTime();
   document.getElementById('solarPreview').innerHTML=data.enabled
     ? '真太阳时：<strong>'+formatTime(data.used)+'</strong><br>'+formatSolarCorrection(data)+'<br>地址经纬：'+locationCoordText(data.location)
-    : '未启用真太阳时，将按输入时间排盘<br>地址经纬：'+locationCoordText(data.location);
+    : '未启用真太阳时，将按输入时间排盘';
 }
 function resetBaziFormToNow(){
   var now=new Date();
@@ -1285,7 +1298,7 @@ function resetBaziFormToNow(){
   document.getElementById('birthMinute').value=now.getMinutes();
   selectedLocation=LOCATIONS[1];
   document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
-  document.getElementById('useTrueSolar').checked=true;
+  document.getElementById('useTrueSolar').checked=false;
   refreshBirthTimeDisplay();
 }
 function fillBaziFormFromData(data){

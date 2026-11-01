@@ -5,6 +5,8 @@ const html = fs.readFileSync('index.html', 'utf8');
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+assert(['年','月','日','时','分'].every(unit=>html.includes('<span>'+unit+'</span>')), 'Qimen date/time controls should expose visible units');
+assert((html.match(/class="qm-time-field"/g)||[]).length===5, 'Qimen date/time controls should use five consistent labeled fields');
 
 assert(html.includes('<textarea rows="2" placeholder="输入你想问的事情..." id="question"'), 'main Qimen question should support multi-line entry');
 assert(html.includes('<textarea id="followupQuestion" rows="2"'), 'Qimen follow-up question should support multi-line entry');

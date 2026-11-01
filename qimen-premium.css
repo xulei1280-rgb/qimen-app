@@ -146,8 +146,20 @@ input[type=checkbox]{accent-color:var(--pm-gold-deep);width:16px;height:16px}
   pointer-events:none;opacity:0;
 }
 .pm-tab-ink.pm-ready{transition:transform .5s var(--pm-ease),width .5s var(--pm-ease),opacity .3s}
-.qm-date-grid{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:8px}
-.qm-time-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.qm-date-grid,.qm-time-grid{display:grid;gap:0;padding:3px;background:#fffefb;border:1px solid var(--pm-line-strong);border-radius:10px;overflow:hidden}
+.qm-date-grid{grid-template-columns:1.25fr 1fr 1fr}
+.qm-time-grid{grid-template-columns:1fr 1fr}
+.qm-time-field{position:relative;display:flex;align-items:center;gap:2px;min-width:0;padding:0 5px;color:var(--pm-muted);font-size:12px;border-radius:6px;cursor:pointer}
+.qm-time-field:hover,.qm-time-field:focus-within{background:var(--pm-gold-wash)}
+.qm-time-field>span{order:1;flex:none}
+.qm-time-field:has(select)::after{content:"⌄";order:2;flex:none;color:var(--pm-gold-deep);font-size:12px}
+/* select 铺满整格，单位和箭头不拦截点击：点格子任意处都能打开下拉 */
+.qm-time-field:has(select){justify-content:flex-end;min-height:36px}
+.qm-time-field>span,.qm-time-field::after{pointer-events:none}
+.qm-time-field>input,.qm-time-field>select{flex:1;box-sizing:border-box;width:0;height:36px;min-height:36px;margin:0;padding:4px 0;border:0;border-radius:4px;background:transparent;background-image:none;box-shadow:none;font-family:var(--pm-sans);font-size:16px;line-height:24px;font-variant-numeric:tabular-nums;text-align:center;text-align-last:center;appearance:none;cursor:pointer}
+.qm-time-field>input{appearance:textfield;cursor:text}
+.qm-time-field>select{position:absolute;inset:0;width:100%;height:100%;padding:0 28px 0 5px}
+.qm-time-field>input::-webkit-inner-spin-button,.qm-time-field>input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .qm-shift{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:6px}
 .qm-shift button,.solar-bar button,.bazi-link button,.qm-ghost{
   min-height:40px;padding:6px 10px;
@@ -577,7 +589,6 @@ input[type=checkbox]{accent-color:var(--pm-gold-deep);width:16px;height:16px}
   .status-chip{font-size:11px;padding:2px 9px;min-height:26px}
 }
 @media (max-width:360px){
-  .qm-date-grid{grid-template-columns:1.2fr 1fr 1fr}
   .qm-shift button{font-size:12px;padding:6px 4px}
 }
 @media (hover:none){

@@ -1,13 +1,13 @@
 // Isolated browser context: no user's records or AI requests.
 const assert=require('node:assert/strict');
-const {chromium}=require('C:/Users/Administrator/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const {chromium,launchOptions,url}=require('./check-playwright-env.cjs');
 (async()=>{
-  const browser=await chromium.launch({channel:'msedge',headless:true});
+  const browser=await chromium.launch(launchOptions);
   try {
     const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     await page.route('**/api.deepseek.com/**',r=>r.abort());
-    await page.goto(process.argv[2]||'http://127.0.0.1:8084/ziwei.html');
+    await page.goto(process.argv[2]||url('ziwei.html'));
     const records=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('ziwei_records_v1')||'[]'));
     const submit=()=>page.locator('#birthForm button[type="submit"]').click();
     assert.ok(await page.locator('#personLabel').isVisible());
