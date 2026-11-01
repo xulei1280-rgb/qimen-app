@@ -4,840 +4,217 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
 <title>奇门遁甲 - 时家转盘排盘</title>
-<style>
-:root{
-  --bg:#eef1ea;
-  --paper:#fffdf7;
-  --paper-2:#f8f2e6;
-  --ink:#27221b;
-  --muted:#736b60;
-  --line:#d3bd91;
-  --line-strong:#b88849;
-  --cinnabar:#9b2f22;
-  --jade:#236b58;
-  --lapis:#2d557c;
-  --violet:#7a45a3;
-  --gold:#a96f28;
-  --shadow:0 18px 45px rgba(61,42,18,.14);
-  --soft-shadow:0 8px 22px rgba(61,42,18,.09);
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{background:var(--bg)}
-body{
-  font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif;
-  color:var(--ink);
-  min-height:100vh;
-  display:grid;
-  grid-template-columns:minmax(700px,760px) 310px;
-  justify-content:center;
-  align-items:start;
-  gap:28px;
-  padding:28px 24px 42px;
-  background:
-    radial-gradient(circle at 12% 10%,rgba(35,107,88,.14),transparent 28%),
-    radial-gradient(circle at 88% 18%,rgba(155,47,34,.10),transparent 26%),
-    linear-gradient(135deg,rgba(45,85,124,.08),transparent 38%),
-    var(--bg);
-}
-body:before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:
-    repeating-linear-gradient(90deg,rgba(39,34,27,.028),rgba(39,34,27,.028) 1px,transparent 1px,transparent 5px),
-    repeating-linear-gradient(0deg,rgba(255,255,255,.35),rgba(255,255,255,.35) 1px,transparent 1px,transparent 7px);
-  mix-blend-mode:multiply;
-  opacity:.45;
-}
-.main-area{
-  position:relative;
-  z-index:1;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  min-width:452px;
-  width:100%;
-  padding:2px 0 0;
-}
-h1{
-  font-size:34px;
-  margin-bottom:1px;
-  color:var(--cinnabar);
-  letter-spacing:8px;
-  text-shadow:0 1px 0 rgba(255,255,255,.8);
-}
-.subtitle{
-  color:var(--muted);
-  font-size:12px;
-  letter-spacing:2px;
-  margin-bottom:18px;
-}
-.page-switch{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  margin-bottom:12px;
-  padding:6px 12px;
-  border:1px solid rgba(169,111,40,.34);
-  border-radius:999px;
-  background:rgba(255,253,247,.76);
-  color:#70481a;
-  text-decoration:none;
-  font-size:12px;
-  font-weight:bold;
-  box-shadow:0 6px 16px rgba(61,42,18,.07);
-}
-.page-switch:hover{background:#fffaf0;border-color:var(--line-strong)}
-.page-actions{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  flex-wrap:wrap;
-  margin-bottom:12px;
-}
-.module-nav{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
-.page-actions .page-switch{margin-bottom:0}
-.page-switch[aria-current="page"]{color:#fff;background:#70481a;border-color:#70481a}
-.display-mode{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  padding:2px;
-  border:1px solid rgba(169,111,40,.34);
-  border-radius:999px;
-  background:rgba(255,253,247,.76);
-  box-shadow:0 6px 16px rgba(61,42,18,.07);
-}
-.display-mode button{
-  min-width:50px;
-  min-height:26px;
-  border:0;
-  border-radius:999px;
-  background:transparent;
-  color:#70481a;
-  cursor:pointer;
-  font-size:12px;
-  font-weight:bold;
-}
-.display-mode button.active{background:#74301f;color:#fffdf7}
-body:not([data-display-mode="professional"]) .professional-only{display:none!important}
-body[data-display-mode="professional"] .standard-only{display:none!important}
-.reading-guide{
-  margin:10px 0;
-  padding:10px;
-  border:1px solid var(--line);
-  border-radius:6px;
-  background:#fffaf0;
-  color:#544534;
-  font-size:12px;
-  line-height:1.7;
-}
-.reading-guide h4{margin:0 0 6px;color:#963222;font-size:13px}
-.reading-guide p{margin:4px 0}
-.reading-guide strong{color:#7f2b20}
-.reasoning-chain{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
-.reasoning-chain span{padding:3px 6px;border:1px solid #e1cda8;border-radius:5px;background:#fffdf7;color:#70481a;font-weight:bold}
-
-.time-bar{
-  width:min(100%,720px);
-  display:flex;
-  gap:7px;
-  align-items:center;
-  flex-wrap:wrap;
-  justify-content:center;
-  margin-bottom:16px;
-  background:linear-gradient(180deg,rgba(255,253,247,.96),rgba(248,242,230,.96));
-  padding:12px 16px;
-  border:1px solid var(--line);
-  border-radius:6px;
-  box-shadow:var(--soft-shadow);
-}
-.time-bar button{
-  background:#fffaf0;
-  color:var(--ink);
-  border:1px solid var(--line);
-  min-height:30px;
-  padding:5px 9px;
-  border-radius:5px;
-  cursor:pointer;
-  font-weight:700;
-  font-size:12px;
-  transition:background .16s ease,border-color .16s ease,transform .16s ease;
-}
-.time-bar button:hover{background:#f4ead8;border-color:var(--line-strong);transform:translateY(-1px)}
-.time-bar button.primary{
-  background:linear-gradient(180deg,#9f3a27,#74301f);
-  color:#fffdf7;
-  border-color:#74301f;
-  padding:6px 15px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.22);
-}
-.time-bar button.primary:hover{background:linear-gradient(180deg,#b5432d,#7b311f)}
-.time-bar select,.time-bar input{
-  background:#fffdf8;
-  color:var(--ink);
-  border:1px solid var(--line);
-  min-height:30px;
-  padding:5px 7px;
-  border-radius:5px;
-  font-size:13px;
-  outline:none;
-}
-.person-input{width:88px}
-.time-bar select:focus,.time-bar input:focus,.question-bar textarea:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.14)}
-.cal-tabs{display:flex;gap:0}
-.cal-tab{
-  padding:6px 14px;
-  cursor:pointer;
-  font-size:12px;
-  background:#ece3d1;
-  color:#6f5840;
-  border:1px solid var(--line);
-  transition:background .16s ease,color .16s ease;
-}
-.cal-tab:first-child{border-radius:5px 0 0 5px}
-.cal-tab:last-child{border-radius:0 5px 5px 0}
-.cal-tab.active{background:var(--cinnabar);color:#fffdf7;font-weight:bold;border-color:var(--cinnabar)}
-
-.solar-bar{
-  width:min(100%,720px);
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:center;
-  gap:7px;
-  margin:-8px auto 14px;
-  padding:8px 12px;
-  border:1px solid rgba(169,111,40,.25);
-  border-radius:6px;
-  background:rgba(255,253,247,.58);
-  color:#51483d;
-  font-size:12px;
-}
-.solar-bar label{display:inline-flex;align-items:center;gap:5px;font-weight:bold;color:var(--jade)}
-.solar-bar input[type="checkbox"]{accent-color:var(--jade)}
-.solar-bar input[type="number"],.solar-bar select{
-  min-height:28px;
-  border:1px solid var(--line);
-  border-radius:5px;
-  background:#fffdf8;
-  color:var(--ink);
-  padding:4px 7px;
-  font-size:12px;
-}
-.solar-bar input[type="number"]{width:92px}
-.solar-bar button{
-  min-height:28px;
-  border:1px solid var(--line);
-  border-radius:5px;
-  background:#fffaf0;
-  color:#5c4731;
-  padding:4px 8px;
-  cursor:pointer;
-  font-size:12px;
-  font-weight:bold;
-}
-.solar-bar button:hover{background:#f4ead8;border-color:var(--line-strong)}
-.solar-preview{color:#735f4a}
-.bazi-link{
-  width:min(100%,720px);margin:-8px auto 14px;padding:0 12px 10px;
-  border:1px solid rgba(45,111,91,.28);border-radius:6px;background:rgba(255,253,247,.66);font-size:12px;color:#51483d;
-}
-.bazi-link summary{padding:9px 0;cursor:pointer;font-weight:bold;color:var(--jade)}
-.bazi-link summary span{margin-left:6px;color:#8b7355;font-weight:normal}
-.bazi-link-tools,.bazi-link-form{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
-.bazi-link select,.bazi-link input{min-height:30px;box-sizing:border-box;border:1px solid var(--line);border-radius:5px;background:#fffdf8;color:var(--ink);padding:4px 7px;font-size:12px}
-.bazi-link select{flex:1;min-width:180px}.bazi-link input[type="number"]{width:98px}.bazi-link input[type="text"]{min-width:100px}
-.bazi-link button{min-height:30px;border:1px solid var(--line);border-radius:5px;background:#fffaf0;color:#5c4731;padding:4px 8px;cursor:pointer;font-size:12px;font-weight:bold}
-.bazi-link button:hover{background:#f4ead8;border-color:var(--line-strong)}
-.bazi-link-summary{margin-top:8px;padding-top:7px;border-top:1px dashed rgba(169,111,40,.3);line-height:1.6;color:#735f4a}
-.bazi-link-form{margin-top:8px;padding-top:8px;border-top:1px dashed rgba(169,111,40,.3)}
-.bazi-link-form label{display:inline-flex;align-items:center;gap:4px;color:#5c4731}.bazi-link-form .wide{flex:1;min-width:180px}
-
-.status-strip{
-  width:444px;
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin:-4px auto 14px;
-  justify-content:center;
-}
-.status-chip{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-  min-height:26px;
-  padding:4px 8px;
-  background:rgba(255,253,247,.82);
-  border:1px solid rgba(169,111,40,.26);
-  border-radius:5px;
-  color:#51483d;
-  font-size:11px;
-  box-shadow:0 4px 12px rgba(61,42,18,.06);
-}
-.status-chip strong{color:var(--cinnabar)}
-.status-chip.warn{color:#855e16;background:#fff8df;border-color:#d8b35c}
-.plate-freshness{
-  width:444px;
-  margin:-6px auto 12px;
-  padding:8px 10px;
-  border:1px solid #d8b35c;
-  border-radius:5px;
-  background:#fff8df;
-  color:#755212;
-  text-align:center;
-  font-size:12px;
-  font-weight:bold;
-}
-
-.board-wrap{
-  position:relative;
-  width:444px;
-  height:444px;
-  margin:0 auto 14px;
-  padding:0;
-  filter:drop-shadow(0 18px 28px rgba(61,42,18,.10));
-}
-.board-wrap:before{
-  content:"";
-  position:absolute;
-  inset:-13px;
-  border:1px solid rgba(169,111,40,.34);
-  background:rgba(255,253,247,.34);
-  border-radius:8px;
-  z-index:-1;
-}
-.board-empty-tip{
-  position:absolute;
-  inset:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  pointer-events:none;
-  z-index:3;
-  color:#7b6248;
-  font-size:14px;
-  font-weight:bold;
-  text-shadow:0 1px 0 rgba(255,255,255,.9);
-}
-.board-empty-tip[hidden]{display:none}
-.palace{
-  position:absolute;
-  width:140px;
-  height:140px;
-  background:
-    linear-gradient(180deg,rgba(255,253,247,.98),rgba(247,241,229,.95)),
-    radial-gradient(circle at 50% 45%,rgba(35,107,88,.04),transparent 58%);
-  border:2px solid var(--line);
-  border-radius:5px;
-  cursor:pointer;
-  transition:border-color .16s ease,box-shadow .16s ease,transform .16s ease,background .16s ease;
-  overflow:hidden;
-}
-.palace:hover{border-color:var(--gold);box-shadow:0 10px 22px rgba(112,72,26,.17);transform:translateY(-2px);z-index:2}
-.palace.selected{border-color:var(--cinnabar);box-shadow:0 0 0 3px rgba(155,47,34,.13),0 14px 28px rgba(155,47,34,.16);background:#fff8f2}
-
-.palace-dir{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:70px;font-weight:bold;pointer-events:none;z-index:0;line-height:1}
-#p1 .palace-dir{color:rgba(50,120,220,0.10)}  /* 坎·水·蓝 */
-#p2 .palace-dir{color:rgba(140,90,40,0.10)}   /* 坤·土·棕 */
-#p3 .palace-dir{color:rgba(40,140,60,0.10)}   /* 震·木·绿 */
-#p4 .palace-dir{color:rgba(40,140,60,0.10)}   /* 巽·木·绿 */
-#p5 .palace-dir{color:rgba(140,90,40,0.10)}   /* 中·土·棕 */
-#p6 .palace-dir{color:rgba(190,150,30,0.10)}  /* 乾·金·金 */
-#p7 .palace-dir{color:rgba(190,150,30,0.10)}  /* 兑·金·金 */
-#p8 .palace-dir{color:rgba(140,90,40,0.10)}   /* 艮·土·棕 */
-#p9 .palace-dir{color:rgba(200,50,50,0.10)}   /* 离·火·红 */
-
-.p-ma{position:absolute;top:8px;left:10px;font-size:16px;z-index:2;line-height:1}
-.p-spirit{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:13px;color:#9c27b0;font-weight:bold;z-index:2;line-height:1}
-.p-kong{position:absolute;top:4px;right:10px;font-size:26px;color:#c0392b;font-weight:900;z-index:2;line-height:1}
-.p-jigan{display:none}
-.p-star{position:absolute;top:46%;left:48%;transform:translate(-50%,-50%);font-size:16px;color:#6d4c41;font-weight:bold;z-index:2;line-height:1;white-space:nowrap}
-.p-heaven{position:absolute;top:46%;right:11px;transform:translateY(-55%);display:flex;flex-direction:column;align-items:center;z-index:2;line-height:1.1}
-.p-yingan{position:absolute;top:46%;left:10px;font-size:11px;color:#888;z-index:2;line-height:1}
-.p-heaven .cs{font-size:10px;color:rgba(58,47,31,0.4);margin-bottom:1px}
-.p-heaven .stem{font-size:22px;font-weight:bold;color:#8b0000;line-height:1.15}
-.p-heaven.double-stem{right:8px}
-.p-heaven .stem.double-stem{display:flex;gap:3px;align-items:center;justify-content:center;white-space:nowrap}
-.p-heaven .stem.double-stem>.stem{font-size:19px;line-height:1}
-.p-num{position:absolute;bottom:8px;left:10px;font-size:14px;color:#8b4513;font-weight:bold;z-index:2;line-height:1}
-.p-door{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:15px;font-weight:bold;color:#5d4037;z-index:2;line-height:1}
-.p-earth{position:absolute;bottom:8px;right:11px;display:flex;flex-direction:column;align-items:center;z-index:2;line-height:1.1}
-.p-earth .cs{font-size:10px;color:rgba(58,47,31,0.4);margin-bottom:1px}
-.p-earth .stem{font-size:19px;font-weight:bold;color:#2e5c4e;line-height:1.15}
-.p-earth .stem.double-stem{display:flex;gap:3px;align-items:center;white-space:nowrap}
-.p-earth .stem.double-stem>.stem{font-size:18px;line-height:1}
-
-.rizhu-box{border:2px solid #8b4513;border-radius:3px;padding:0 3px}
-.jixing{color:#2563eb!important}
-.rumu{color:#16a34a!important}
-.jixing-rumu{color:#7c3aed!important}
-.menpo{color:#dc2626!important}
-
-#p4{top:6px;left:6px}#p9{top:6px;left:152px}#p2{top:6px;left:298px}
-#p3{top:152px;left:6px}#p5{top:152px;left:152px}#p7{top:152px;left:298px}
-#p8{top:298px;left:6px}#p1{top:298px;left:152px}#p6{top:298px;left:298px}
-
-.question-bar{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:0;width:444px;flex-wrap:wrap}
-.question-bar textarea{
-  flex:1 0 100%;
-  min-width:0;
-  box-sizing:border-box;
-  background:#fffdf8;
-  color:var(--ink);
-  border:1px solid var(--line);
-  padding:12px 14px;
-  border-radius:6px;
-  font:inherit;
-  font-size:13px;
-  line-height:1.5;
-  min-height:66px;
-  max-height:164px;
-  overflow-y:auto;
-  resize:vertical;
-  outline:none;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.75);
-}
-.question-bar button{
-  flex:1 1 0;
-  background:linear-gradient(180deg,#2c725f,#215746);
-  color:#fff;
-  border:1px solid #1f4d40;
-  min-height:40px;
-  padding:9px 10px;
-  border-radius:6px;
-  cursor:pointer;
-  font-size:13px;
-  font-weight:bold;
-  white-space:nowrap;
-  box-shadow:var(--soft-shadow);
-  transition:transform .16s ease,filter .16s ease;
-}
-.question-bar button:hover{filter:brightness(1.05);transform:translateY(-1px)}
-.question-bar button:disabled{background:#9b9a92;border-color:#8a8982;cursor:not-allowed;box-shadow:none;transform:none}
-.tool-row{
-  width:444px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-  margin:0 auto 8px;
-}
-.tool-field{
-  display:grid;
-  gap:4px;
-}
-.tool-label{
-  color:#806742;
-  font-size:11px;
-  font-weight:bold;
-  line-height:1.2;
-  padding-left:2px;
-}
-.tool-row select,.tool-row button{
-  min-height:34px;
-  border:1px solid var(--line);
-  border-radius:6px;
-  background:#fffdf8;
-  color:var(--ink);
-  padding:6px 8px;
-  font-size:12px;
-  font-weight:bold;
-}
-.tool-row button{cursor:pointer;color:#5c4731;background:#fffaf0}
-.tool-row button:hover{background:#f4ead8;border-color:var(--line-strong)}
-.quick-questions{
-  width:444px;
-  display:flex;
-  flex-wrap:wrap;
-  gap:6px;
-  margin:0 auto 8px;
-}
-.quick-questions button{
-  border:1px solid rgba(169,111,40,.34);
-  background:rgba(255,253,247,.78);
-  color:#5c4731;
-  min-height:28px;
-  padding:4px 9px;
-  border-radius:5px;
-  font-size:12px;
-  cursor:pointer;
-}
-.quick-questions button:hover{background:#f4ead8;border-color:var(--line-strong)}
-
-.info-panel{
-  width:444px;
-  min-height:68px;
-  background:linear-gradient(180deg,#fffdf8,#faf3e7);
-  border:1px solid var(--line);
-  border-radius:6px;
-  padding:14px 16px;
-  margin-top:12px;
-  font-size:12px;
-  line-height:1.75;
-  box-shadow:var(--soft-shadow);
-}
-.info-panel .title{color:var(--cinnabar);font-weight:bold;margin-bottom:4px;font-size:13px}
-.info-panel .detail{color:#5b5147}
-.info-panel .ai{color:var(--jade);margin-top:9px;padding-top:9px;border-top:1px dashed rgba(169,111,40,.38);white-space:pre-wrap;line-height:1.8}
-.mini-section{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(169,111,40,.28)}
-.mini-section strong{color:var(--cinnabar)}
-.hint-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
-.hint-tag{font-size:11px;color:#70481a;background:#fffaf0;border:1px solid rgba(169,111,40,.25);border-radius:4px;padding:2px 6px}
-.followups{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.followups button{border:1px solid rgba(169,111,40,.34);background:#fffdf8;color:#5c4731;border-radius:5px;padding:4px 8px;font-size:12px;cursor:pointer}
-.followups button:hover{background:#f4ead8;border-color:var(--line-strong)}
-.ai-chat{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed rgba(169,111,40,.28);white-space:normal}
-.ai-chat textarea{min-width:0;box-sizing:border-box;min-height:66px;max-height:164px;overflow-y:auto;resize:vertical;border:1px solid rgba(169,111,40,.34);border-radius:6px;background:#fffdf8;color:var(--ink);padding:8px 10px;font:inherit;font-size:13px;line-height:1.5;outline:none}
-.ai-chat textarea:focus{border-color:var(--jade);box-shadow:0 0 0 3px rgba(46,92,78,.12)}
-.ai-chat button{border:1px solid var(--jade);background:var(--jade);color:#fffdf7;border-radius:6px;padding:0 14px;font-size:13px;font-weight:bold;cursor:pointer}
-.ai-chat button:hover{filter:brightness(1.05)}
-.ai-pending{display:flex;align-items:center;gap:7px;margin-top:10px;padding:9px 10px;border:1px dashed rgba(35,107,88,.42);border-radius:6px;background:rgba(236,246,239,.72);color:var(--jade);font-weight:bold;white-space:normal}
-.ai-pending:before{content:'⏳';animation:ai-pending-pulse 1.2s ease-in-out infinite}
-@keyframes ai-pending-pulse{50%{opacity:.48;transform:translateY(-1px)}}
-@media(prefers-reduced-motion:reduce){.ai-pending:before{animation:none}}
-
-.side-panel{
-  position:sticky;
-  top:24px;
-  z-index:1;
-  width:310px;
-  flex-shrink:0;
-  background:linear-gradient(180deg,rgba(255,253,247,.98),rgba(249,244,235,.98));
-  border:1px solid var(--line);
-  border-radius:7px;
-  padding:18px;
-  box-shadow:var(--shadow);
-  max-height:calc(100vh - 48px);
-  overflow-y:auto;
-}
-.side-panel h3{
-  color:var(--cinnabar);
-  font-size:16px;
-  margin-bottom:14px;
-  padding-bottom:9px;
-  border-bottom:1px solid rgba(169,111,40,.25);
-  letter-spacing:1px;
-}
-.side-tabs{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:5px;
-  margin-bottom:12px;
-}
-.side-tab{
-  border:1px solid rgba(169,111,40,.30);
-  background:#fffaf0;
-  color:#5c4731;
-  border-radius:5px;
-  padding:6px 4px;
-  font-size:12px;
-  font-weight:bold;
-  cursor:pointer;
-}
-.side-tab.active{background:var(--cinnabar);border-color:var(--cinnabar);color:#fffdf7}
-.side-tab-panel{display:none}
-.side-tab-panel.active{display:block}
-.info-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid rgba(169,111,40,.18);font-size:12px}
-.info-label{color:var(--muted)}
-.info-value{font-weight:bold;color:var(--ink);text-align:right}
-.legend{margin-top:14px}
-.legend h4{font-size:12px;color:var(--cinnabar);margin-bottom:8px}
-.legend-item{font-size:11px;color:#51483d;margin-bottom:5px;display:flex;align-items:center;gap:4px}
-.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
-.side-focus{
-  margin-bottom:12px;
-  padding:10px 11px;
-  background:#fff8ed;
-  border:1px solid rgba(155,47,34,.28);
-  border-radius:6px;
-}
-.side-focus .focus-title{font-weight:bold;color:var(--cinnabar);font-size:13px;margin-bottom:7px}
-.side-focus .focus-line{font-size:11px;color:#51483d;line-height:1.7}
-.mark-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.mark-tag{font-size:10px;color:#70481a;background:#fffdf8;border:1px solid rgba(169,111,40,.28);border-radius:4px;padding:2px 5px}
-.ai-turn{margin-bottom:10px;overflow:hidden;border:1px solid rgba(169,111,40,.28);border-radius:6px;background:rgba(255,253,248,.72)}
-.ai-turn[open]{border-color:rgba(35,107,88,.38);box-shadow:0 4px 12px rgba(61,42,18,.06)}
-.ai-turn-question{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:3px 8px;padding:8px 10px;color:#5c4731;cursor:pointer;list-style:none;user-select:none}
-.ai-turn-question::-webkit-details-marker{display:none}
-.ai-turn-question b{color:var(--cinnabar);font-size:12px}
-.ai-turn-question strong{grid-column:1/-1;color:var(--ink);font-size:12px;line-height:1.5;word-break:break-word}
-.ai-turn-time{color:#9a8a76;font-size:10px}
-.ai-turn-toggle{color:var(--jade);font-size:10px;white-space:nowrap}
-.ai-turn-toggle:before{content:'展开'}
-.ai-turn[open] .ai-turn-toggle:before{content:'收起'}
-.ai-turn-delete{border:0;background:transparent;color:#a82424;padding:1px 3px;font-size:10px;cursor:pointer;opacity:.78}
-.ai-turn-delete:hover{opacity:1;text-decoration:underline}
-.ai-turn-answer{padding:10px 11px 12px;border-top:1px dashed rgba(169,111,40,.28);color:#2e5c4e;line-height:1.85;white-space:pre-wrap;word-break:break-word}
-.ai-history-tools{display:flex;justify-content:flex-end;margin:8px 0;white-space:normal}
-.ai-history-tools button{border:1px solid rgba(169,111,40,.34);background:#fffdf8;color:#5c4731;border-radius:5px;padding:4px 9px;font-size:11px;cursor:pointer}
-.ai-history-tools button:hover{background:#f4ead8;border-color:var(--line-strong)}
-
-.gz-table{width:100%;text-align:center;border-collapse:separate;border-spacing:3px;font-size:12px;margin:10px 0}
-.gz-table th{color:var(--muted);font-size:10px;padding:2px 4px;font-weight:700}
-.gz-table td{background:rgba(255,255,255,.58);border:1px solid rgba(169,111,40,.20);border-radius:4px}
-.gz-table .gz-t{font-weight:bold;color:#8b1111;padding:4px 6px}
-.gz-table .gz-d{font-weight:bold;color:var(--jade);padding:4px 6px}
-.gz-table .rizhu-td{border:2px solid var(--cinnabar)!important;border-radius:4px}
-.hist-item{
-  padding:7px 8px;
-  margin-bottom:6px;
-  background:#fffaf0;
-  border-radius:5px;
-  font-size:11px;
-  cursor:pointer;
-  border:1px solid rgba(169,111,40,.24);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:6px;
-}
-.hist-item:hover{background:#f4ead8;border-color:var(--line-strong)}
-.hist-item .hi-name{flex:1;color:var(--ink);font-weight:bold;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hist-item .hi-date{font-size:9px;color:var(--muted);margin-right:2px}
-.hist-item .hi-btns{display:flex;gap:3px;margin-left:4px}
-.hist-item .hi-btns button{font-size:10px;padding:2px 5px;border:1px solid var(--line);background:#fffdf8;border-radius:4px;cursor:pointer;color:#5d4037}
-.hist-item .hi-btns button:hover{background:var(--cinnabar);color:#fff;border-color:var(--cinnabar)}
-.hist-item .hi-btns .del:hover{background:#a82424;border-color:#a82424}
-.history-search{
-  width:100%;
-  margin-bottom:8px;
-  padding:7px 9px;
-  border:1px solid rgba(169,111,40,.28);
-  border-radius:5px;
-  background:#fffdf8;
-  color:var(--ink);
-  font-size:12px;
-  outline:none;
-}
-.history-search:focus{border-color:var(--lapis);box-shadow:0 0 0 3px rgba(45,85,124,.12)}
-
-@media(max-width:1100px){
-  body{display:flex;flex-direction:column;align-items:center;padding:16px 10px 28px;gap:18px}
-  .main-area{min-width:auto;width:100%}
-  h1{font-size:22px;letter-spacing:2px}
-  .subtitle{margin-bottom:12px}
-  .page-actions{width:100%;max-width:420px;align-items:stretch}
-  .page-actions .module-nav{width:100%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}
-  .page-actions .page-switch{min-width:0;justify-content:center;min-height:44px;padding-inline:6px}
-  .display-mode{width:100%}
-  .display-mode button{min-height:44px}
-  .board-wrap{width:340px;height:340px;margin:2px auto 18px}
-  .board-wrap:before{inset:-8px}
-  .palace{width:107px;height:107px;border-radius:5px;border-width:1px}
-  .palace-dir{font-size:72px}
-  #p4{top:4px;left:4px}#p9{top:4px;left:116px}#p2{top:4px;left:228px}
-  #p3{top:116px;left:4px}#p5{top:116px;left:116px}#p7{top:116px;left:228px}
-  #p8{top:228px;left:4px}#p1{top:228px;left:116px}#p6{top:228px;left:228px}
-  .p-ma{top:5px;left:5px;font-size:13px}
-  .p-spirit{top:5px;font-size:10px}
-  .p-kong{top:2px;right:5px;font-size:18px}
-  .p-heaven.double-stem{right:4px}
-  .p-heaven .stem.double-stem{gap:2px}
-  .p-heaven .stem.double-stem>.stem{font-size:15px}
-  .p-earth .stem.double-stem{gap:1px}
-  .p-earth .stem.double-stem>.stem{font-size:14px}
-  .p-star{top:46%;font-size:13px}
-  .p-heaven{top:46%;right:5px}
-  .p-heaven .stem{font-size:17px}
-  .p-heaven .cs{font-size:8px}
-  .p-num{bottom:5px;left:5px;font-size:10px}
-  .p-door{bottom:5px;font-size:11px}
-  .p-earth{bottom:5px;right:5px}
-  .p-earth .stem{font-size:15px}
-  .p-earth .cs{font-size:8px}
-  .p-yingan{top:46%;left:5px;font-size:8px}
-  .time-bar{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));align-items:center;padding:8px;gap:6px}
-  .time-bar .cal-tabs{grid-column:span 4;order:1;display:grid;grid-template-columns:1fr 1fr}
-  .time-bar .cal-tab{display:flex;align-items:center;justify-content:center;min-height:44px;padding:4px}
-  .time-bar #personName{grid-column:span 4;order:2}
-  .time-bar #gender{grid-column:span 2;order:3}
-  .time-bar #year,.time-bar #month,.time-bar #day,.time-bar #hour,.time-bar #minute{grid-column:span 2;order:4}
-  .time-bar>button{grid-column:span 2;order:5}
-  .time-bar input,.time-bar select{width:100%!important;height:44px!important;min-width:0;min-height:44px;max-height:44px;font-size:12px!important;line-height:1.2;padding:4px 6px!important}
-  .time-bar button{height:44px;font-size:11px!important;padding:6px 4px!important}
-  .solar-bar,.bazi-link{width:100%;max-width:340px;margin:-6px auto 10px;padding:7px;gap:5px;font-size:11px}
-  .solar-bar input[type="number"]{width:82px;font-size:11px}
-  .solar-bar select,.solar-bar button,.bazi-link select,.bazi-link input,.bazi-link button{font-size:11px}
-  .bazi-link-form label{width:100%}.bazi-link-form input[type="text"],.bazi-link-form .wide{width:100%;min-width:0}
-  .solar-preview{flex:1 0 100%;text-align:center}
-  .status-strip{width:100%;max-width:340px;margin:4px auto 10px}
-  .plate-freshness{width:100%;max-width:340px;margin:-2px auto 10px}
-  .status-chip{font-size:10px;padding:3px 6px}
-  .tool-row{width:100%;max-width:340px;grid-template-columns:1fr;gap:8px;margin-bottom:10px}
-  .question-bar{width:100%;max-width:340px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-  .question-bar textarea{grid-column:1/-1;width:100%;font-size:13px;padding:10px 12px;min-height:66px}
-  .question-bar button{min-width:0;width:100%;min-height:44px;padding:9px 8px;font-size:13px;white-space:normal;line-height:1.25}
-  .quick-questions{width:100%;max-width:340px;gap:5px}
-  .time-bar button,.solar-bar button,.tool-row button,.quick-questions button,.side-tab,.hist-item .hi-btns button,.followups button,.ai-chat button{min-height:44px}
-  .quick-questions button{font-size:11px;padding:7px}
-  .info-panel{width:100%;font-size:11px}
-  .side-panel{width:100%;position:static;padding:14px;max-height:none}
-}
-@media(max-width:360px){
-  body{padding-left:4px;padding-right:4px}
-  .time-bar #year{font-size:11px!important;padding:2px!important}
-  .board-wrap{width:296px;height:296px}
-  .board-wrap:before{inset:-4px}
-  .palace{width:93px;height:93px}
-  #p4{top:3px;left:3px}#p9{top:3px;left:101px}#p2{top:3px;left:199px}
-  #p3{top:101px;left:3px}#p5{top:101px;left:101px}#p7{top:101px;left:199px}
-  #p8{top:199px;left:3px}#p1{top:199px;left:101px}#p6{top:199px;left:199px}
-  .p-star{font-size:12px}
-  .p-heaven .stem{font-size:16px}
-  .p-earth .stem{font-size:14px}
-}
-@media print{
-  body{display:block;background:#fff;padding:0}
-  body:before,.time-bar,.solar-bar,.status-strip,.quick-questions,.tool-row,.question-bar,.side-panel{display:none!important}
-  .main-area{width:100%;min-width:0}
-  h1,.subtitle{display:block}
-  .board-wrap,.info-panel{break-inside:avoid}
-}
-</style>
+<link rel="stylesheet" href="premium-base.css?v=20261101.2">
+<link rel="stylesheet" href="qimen-premium.css?v=20261101.2">
 </head>
 <body>
-<div class="main-area">
-  <h1>奇门遁甲</h1>
-  <div class="subtitle">时家转盘 · 拆补法</div>
-  <div class="page-actions">
-    <nav class="module-nav" aria-label="术数模块">
-      <a class="page-switch" href="index.html" aria-current="page">奇门</a>
-      <a class="page-switch" href="bazi.html">八字</a>
-      <a class="page-switch" href="liuyao.html">六爻</a>
-      <a class="page-switch" href="ziwei.html">紫微</a>
-      <a class="page-switch" href="daily.html">日运</a>
+<main class="page qm-page">
+  <header class="top">
+    <div class="appbar">
+    <div class="app-brand"><svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="2" y="2" width="24" height="24" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v24M18 2v24M2 10h24M2 18h24" stroke="currentColor" stroke-width="1.2"/></svg>术数研习</div>
+    <nav class="top-row module-nav" aria-label="术数模块">
+      <a class="back page-switch" href="index.html" aria-current="page">奇门</a>
+      <a class="back page-switch" href="bazi.html">八字</a>
+      <a class="back page-switch" href="liuyao.html">六爻</a>
+      <a class="back page-switch" href="ziwei.html">紫微</a>
+      <a class="back page-switch" href="daily.html">日运</a>
     </nav>
-    <div class="display-mode" aria-label="显示模式">
-      <button type="button" data-display-mode="standard" onclick="setDisplayMode('standard')" title="保留专业词，并用大白话解释">标准</button>
-      <button type="button" data-display-mode="professional" onclick="setDisplayMode('professional')" title="显示专业术语、判定依据和推理顺序">专业</button>
+    </div>
+    <div class="page-intro"><div>
+      <h1>奇门遁甲</h1>
+      <div class="sub subtitle">时家转盘 · 拆补法　选好时间起盘，点宫位看详情</div>
+    </div>
+    <div class="qm-intro-side">
+      <div class="display-mode" aria-label="显示模式">
+        <button type="button" data-display-mode="standard" onclick="setDisplayMode('standard')" title="保留专业词，并用大白话解释">标准</button>
+        <button type="button" data-display-mode="professional" onclick="setDisplayMode('professional')" title="显示专业术语、判定依据和推理顺序">专业</button>
+      </div>
+      <span class="qm-intro-hint">标准：白话解释　·　专业：术语与推理</span>
+    </div></div>
+  </header>
+
+  <div class="qm-layout">
+  <div class="main-area">
+    <section class="qm-card qm-setup" id="qmSetup" aria-labelledby="qmSetupTitle">
+      <div class="qm-card-head">
+        <h2 class="qm-title" id="qmSetupTitle">起盘时间</h2>
+        <button type="button" class="qm-link" onclick="qmShowRecords('auto')" title="查看最近自动保存的起盘记录">起盘记录</button>
+      </div>
+      <div class="qm-setup-body">
+        <div class="qm-setup-main">
+          <div class="time-bar">
+            <div class="cal-tabs" role="group" aria-label="历法">
+              <span class="cal-tab active" id="tabSolar" onclick="switchCal('solar')">公历</span>
+              <span class="cal-tab" id="tabLunar" onclick="switchCal('lunar')">农历</span>
+            </div>
+            <div class="qm-date-grid">
+              <input type="number" id="year" placeholder="年" aria-label="年">
+              <select id="month" aria-label="月"></select>
+              <select id="day" aria-label="日"></select>
+            </div>
+            <div class="qm-time-grid">
+              <select id="hour" aria-label="时"></select>
+              <select id="minute" aria-label="分"></select>
+            </div>
+            <div class="qm-shift">
+              <button type="button" onclick="shiftHour(-2)" title="切换到上一个时辰">← 时辰</button>
+              <button type="button" class="qm-now-time" onclick="useCurrentTime()" title="把时间设为此刻">当前时间</button>
+              <button type="button" onclick="shiftHour(2)" title="切换到下一个时辰">时辰 →</button>
+            </div>
+            <div class="qm-person">
+              <input class="person-input" type="text" id="personName" placeholder="姓名/标记（可选）" title="可选，用于保存和起盘记录" aria-label="姓名或标记">
+              <select id="gender" aria-label="性别"><option value="男">男</option><option value="女">女</option></select>
+            </div>
+          </div>
+          <div class="qm-actions">
+            <button type="button" class="primary qm-primary" onclick="doPaiPan()">起盘</button>
+            <button type="button" class="qm-now" onclick="useCurrentTime();doPaiPan()" title="取此刻时间立即起盘">此刻起盘</button>
+          </div>
+        </div>
+        <div class="qm-advanced">
+          <span class="qm-group-label">校正与关联（可选）</span>
+          <div class="solar-bar">
+            <label><input type="checkbox" id="useTrueSolar" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()">按真太阳时起盘</label>
+            <select id="locationPreset" onchange="applyLocationPreset(this.value)" title="选择常用地点经度" aria-label="常用地点">
+              <option value="">自定义经度</option>
+              <option value="103.99505">云南师宗</option>
+              <option value="102.83289">昆明</option>
+              <option value="116.4074">北京</option>
+            </select>
+            <input type="number" id="longitude" step="0.0001" value="103.9951" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()" title="经度，东经为正；中国标准时区按东经120度计算" aria-label="经度">
+            <button type="button" onclick="useBrowserLocation()" title="使用浏览器定位读取经度，只保存在本机">定位</button>
+            <span class="solar-preview" id="solarPreview">未启用真太阳时</span>
+          </div>
+          <details class="bazi-link" id="qimenBaziLink">
+            <summary>问事人八字（可选）<span id="qimenBaziLinkLabel">未关联，纯奇门分析</span></summary>
+            <div class="bazi-link-tools">
+              <select id="qimenBaziRecord" aria-label="选择已保存八字档案" onchange="selectQimenBaziRecord(this.value)"></select>
+              <button type="button" onclick="toggleQimenBaziForm()">新建八字</button>
+              <button type="button" onclick="clearQimenLinkedBazi()">清除关联</button>
+            </div>
+            <div class="bazi-link-summary" id="qimenBaziSummary">不关联时，AI 仅按当前奇门盘分析。</div>
+            <form class="bazi-link-form" id="qimenBaziForm" hidden onsubmit="createQimenBaziProfile(event)">
+              <input type="text" id="qimenBaziName" placeholder="姓名/标记（可选）">
+              <select id="qimenBaziGender" aria-label="八字性别"><option value="男">男</option><option value="女">女</option></select>
+              <label>出生日期 <input type="date" id="qimenBaziDate" required></label>
+              <label>出生时间 <input type="time" id="qimenBaziTime" required></label>
+              <input class="wide" type="text" id="qimenBaziLocation" placeholder="出生地点（可选）" value="自定义地点">
+              <label>东经 <input type="number" id="qimenBaziLongitude" step="0.0001" min="-180" max="180" value="103.9951" required></label>
+              <label><input type="checkbox" id="qimenBaziTrueSolar" checked> 真太阳时</label>
+              <button type="submit">保存并关联</button>
+            </form>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section class="qm-card qm-plate" id="qmPlate" aria-labelledby="qmPlateTitle">
+      <div class="qm-card-head">
+        <h2 class="qm-title" id="qmPlateTitle">九宫盘</h2>
+        <div class="qm-plate-actions" role="group" aria-label="盘面操作">
+          <button onclick="copyPlateText()" id="btnCopy" disabled title="复制当前盘面文字">复制</button>
+          <button onclick="exportPlate()" id="btnExport" disabled title="打印当前盘面，可保存为 PDF">导出</button>
+          <button onclick="saveToHistory()" id="btnSave" disabled title="保存到「保存起盘」">保存</button>
+        </div>
+      </div>
+      <div class="plate-freshness" id="plateFreshness" hidden>时间或起盘设置已改变，请重新点击「起盘」。</div>
+      <div class="status-strip" id="statusStrip" aria-live="polite"></div>
+      <div class="board-wrap" id="board"></div>
+      <div class="qm-legend-mini" aria-label="盘面标记说明">
+        <span><i style="background:var(--qm-menpo)"></i>门迫</span>
+        <span><i style="background:var(--qm-jixing)"></i>击刑</span>
+        <span><i style="background:var(--qm-rumu)"></i>入墓</span>
+        <span><i style="background:var(--qm-jixing-rumu)"></i>刑+墓</span>
+        <span><b class="qm-badge qm-badge-kong">空</b>旬空</span>
+        <span><b class="qm-badge qm-badge-ma">马</b>马星</span>
+        <span><b class="qm-rizhu-sample">干</b>日主</span>
+      </div>
+    </section>
+
+    <section class="qm-card qm-ask" id="qmAsk" aria-labelledby="qmAskTitle">
+      <div class="qm-card-head">
+        <h2 class="qm-title" id="qmAskTitle">问事 · AI 断事</h2>
+        <button type="button" class="qm-ghost qm-key" onclick="manageApiKey()" title="设置或清除本机保存的 DeepSeek API Key">API Key</button>
+      </div>
+      <div class="tool-row">
+        <label class="tool-field">
+          <span class="tool-label">断事类型 / 方向</span>
+          <select id="questionType" title="选择问事类型，会影响用神提示和 AI 分析侧重点" onchange="refreshAssistInfo()">
+            <option value="general">综合</option>
+            <option value="career">事业工作</option>
+            <option value="love">感情关系</option>
+            <option value="wealth">财运投资</option>
+            <option value="cooperation">合作谈判</option>
+            <option value="travel">出行迁动</option>
+            <option value="health">健康疾病</option>
+            <option value="lost">找失物</option>
+            <option value="exam">考试竞聘</option>
+            <option value="choice">选择决策</option>
+            <option value="birth">命盘分析</option>
+          </select>
+        </label>
+        <label class="tool-field">
+          <span class="tool-label">断事方式</span>
+          <select id="aiMode" title="选择 AI 输出方式" onchange="saveAiMode();updateAiButtonLabel()">
+            <option value="brief">简断</option>
+            <option value="detail">详断</option>
+            <option value="conclusion">只看结论</option>
+            <option value="palaces">逐宫细断</option>
+            <option value="timing">应期重点</option>
+          </select>
+        </label>
+      </div>
+      <div class="quick-questions" aria-label="常用问事">
+        <button type="button" onclick="useQuestionTemplate('career')">事业</button>
+        <button type="button" onclick="useQuestionTemplate('love')">感情复合</button>
+        <button type="button" onclick="useQuestionTemplate('wealth')">财运投资</button>
+        <button type="button" onclick="useQuestionTemplate('cooperation')">合作谈判</button>
+        <button type="button" onclick="useQuestionTemplate('travel')">出行</button>
+        <button type="button" onclick="useQuestionTemplate('health')">健康</button>
+        <button type="button" onclick="useQuestionTemplate('lost')">找失物</button>
+        <button type="button" onclick="useQuestionTemplate('exam')">考试竞聘</button>
+        <button type="button" onclick="useQuestionTemplate('choice')">选择</button>
+        <button type="button" onclick="useQuestionTemplate('birth')">命盘分析</button>
+      </div>
+      <div class="question-bar">
+        <textarea rows="2" placeholder="输入你想问的事情..." id="question" aria-label="奇门分析问题" oninput="autoGrowQimenAiTextarea(this)" onkeydown="handleQimenAiKeydown(event)"></textarea>
+        <div class="qm-ask-foot">
+          <span class="qm-ask-tip">先起盘，再提问；Ctrl / ⌘ + Enter 发送</span>
+          <button onclick="analyzeWithAI()" id="btnAI" disabled>AI 分析</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="info-panel" id="infoPanel" aria-live="polite">
+      <div class="title">点击「起盘」生成盘面，再点击宫位查看详情</div>
+      <div class="detail">支持公历时间起盘，也可手动选择年月日时。</div>
     </div>
   </div>
-  <div class="time-bar">
-    <div class="cal-tabs">
-      <span class="cal-tab active" id="tabSolar" onclick="switchCal('solar')">公历</span>
-      <span class="cal-tab" id="tabLunar" onclick="switchCal('lunar')">农历</span>
+  <aside class="side-panel" id="sidePanel">
+    <h3>盘面信息</h3>
+    <div class="side-tabs" role="tablist" aria-label="右侧信息切换">
+      <button class="side-tab active" type="button" id="tabInfoPanel" onclick="setSideTab('info')">盘面</button>
+      <button class="side-tab" type="button" id="tabAutoHistory" onclick="setSideTab('auto')">起盘记录</button>
+      <button class="side-tab" type="button" id="tabSavedHistory" onclick="setSideTab('saved')">保存起盘</button>
     </div>
-    <input type="number" id="year" style="width:60px" placeholder="年">
-    <select id="month"></select>
-    <select id="day"></select>
-    <select id="hour"></select>
-    <select id="minute"></select>
-    <select id="gender"><option value="男">男</option><option value="女">女</option></select>
-    <input class="person-input" type="text" id="personName" placeholder="姓名/标记" title="可选，用于保存和起盘记录">
-    <button onclick="useCurrentTime()">🕐 当前</button>
-    <button onclick="shiftHour(-2)" title="切换到上一个时辰">← 时辰</button>
-    <button onclick="shiftHour(2)" title="切换到下一个时辰">时辰 →</button>
-    <button onclick="manageApiKey()" title="设置或清除本机保存的 DeepSeek API Key">🔑 Key</button>
-    <button class="primary" onclick="doPaiPan()">🔮 起盘</button>
-  </div>
-  <div class="solar-bar">
-    <label><input type="checkbox" id="useTrueSolar" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()">真太阳时</label>
-    <select id="locationPreset" onchange="applyLocationPreset(this.value)" title="选择常用地点经度">
-      <option value="">自定义经度</option>
-      <option value="103.99505">云南师宗</option>
-      <option value="102.83289">昆明</option>
-      <option value="116.4074">北京</option>
-    </select>
-    <input type="number" id="longitude" step="0.0001" value="103.9951" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()" title="经度，东经为正；中国标准时区按东经120度计算">
-    <button onclick="useBrowserLocation()" title="使用浏览器定位读取经度，只保存在本机">📍 定位</button>
-    <span class="solar-preview" id="solarPreview">未启用真太阳时</span>
-  </div>
-  <details class="bazi-link" id="qimenBaziLink">
-    <summary>问事人八字（可选）<span id="qimenBaziLinkLabel">未关联，纯奇门分析</span></summary>
-    <div class="bazi-link-tools">
-      <select id="qimenBaziRecord" aria-label="选择已保存八字档案" onchange="selectQimenBaziRecord(this.value)"></select>
-      <button type="button" onclick="toggleQimenBaziForm()">新建八字</button>
-      <button type="button" onclick="clearQimenLinkedBazi()">清除关联</button>
+    <div id="sideContent" class="side-tab-panel active"><div style="text-align:center;color:#a2978a;padding:20px 0">点击「起盘」显示</div></div>
+    <div id="autoHistorySection" class="side-tab-panel">
+      <input class="history-search" id="autoHistorySearch" type="search" placeholder="搜索起盘记录..." oninput="renderAutoHistory()">
+      <div id="autoHistoryList"></div>
     </div>
-    <div class="bazi-link-summary" id="qimenBaziSummary">不关联时，AI 仅按当前奇门盘分析。</div>
-    <form class="bazi-link-form" id="qimenBaziForm" hidden onsubmit="createQimenBaziProfile(event)">
-      <input type="text" id="qimenBaziName" placeholder="姓名/标记（可选）">
-      <select id="qimenBaziGender" aria-label="八字性别"><option value="男">男</option><option value="女">女</option></select>
-      <label>出生日期 <input type="date" id="qimenBaziDate" required></label>
-      <label>出生时间 <input type="time" id="qimenBaziTime" required></label>
-      <input class="wide" type="text" id="qimenBaziLocation" placeholder="出生地点（可选）" value="自定义地点">
-      <label>东经 <input type="number" id="qimenBaziLongitude" step="0.0001" min="-180" max="180" value="103.9951" required></label>
-      <label><input type="checkbox" id="qimenBaziTrueSolar" checked> 真太阳时</label>
-      <button type="submit">保存并关联</button>
-    </form>
-  </details>
-  <div class="plate-freshness" id="plateFreshness" hidden>时间或起盘设置已改变，请重新点击「起盘」。</div>
-  <div class="status-strip" id="statusStrip" aria-live="polite"></div>
-  <div class="board-wrap" id="board"></div>
-  <div class="tool-row">
-    <label class="tool-field">
-      <span class="tool-label">断事类型 / 方向</span>
-      <select id="questionType" title="选择问事类型，会影响用神提示和 AI 分析侧重点" onchange="refreshAssistInfo()">
-        <option value="general">综合</option>
-        <option value="career">事业工作</option>
-        <option value="love">感情关系</option>
-        <option value="wealth">财运投资</option>
-        <option value="cooperation">合作谈判</option>
-        <option value="travel">出行迁动</option>
-        <option value="health">健康疾病</option>
-        <option value="lost">找失物</option>
-        <option value="exam">考试竞聘</option>
-        <option value="choice">选择决策</option>
-        <option value="birth">命盘分析</option>
-      </select>
-    </label>
-    <label class="tool-field">
-      <span class="tool-label">断事方式</span>
-      <select id="aiMode" title="选择 AI 输出方式" onchange="saveAiMode();updateAiButtonLabel()">
-        <option value="brief">简断</option>
-        <option value="detail">详断</option>
-        <option value="conclusion">只看结论</option>
-        <option value="palaces">逐宫细断</option>
-        <option value="timing">应期重点</option>
-      </select>
-    </label>
+    <div id="historySection" class="side-tab-panel">
+      <input class="history-search" id="historySearch" type="search" placeholder="搜索保存起盘..." oninput="renderHistory()">
+      <div id="historyList"></div>
+    </div>
+  </aside>
   </div>
-  <div class="quick-questions" aria-label="常用问事">
-    <button type="button" onclick="useQuestionTemplate('career')">事业</button>
-    <button type="button" onclick="useQuestionTemplate('love')">感情复合</button>
-    <button type="button" onclick="useQuestionTemplate('wealth')">财运投资</button>
-    <button type="button" onclick="useQuestionTemplate('cooperation')">合作谈判</button>
-    <button type="button" onclick="useQuestionTemplate('travel')">出行</button>
-    <button type="button" onclick="useQuestionTemplate('health')">健康</button>
-    <button type="button" onclick="useQuestionTemplate('lost')">找失物</button>
-    <button type="button" onclick="useQuestionTemplate('exam')">考试竞聘</button>
-    <button type="button" onclick="useQuestionTemplate('choice')">选择</button>
-    <button type="button" onclick="useQuestionTemplate('birth')">命盘分析</button>
-  </div>
-  <div class="question-bar">
-    <textarea rows="2" placeholder="输入你想问的事情..." id="question" aria-label="奇门分析问题" oninput="autoGrowQimenAiTextarea(this)" onkeydown="handleQimenAiKeydown(event)"></textarea>
-    <button onclick="analyzeWithAI()" id="btnAI" disabled>🤖 AI 分析</button>
-    <button onclick="copyPlateText()" id="btnCopy" disabled title="复制当前盘面文字">📋 复制</button>
-    <button onclick="exportPlate()" id="btnExport" disabled title="打印当前盘面，可保存为 PDF">🖨 导出</button>
-    <button onclick="saveToHistory()" id="btnSave" disabled>💾 保存</button>
-  </div>
-  <div class="info-panel" id="infoPanel">
-    <div class="title">👆 点击「起盘」生成盘面，再点击宫位查看详情</div>
-    <div class="detail">支持公历时间起盘，也可手动选择年月日时。</div>
-  </div>
-</div>
-<div class="side-panel" id="sidePanel">
-  <h3>📋 盘面信息</h3>
-  <div class="side-tabs" role="tablist" aria-label="右侧信息切换">
-    <button class="side-tab active" type="button" id="tabInfoPanel" onclick="setSideTab('info')">盘面</button>
-    <button class="side-tab" type="button" id="tabAutoHistory" onclick="setSideTab('auto')">起盘记录</button>
-    <button class="side-tab" type="button" id="tabSavedHistory" onclick="setSideTab('saved')">保存起盘</button>
-  </div>
-  <div id="sideContent" class="side-tab-panel active"><div style="text-align:center;color:#999;padding:20px 0">点击「起盘」显示</div></div>
-  <div id="autoHistorySection" class="side-tab-panel">
-    <input class="history-search" id="autoHistorySearch" type="search" placeholder="搜索起盘记录..." oninput="renderAutoHistory()">
-    <div id="autoHistoryList"></div>
-  </div>
-  <div id="historySection" class="side-tab-panel">
-    <input class="history-search" id="historySearch" type="search" placeholder="搜索保存起盘..." oninput="renderHistory()">
-    <div id="historyList"></div>
-  </div>
-</div>
+</main>
 
 <script src="qimen.js?v=20260703-jieqi1"></script>
 <script src="bazi-engine.js?v=20260820.2"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
+<script src="premium-base.js?v=20261101.2" defer></script>
+<script src="qimen-premium.js?v=20261101.2" defer></script>
 <script>
 var currentCal='solar',selectedPalace=null,plateData=null;
 var aiHistory=[];
@@ -1192,7 +569,7 @@ function getJieQiNote(t){
   for(var i=0;i<JIE_QI_DATA.length;i++){
     var jq=JIE_QI_DATA[i];
     if(jq.month===t.month&&Math.abs(t.day-jq.approx[0])<=1){
-      return '⚠ 当前日期接近「'+jq.name+'」交节，本工具按日期近似处理；交节当天请以准确节气时刻复核。';
+      return '当前日期接近「'+jq.name+'」交节，本工具按日期近似处理；交节当天请以准确节气时刻复核。';
     }
   }
   return '';
@@ -1262,7 +639,7 @@ function saveAiMode(){
 }
 function updateAiButtonLabel(){
   var btn=document.getElementById('btnAI'),el=document.getElementById('aiMode');
-  if(btn&&el)btn.textContent='🤖 AI 分析 · '+getAiModeLabel(el.value);
+  if(btn&&el)btn.textContent='AI 分析 · '+getAiModeLabel(el.value);
 }
 function findDayMasterPalace(data){
   for(var g=1;g<=9;g++){if(data.gongs[g].isRiZhuTian)return g}
@@ -1319,7 +696,7 @@ function renderAssistInfo(data,note){
 function refreshAssistInfo(){
   if(!plateData)return;
   var note=getJieQiNote(plateData.solarTime);
-  document.getElementById('infoPanel').innerHTML='<div class="title">✅ 排盘完成 — 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+  document.getElementById('infoPanel').innerHTML='<div class="title">排盘完成 · 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
 }
 function useQuestionTemplate(type){
   var map={
@@ -1403,7 +780,7 @@ function doPaiPan(opts){
   var note=getJieQiNote(pt.used);
   var solarNote=pt.enabled?'真太阳时：输入 '+formatTimeObj(pt.input)+'，校正 '+formatOffset(pt.correction)+'，起盘用 '+formatTimeObj(pt.used)+'。':'';
   renderStatus(plateData,note);
-  document.getElementById('infoPanel').innerHTML='<div class="title">✅ 排盘完成 — 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+  document.getElementById('infoPanel').innerHTML='<div class="title">排盘完成 · 点击宫位查看详情</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,note)+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
   if(!opts.skipRecord)addAutoHistory();
 }
 
@@ -1488,7 +865,7 @@ function renderPalaceFocus(data,num){
   var marks=getPalaceMarks(o);
   return '<div class="side-focus">'+
     '<div class="focus-title">第'+num+'宫（'+dirs[num]+'·'+o.wuxing+'） '+(o.door?o.door+'门':'')+' · '+(o.star==='天芮,天禽'?'芮禽':(o.star||''))+' · '+(o.spirit||'')+'</div>'+
-    '<div class="focus-line">天盘：<strong style="color:#8b0000">'+(o.tianPan||'空')+'</strong>　地盘：<strong style="color:#2e5c4e">'+palaceStemText(num,o)+'</strong>'+(o.yinGan?'　隐干：'+o.yinGan:'')+'</div>'+
+    '<div class="focus-line">天盘：<strong style="color:#a8352a">'+(o.tianPan||'空')+'</strong>　地盘：<strong style="color:#2f6b52">'+palaceStemText(num,o)+'</strong>'+(o.yinGan?'　隐干：'+o.yinGan:'')+'</div>'+
     '<div class="focus-line">长生：天盘 '+(o.changShengTian||'-')+' / 地盘 '+(o.changShengDi||'-')+'</div>'+
     (marks.length?'<div class="mark-tags">'+marks.map(function(m){return '<span class="mark-tag">'+m+'</span>'}).join('')+'</div>':'')+
   '</div>';
@@ -1523,14 +900,14 @@ function renderSidePanel(data,focusNum){
       '<p><strong>看单宫</strong>时，门看事情怎么发生，星看性质和状态，神看外在氛围与助力，天盘干看当前变化，地盘干看原有基础。门迫、击刑、入墓是受限方式的专业名称，要和整宫及用神一起判断。</p>'+
     '</div>'+
     '<div class="reading-guide professional-only"><h4>专业判读顺序</h4><div class="reasoning-chain"><span>局式旬首</span>→<span>值符值使</span>→<span>用神落宫</span>→<span>门星神仪</span>→<span>旺衰格局</span>→<span>空马刑墓</span></div></div>'+
-    '<div class="legend"><h4>📖 颜色图例</h4>'+
-      '<div class="legend-item"><span class="legend-dot" style="background:#dc2626"></span> 门迫 — 八门受制</div>'+
-      '<div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span> 击刑 — 地支相刑</div>'+
-      '<div class="legend-item"><span class="legend-dot" style="background:#16a34a"></span> 入墓 — 天干入墓</div>'+
-      '<div class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span> 击刑+入墓</div>'+
-      '<div class="legend-item"><span style="color:#c0392b">○</span> 空亡</div>'+
-      '<div class="legend-item"><span>🐴</span> 马星</div>'+
-      '<div class="legend-item"><span style="border:2px solid #8b4513;padding:0 2px;border-radius:2px">干</span> 日主方框</div></div>';
+    '<div class="legend"><h4>颜色图例</h4>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#e0614f"></span> 门迫 — 八门受制</div>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#5b8fd9"></span> 击刑 — 地支相刑</div>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#3e9c6a"></span> 入墓 — 天干入墓</div>'+
+      '<div class="legend-item"><span class="legend-dot" style="background:#9a6fd0"></span> 击刑+入墓</div>'+
+      '<div class="legend-item"><span class="qm-badge qm-badge-kong">空</span> 空亡</div>'+
+      '<div class="legend-item"><span class="qm-badge qm-badge-ma">马</span> 马星</div>'+
+      '<div class="legend-item"><span class="qm-rizhu-sample">干</span> 日主方框</div></div>';
 }
 
 function pad(n){var m=n||0;return(m<10?'0':'')+m}
@@ -1581,7 +958,7 @@ async function copyPlateText(){
     if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(text);
     else copyFallback(text);
     var btn=document.getElementById('btnCopy'),old=btn.textContent;
-    btn.textContent='✅ 已复制';
+    btn.textContent='已复制';
     setTimeout(function(){btn.textContent=old},1200);
   }catch(e){copyFallback(text);alert('盘面文字已复制。')}
 }
@@ -1615,8 +992,8 @@ function selectPalace(num){
   renderStatus(plateData);
   var panel=document.getElementById('infoPanel');
   panel.innerHTML=
-    '<div class="title">📍 第'+num+'宫（'+dirs[num]+'·'+o.wuxing+'）— '+(o.door?o.door+'门':'')+' | '+(o.star==='天芮,天禽'?'芮禽':(o.star||''))+' | '+o.spirit+'</div>'+
-    '<div class="detail"><span>天盘干：</span><span style="color:#8b0000;font-weight:bold">'+o.tianPan+'</span> <span style="font-size:11px;color:#999">长生：'+o.changShengTian+'</span> <span style="margin-left:12px">地盘干：</span><span style="color:#2e5c4e;font-weight:bold">'+dp+'</span> <span style="font-size:11px;color:#999">长生：'+o.changShengDi+'</span></div>'+
+    '<div class="title">第'+num+'宫（'+dirs[num]+'·'+o.wuxing+'）— '+(o.door?o.door+'门':'')+' | '+(o.star==='天芮,天禽'?'芮禽':(o.star||''))+' | '+o.spirit+'</div>'+
+    '<div class="detail"><span>天盘干：</span><span style="color:#a8352a;font-weight:bold">'+o.tianPan+'</span> <span style="font-size:11px;color:#999">长生：'+o.changShengTian+'</span> <span style="margin-left:12px">地盘干：</span><span style="color:#2f6b52;font-weight:bold">'+dp+'</span> <span style="font-size:11px;color:#999">长生：'+o.changShengDi+'</span></div>'+
     (o.yinGan?'<div class="detail">隐干：<span style="color:#888">'+o.yinGan+'</span></div>':'')+
     (o.jigan?'<div class="detail">寄干：<span style="color:#b8860b">'+o.jigan+'</span></div>':'')+
     (marks.length?'<div class="detail">标记：'+marks.join(' · ')+'</div>':'')+
@@ -1665,10 +1042,10 @@ async function analyzeWithAI(){
   messages.push({role:'user',content:prompt});
   var aiBtn=document.getElementById('btnAI');
   aiBtn.disabled=true;
-  aiBtn.textContent='⏳ 分析中 · '+getAiModeLabel(aiMode);
+  aiBtn.textContent='分析中 · '+getAiModeLabel(aiMode);
   showQimenAiPending(aiRequestId);
   try{
-    var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:messages,maxTokens:16384,onRetry:function(){aiBtn.textContent='⏳ 正在获取最终回答…'}});
+    var result=await DeepSeekClient.requestFinal({apiKey:apiKey,messages:messages,maxTokens:16384,onRetry:function(){aiBtn.textContent='正在获取最终回答…'}});
     if(aiRequestId!==qimenAiRequestSeq||aiRequestFingerprint!==plateInputFingerprint||currentPlateInputFingerprint()!==plateInputFingerprint)return;
     var answer=result.answer;
     if(answer){
@@ -1680,14 +1057,14 @@ async function analyzeWithAI(){
       document.getElementById('aiResult').innerHTML=renderAIHistory();
     }
   }catch(e){
-    if(aiRequestId===qimenAiRequestSeq&&aiRequestFingerprint===plateInputFingerprint)document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>❌ 请求失败: '+esc(e.message)+'</div>';
+    if(aiRequestId===qimenAiRequestSeq&&aiRequestFingerprint===plateInputFingerprint)document.getElementById('aiResult').innerHTML=renderAIHistory()+'<div>请求失败: '+esc(e.message)+'</div>';
   }finally{
     if(aiRequestId===qimenAiRequestSeq){clearQimenAiPending(aiRequestId);aiBtn.disabled=false;updateAiButtonLabel()}
   }
 }
 
 function renderAIHistory(){
-  if(!aiHistory.length)return '💡 输入问题后点击「AI 分析」获取全盘解读…';
+  if(!aiHistory.length)return '输入问题后点击「AI 分析」获取全盘解读…';
   var h='';
   if(aiTopic&&aiTopic.question)h+='<div style="font-size:11px;color:#8b7355;margin-bottom:10px">本盘问事：'+esc(aiTopic.question)+(plateData&&plateData.linkedBazi?' · '+esc(qimenBaziLinkText(plateData.linkedBazi)):' · 未关联八字')+'</div>';
   h+='<div class="ai-history-tools"><button type="button" onclick="collapseAllAI()">一键收起</button></div>';
@@ -1908,7 +1285,7 @@ function loadHistory(id,kind){
   setPlateActionsDisabled(false);
   var solarNote=plateData.trueSolar&&plateData.trueSolar.enabled?'真太阳时：输入 '+formatTimeObj(plateData.inputTime)+'，校正 '+formatOffset(plateData.trueSolar.correction)+'，起盘用 '+formatTimeObj(plateData.solarTime)+'。':'';
   setSideTab('info');
-  document.getElementById('infoPanel').innerHTML='<div class="title">📜 已加载'+(kind==='auto'?'起盘记录':'保存起盘')+' — '+esc(item.name)+'</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,getJieQiNote(plateData.solarTime))+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
+  document.getElementById('infoPanel').innerHTML='<div class="title">已加载'+(kind==='auto'?'起盘记录':'保存起盘')+' — '+esc(item.name)+'</div><div class="detail">'+plateData.juInfo.juShi+' | '+plateData.juInfo.jieQi+' '+plateData.juInfo.yuan+' | 日主: '+plateData.riZhu+'</div>'+(solarNote?'<div class="detail">'+solarNote+'</div>':'')+renderAssistInfo(plateData,getJieQiNote(plateData.solarTime))+'<div class="ai" id="aiResult">'+renderAIHistory()+'</div>';
 }
 
 function renameHistory(id,kind){
@@ -1953,8 +1330,8 @@ function renderRecordList(kind){
       '<span class="hi-date">'+(h.tag?'['+esc(h.tag)+'] ':'')+h.solarTime.year+'-'+pad(h.solarTime.month)+'-'+pad(h.solarTime.day)+'</span>'+
       '<span class="hi-name" title="'+esc(h.name)+'" onclick="loadHistory('+hid+',\''+kind+'\')">'+esc(h.name)+'</span>'+
       '<span class="hi-btns">'+
-        '<button onclick="event.stopPropagation();renameHistory('+hid+',\''+kind+'\')">✏</button>'+
-        '<button class="del" onclick="event.stopPropagation();deleteHistory('+hid+',\''+kind+'\')">✕</button>'+
+        '<button onclick="event.stopPropagation();renameHistory('+hid+',\''+kind+'\')">改名</button>'+
+        '<button class="del" onclick="event.stopPropagation();deleteHistory('+hid+',\''+kind+'\')">删除</button>'+
       '</span></div>';
   }
   list.innerHTML=html||'<div style="font-size:11px;color:#999;padding:8px;text-align:center">没有匹配的记录</div>';
