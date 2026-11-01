@@ -25,6 +25,28 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Ziwei Consolidated Release — 2026-11-02
+
+- 用户明确授权全部紫微本地修改一起提交推送至 `main`：紫微星夜界面与多图层/运限展示、本地术语解释卡、白话 AI 五段正文及独立依据、农历闰月输入校验、回答折叠/删除、移除记录导入导出入口。包括相应测试；不含六爻设计试验工作树。
+- 验证通过：紫微 30 固定盘及 3567 断言、AI 控件真实浏览器检查（独立存储、键盘折叠/删除/回滚、手机模拟）、八字检查、六爻检查、18 基线、共享 DeepSeek 客户端检查、4 个紫微 JS 语法检查与 diff 空白检查。未调用真实 AI，未测试实体手机。
+- 已知既有检查问题：`check-daily-page.js:135` 仍要求 `bazi-engine.js?v=20260820.1`，而日运页面使用 `.2`，导致日运检查失败；相关文件与远端基线一致，本次不修改日运、不宣称全仓检查全绿。
+- 发布目标：`main`；本节汇总覆盖下面两项“未提交”的历史交接状态。后续若继续改动，从最新 main 开始；未采用的设计技能尚未删除。
+
+### Ziwei AI Answer Controls — 2026-11-02
+
+- 本次只补紫微问答操作：参照八字使用原生 details/summary，默认展开、可键盘折叠；会话内重绘保留折叠状态，不改记录格式。删除移到每条问题标题栏，保留确认、持久化与写入失败回滚。
+- 移除记录区 JSON 导入/导出按钮及页面事件，搜索占满原工具行；不删除已有记录，不改排盘、提示词或模型配置。页面脚本/视觉缓存版本已更新。
+- 检查：`node check-ziwei-page.js`（30 固定盘、3567 断言）；`node check-ziwei-ai-ui.cjs`（独立浏览器存储验证键盘折叠、重绘保持、取消/确认删除、刷新恢复、存储异常回滚、390px 手机与入口移除）；未调用真实 AI 或读取用户浏览器记录。
+- 本地修改，未提交推送；八字仅作只读参考。原有紫微修改保留。
+
+### Ziwei Lunar Input Validation — 2026-11-02
+
+- Owner: current local checkout，`codex/bazi-ui-preview-20261014`；本次仅修改紫微文件。
+- Changed: 农历转公历后用原始历法回查年月日及闰月标记，拒绝不存在的闰月；吸收条件式解释结构（成立依据、制约条件、运限触发），四化必须绑定化星与宫位。页面资源版本 `20261102.1`。
+- Checks: `node check-ziwei-page.js`（30 固定盘、2930 断言，含无效闰月与合法闰月早晚子时等价盘）；`node check-baselines.js`（18 基线）；`node check-deepseek-client.js`；两个修改 JS 的语法检查；`git diff --check`。全部通过。
+- Delivery: 本地修改，未提交、推送；未调用真实 AI，未做本轮真实浏览器验收。
+- Next task: 本地验收农历输入报错及新 AI 解读结构；历史夏令时/海外时区、新亮度表尚未接入，时间公式和有效历史盘保持不变。
+
 ### Bazi Luck Concise Local Preview — 2026-10-14
 
 - Owner: current local checkout; branch `codex/bazi-ui-preview-20261014`，沿用下方界面预览。

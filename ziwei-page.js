@@ -34,7 +34,9 @@
     yearly: "指定流年：说明该年最值得关注的领域、触发条件和反向证据，必须回到本命与大限判断。",
     conclusion: "只看结论：保留完整证据链，但全文尽量控制在 500 字以内，先给最重要结论和现实建议。",
   });
-  const REQUIRED_AI_SECTIONS = Object.freeze(["总论", "关键结构", "本命基础", "运限合参", "支持与制约", "现实观察", "不确定边界"]);
+  // 2026-11-02 白话五段 + 依据：正文给完全不懂紫微的人看，证据编号只集中在最后的“依据”里。
+  const REQUIRED_AI_SECTIONS = Object.freeze(["一句话总结", "重点关注", "顺的地方", "要留意的", "建议怎么做", "依据"]);
+  const AI_BODY_SECTIONS = Object.freeze(REQUIRED_AI_SECTIONS.slice(0, 5));
   const LOCATIONS = [
     { preset: true, name: "云南省 昆明市", aliases: ["昆明", "云南昆明", "kunming"], lat: 25.0389, lng: 102.7183 },
     { preset: true, name: "云南省 曲靖市 麒麟区", aliases: ["曲靖", "麒麟", "麒麟区", "曲靖麒麟"], lat: 25.4951, lng: 103.8050 },
@@ -56,8 +58,11 @@
     "本盘固定 iztro default（以《紫微斗数全书》为基础）的四化、亮度与安星规则；不得混入中州派或其他门派表格。",
     "紫微用于观察整张命盘：用户可以同时询问全盘或多个生活领域，不得套用六爻的一事一问限制。分析模式只是观察重点，不是排他范围。",
     "先抓主线再展开：本命定基础；提供运限时，再以大限定阶段、流年看触发。优先三方四正、六组对宫轴、星曜组合、亮度、四化和辅煞关系，不得逐宫流水账或逐星套话。",
-    "每次回答必须严格使用七个二级标题：『## 总论』『## 关键结构』『## 本命基础』『## 运限合参』『## 支持与制约』『## 现实观察』『## 不确定边界』。关键结构最多三项，按重要性排序。",
-    "每项盘面事实后必须引用提供的证据编号，例如 [P01]、[D01]、[Y01]；只能引用证据目录中真实存在的编号。支持与制约必须同时出现，不能把禄权科一概视为吉，也不能把忌煞一概视为凶。",
+    "每次回答必须严格使用六个二级标题，顺序固定：『## 一句话总结』『## 重点关注』『## 顺的地方』『## 要留意的』『## 建议怎么做』『## 依据』。",
+    "读者完全不懂紫微斗数：用直白口语短句。『一句话总结』只写一句；『重点关注』写已选流年（或用户所问）的重点；其余每段 2–3 句。少用术语，必须用时在括号里用几个字解释，例如：化忌（容易操心、放不下的地方）。不要逐宫流水账，不要用加粗、表格或多级列表。",
+    "前五段正文里不得出现任何证据编号。所有证据编号只写在最后『## 依据』里，用英文方括号，每段一行，格式照抄下面的样子（编号换成证据目录里真实存在的）：\n## 依据\n- 一句话总结：[P01] [N01]\n- 重点关注：[D02] [Y03] [P05]\n- 顺的地方：[P07] [R01]\n- 要留意的：[P04] [Y05]\n- 建议怎么做：[N01]\n已选运限时，依据里要同时出现大限（D 开头）和流年（Y 开头）编号，最好写在“重点关注”这一行。只能引用证据目录中真实存在的编号。",
+    "『顺的地方』与『要留意的』必须同时有内容并各有依据，不能把禄权科一概视为吉，也不能把忌煞一概视为凶。重点先在内部按『成立依据—制约条件—运限触发』核对，再用白话写出；没有运限时只解释本命条件。使用传统格局名称时必须核对成立条件与破格因素，证据不足只描述星曜组合，不强行定格。四化是星曜的属性，必须连同化星及所在宫位理解，不能当成独立星曜。",
+    "『建议怎么做』给可执行的现实建议，最后一句提醒这是传统解读、需要结合现实验证，不是确定会发生的事。",
     "若证据不足，直接说证据不足。不得声称科学证实、权威定论、必然吉凶，不替代医疗、法律、投资等专业意见。",
     "不要尝试推断或索要姓名、经度、原始出生日期和原始出生时间。",
   ].join("\n");
@@ -76,6 +81,7 @@
     theme: "light",
     density: "clear",
     chartZoom: 1,
+    collapsedTurns: new Set(),
   };
 
   const $ = (id) => document.getElementById(id);
@@ -136,8 +142,6 @@
     askAi: $("askAi"),
     aiState: $("aiState"),
     recordSearch: $("recordSearch"),
-    exportRecords: $("exportRecords"),
-    importRecords: $("importRecords"),
     recordList: $("recordList"),
     timeConfirmDialog: $("timeConfirmDialog"),
     inputDateTime: $("inputDateTime"),
@@ -260,6 +264,12 @@
   function todayText() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }
+
+  // 只把当前盘面状态广播给展示层（ziwei-premium.js），不改排盘与解盘逻辑。
+  function notifyView(reason) {
+    if (typeof window.dispatchEvent !== "function" || typeof window.CustomEvent !== "function") return;
+    window.dispatchEvent(new window.CustomEvent("ziwei:view", { detail: { reason, snapshot: state.snapshot, horoscope: state.horoscope, selectedPalaceIndex: state.selectedPalaceIndex } }));
   }
 
   function setStatus(message, kind) {
@@ -587,6 +597,7 @@
     renderHoroscope();
     renderConversation();
     renderRecords();
+    notifyView("snapshot");
   }
 
   function selectPalace(index) {
@@ -608,6 +619,7 @@
     renderCenter();
     renderPalaceDetail();
     renderAiPresetQuestions();
+    notifyView("palace");
   }
 
   function starDetailMarkup(star) {
@@ -644,6 +656,7 @@
       elements.horoscopeState.textContent = "选择日期后点击按钮，不会自动切换。";
       elements.horoscopeState.className = "horoscope-state";
       renderAiPresetQuestions();
+      notifyView("horoscope");
       return;
     }
     const horoscope = state.horoscope;
@@ -667,6 +680,7 @@
       yearlyNode.dataset.limitLabel = yearlyNode === decadalNode ? "大限 · 流年" : "流年";
     }
     renderAiPresetQuestions();
+    notifyView("horoscope");
   }
 
   function calculateHoroscope() {
@@ -941,7 +955,7 @@
       targetDate: horoscope?.targetSolarDate || null,
       includesHoroscope: Boolean(horoscope),
       entries,
-      references: entries.map(({ id, layer, palaceIndex }) => ({ id, label: layer, palaceIndex })),
+      references: entries.map(({ id, layer, fact, palaceIndex }) => ({ id, label: layer, fact, palaceIndex })),
     };
   }
 
@@ -958,14 +972,14 @@
     const messages = [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: `以下是按重要层级整理的冻结证据目录（JSON）。目录包含本命十二宫完整星曜、三方四正和六组对宫轴；选择运限时还包含大限、流年的完整十二宫映射、四化与流曜。不要重新排盘：\n${JSON.stringify(context)}` },
-      { role: "assistant", content: horoscope ? "我会从整张命盘提炼主线，按本命—大限—流年合参，并用证据编号标注支持与制约。" : "我会只依据本命冻结证据提炼主线，不推断未提供的大限和流年。" },
+      { role: "assistant", content: horoscope ? "我会从整张命盘提炼主线，按本命—大限—流年合参，正文用白话写，证据编号只放在最后的依据里。" : "我会只依据本命冻结证据提炼主线，不推断未提供的大限和流年；正文用白话写，证据编号只放在最后的依据里。" },
     ];
     for (const turn of history) {
       const priorMeta = [turn.mode ? `模式:${turn.mode}` : "", turn.horoscopeSnapshot?.targetSolarDate ? `当时目标日期:${turn.horoscopeSnapshot.targetSolarDate}` : ""].filter(Boolean).join("；");
       messages.push({ role: "user", content: `${priorMeta ? `历史追问（${priorMeta}）\n` : ""}${turn.question}` });
       messages.push({ role: "assistant", content: `历史回答仅用于保持对话语义，不能把其中证据编号当作本次证据：\n${turn.answer.replace(/\[[A-Z]\d{2}\]/g, "")}` });
     }
-    messages.push({ role: "user", content: `本次分析模式：${aiModeGuide(mode, Boolean(horoscope))}\n当前查看宫位：${evidence.selectedPalace}（只是观察焦点，不限制全盘）\n${horoscope ? `已选运限：${evidence.targetDate}` : "未选择运限：只分析本命；“运限合参”须明确写明未提供，不能推断。"}\n用户问题：${question}\n请先完成内部核对，再严格按七个标题输出；不要复述整份数据。` });
+    messages.push({ role: "user", content: `本次分析模式：${aiModeGuide(mode, Boolean(horoscope))}\n当前查看宫位：${evidence.selectedPalace}（只是观察焦点，不限制全盘）\n${horoscope ? `已选运限：${evidence.targetDate}` : "未选择运限：只分析本命；“重点关注”须写明未提供运限，不能推断。"}\n用户问题：${question}\n请先完成内部核对，再严格按六个标题用白话输出；正文不写证据编号，编号只放在“依据”；不要复述整份数据。` });
     return messages;
   }
 
@@ -1016,51 +1030,103 @@
     return window.DeepSeekClient.extractAnswer(body);
   }
 
-  function validateAiAnswer(answer, evidence) {
-    const errors = [];
-    const lines = answer.split(/\r?\n/);
-    const sectionBody = (section) => {
-      const start = lines.findIndex((line) => line.trim() === `## ${section}`);
-      if (start < 0) return "";
-      const next = lines.findIndex((line, index) => index > start && /^##\s+/.test(line.trim()));
-      return lines.slice(start + 1, next < 0 ? lines.length : next).join("\n");
-    };
-    const sectionReferences = (section) => [...new Set([...sectionBody(section).matchAll(/\[([A-Z]\d{2})\]/g)].map((match) => match[1]))];
-    for (const section of REQUIRED_AI_SECTIONS) {
-      if (!new RegExp(`^##\\s*${section}\\s*$`, "m").test(answer)) errors.push(`缺少“${section}”`);
-    }
-    const validIds = new Set(evidence.references.map((item) => item.id));
-    const references = [...new Set([...answer.matchAll(/\[([A-Z]\d{2})\]/g)].map((match) => match[1]))];
-    const invalid = references.filter((id) => !validIds.has(id));
-    if (invalid.length) errors.push(`引用了不存在的证据 ${invalid.join("、")}`);
-    if (references.length < 5) errors.push("可核对证据少于 5 项");
-    if (!references.some((id) => /^[NPR]/.test(id))) errors.push("缺少本命证据");
-    if (evidence.includesHoroscope && !references.some((id) => id.startsWith("D"))) errors.push("缺少大限证据");
-    if (evidence.includesHoroscope && !references.some((id) => id.startsWith("Y"))) errors.push("缺少流年证据");
-    if (sectionReferences("关键结构").length < 2) errors.push("关键结构缺少多项证据");
-    if (!sectionReferences("本命基础").some((id) => /^[NPR]/.test(id))) errors.push("本命基础没有引用本命证据");
-    if (evidence.includesHoroscope && (!sectionReferences("运限合参").some((id) => id.startsWith("D")) || !sectionReferences("运限合参").some((id) => id.startsWith("Y")))) errors.push("运限合参没有同时引用大限与流年证据");
-    if (sectionReferences("支持与制约").length < 2) errors.push("支持与制约缺少双向证据");
-    return { valid: errors.length === 0, errors, references };
+  // 把模型常见的格式偏差先规范化：全角括号、### / **标题** / “1. 标题”、依据里的裸编号。
+  function normalizeAiAnswer(answer) {
+    const headings = [...REQUIRED_AI_SECTIONS, "总论", "关键结构", "本命基础", "运限合参", "支持与制约", "现实观察", "不确定边界"];
+    const headingRe = new RegExp(`^\\s*(?:#{1,4}\\s*)?(?:\\*\\*)?\\s*(?:[一二三四五六七八九十\\d]+[.、)）]\\s*)?(?:\\*\\*)?\\s*(${headings.join("|")})(?:（[^）]*）|\\([^)]*\\))?\\s*(?:\\*\\*)?\\s*[：:]?\\s*(?:\\*\\*)?\\s*$`);
+    let inBasis = false;
+    return String(answer || "")
+      .replace(/[【［\[]\s*([NPRDY]\d{2})\s*[】］\]]/g, "[$1]")
+      .split(/\r?\n/)
+      .map((line) => {
+        const heading = line.match(headingRe);
+        if (heading) { inBasis = heading[1] === "依据"; return `## ${heading[1]}`; }
+        if (/^\s*#{1,4}\s+/.test(line)) inBasis = false;
+        return inBasis ? line.replace(/(^|[^[A-Z\d])([NPRDY]\d{2})(?![\d\]])/g, "$1[$2]") : line;
+      })
+      .join("\n");
   }
 
+  function aiSectionBody(answer, section) {
+    const lines = String(answer).split(/\r?\n/);
+    const start = lines.findIndex((line) => new RegExp(`^#{2,3}\\s*${section}\\s*$`).test(line.trim()));
+    if (start < 0) return "";
+    const next = lines.findIndex((line, index) => index > start && /^#{2,3}\s+/.test(line.trim()));
+    return lines.slice(start + 1, next < 0 ? lines.length : next).join("\n");
+  }
+
+  // 硬性：引用不存在的编号、整篇没有任何编号 → 拒绝。其余只是格式/依据不全 → 重写一次，仍不全就带“仅供参考”标记显示并保存。
+  function validateAiAnswer(rawAnswer, evidence) {
+    const answer = normalizeAiAnswer(rawAnswer);
+    const hardErrors = [];
+    const softErrors = [];
+    const ids = (text) => [...new Set([...String(text).matchAll(/\[([A-Z]\d{2})\]/g)].map((match) => match[1]))];
+    const basis = aiSectionBody(answer, "依据");
+    const basisFor = (section) => ids(basis.split(/\r?\n/).filter((line) => line.includes(section)).join(" "));
+    const validIds = new Set(evidence.references.map((item) => item.id));
+    const references = ids(answer);
+    const invalid = references.filter((id) => !validIds.has(id));
+    if (invalid.length) hardErrors.push(`引用了不存在的证据 ${invalid.join("、")}`);
+    if (!references.length) hardErrors.push("没有任何可核对的依据编号");
+    for (const section of REQUIRED_AI_SECTIONS) {
+      if (!new RegExp(`^##\\s*${section}\\s*$`, "m").test(answer)) softErrors.push(`缺少“${section}”`);
+    }
+    if (!aiSectionBody(answer, "一句话总结").trim()) softErrors.push("一句话总结为空");
+    if (references.length && references.length < 5) softErrors.push("可核对证据少于 5 项");
+    if (!references.some((id) => /^[NPR]/.test(id))) softErrors.push("缺少本命证据");
+    if (evidence.includesHoroscope && !references.some((id) => id.startsWith("D"))) softErrors.push("缺少大限证据");
+    if (evidence.includesHoroscope && !references.some((id) => id.startsWith("Y"))) softErrors.push("缺少流年证据");
+    if (basis && (!basisFor("顺的地方").length || !basisFor("要留意的").length)) softErrors.push("顺的地方与要留意的没有各自的依据");
+    const errors = [...hardErrors, ...softErrors];
+    return { valid: errors.length === 0, hard: hardErrors.length > 0, errors, hardErrors, softErrors, references, answer };
+  }
+
+  // 白话渲染：正文去掉行内证据编号（旧回答也一样），**加粗**正常显示，编号统一收进可展开的“依据”。
   function renderAiAnswer(answer, references) {
     const referenceMap = new Map((references || []).map((item) => [item.id, item]));
-    const inline = (text) => escapeHtml(text).replace(/\[([A-Z]\d{2})\]/g, (match, id) => {
+    const cited = [];
+    const cite = (id) => { if (!cited.includes(id)) cited.push(id); };
+    const refButton = (id) => {
       const reference = referenceMap.get(id);
-      if (!reference) return match;
+      if (!reference) return `<span class="evidence-ref static">[${escapeHtml(id)}]</span>`;
       const label = escapeHtml(`${reference.label} ${id}`);
       if (reference.palaceIndex == null) return `<span class="evidence-ref static" title="${label}">[${id}]</span>`;
       return `<button class="evidence-ref" type="button" data-evidence-palace="${reference.palaceIndex}" title="定位到${label}" aria-label="定位到${label}">[${id}]</button>`;
-    });
-    return String(answer).split(/\r?\n/).map((line) => {
-      const heading = line.match(/^##\s+(.+)$/);
-      if (heading) return `<h3>${inline(heading[1])}</h3>`;
-      const bullet = line.match(/^[-*]\s+(.+)$/);
-      if (bullet) return `<div class="ai-answer-bullet">${inline(bullet[1])}</div>`;
-      if (!line.trim()) return '<span class="ai-answer-space" aria-hidden="true"></span>';
-      return `<p>${inline(line)}</p>`;
+    };
+    const stripTags = (text) => String(text)
+      .replace(/[（(]\s*((?:\[[A-Z]\d{2}\][\s、，,;；]*)+)[）)]/g, (match, group) => { [...group.matchAll(/\[([A-Z]\d{2})\]/g)].forEach((m) => cite(m[1])); return ""; })
+      .replace(/\s*\[([A-Z]\d{2})\]/g, (match, id) => { cite(id); return ""; })
+      .replace(/\s+([；;，,。．.、])/g, "$1")
+      .replace(/([；;，,、])\s*(?=[。．.])/g, "");
+    const md = (text) => escapeHtml(stripTags(text)).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/__(.+?)__/g, "<strong>$1</strong>").replace(/\*\*/g, "");
+    const lines = String(answer).split(/\r?\n/);
+    const basisAt = lines.findIndex((line) => /^#{2,3}\s*依据\s*$/.test(line.trim()));
+    const bodyLines = basisAt < 0 ? lines : lines.slice(0, basisAt);
+    const basisLines = basisAt < 0 ? [] : lines.slice(basisAt + 1).filter((line) => line.trim());
+    const body = bodyLines.map((line) => {
+      const trimmed = line.trim();
+      if (/^(-{3,}|\*{3,})$/.test(trimmed)) return "";
+      const heading = trimmed.match(/^#{1,4}\s+(.+)$/);
+      if (heading) return `<h3>${md(heading[1].replace(/\*\*/g, ""))}</h3>`;
+      const bullet = trimmed.match(/^[-*•]\s+(.+)$/);
+      if (bullet) return `<div class="ai-answer-bullet">${md(bullet[1])}</div>`;
+      const numbered = trimmed.match(/^(\d{1,2})[.、)]\s*(.+)$/);
+      if (numbered) return `<div class="ai-answer-num"><b>${numbered[1]}</b><span>${md(numbered[2])}</span></div>`;
+      if (!trimmed) return '<span class="ai-answer-space" aria-hidden="true"></span>';
+      return `<p>${md(trimmed.replace(/^>\s*/, ""))}</p>`;
     }).join("");
+    const basisMarkup = basisLines.map((line) => {
+      const text = line.trim().replace(/^[-*•]\s+/, "");
+      [...text.matchAll(/\[([A-Z]\d{2})\]/g)].forEach((m) => cite(m[1]));
+      return `<div class="ai-basis-line">${escapeHtml(text.replace(/\*\*/g, "")).replace(/\[([A-Z]\d{2})\]/g, (match, id) => refButton(id))}</div>`;
+    }).join("");
+    if (!cited.length && !basisMarkup) return body;
+    const list = cited.map((id) => {
+      const reference = referenceMap.get(id);
+      const fact = reference?.fact ? String(reference.fact) : "";
+      return `<li>${refButton(id)}<span>${escapeHtml(reference?.label || "未知编号")}</span>${fact ? `<small>${escapeHtml(fact.length > 180 ? `${fact.slice(0, 180)}…` : fact)}</small>` : ""}</li>`;
+    }).join("");
+    return `${body}<details class="ai-basis"><summary>依据（点开核对）<small>${cited.length} 条</small></summary>${basisMarkup ? `<div class="ai-basis-map">${basisMarkup}</div>` : ""}${list ? `<ul class="ai-basis-list">${list}</ul>` : ""}</details>`;
   }
 
   async function requestAiCompletion(messages) {
@@ -1087,10 +1153,14 @@
     let answer = await requestAiCompletion(messages);
     let validation = validateAiAnswer(answer, evidence);
     if (!validation.valid) {
-      answer = await requestAiCompletion([...messages, { role: "assistant", content: answer }, { role: "user", content: `上面的草稿未通过本地校验：${validation.errors.join("；")}。请不要增加任何新事实，重新严格按七个标题输出，并只引用证据目录中的编号。` }]);
-      validation = validateAiAnswer(answer, evidence);
+      elements.aiState.textContent = "回答格式不完整，正在请 AI 按格式重写一次…";
+      const retry = await requestAiCompletion([...messages, { role: "assistant", content: answer }, { role: "user", content: `上面的草稿未通过本地校验：${validation.errors.join("；")}。请不要增加任何新事实，重新严格按六个标题用白话输出，正文不写证据编号，并在“## 依据”里按示例逐行列出编号，只引用证据目录中的编号。` }]);
+      const retried = validateAiAnswer(retry, evidence);
+      // 重写后若更差（出现硬性问题）而原稿只是格式问题，就保留原稿。
+      if (!retried.hard || validation.hard) { answer = retry; validation = retried; }
     }
-    if (!validation.valid) throw new Error(`AI 回答未通过结构与证据校验：${validation.errors.join("；")}。已拒绝保存。`);
+    if (validation.hard) throw new Error(`AI 回答引用了无法核对的依据（${validation.hardErrors.join("；")}），已拒绝保存，请重新提问。`);
+    answer = validation.answer;
     const now = new Date().toISOString();
     const turn = {
       id: randomId("turn"),
@@ -1102,6 +1172,7 @@
       horoscopeSnapshot: horoscope ? clone(horoscope) : null,
       evidenceRefs: clone(evidence.references),
     };
+    if (!validation.valid) turn.formatWarning = validation.softErrors.slice(0, 6);
     record.aiHistory.push(turn);
     record.currentHoroscope = horoscope ? clone(horoscope) : null;
     record.updatedAt = now;
@@ -1119,14 +1190,24 @@
       elements.conversation.innerHTML = '<p class="privacy-note">还没有问答。回答会按当时本命盘与已选运限冻结，不随以后切换年份而改变。</p>';
       return;
     }
-    elements.conversation.innerHTML = history.map((turn) => `
-      <article class="turn">
-        <div class="turn-question"><small>${escapeHtml(turn.mode ? `分析模式 · ${aiModeLabel(turn.mode)} · ` : "问题 · ")}${escapeHtml(turn.horoscopeSnapshot?.targetSolarDate || "未选运限")}</small>${escapeHtml(turn.question)}</div>
-        <div class="turn-answer"><small>${escapeHtml(turn.model)} · ${escapeHtml(formatDateTime(turn.createdAt))}</small>${renderAiAnswer(turn.answer, turn.evidenceRefs)}</div>
-        <div class="turn-actions"><button class="text-button" type="button" data-delete-turn="${escapeHtml(turn.id)}">删除这条问答</button></div>
-      </article>`).join("");
+    elements.conversation.innerHTML = history.map((turn, index) => `
+      <details class="turn" data-turn-id="${escapeHtml(turn.id)}" ${state.collapsedTurns.has(`${record.id}:${turn.id}`) ? "" : "open"}>
+        <summary class="turn-question"><span class="turn-heading"><b>第 ${index + 1} 问</b><span class="turn-toggle"></span><button class="text-button turn-delete" type="button" data-delete-turn="${escapeHtml(turn.id)}">删除</button></span><small>${escapeHtml(turn.mode ? `分析模式 · ${aiModeLabel(turn.mode)} · ` : "问题 · ")}${escapeHtml(turn.horoscopeSnapshot?.targetSolarDate || "未选运限")}</small><strong>${escapeHtml(turn.question)}</strong></summary>
+        <div class="turn-answer"><small>${escapeHtml(turn.model)} · ${escapeHtml(formatDateTime(turn.createdAt))}</small>${Array.isArray(turn.formatWarning) && turn.formatWarning.length ? `<p class="ai-format-note" title="${escapeHtml(turn.formatWarning.join("；"))}">未完全按格式/依据不全，仅供参考</p>` : ""}${renderAiAnswer(normalizeAiAnswer(turn.answer), turn.evidenceRefs)}</div>
+      </details>`).join("");
+    elements.conversation.querySelectorAll("details[data-turn-id]").forEach((details) => {
+      details.addEventListener("toggle", () => {
+        const key = `${record.id}:${details.dataset.turnId}`;
+        if (details.open) state.collapsedTurns.delete(key);
+        else state.collapsedTurns.add(key);
+      });
+    });
     elements.conversation.querySelectorAll("[data-delete-turn]").forEach((button) => {
-      button.addEventListener("click", () => deleteTurn(button.dataset.deleteTurn));
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        deleteTurn(button.dataset.deleteTurn);
+      });
     });
     elements.conversation.querySelectorAll("[data-evidence-palace]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -1226,40 +1307,6 @@
     renderConversation();
   }
 
-  function exportRecords() {
-    const data = createExportBundle(state.records);
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `ziwei-records-${todayText()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setStatus(`已导出 ${state.records.length} 条记录；API Key 不在导出文件中。`, "success");
-  }
-
-  async function importRecords(file) {
-    if (!file) return;
-    try {
-      const parsed = JSON.parse(await file.text());
-      const result = mergeImportBundle(state.records, parsed);
-      const previous = state.records;
-      state.records = result.records;
-      if (!saveRecords()) {
-        state.records = previous;
-        return;
-      }
-      renderRecords();
-      setStatus(`导入完成：读取 ${result.read} 条，新增或更新 ${result.updated} 条。`, "success");
-    } catch (error) {
-      setStatus(`导入失败：${error.message}`, "error");
-    } finally {
-      elements.importRecords.value = "";
-    }
-  }
-
   function resetPage() {
     elements.birthForm.reset();
     elements.solarDate.value = "1990-01-01";
@@ -1287,6 +1334,7 @@
     elements.inputState.className = "input-state";
     setStatus("请填写出生资料并点击“排出命盘”。修改输入不会自动改盘。", "");
     renderRecords();
+    notifyView("reset");
   }
 
   elements.birthForm.addEventListener("submit", (event) => {
@@ -1360,7 +1408,7 @@
       elements.aiState.textContent = turn.horoscopeSnapshot ? "回答和当时运限已冻结到本地记录。" : "本命回答已冻结到本地记录。";
       renderConversation();
       renderRecords();
-      setStatus("AI 回答已保存。传统解读不是科学验证或权威结论。", "success");
+      setStatus(turn.formatWarning ? "AI 回答已显示并保存（未完全按格式，仅供参考）。" : "AI 回答已保存。传统解读不是科学验证或权威结论。", "success");
     } catch (error) {
       elements.aiState.textContent = error.message;
       setStatus(error.message, "error");
@@ -1369,8 +1417,6 @@
     }
   });
   elements.recordSearch.addEventListener("input", renderRecords);
-  elements.exportRecords.addEventListener("click", exportRecords);
-  elements.importRecords.addEventListener("change", () => importRecords(elements.importRecords.files[0]));
 
   state.theme = readDisplayPreference(localStorage, THEME_STORAGE_KEY, ["light", "dark"], "light");
   state.density = readDisplayPreference(localStorage, DENSITY_STORAGE_KEY, ["clear", "pro"], "clear");
@@ -1403,6 +1449,7 @@
     aiPresetQuestions,
     validateAiAnswer,
     renderAiAnswer,
+    normalizeAiAnswer,
     extractAiAnswer,
     isValidRecord,
     readRecordStorage,

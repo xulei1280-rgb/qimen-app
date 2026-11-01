@@ -285,7 +285,7 @@
     if (calendarType === "solar") return sourceDate.text;
     applyProjectConfig();
     try {
-      return iztro.astro.byLunar(
+      const solarDate = iztro.astro.byLunar(
         sourceDate.text,
         timeIndex,
         gender,
@@ -293,6 +293,13 @@
         true,
         "zh-CN",
       ).solarDate;
+      // 用原始历法回查，不用晚子换日或闰月分半后的安星日期校验输入。
+      const raw = iztro.astro.bySolar(solarDate, 0, gender, true, "zh-CN").rawDates.lunarDate;
+      if (raw.lunarYear !== sourceDate.year || Math.abs(raw.lunarMonth) !== sourceDate.month ||
+          raw.lunarDay !== sourceDate.day || Boolean(raw.isLeap) !== sourceDate.isLeap) {
+        throw new Error("该农历日期或闰月不存在，请核对出生日期和闰月选项。");
+      }
+      return solarDate;
     } catch (error) {
       throw engineError("INVALID_LUNAR_DATE", `无法换算该农历日期：${error.message}`);
     }

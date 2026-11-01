@@ -527,6 +527,15 @@
     .turn { border: 1px solid var(--line); background: rgba(2,6,15,.45); }
     .turn-question, .turn-answer { padding: .75rem; }
     .turn-question { color: var(--gold-pale); border-bottom: 1px solid var(--line); }
+    summary.turn-question { cursor: pointer; list-style: none; overflow-wrap: anywhere; }
+    summary.turn-question::-webkit-details-marker { display: none; }
+    .turn-heading { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; font-size: 14px; }
+    .turn-toggle { margin-left: auto; color: var(--muted); font-size: 12px; }
+    .turn-toggle::after { content: "展开回答 ▾"; }
+    .turn[open] .turn-toggle::after { content: "收起回答 ▴"; }
+    .turn:not([open]) .turn-question { border-bottom: 0; }
+    .turn-question strong { display: block; font-size: 16px; line-height: 1.65; }
+    .turn-heading .turn-delete { min-height: 36px; padding: .25rem .6rem; color: var(--red); font-size: 12px; }
     .turn-question small, .turn-answer small { display: block; margin-bottom: .35rem; color: var(--muted); font-size: .68rem; }
     .turn-answer { overflow-wrap: anywhere; font-family: Georgia, "STSong", serif; }
     .turn-answer h3 { margin: 1rem 0 .45rem; color: var(--gold-pale); font-size: 1rem; }
@@ -1129,52 +1138,57 @@
       *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
     }
   </style>
+  <link rel="stylesheet" href="premium-base.css?v=20261101.2">
+  <link rel="stylesheet" href="ziwei-premium.css?v=20261102.5">
 </head>
-<body>
+<body class="zw">
   <a class="skip-link" href="#main">跳到主要内容</a>
-  <header class="site-header">
-    <div class="header-inner">
-      <a class="brand" href="ziwei.html"><span class="brand-mark">四术 · 紫微</span><small>LOCAL PROTOTYPE</small></a>
-      <div class="header-actions">
-        <nav class="module-nav" aria-label="术数模块">
-          <a href="index.html">奇门</a>
-          <a href="bazi.html">八字</a>
-          <a href="liuyao.html">六爻</a>
-          <a href="ziwei.html" aria-current="page">紫微</a>
-          <a href="daily.html">日运</a>
-        </nav>
-        <div class="segmented-control theme-control" role="group" aria-label="页面主题">
-          <button id="themeLight" type="button" data-theme-choice="light" aria-pressed="true">明亮</button>
-          <button id="themeDark" type="button" data-theme-choice="dark" aria-pressed="false">夜色</button>
+  <main id="main" class="zw-page">
+    <header class="top zw-top">
+      <div class="appbar">
+        <a class="app-brand" href="ziwei.html"><svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="14" cy="14" r="11.5" stroke="currentColor" stroke-width="1.3"/><path d="M14 4.5l1.9 6.3 6.6.2-5.3 3.9 1.9 6.3L14 17.4l-5.1 3.8 1.9-6.3-5.3-3.9 6.6-.2z" stroke="currentColor" stroke-width="1" fill="currentColor" fill-opacity=".18"/></svg>术数研习</a>
+        <div class="header-actions">
+          <nav class="module-nav" aria-label="术数模块">
+            <a class="back" href="index.html">奇门</a>
+            <a class="back" href="bazi.html">八字</a>
+            <a class="back" href="liuyao.html">六爻</a>
+            <a class="back" href="ziwei.html" aria-current="page">紫微</a>
+            <a class="back" href="daily.html">日运</a>
+          </nav>
+          <div class="segmented-control theme-control" role="group" aria-label="页面主题">
+            <button id="themeLight" type="button" data-theme-choice="light" aria-pressed="true">明亮</button>
+            <button id="themeDark" type="button" data-theme-choice="dark" aria-pressed="false">夜色</button>
+          </div>
         </div>
       </div>
-    </div>
-  </header>
-
-  <main id="main">
-    <section class="hero" aria-labelledby="page-title">
-      <div>
-        <p class="eyebrow">Zi Wei Dou Shu · Natal &amp; Horoscope</p>
-        <h1 id="page-title">紫微斗数</h1>
-        <p class="hero-copy">固定 iztro 2.5.8 的本地排盘原型。展示本命、大限与流年；规则是项目选择，不代表唯一门派，更不是科学验证的权威结论。</p>
+      <div class="page-intro">
+        <div>
+          <h1 id="page-title">紫微斗数</h1>
+          <div class="sub">十二宫 · 四化飞星 · 大限流年
+            <button class="zw-info-btn" id="zwInfoBtn" type="button" aria-expanded="false" aria-controls="zwInfo" aria-label="关于本页规则">ⓘ</button>
+          </div>
+        </div>
       </div>
-      <div class="prototype-stamp">本地验盘版 · 未发布</div>
-    </section>
+      <div class="zw-info" id="zwInfo" hidden>
+        <p class="eyebrow">Zi Wei Dou Shu · Natal &amp; Horoscope</p>
+        <p class="hero-copy">固定 iztro 2.5.8 的本地排盘原型。展示本命、大限与流年；规则是项目选择，不代表唯一门派，更不是科学验证的权威结论。</p>
+        <span class="prototype-stamp">本地验盘版 · 未发布</span>
+      </div>
+    </header>
 
     <div id="statusBanner" class="notice" role="status" aria-live="polite">请填写出生资料并点击“排出命盘”。修改输入不会自动改盘。</div>
 
-    <div class="workspace">
-      <aside class="panel input-panel" aria-labelledby="input-title">
+    <section class="panel input-panel zw-entry" id="entryCard" aria-labelledby="input-title">
+      <div class="zw-entry-summary" id="entrySummary" hidden>
+        <div><small>出生资料</small><strong id="entrySummaryText"></strong></div>
+        <button class="button" id="entryEdit" type="button" aria-controls="entryBody" aria-expanded="false">修改</button>
+      </div>
+      <div class="zw-entry-body" id="entryBody">
         <div class="panel-heading">
           <h2 id="input-title">出生资料</h2>
           <p>姓名只保存在本机，不会发给 AI。</p>
         </div>
         <form id="birthForm" novalidate>
-          <label class="field">
-            <span>姓名或本地标记（可选）</span>
-            <input id="personLabel" name="personLabel" autocomplete="off" maxlength="40" placeholder="例如：测试盘 A">
-          </label>
-
           <fieldset>
             <legend>性别</legend>
             <div class="radio-row">
@@ -1214,33 +1228,41 @@
             <input class="chart-input" id="birthTime" type="time" required>
           </label>
 
-          <fieldset>
-            <legend>时间口径</legend>
-            <div class="radio-row">
-              <label><input class="chart-input" type="radio" name="timeBasis" value="beijing" checked> 北京时间</label>
-              <label><input class="chart-input" type="radio" name="timeBasis" value="trueSolar"> 真太阳时</label>
-            </div>
-          </fieldset>
+          <details class="zw-more" id="entryMore">
+            <summary>更多选项 <small>姓名标记 · 真太阳时与出生地点</small></summary>
+            <label class="field">
+              <span>姓名或本地标记（可选）</span>
+              <input id="personLabel" name="personLabel" autocomplete="off" maxlength="40" placeholder="例如：测试盘 A">
+            </label>
 
-          <div class="location-field" id="longitudeField" hidden>
-            <button class="location-trigger" id="locationTrigger" type="button" aria-expanded="false" aria-controls="locationPanel">
-              <span>出生地点</span>
-              <strong id="birthLocationDisplay">尚未选择</strong>
-              <small id="birthLocationCoord">开启真太阳时后必须选择地点</small>
-            </button>
-            <div class="location-panel" id="locationPanel" hidden>
-              <label class="field"><span>搜索本地城市</span><input id="locationSearch" type="search" autocomplete="off" placeholder="例如：昆明、上海、师宗"></label>
-              <div class="location-list" id="locationList" role="listbox" aria-label="出生地点"></div>
-              <div class="custom-location">
-                <input id="customLocationName" autocomplete="off" placeholder="自定义地点名" aria-label="自定义地点名">
-                <input id="customLongitude" type="number" min="-180" max="180" step="0.0001" inputmode="decimal" placeholder="东经，如 121.4737" aria-label="自定义经度">
-                <button class="button" id="useCustomLocation" type="button">使用</button>
+            <fieldset>
+              <legend>时间口径 <button type="button" class="zw-help zw-help-inline" data-zw-term="真太阳时" aria-label="真太阳时是什么意思">?</button></legend>
+              <div class="radio-row">
+                <label><input class="chart-input" type="radio" name="timeBasis" value="beijing" checked> 北京时间</label>
+                <label><input class="chart-input" type="radio" name="timeBasis" value="trueSolar"> 真太阳时</label>
               </div>
+            </fieldset>
+
+            <div class="location-field" id="longitudeField" hidden>
+              <button class="location-trigger" id="locationTrigger" type="button" aria-expanded="false" aria-controls="locationPanel">
+                <span>出生地点</span>
+                <strong id="birthLocationDisplay">尚未选择</strong>
+                <small id="birthLocationCoord">开启真太阳时后必须选择地点</small>
+              </button>
+              <div class="location-panel" id="locationPanel" hidden>
+                <label class="field"><span>搜索本地城市</span><input id="locationSearch" type="search" autocomplete="off" placeholder="例如：昆明、上海、师宗"></label>
+                <div class="location-list" id="locationList" role="listbox" aria-label="出生地点"></div>
+                <div class="custom-location">
+                  <input id="customLocationName" autocomplete="off" placeholder="自定义地点名" aria-label="自定义地点名">
+                  <input id="customLongitude" type="number" min="-180" max="180" step="0.0001" inputmode="decimal" placeholder="东经，如 121.4737" aria-label="自定义经度">
+                  <button class="button" id="useCustomLocation" type="button">使用</button>
+                </div>
+              </div>
+              <input class="chart-input" id="longitude" type="hidden" value="">
+              <div class="solar-preview" id="solarPreview" role="status" aria-live="polite">请选择出生地点后预览真太阳时。</div>
+              <p class="privacy-note">城市预设采用中心坐标；需要更精确时可填写实际经度。当前算法使用经度和日期均时差，纬度仅用于地点核对，不参与修正。</p>
             </div>
-            <input class="chart-input" id="longitude" type="hidden" value="">
-            <div class="solar-preview" id="solarPreview" role="status" aria-live="polite">请选择出生地点后预览真太阳时。</div>
-            <p class="privacy-note">城市预设采用中心坐标；需要更精确时可填写实际经度。当前算法使用经度和日期均时差，纬度仅用于地点核对，不参与修正。</p>
-          </div>
+          </details>
 
           <div class="button-row">
             <button class="button primary" type="submit">排出命盘</button>
@@ -1248,16 +1270,27 @@
           </div>
           <p class="input-state" id="inputState">尚未排盘</p>
         </form>
-        <p class="rule-note">固定规则：正月初一分年与切运、自然年虚岁、闰月十五日前后分月；大限宫干沿用本命原宫干；时辰按左闭右开区间，01:00 起丑、03:00 起寅、23:00 起晚子。真太阳时跨时辰须二次确认。</p>
-      </aside>
+      </div>
+    </section>
 
-      <div class="content-stack">
-        <section class="panel empty-state" id="emptyState">
-          <div class="empty-orbit" aria-hidden="true"></div>
-          <h2>命盘尚未生成</h2>
-          <p>先从左侧输入一组出生资料。排盘后才能查看大限、流年与 AI 解读。</p>
-        </section>
+    <section class="panel empty-state" id="emptyState">
+      <div class="empty-orbit" aria-hidden="true"></div>
+      <h2>命盘尚未生成</h2>
+      <p>先在上方输入一组出生资料。排盘后才能查看大限、流年与 AI 解读。</p>
+    </section>
 
+    <section class="zw-overview" id="zwOverview" hidden aria-label="命盘总览"></section>
+
+    <div class="zw-tabs" id="zwTabs" role="tablist" aria-label="命盘视图" hidden>
+      <button type="button" role="tab" data-zw-tab="natal" aria-selected="true" class="active">本命</button>
+      <button type="button" role="tab" data-zw-tab="luck" aria-selected="false">运限</button>
+      <button type="button" role="tab" data-zw-tab="ai" aria-selected="false">AI 解读</button>
+      <button type="button" role="tab" data-zw-tab="records" aria-selected="false">记录</button>
+    </div>
+
+    <div class="content-stack">
+      <div class="zw-natal" data-zw-panel="natal">
+        <section class="zw-plain" id="zwPlain" hidden aria-labelledby="zwPlainTitle" aria-live="polite"></section>
         <section class="panel chart-panel" id="chartPanel" hidden aria-labelledby="chart-title">
           <div class="chart-toolbar">
             <div>
@@ -1277,49 +1310,65 @@
               </div>
             </div>
           </div>
+          <div class="zw-layers" id="zwLayers" role="group" aria-label="命盘连线图层（可叠加）">
+            <span class="zw-layer"><button type="button" data-zw-layer="rel" aria-pressed="true"><i class="zw-sw zw-sw-rel" aria-hidden="true"></i>三方四正</button><button type="button" class="zw-help" data-zw-term="三方四正连线" aria-label="三方四正连线是什么意思">?</button></span>
+            <span class="zw-layer"><button type="button" data-zw-layer="birth" aria-pressed="false"><i class="zw-sw zw-sw-birth" aria-hidden="true"></i>生年四化</button><button type="button" class="zw-help" data-zw-term="生年四化连线" aria-label="生年四化连线是什么意思">?</button></span>
+            <span class="zw-layer"><button type="button" data-zw-layer="fly" aria-pressed="false"><i class="zw-sw zw-sw-fly" aria-hidden="true"></i>宫干飞化</button><button type="button" class="zw-help" data-zw-term="宫干飞化连线" aria-label="宫干飞化连线是什么意思">?</button></span>
+            <span class="zw-layer"><button type="button" data-zw-layer="luck" aria-pressed="false"><i class="zw-sw zw-sw-luck" aria-hidden="true"></i>大限·流年四化</button><button type="button" class="zw-help" data-zw-term="大限·流年四化连线" aria-label="大限·流年四化连线是什么意思">?</button></span>
+          </div>
           <div class="chart-viewport" id="chartViewport" aria-label="可独立缩放和左右滑动的紫微命盘">
             <div class="chart-grid" id="chartGrid" aria-label="紫微斗数十二宫命盘">
               <div class="chart-center" id="chartCenter"></div>
             </div>
           </div>
+          <div class="zw-legend" id="zwLegend" aria-live="polite"></div>
         </section>
 
         <div class="detail-grid" id="detailSection" hidden>
-          <section class="panel detail-card" aria-labelledby="detail-title">
-            <h2 id="detail-title">宫位详情</h2>
-            <div class="detail-body" id="palaceDetail"></div>
-          </section>
-
-          <section class="panel horoscope-card" aria-labelledby="horoscope-title">
-            <h2 id="horoscope-title">大限与流年</h2>
-            <div class="horoscope-controls">
-              <label class="field"><span>目标日期</span><input id="targetDate" type="date" min="1900-01-01" max="2099-12-31"></label>
-              <button class="button secondary" id="horoscopeButton" type="button">查看运限</button>
+          <section class="panel detail-card" id="detailCard" aria-labelledby="detail-title">
+            <div class="zw-sheet-head">
+              <span class="zw-sheet-grip" aria-hidden="true"></span>
+              <button class="zw-sheet-nav" id="sheetPrev" type="button" aria-label="上一宫">‹</button>
+              <h2 id="detail-title">宫位详情</h2>
+              <button class="zw-sheet-nav" id="sheetNext" type="button" aria-label="下一宫">›</button>
+              <button class="zw-sheet-close" id="sheetClose" type="button" aria-label="关闭宫位详情">×</button>
             </div>
-            <p class="horoscope-state" id="horoscopeState">选择日期后点击按钮，不会自动切换。</p>
-            <div class="horoscope-summary" id="horoscopeSummary" hidden></div>
+            <div class="detail-body" id="palaceDetail"></div>
+            <div class="zw-fly-detail" id="zwFlyDetail"></div>
           </section>
         </div>
+      </div>
 
-        <div class="lower-grid records-only" id="lowerSection">
-          <section class="panel ai-panel" id="aiPanel" hidden aria-labelledby="ai-title">
-            <div class="section-heading">
-              <div>
-                <h2 id="ai-title">AI 连续追问</h2>
-                <p>仅解释冻结盘面；如已选择运限，每条回答同时固定当时运限。</p>
-              </div>
-              <span class="rule-chip">deepseek-v4-flash · 思考</span>
+      <div class="zw-luck" data-zw-panel="luck">
+        <section class="panel horoscope-card" aria-labelledby="horoscope-title">
+          <h2 id="horoscope-title">大限与流年</h2>
+          <div class="horoscope-controls">
+            <label class="field"><span>目标日期</span><input id="targetDate" type="date" min="1900-01-01" max="2099-12-31"></label>
+            <button class="button secondary" id="horoscopeButton" type="button">查看运限</button>
+          </div>
+          <p class="horoscope-state" id="horoscopeState">选择日期后点击按钮，不会自动切换。</p>
+          <div class="horoscope-summary" id="horoscopeSummary" hidden></div>
+          <div class="zw-timeline-wrap">
+            <h3>十二大限</h3>
+            <ol class="zw-timeline" id="zwTimeline" aria-label="大限时间轴"></ol>
+          </div>
+        </section>
+      </div>
+
+      <div class="lower-grid records-only" id="lowerSection">
+        <section class="panel ai-panel" id="aiPanel" data-zw-panel="ai" hidden aria-labelledby="ai-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="ai-title">AI 连续追问</h2>
+              <p>仅解释冻结盘面；如已选择运限，每条回答同时固定当时运限。</p>
             </div>
+            <span class="rule-chip">deepseek-v4-flash · 思考</span>
+          </div>
 
-            <details class="key-box">
-              <summary>DeepSeek API Key</summary>
-              <label class="field"><span>与旧模块共用本机 Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
-              <div class="button-row"><button class="button" id="saveApiKey" type="button">保存到本机</button></div>
-            </details>
-            <p class="privacy-note">发送内容：匿名本命盘、当前问题、已有对话，以及已经选择时的冻结运限。不发送姓名、出生地点、经纬度、原始出生日期时间。你在问题里主动填写的信息仍会发送。</p>
-
-            <div class="conversation" id="conversation" aria-live="polite"></div>
-            <form class="ai-form" id="aiForm">
+          <div class="conversation" id="conversation" aria-live="polite"></div>
+          <form class="ai-form" id="aiForm">
+            <details class="zw-ai-settings" id="aiSettings">
+              <summary>分析方式与设置 <small id="aiModeSummary">综合总览</small></summary>
               <div class="ai-mode-row">
                 <label class="field"><span>分析方式</span><select id="aiMode" aria-describedby="aiModeHelp">
                   <option value="comprehensive" selected>综合总览</option>
@@ -1334,37 +1383,45 @@
                 </select></label>
                 <p id="aiModeHelp">默认从整张命盘提炼主线。专题模式只改变观察重点，不会限制为一事一问，也不会重新排盘。</p>
               </div>
-              <div class="ai-presets" aria-labelledby="aiPresetLabel">
-                <span id="aiPresetLabel">预设问法 · 点击后仍可修改</span>
-                <div class="ai-preset-list" id="aiPresetQuestions"></div>
-              </div>
-              <label class="field"><span>问题</span><textarea id="aiQuestion" rows="4" maxlength="3000" placeholder="例如：请从整张命盘提炼最重要的结构，并说明当前大限和流年的影响。" required></textarea></label>
-              <div class="ai-actions">
-                <small id="aiState">第一次提问时自动建立本地记录。</small>
-                <button class="button primary" id="askAi" type="submit">发送问题</button>
-              </div>
-            </form>
-          </section>
+              <details class="key-box">
+                <summary>DeepSeek API Key</summary>
+                <label class="field"><span>与旧模块共用本机 Key</span><input id="apiKey" type="password" autocomplete="off" placeholder="sk-..."></label>
+                <div class="button-row"><button class="button" id="saveApiKey" type="button">保存到本机</button></div>
+              </details>
+              <p class="privacy-note">发送内容：匿名本命盘、当前问题、已有对话，以及已经选择时的冻结运限。不发送姓名、出生地点、经纬度、原始出生日期时间。你在问题里主动填写的信息仍会发送。</p>
+            </details>
+            <div class="ai-presets" aria-labelledby="aiPresetLabel">
+              <span id="aiPresetLabel">预设问法 · 点击后仍可修改</span>
+              <div class="ai-preset-list" id="aiPresetQuestions"></div>
+            </div>
+            <label class="field"><span>问题</span><textarea id="aiQuestion" rows="4" maxlength="3000" placeholder="例如：请从整张命盘提炼最重要的结构，并说明当前大限和流年的影响。" required></textarea></label>
+            <div class="ai-actions">
+              <small id="aiState">第一次提问时自动建立本地记录。</small>
+              <button class="button primary" id="askAi" type="submit">发送问题</button>
+            </div>
+          </form>
+        </section>
 
-          <section class="panel records-panel" aria-labelledby="records-title">
-            <div class="section-heading">
-              <div>
-                <h2 id="records-title">本地会话记录</h2>
-                <p>记录与问答只保存在当前浏览器。</p>
-              </div>
+        <section class="panel records-panel" data-zw-panel="records" aria-labelledby="records-title">
+          <div class="section-heading">
+            <div>
+              <h2 id="records-title">本地会话记录</h2>
+              <p>记录与问答只保存在当前浏览器。</p>
             </div>
-            <div class="record-tools">
-              <label class="field"><span>搜索</span><input id="recordSearch" type="search" placeholder="姓名、标记或问题"></label>
-              <div class="button-row">
-                <button class="button" id="exportRecords" type="button">导出 JSON</button>
-                <label class="button record-import">导入 JSON<input id="importRecords" type="file" accept="application/json,.json"></label>
-              </div>
-            </div>
-            <div class="record-list" id="recordList"></div>
-          </section>
-        </div>
+          </div>
+          <div class="record-tools">
+            <label class="field"><span>搜索</span><input id="recordSearch" type="search" placeholder="姓名、标记或问题"></label>
+          </div>
+          <div class="record-list" id="recordList"></div>
+        </section>
       </div>
     </div>
+
+    <details class="zw-footer">
+      <summary>规则与说明</summary>
+      <p class="rule-note">固定规则：正月初一分年与切运、自然年虚岁、闰月十五日前后分月；大限宫干沿用本命原宫干；时辰按左闭右开区间，01:00 起丑、03:00 起寅、23:00 起晚子。真太阳时跨时辰须二次确认。</p>
+      <p class="rule-note">宫干飞化按本盘同一套 iztro 默认十干四化表（与生年、大限、流年四化同源）计算，只作结构展示，不参与排盘。</p>
+    </details>
   </main>
 
   <dialog id="timeConfirmDialog" aria-labelledby="time-confirm-title">
@@ -1385,8 +1442,11 @@
   </dialog>
 
   <script src="vendor/iztro/2.5.8/iztro.min.js"></script>
-  <script src="ziwei-engine.js?v=20260825.2"></script>
+  <script src="ziwei-engine.js?v=20261102.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
-  <script src="ziwei-page.js?v=20260825.2"></script>
+  <script src="ziwei-page.js?v=20261102.4"></script>
+  <script src="premium-base.js?v=20261101.2"></script>
+  <script src="ziwei-premium.js?v=20261102.2"></script>
+  <script src="ziwei-glossary.js?v=20261102.2"></script>
 </body>
 </html>
