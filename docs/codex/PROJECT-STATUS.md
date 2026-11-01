@@ -25,6 +25,15 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Concise Local Preview — 2026-10-14
+
+- Owner: current local checkout; branch `codex/bazi-ui-preview-20261014`，沿用下方界面预览。
+- Changed: 岁运四项结论默认仅显示标签与一句解释，依据、合冲口径和流月按需展开；规则 `luck-outlook-20261014.1` 修正破坏检查跳过、无实际七杀的裁食触发与已核对未补足条件被误当空证据。用户授权有明确部分依据时显示带“需复核”的倾向，最终未定状态与分歧继续保留。详见规则审查文档第 15 节。
+- Delivery: 仅本地修改，尚未提交推送或发布。
+- Checks: `node --check bazi-engine.js`、`node --check check-bazi-page.js`、`node check-bazi-page.js`、`node check-baselines.js`（18 基线）、`git diff --check`；真实本地浏览器桌面及 390px 视口的简明结论、依据折叠、流月展开选择与流年切换，无页面横向溢出和浏览器错误。设计检测仅保留既有纸色风格提示。
+- Next task: 用户验收简明展示、四项参照与复核倾向。
+- Caution: 倾向仅代表已有明确依据；关键资料或比较口径不足仍待判。条件测试不证明现实预测准确率，未调用真实 AI API。
+
 ### Bazi UI Local Preview — 2026-10-14
 
 - Owner: current local checkout; branch `codex/bazi-ui-preview-20261014`.

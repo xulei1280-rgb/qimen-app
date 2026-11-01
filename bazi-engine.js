@@ -2402,7 +2402,7 @@
     var activationStatus=recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持')));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261010.3';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261014.1';
   function outlookPending(reason){
     return {direction:'pending',evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'证据不足'};
   }
@@ -2523,7 +2523,7 @@
       var connected=state===1&&options.enabled!==false;
       if(options.enabled===false)state=0,reason='当前所用分支不采用此路径';
       if(state===1&&options.condition){var check=options.condition();state=check.state;reason+='；'+check.reason}
-      if(connected&&state!==null&&options.breaks){
+      if(connected&&options.breaks){
         options.breaks.forEach(function(item){
           var result=breaker(item[0],item[1],item[2]);counter.push(result.reason);
           if(result.state===-1)state=-1;
@@ -2532,6 +2532,7 @@
       }
       task(id,label,state,keys,reason+(counter.length?'；'+counter.join('；'):''),options.life,options.ruleId,counter);
       tasks[tasks.length-1].applicable=options.enabled!==false;
+      tasks[tasks.length-1].assessed=connected&&g[to].usable&&state!==null;
     }
     function carrying(id,label,key){
       var cap=capacity(g[key]);
@@ -2620,7 +2621,7 @@
         path('wealth-tunes-seal','印重时财调印','W','I',{keys:['B','U'],enabled:strong,condition:function(){var r=outlookRelative(g.I,g.W);return {state:r===null?null:(r>=0?1:-1),reason:r>=0?'印有根而财未占优，核对财调印':'财印轻重未确认或财过重，不能称作适量调印'}}});
       }else if(family==='食'){
         carrying('carry-output','承泄的根气与支持条件','U');outputWealth();foodKill();
-        path('food-seal-tune','食过重时印的裁制','I','F',{keys:['K','B'],condition:function(){var r=outlookRelative(g.F,g.K);return {state:r===1?1:(r===null?null:0),reason:r===1?'食根透优势明确，印裁食与夺食分开':'未确认食过重，不把印直接当调节'}}});
+        path('food-seal-tune','食过重时印的裁制','I','F',{keys:['K','B'],enabled:g.K.usable,condition:function(){var r=outlookRelative(g.F,g.K);return {state:r===1?1:(r===null?null:0),reason:r===1?'食根透优势明确，印裁食与夺食分开':'未确认食过重，不把印直接当调节'}}});
         if(/弃食|杀印/.test(context.rawMainPattern))killingSeal();
       }else if(family==='杀'){
         foodKill();killingSeal();carrying('carry-kill','任杀与承泄的支持条件','K');
@@ -2748,6 +2749,8 @@
       if(!stable)uncertainty.push(risk.message);
     });
     var known=left.tasks.concat(right.tasks).some(function(x){return x.state!==null&&x.state!==0});
+    // An adopted path may remain incomplete on both sides without being unexamined or empty evidence.
+    if(!known&&!analysis.specialPatternQualification&&left.route===right.route)known=left.tasks.some(function(a){return a.assessed&&right.tasks.some(function(b){return b.id===a.id&&b.assessed&&a.signature===b.signature})});
     if(!known&&!evidence.length)uncertainty.push('尚未确认主要任用路径，不能把空证据当作持平');
     var direction=uncertainty.length?'pending':(positive&&negative?'mixed':(positive?'positive':(negative?'negative':'neutral')));
     if(direction==='neutral'){
@@ -2756,11 +2759,18 @@
     }
     if(direction==='mixed')reservations.push({direction:'neutral',kind:'mixed',text:'救应结算后独立关键利弊仍并存，不用总分抵消',ruleId:'LK-11',life:''});
     if(left.route!==right.route)reservations.push({direction:'neutral',kind:'structure',text:'阶段实际路线由'+left.route+'转为'+right.route+'；原局身份保持，不按格名排高低',life:'',ruleId:'LK-04'});
-    return {direction:direction,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}};
+    // A provisional reading uses confirmed evidence only; uncertainty keeps the final verdict pending.
+    var tendency=direction==='pending'&&risks.length&&uncertainty.every(function(x){return risks.some(function(r){return r.message===x})})?(positive&&negative?'mixed':(positive?'positive':(negative?'negative':null))):null;
+    return {direction:direction,tendency:tendency,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}};
   }
   function labelOutlook(result,kind){
     var labels={natal:{positive:'助益',neutral:'持平',negative:'受阻',mixed:'利弊并存',pending:'待判'},previous:{positive:'上升',neutral:'持平',negative:'下降',mixed:'利弊并存',pending:'待判'},annual:{positive:'偏吉',neutral:'平',negative:'偏凶',mixed:'吉凶并见',pending:'待判'},increment:{positive:'改善',neutral:'维持',negative:'拖累',mixed:'利弊并存',pending:'待判'}};
-    return Object.assign({},result,{label:labels[kind][result.direction]});
+    var label=labels[kind][result.direction];
+    if(result.direction==='pending'&&result.tendency){
+      var tentative={natal:{positive:'倾向助益',negative:'倾向受阻',mixed:'已有利弊'},previous:{positive:'倾向上升',negative:'倾向下降',mixed:'已有利弊'},annual:{positive:'倾向偏吉',negative:'倾向偏凶',mixed:'已有吉凶并见'},increment:{positive:'倾向改善',negative:'倾向拖累',mixed:'已有利弊'}};
+      label=tentative[kind][result.tendency]+'（需复核）';
+    }
+    return Object.assign({},result,{label:label});
   }
   function evaluateLuckOutlook(bazi,luckGz,previousGz,flowYears){
     var valid=function(gz){return getGZ60().indexOf(gz)>=0},years=flowYears||[],out={ruleVersion:LUCK_OUTLOOK_VERSION,luckGz:luckGz,previousGz:previousGz||null,years:[]};

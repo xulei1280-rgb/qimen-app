@@ -247,7 +247,7 @@ assert(html.includes('.core-cards[hidden]{display:none!important}'), 'the struct
   '展开明细表',
   '原局对照',
   '运势选择',
-  '详细信息',
+  '岁运判断',
   '命格层次',
   '事业方向',
   '财运方式',
@@ -283,7 +283,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20261010.2"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="bazi-engine.js?v=20261014.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -1516,7 +1516,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261010.3', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261014.1', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
@@ -1618,6 +1618,14 @@ assert(rules.compare(ordinaryCarry,thresholdCarry,coreAnalysis).direction==='pen
 
 const pendingFood=rules.compare(killHeavy,crossedPower,coreAnalysis);
 assert(pendingFood.direction==='pending' && pendingFood.uncertainty.some(x=>x.includes('食神制杀')), 'changed consequential unconfirmed food/kill balance has priority over mixed or favorable clues');
+const brokenUnbalancedFood=coreFixture('食',{'比肩':{position:3},'食神':{position:1,command:true},'七杀':{position:0,roots:2},'正印':{position:2}},'中和');
+assert(findTask(brokenUnbalancedFood,'food-kill').state===-1, 'a confirmed unrescued seal blocking food must still be settled when food/kill balance is unknown');
+const foodWithoutKill=coreFixture('食',{'比肩':{position:3},'食神':{position:1},'正印':{position:2}},'中和');
+assert(findTask(foodWithoutKill,'food-seal-tune').state===0 && findTask(foodWithoutKill,'food-seal-tune').applicable===false, 'food/kill balancing must not introduce a missing-kill uncertainty when killing is not actually usable');
+const checkedIncompleteFood=coreFixture('食',{'比肩':{position:3},'食神':{position:1,command:true},'七杀':{position:0}},'弱');
+assert(findTask(checkedIncompleteFood,'food-kill').state===0 && rules.compare(checkedIncompleteFood,checkedIncompleteFood,coreAnalysis).direction==='neutral', 'an actually connected, usable but incomplete path checked unchanged on both sides is not empty evidence');
+const noUsablePath=coreFixture('食',{},'弱');
+assert(rules.compare(noUsablePath,noUsablePath,coreAnalysis).direction==='pending', 'no usable participating path must still remain pending rather than defaulting to neutral');
 // Other primary routes: an outlet/control needs an actual usable participant, with its counterexample beside it.
 const externalUse={'比肩':{position:3},'正官':{position:2},'食神':{position:1},'正财':{position:0}};
 const foodOutlet=coreFixture('食',externalUse,'强');
@@ -1658,6 +1666,13 @@ const mixedWithRisk=rules.compare(matchingHurt,mixedWithUnknownKill,coreAnalysis
 assert(findTask(mixedWithUnknownKill,'handle-kill').state===null && mixedWithRisk.direction==='mixed' && mixedWithRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.text.includes('各可行解释不改变')), 'a new ordinary-route unknown must be checked for consequence instead of unconditionally overriding already independent mixed effects');
 const mixedWithRemovedRisk=rules.compare(mixedWithUnknownKill,matchingHurt,coreAnalysis);
 assert(mixedWithRemovedRisk.direction==='mixed', 'the same new or removed nondecisive unknown must preserve mixed effects on reversed comparison');
+const improvedButUncertain=coreFixture('伤',{'比肩':{position:3},'伤官':{position:0},'正印':{position:1},'正官':{position:2},'七杀':{position:0,damaged:true}},'弱');
+const improvingWithRisk=rules.compare(mixedWithUnknownKill,improvedButUncertain,coreAnalysis);
+assert(improvingWithRisk.direction==='pending' && improvingWithRisk.tendency==='positive', 'confirmed improvement plus consequential unknowns may offer a provisional tendency while keeping the verdict pending');
+assert(rules.label(improvingWithRisk,'previous').label==='倾向上升（需复核）', 'provisional previous-luck labels must retain their review qualifier');
+const worseningWithRisk=rules.compare(improvedButUncertain,mixedWithUnknownKill,coreAnalysis);
+assert(worseningWithRisk.tendency==='negative' && rules.label(worseningWithRisk,'previous').label==='倾向下降（需复核）', 'reversing the comparison must reverse the provisional tendency');
+assert(!rules.compare(mixedWithUnknownKill,matchingHurt,{monthCommand:{ambiguous:true}}).tendency && !rules.compare(ordinaryCarry,thresholdCarry,coreAnalysis).tendency, 'month-use ambiguity and numerical threshold changes cannot manufacture provisional directions');
 assert(mixedWithRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.conditions.includes('变化前：未见对应实际作用')) && mixedWithRemovedRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.conditions.includes('变化后：未见对应实际作用')), 'new or removed unknowns must expose the actual missing side instead of copying the old conditions to both sides');
 
 for(const specialType of ['化气格','专旺格']) {
@@ -1693,7 +1708,7 @@ const realChartOutlook = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '�
 assert(realChartOutlook.years.length === 10 && JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart)) === natalBeforeOutlook, 'a real calendar reference should expose ten annual results without changing its natal analysis');
 vm.runInContext('GZ60', scriptContext).forEach((gz) => {
   const reviewed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, gz, '癸亥', [{ year: 2026, gz: '丙午' }]);
-  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && ['偏吉','平','偏凶','吉凶并见','待判'].includes(reviewed.years[0].annual.label), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
+  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && (['偏吉','平','偏凶','吉凶并见','待判'].includes(reviewed.years[0].annual.label)||/^(倾向偏吉|倾向偏凶|已有吉凶并见)（需复核）$/.test(reviewed.years[0].annual.label)), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
   if(reviewed.years[0].annual.direction==='pending')assert(reviewed.years[0].annual.uncertainty.length>0, 'pending needs the actual missing condition');
   const reversed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '癸亥', gz, []);
   const opposite = { positive:'negative', negative:'positive', neutral:'neutral', mixed:'mixed', pending:'pending' };
@@ -1728,5 +1743,8 @@ const otherOutlook = scriptContext.getSelectedLuckOutlook(otherChart, scriptCont
 assert(otherOutlook !== selectedOutlook && JSON.stringify(scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, selectedOutlookContext)) === summaryBeforeMonth, 'single-entry cache must not leak across charts or restore a wrong luck');
 const hostileOutlookBox = scriptContext.renderOutlookBox('<img src=x>', { label: '待判', direction: 'pending', evidence: [{ direction: 'neutral', text: '<script>x</script>' }], reservations: [], uncertainty: [], life: [] });
 assert(!hostileOutlookBox.includes('<script>') && hostileOutlookBox.includes('&lt;img'), 'new evidence rendering must escape labels and prose');
+assert(hostileOutlookBox.includes('<details class="outlook-details"><summary>查看判断依据</summary>') && selectedOutlookHtml.includes('<summary>合冲关系与判断口径</summary>'), 'full reasoning and repeated technical context should be collapsed by default');
+const conciseOutlookBox=scriptContext.renderOutlookBox('较上一运',rules.label(improvingWithRisk,'previous'));
+assert(conciseOutlookBox.includes('倾向上升（需复核）') && conciseOutlookBox.indexOf('待复核：')>conciseOutlookBox.indexOf('查看判断依据'), 'provisional summary must retain its qualifier and expose the uncertainty on demand');
 
 console.log('bazi page checks ok (including luck outlooks)');
