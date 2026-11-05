@@ -2402,11 +2402,16 @@
     var activationStatus=recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持')));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261014.1';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261106.1';
   function outlookPending(reason){
-    return {direction:'pending',evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'证据不足'};
+    return {direction:'pending',assessment:'input-error',summary:reason,evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'资料校验未通过'};
   }
   var OUTLOOK_SOURCES={官:'215722',财:'215720',印:'215718',食:'215716',杀:'215714',伤:'215712',刃:'215710',禄:'215708'};
+  function outlookRootRestricted(root){
+    var attacks=root.attacks||[];
+    // 刑害破 names alone do not establish loss of a usable root (任氏地支注).
+    return !!root.boundByCombine||attacks.some(function(x){return /冲/.test(x)})||!!root.attacked&&!attacks.length;
+  }
   function outlookGod(context,names){
     var stems=[],roots=[],rawStems=[],rawRoots=[],command=false;
     names.forEach(function(name){
@@ -2421,7 +2426,7 @@
       var dayChange=stemInteractionChange(2,context.interactions),dayEntry={pillar:'day',position:2,stem:context.pillars.day[0],usable:dayChange.usable,effect:dayChange.effect,relations:dayChange.relations.map(function(x){return x.text})};
       rawStems.push(dayEntry);if(dayEntry.usable)stems.push(dayEntry);
     }
-    var clean=roots.filter(function(x){return !(x.attacks||[]).length&&!x.boundByCombine}),main=clean.filter(function(x){return x.hiddenIndex===0});
+    var clean=roots.filter(function(x){return !outlookRootRestricted(x)}),main=clean.filter(function(x){return x.hiddenIndex===0});
     var clear=stems.length>0||command;
     var internal=[],limited=false;
     TEMPORAL_PILLAR_KEYS.filter(function(key){return context.pillars[key]}).forEach(function(key){
@@ -2433,7 +2438,7 @@
       var controller=head?stemWx:branchWx,bridge=gen[controller];
       var bridged=godNamesForElement(context.pillars.day[0],bridge).some(function(name){
         var p=context.profiles[name]||{};
-        return (p.stemEntries||[]).some(function(x){return x.usable!==false&&x.effect!=='transform'&&x.effect!=='contest'})&&(p.branchEntries||[]).some(function(x){return x.usable!==false&&!x.transformedAway&&!x.boundByCombine&&!(x.attacks||[]).length&&x.rootPower>0});
+        return (p.stemEntries||[]).some(function(x){return x.usable!==false&&x.effect!=='transform'&&x.effect!=='contest'})&&(p.branchEntries||[]).some(function(x){return x.usable!==false&&!x.transformedAway&&!outlookRootRestricted(x)&&x.rootPower>0});
       });
       var otherRoot=clean.some(function(x){return x.pillar!==key});
       internal.push((key==='luck'?'大运':'流年')+gz+(head?'盖头':'截脚')+'，所用'+(head?branchWx:stemWx)+(bridged?'有透清通根之'+bridge+'承接，继续核对主链':(otherRoot?'另有未损根，保留内部制约而不定整运凶':'未见可用通关或其他未损根，作用是否足够待核')));
@@ -2442,8 +2447,8 @@
     return {names:names,stems:stems,roots:roots,command:command,clear:clear,present:stems.length>0||roots.length>0,
       usable:clear&&roots.length>0,dims:[command?1:0,main.length,clean.length,clear?1:0],
       uncertain:roots.length>0&&!clean.length||limited,
-      facts:[names.join('/')+'：'+(clear?'透清或得令':'未透清')+'，可用根'+roots.length+'，未损本气根'+main.length].concat(rawStems.map(function(x){return ((PILLAR_META[x.pillar]||{}).stemLabel||'参与天干')+x.stem+'：'+(x.usable===false?'失用，'+({bind:'合绊',contest:'争合',transform:'合化改性','daymaster-combine':'日主合绊'}[x.effect]||'受制'):'可用')+(x.relations&&x.relations.length?'（'+x.relations.join('、')+'）':'')}),rawRoots.map(function(x){return ((PILLAR_META[x.pillar]||{}).branchLabel||'参与地支')+x.branch+'藏'+x.stem+'：'+(x.hiddenIndex===0?'本气':'余气')+(x.transformedAway?'已变气':(x.usable===false?'失根':(x.boundByCombine?'合绊余根':'可用根')))+(x.attacks&&x.attacks.length?'，'+x.attacks.join('、'):'')})),
-      signature:JSON.stringify([command,stems.map(function(x){return [x.pillar,x.stem,x.effect||'none']}),roots.map(function(x){return [x.pillar,x.stem,x.hiddenIndex,x.boundByCombine,!!(x.attacks||[]).length]}),internal]),internal:internal};
+      facts:[names.join('/')+'：'+(clear?'透清或得令':'未透清')+'，可用根'+roots.length+'，未受冲绊本气根'+main.length].concat(rawStems.map(function(x){return ((PILLAR_META[x.pillar]||{}).stemLabel||'参与天干')+x.stem+'：'+(x.usable===false?'失用，'+({bind:'合绊',contest:'争合',transform:'合化改性','daymaster-combine':'日主合绊'}[x.effect]||'受制'):'可用')+(x.relations&&x.relations.length?'（'+x.relations.join('、')+'）':'')}),rawRoots.map(function(x){return ((PILLAR_META[x.pillar]||{}).branchLabel||'参与地支')+x.branch+'藏'+x.stem+'：'+(x.hiddenIndex===0?'本气':'余气')+(x.transformedAway?'已变气':(x.usable===false?'失根':(x.boundByCombine?'合绊余根':'可用根')))+(x.attacks&&x.attacks.length?'，'+x.attacks.join('、'):'')})),
+      signature:JSON.stringify([command,stems.map(function(x){return [x.pillar,x.stem,x.effect||'none']}),roots.map(function(x){return [x.pillar,x.stem,x.hiddenIndex,!!x.boundByCombine,outlookRootRestricted(x)]}),internal]),internal:internal};
   }
   // These qualitative comparisons select a branch; they are not a fortune score.
   function outlookRelative(left,right){
@@ -2481,20 +2486,28 @@
       g[key].facts=g[key].facts.concat(g[key].internal);
       g[key].signature=JSON.stringify([g[key].signature,incoming.map(function(x){return g[x].names})]);
     });
-    var dayRoots=(context.strengthScore.dimensions.roots.items||[]).filter(function(x){return x.usable!==false&&!x.transformedAway}),cleanDay=dayRoots.filter(function(x){return !x.attacked&&!x.changedByGroup&&!x.changedByInteraction&&!x.boundByCombine});
+    var dayRoots=(context.strengthScore.dimensions.roots.items||[]).filter(function(x){return x.usable!==false&&!x.transformedAway}),cleanDay=dayRoots.filter(function(x){return !outlookRootRestricted(x)&&!x.changedByGroup&&!x.changedByInteraction});
     var weak=/弱/.test(context.strength),strong=/强/.test(context.strength);
     var source={title:'《子平真诠》'+({官:'正官',财:'财',印:'印绶',食:'食神',杀:'偏官',伤:'伤官',刃:'阳刃',禄:'建禄月劫'}[family]||'行运')+'取运',url:'https://chinesebooks.github.io/yijingshuji/zipingzhenquan/'+(OUTLOOK_SOURCES[family]||'215729')+'.html'};
     function task(id,label,state,keys,reason,life,ruleId,counter){
       var conditions=unique(keys.reduce(function(out,key){return out.concat(g[key].facts)},[]).concat(reason));
       var taskSource=ruleId==='LK-10'?{title:(analysis.specialPatternQualification.source||['《滴天髓阐微》从象、化象与独象']).join('；'),url:'https://zh.wikisource.org/zh-hans/滴天髓阐微'}:source;
       // LK-03 checks a specific harmful mechanism; its rescue is neutral here, with benefits checked by the usable paths.
-      tasks.push({id:id,label:label,state:state,possibleStates:ruleId==='LK-03'?[-1,0]:[-1,0,1],ruleId:ruleId||'LK-02',source:taskSource,conditions:conditions,counterEvidence:counter||[],
+      tasks.push({id:id,label:label,state:state,possibleStates:state===null?(ruleId==='LK-03'?[-1,0]:[-1,0,1]):[state],ruleId:ruleId||'LK-02',source:taskSource,conditions:conditions,counterEvidence:counter||[],
         reason:reason,life:life||'相关发挥条件发生变化，仍需结合尚存的限制。',signature:JSON.stringify(keys.map(function(key){return g[key].signature}).concat(reason))});
+    }
+    function possibilities(item){return item.state===null?item.possibleStates:[item.state]}
+    function uniqueStates(states){return states.filter(function(value,index){return states.indexOf(value)===index})}
+    function settlePath(states,check){
+      return uniqueStates(states.reduce(function(out,state){
+        if(state!==1)return out.concat(state);
+        return out.concat(possibilities(check));
+      },[]));
     }
     function capacity(load){
       if(!load.present)return {state:0,reason:'未见当前所用的压力对象'};
       if(!load.usable)return {state:0,reason:'对象未透清得令或未通根，尚未建立实际任用，不据其存在新增承载压力'};
-      if(load.uncertain)return {state:null,reason:'所用对象根气受损或运柱内部制约，任用强度尚未确认'};
+      if(load.uncertain)return {state:null,reason:'所用对象根气受冲绊或运柱内部制约，任用强度尚未确认'};
       var support=outlookLink(context,g.I,g.B)===1||g.B.usable&&cleanDay.length>0;
       if(!dayRoots.length&&!support)return {state:-1,reason:'任用对象存在，但日主无可用根且未见有效印比承接'};
       var loadBalance=outlookRelative(load,g.B);
@@ -2505,54 +2518,66 @@
     }
     function breaker(bad,target,medicine){
       var link=outlookLink(context,g[bad],g[target]);
-      if(link!==1)return link===0?{state:0,reason:'未形成对应破坏'}:{state:null,reason:'破坏因素有线索，根透或路径未确认'};
+      if(link!==1)return link===0?{state:0,reason:'未形成对应破坏'}:{state:null,possibleStates:[-1,0],reason:'破坏因素有线索，根透或路径未确认'};
       if(medicine){
         var rescue=outlookLink(context,g[medicine],g[bad]);
         if(rescue===1){
           var balance=outlookRelative(g[medicine],g[bad]);
-          if(balance===null||balance<0)return {state:null,reason:'救应可达，但尚不能确认足以制去破坏'};
+          if(balance===null||balance<0)return {state:null,possibleStates:[-1,0],reason:'救应可达，但尚不能确认足以制去破坏'};
           return {state:0,reason:groups[medicine].join('/')+'可达且根透不弱于破坏因素，已结算救应'};
         }
-        if(rescue===null&&g[medicine].present)return {state:null,reason:'救应已有线索，是否有效尚未确认'};
+        if(rescue===null&&g[medicine].present)return {state:null,possibleStates:[-1,0],reason:'救应已有线索，是否有效尚未确认'};
       }
       return {state:-1,reason:groups[bad].join('/')+'有效作用于'+groups[target].join('/')+'，未见足够救应'};
     }
     function path(id,label,from,to,options){
       options=options||{};
       var keys=unique([from,to].concat(options.keys||[])),state=outlookLink(context,g[from],g[to]),reason=state===1?'根透与具体作用对象支持路径可达':(state===0?'当前未建立该路径':'根透或具体作用通路尚未确认'),counter=[];
-      var connected=state===1&&options.enabled!==false;
+      var connected=state===1&&options.enabled!==false,maybeAbsent=state===null,possible=state===null?[1]:[state];
       if(options.enabled===false)state=0,reason='当前所用分支不采用此路径';
-      if(state===1&&options.condition){var check=options.condition();state=check.state;reason+='；'+check.reason}
-      if(connected&&options.breaks){
+      if(options.enabled===false)possible=[0];
+      if(possible.indexOf(1)>=0&&options.condition){
+        var check=options.condition();
+        if(check.state===null&&!check.possibleStates)check.possibleStates=[-1,0,1];
+        possible=settlePath(possible,check);reason+='；'+check.reason;
+      }
+      if(options.enabled!==false&&(state===1||state===null)&&options.breaks){
         options.breaks.forEach(function(item){
           var result=breaker(item[0],item[1],item[2]);counter.push(result.reason);
-          if(result.state===-1)state=-1;
-          else if(result.state===null&&state!==-1)state=null;
+          possible=uniqueStates(possible.reduce(function(out,value){
+            return out.concat(possibilities(result).map(function(breakState){return value===-1?-1:(breakState===-1?-1:value)}));
+          },[]));
         });
       }
+      if(maybeAbsent&&options.enabled!==false)possible=uniqueStates(possible.concat(0));
+      state=possible.length===1?possible[0]:null;
       task(id,label,state,keys,reason+(counter.length?'；'+counter.join('；'):''),options.life,options.ruleId,counter);
       tasks[tasks.length-1].applicable=options.enabled!==false;
+      tasks[tasks.length-1].examined=options.enabled!==false&&(connected||maybeAbsent);
       tasks[tasks.length-1].assessed=connected&&g[to].usable&&state!==null;
+      tasks[tasks.length-1].possibleStates=possible;
+      tasks[tasks.length-1].signature=JSON.stringify([tasks[tasks.length-1].signature,possible.slice().sort()]);
     }
     function carrying(id,label,key){
       var cap=capacity(g[key]);
       task(id,label,cap.state,[key,'B','I'],cap.reason+'；未损日主根'+cleanDay.length,'任务压力与自身根气、支持条件的匹配发生变化。','LK-05');
+      tasks[tasks.length-1].examined=g[key].usable;
     }
     function foodKill(){
       path('food-kill','食神制杀及食杀轻重','F','K',{keys:['I','W','B'],ruleId:'LK-05',condition:function(){
         var balance=outlookRelative(g.F,g.K),cap=capacity(g.K);
-        if(balance===null)return {state:null,reason:'食杀根透优势交叉，轻重尚未确认'};
+        if(balance===null)return {state:null,possibleStates:cap.state===null?[-1,0,1]:uniqueStates([0,cap.state]),reason:'食杀根透优势交叉，轻重尚未确认'};
         if(balance!==0)return {state:0,reason:balance<0?'杀较重、食较轻，需要有效助食，不能只凭见食判制杀完成':'食较重、杀较轻，需要适当助杀或裁食，不能继续一律助食'};
         return {state:cap.state===1?1:cap.state,reason:'食杀各有可用根透且未见单方优势；'+cap.reason};
       },breaks:[['I','F','W']],life:'制约任务压力与表达产出的条件发生变化。'});
     }
     function killingSeal(){
-      path('kill-seal','印化杀并承接生身','K','I',{keys:['W','B'],condition:function(){return {state:outlookLink(context,g.I,g.B),reason:'另核印是否实际生身，不以印出现直接认化杀'}},breaks:[['W','I','B']]});
+      path('kill-seal','印化杀并承接生身','K','I',{keys:['W','B'],condition:function(){return {state:outlookLink(context,g.I,g.B),possibleStates:[0,1],reason:'另核印是否实际生身，不以印出现直接认化杀'}},breaks:[['W','I','B']]});
     }
     function hurtingSeal(){
       path('hurt-seal','伤官配印的实际制伤与护身','I','H',{keys:['B','W'],condition:function(){
         var balance=outlookRelative(g.H,g.I);
-        if(!g.I.roots.some(function(x){return x.hiddenIndex===0&&!(x.attacks||[]).length}))return {state:null,reason:'印有线索，但未确认深根足以配印'};
+        if(!g.I.roots.some(function(x){return x.hiddenIndex===0&&!outlookRootRestricted(x)}))return {state:null,reason:'印有线索，但未确认深根足以配印'};
         if(balance===null)return {state:null,reason:'伤、印轻重依据交叉，不能仅见印即判助益'};
         if(strong&&balance<0)return {state:-1,reason:'身已有根且偏强，伤较轻而印占优，继续制伤会压低出口'};
         if(weak&&balance>=0&&dayRoots.length)return {state:1,reason:'伤有根透、身偏弱但有根承接、印有未损本气根，支持制伤护身'};
@@ -2580,7 +2605,7 @@
     function official(){
       carrying('carry-officer','任官的根气与支持条件','O');
       path('wealth-officer','财生官','W','O',{keys:['B','I'],condition:function(){return capacity(g.O)}});
-      path('officer-seal','官印承接','O','I',{keys:['B','W'],condition:function(){return {state:outlookLink(context,g.I,g.B),reason:'印须实际生身，普通佩印不一律忌财食伤'}}});
+      path('officer-seal','官印承接','O','I',{keys:['B','W'],condition:function(){return {state:outlookLink(context,g.I,g.B),possibleStates:[0,1],reason:'印须实际生身，普通佩印不一律忌财食伤'}}});
       if(g.H.present){
         var hit=breaker('H','O','I');
         if(hit.state===-1&&outlookLink(context,g.H,g.W)===1&&outlookLink(context,g.W,g.O)===1)hit={state:0,reason:'伤官有财通关生官，先结算实际通关'};
@@ -2621,18 +2646,18 @@
         path('wealth-tunes-seal','印重时财调印','W','I',{keys:['B','U'],enabled:strong,condition:function(){var r=outlookRelative(g.I,g.W);return {state:r===null?null:(r>=0?1:-1),reason:r>=0?'印有根而财未占优，核对财调印':'财印轻重未确认或财过重，不能称作适量调印'}}});
       }else if(family==='食'){
         carrying('carry-output','承泄的根气与支持条件','U');outputWealth();foodKill();
-        path('food-seal-tune','食过重时印的裁制','I','F',{keys:['K','B'],enabled:g.K.usable,condition:function(){var r=outlookRelative(g.F,g.K);return {state:r===1?1:(r===null?null:0),reason:r===1?'食根透优势明确，印裁食与夺食分开':'未确认食过重，不把印直接当调节'}}});
+        path('food-seal-tune','食过重时印的裁制','I','F',{keys:['K','B'],enabled:g.K.usable,condition:function(){var r=outlookRelative(g.F,g.K);return {state:r===1?1:(r===null?null:0),possibleStates:[0,1],reason:r===1?'食根透优势明确，印裁食与夺食分开':'未确认食过重，不把印直接当调节'}}});
         if(/弃食|杀印/.test(context.rawMainPattern))killingSeal();
       }else if(family==='杀'){
         foodKill();killingSeal();carrying('carry-kill','任杀与承泄的支持条件','K');
-        path('blade-kill','刃当杀的实际平衡','K','B',{keys:['F','I'],condition:function(){var r=outlookRelative(g.B,g.K);return {state:r===null?null:(r===0?1:0),reason:r===null?'刃杀轻重未确认':(r===0?'刃杀根透相互承接':'刃杀一方占优，须补不足或有效制化')}}});
+        path('blade-kill','刃当杀的实际平衡','K','B',{keys:['F','I'],condition:function(){var r=outlookRelative(g.B,g.K);return {state:r===null?null:(r===0?1:0),possibleStates:[0,1],reason:r===null?'刃杀轻重未确认':(r===0?'刃杀根透相互承接':'刃杀一方占优，须补不足或有效制化')}}});
       }else if(family==='伤'){
         carrying('carry-output','承泄的根气与支持条件','U');outputWealth();hurtingSeal();
         if(g.K.present){path('hurt-kill','伤官制杀','H','K',{keys:['W','I','B'],condition:function(){return capacity(g.K)},breaks:[['W','K','H']]});killingSeal()}
         if(g.O.present)official();
       }else if(family==='刃'){
         path('officer-blade','官制刃','O','B',{keys:['H','I'],breaks:[['H','O','I']]});
-        path('kill-blade','杀制刃及轻重','K','B',{keys:['I','F'],condition:function(){var r=outlookRelative(g.K,g.B);return {state:r===null?null:(r===0?1:0),reason:r===null?'刃杀轻重未确认':(r===0?'刃杀均有可用根透':'刃杀有偏重，须按所需补足或制化')}}});
+        path('kill-blade','杀制刃及轻重','K','B',{keys:['I','F'],condition:function(){var r=outlookRelative(g.K,g.B);return {state:r===null?null:(r===0?1:0),possibleStates:[0,1],reason:r===null?'刃杀轻重未确认':(r===0?'刃杀均有可用根透':'刃杀有偏重，须按所需补足或制化')}}});
       }else if(family==='禄'){
         outputWealth();foodKill();official();
         path('body-output','建禄月劫的食伤出口','B','U',{keys:['I','W'],condition:function(){return capacity(g.U)},breaks:[['I','U','W']]});
@@ -2660,6 +2685,10 @@
       var working=killPaths.filter(function(x){return x.state===1}),state=working.length?1:(killPaths.some(function(x){return x.state===null})?null:(killPaths.some(function(x){return x.state===-1})?-1:0));
       task('handle-kill','食神制杀／印化杀等共同任用需求',state,['K','F','I','B','H'],working.length?'已确认'+working.map(function(x){return x.label}).join('、')+'可承接同一杀压；旧路径须按共同需求比较':killPaths.map(function(x){return x.label+'：'+x.reason}).join('；'),'处理任务压力的实际方式与支持条件发生变化。','LK-04',killPaths.reduce(function(out,x){return out.concat(x.counterEvidence)},[]));
       tasks[tasks.length-1].signature=JSON.stringify(killPaths.map(function(x){return x.signature}));
+      var combined=[0];
+      killPaths.forEach(function(path){combined=uniqueStates(combined.reduce(function(out,a){return out.concat(possibilities(path).map(function(b){return a===1||b===1?1:(a===-1||b===-1?-1:0)}))},[]))});
+      tasks[tasks.length-1].possibleStates=combined;
+      tasks[tasks.length-1].state=combined.length===1?combined[0]:null;
     }
     return {family:family,tasks:tasks,route:context.currentSpecialDetail?context.currentSpecialDetail.name:family};
   }
@@ -2726,7 +2755,7 @@
       // Numerical carrying switches alone cannot provide a direction.
       if(task.ruleId==='LK-05'&&id.indexOf('carry-')===0){
         var loadNames={'carry-wealth':['正财','偏财'],'carry-output':['食神','伤官'],'carry-officer':['正官'],'carry-kill':['七杀']}[id]||[];
-        var physical=function(ctx){return JSON.stringify((ctx.strengthScore.dimensions.roots.items||[]).map(function(x){return [x.pillar||x.position,x.branch,x.usable,x.attacked,x.changedByGroup,x.changedByInteraction,x.boundByCombine,x.transformedAway]}).concat([outlookGod(ctx,['正印','偏印']).signature,outlookGod(ctx,['比肩','劫财']).signature,outlookGod(ctx,loadNames).signature]))};
+        var physical=function(ctx){return JSON.stringify((ctx.strengthScore.dimensions.roots.items||[]).map(function(x){return [x.pillar||x.position,x.branch,x.usable,outlookRootRestricted(x),x.changedByGroup,x.changedByInteraction,x.boundByCombine,x.transformedAway]}).concat([outlookGod(ctx,['正印','偏印']).signature,outlookGod(ctx,['比肩','劫财']).signature,outlookGod(ctx,loadNames).signature]))};
         if(physical(before)===physical(after)){uncertainty.push(task.label+'：仅旺衰数值或阈值发生变化，不独立裁决方向');return}
       }
       var better=b.state>a.state;
@@ -2734,11 +2763,18 @@
     });
     if(analysis.monthCommand&&analysis.monthCommand.ambiguous)uncertainty.push('原局月令取用未定，无法可靠归纳整体方向');
     var positive=evidence.some(function(x){return x.direction==='positive'}),negative=evidence.some(function(x){return x.direction==='negative'});
+    var possibleDirections=[positive&&negative?'mixed':(positive?'positive':(negative?'negative':'neutral'))];
     risks.forEach(function(risk){
       // A disease can be active or resolved; its absence is not an independent benefit.
       var choices=function(task){return !task?[0]:(task.state===null?task.possibleStates:[task.state])};
       var outcomes=[],a=choices(risk.before),b=choices(risk.after);
       a.forEach(function(x){b.forEach(function(y){var p=positive||y>x,n=negative||y<x;outcomes.push(p&&n?'mixed':(p?'positive':(n?'negative':'neutral')))} )});
+      possibleDirections=unique(possibleDirections.reduce(function(out,known){
+        a.forEach(function(x){b.forEach(function(y){
+          var p=known==='positive'||known==='mixed'||y>x,n=known==='negative'||known==='mixed'||y<x;
+          out.push(p&&n?'mixed':(p?'positive':(n?'negative':'neutral')));
+        })});return out;
+      },[]));
       var stable=unique(outcomes).length===1,item=evidenceItem(risk.task,'neutral',risk.message+(stable?'；各可行解释不改变已确认方向':''),risk.after?risk.before:null);
       if(!risk.before||!risk.after){
         var prefix=risk.before?'变化前：':'变化后：';
@@ -2749,9 +2785,10 @@
       if(!stable)uncertainty.push(risk.message);
     });
     var known=left.tasks.concat(right.tasks).some(function(x){return x.state!==null&&x.state!==0});
+    var examined=left.tasks.concat(right.tasks).some(function(x){return x.examined||x.state!==null&&x.state!==0});
     // An adopted path may remain incomplete on both sides without being unexamined or empty evidence.
     if(!known&&!analysis.specialPatternQualification&&left.route===right.route)known=left.tasks.some(function(a){return a.assessed&&right.tasks.some(function(b){return b.id===a.id&&b.assessed&&a.signature===b.signature})});
-    if(!known&&!evidence.length)uncertainty.push('尚未确认主要任用路径，不能把空证据当作持平');
+    if(!known&&!evidence.length&&(!examined||!risks.length))uncertainty.push(examined?'主要任用条件已核对，但尚未确认整体作用':'尚未确认主要任用路径，不能把空证据当作持平');
     var direction=uncertainty.length?'pending':(positive&&negative?'mixed':(positive?'positive':(negative?'negative':'neutral')));
     if(direction==='neutral'){
       var checkedTasks=right.tasks.filter(function(x){return x.state!==null}),checked=checkedTasks.map(function(x){return x.label+'（'+states[x.state]+'）'});
@@ -2761,14 +2798,30 @@
     if(left.route!==right.route)reservations.push({direction:'neutral',kind:'structure',text:'阶段实际路线由'+left.route+'转为'+right.route+'；原局身份保持，不按格名排高低',life:'',ruleId:'LK-04'});
     // A provisional reading uses confirmed evidence only; uncertainty keeps the final verdict pending.
     var tendency=direction==='pending'&&risks.length&&uncertainty.every(function(x){return risks.some(function(r){return r.message===x})})?(positive&&negative?'mixed':(positive?'positive':(negative?'negative':null))):null;
-    return {direction:direction,tendency:tendency,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}};
+    var hardGap=!!analysis.specialPatternQualification||uncertainty.some(function(x){return /共同参照|月令取用未定|仅旺衰数值/.test(x)});
+    var assessment=direction!=='pending'?'determined':(examined&&!hardGap?'conditional':'unsupported');
+    var focus=risks.length?risks[0].task.id:'';
+    var subject=/^carry-/.test(focus)?'自身基础与可用支持能否承接当前压力':(/kill/.test(focus)?'任务压力能否得到有效承接':(/wealth|sharing/.test(focus)?'资源转化、分配与自身支持能否配合':(/seal/.test(focus)?'学习与支持资源能否有效发挥作用':(/output|food|hurt/.test(focus)?'表达产出能否得到有效承接':'主要助力能否形成实际作用'))));
+    var summary=assessment==='conditional'?(positive&&negative?'已有独立助益与牵制，整体表现还取决于':(positive?'已有改善依据，整体表现还取决于':(negative?'已有受阻依据，整体表现还取决于':'整体表现取决于')))+subject+'。':(assessment==='unsupported'?'当前规则尚不足以归纳这个组合的整体方向。':'');
+    return {direction:direction,tendency:tendency,assessment:assessment,summary:summary,possibleDirections:assessment==='unsupported'?[]:possibleDirections,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}};
   }
   function labelOutlook(result,kind){
     var labels={natal:{positive:'助益',neutral:'持平',negative:'受阻',mixed:'利弊并存',pending:'待判'},previous:{positive:'上升',neutral:'持平',negative:'下降',mixed:'利弊并存',pending:'待判'},annual:{positive:'偏吉',neutral:'平',negative:'偏凶',mixed:'吉凶并见',pending:'待判'},increment:{positive:'改善',neutral:'维持',negative:'拖累',mixed:'利弊并存',pending:'待判'}};
     var label=labels[kind][result.direction];
-    if(result.direction==='pending'&&result.tendency){
-      var tentative={natal:{positive:'倾向助益',negative:'倾向受阻',mixed:'已有利弊'},previous:{positive:'倾向上升',negative:'倾向下降',mixed:'已有利弊'},annual:{positive:'倾向偏吉',negative:'倾向偏凶',mixed:'已有吉凶并见'},increment:{positive:'倾向改善',negative:'倾向拖累',mixed:'已有利弊'}};
-      label=tentative[kind][result.tendency]+'（需复核）';
+    if(result.direction==='pending'){
+      if(result.assessment==='input-error')label='资料需核对';
+      else if(result.assessment==='unsupported')label='暂缺整体结论';
+      else if(result.assessment==='conditional'){
+        label='分条件看';
+        if(result.tendency==='positive')label=kind==='annual'?'已有有利因素':'已有改善因素';
+        else if(result.tendency==='negative')label=kind==='annual'?'已有不利因素':'已有受阻因素';
+        else if(result.tendency==='mixed')label=kind==='annual'?'已有吉凶并见':'已有利弊';
+        else if(result.possibleDirections.length===2&&result.possibleDirections.indexOf('neutral')>=0){
+          var possible={natal:{positive:'可能助益',negative:'可能受阻'},previous:{positive:'可能上升',negative:'可能下降'},annual:{positive:'可能偏吉',negative:'可能偏凶'},increment:{positive:'可能改善',negative:'可能拖累'}};
+          var oneWay=result.possibleDirections.find(function(x){return x==='positive'||x==='negative'});
+          if(oneWay)label=possible[kind][oneWay];
+        }
+      }
     }
     return Object.assign({},result,{label:label});
   }

@@ -237,7 +237,7 @@ assert(html.includes('.core-cards[hidden]{display:none!important}'), 'the struct
   '基础排盘',
   '格局喜用',
   '大运流年',
-  'AI断命',
+  'AI分析',
   '通根',
   '透干',
   '主要格局',
@@ -284,7 +284,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20261014.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="bazi-engine.js?v=20261106.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -1520,7 +1520,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261014.1', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261106.1', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
@@ -1565,6 +1565,8 @@ assert(findTask(killHeavy,'food-kill').reason.includes('杀较重'), 'kill heavy
 assert(findTask(foodHeavy,'food-kill').reason.includes('食较重'), 'food heavy / kill light must ask for kill or food adjustment, not more food');
 const crossedPower=coreFixture('杀',{'比肩':{position:2},'食神':{position:1,roots:2},'七杀':{position:0,command:true}});
 assert(findTask(crossedPower,'food-kill').state === null, 'crossed command/root advantages remain unconfirmed, without an invented ratio');
+const crossedBlade=coreFixture('刃',{'比肩':{position:2,roots:2},'七杀':{position:1,command:true}});
+assert(findTask(crossedBlade,'kill-blade').state===null && findTask(crossedBlade,'kill-blade').possibleStates.includes(0) && !findTask(crossedBlade,'kill-blade').possibleStates.includes(-1), 'unconfirmed blade/killing matching alone is an unresolved useful route, not an independent harmful mechanism');
 
 const foodRobbed=coreFixture('杀',{'比肩':{position:3},'食神':{position:0},'七杀':{position:1},'偏印':{position:2}});
 const foodSaved=coreFixture('杀',{'比肩':{position:3},'食神':{position:0},'七杀':{position:1},'偏印':{position:2},'正财':{position:3,command:true}});
@@ -1647,6 +1649,19 @@ const fortuneBlocked=coreFixture('禄',Object.assign({},externalUse,{'食神':{p
 assert(findTask(fortuneOutlet,'body-output').state===1 && findTask(fortuneBlocked,'body-output').state===0, 'lu taking output must lose that outlet when its participant is bound');
 const damagedPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1,damaged:true}},'偏弱');
 assert(findTask(damagedPrint,'seal-body').state===null, 'a surviving but entirely attacked root is a clue, not proof of fully effective body support');
+assert(findTask(damagedPrint,'seal-body').possibleStates.includes(0) && findTask(damagedPrint,'seal-body').possibleStates.includes(1) && !findTask(damagedPrint,'seal-body').possibleStates.includes(-1), 'uncertain support without a damaging mechanism can be absent or effective, but cannot invent independent harm');
+for(const relation of ['刑','害','破']) {
+  const nominalRelation=coreFixture('印',{'比肩':{position:2},'正印':{position:1}},'偏弱');
+  nominalRelation.profiles['正印'].branchEntries[0].attacks=[relation];
+  assert(findTask(nominalRelation,'seal-body').state===1 && findTask(nominalRelation,'seal-body').conditions.some(x=>x.includes(relation)), 'a nominal '+relation+' must remain in evidence without disabling a still usable support root');
+  nominalRelation.profiles['正印'].branchEntries[0].boundByCombine=true;
+  assert(findTask(nominalRelation,'seal-body').state===null, 'actual binding must still restrict the root despite nominal relations being nondecisive');
+}
+const damagedSupportWithRisk=coreFixture('印',{'比肩':{position:2},'正印':{position:1,damaged:true},'正财':{position:0}},'偏弱');
+assert(findTask(damagedSupportWithRisk,'seal-body').possibleStates.includes(-1), 'a real possible wealth/seal damaging mechanism must keep adverse outcomes available');
+const conditionalSupport=rules.compare(damagedPrint,coreFixture('印',{'比肩':{position:2},'正印':{position:1}},'偏弱'),coreAnalysis);
+assert(conditionalSupport.direction==='pending' && conditionalSupport.assessment==='conditional' && conditionalSupport.possibleDirections.includes('positive') && conditionalSupport.possibleDirections.includes('neutral') && !conditionalSupport.possibleDirections.includes('negative'), 'an uncertain support becoming usable provides one-way conditional improvement, not a guaranteed rise or invented reversal');
+assert(rules.label(conditionalSupport,'previous').label==='可能上升' && conditionalSupport.summary.includes('学习与支持资源'), 'conditional directions need a concrete deciding condition in plain language');
 const rootLostPrint=coreFixture('印',{'比肩':{position:2},'正印':{position:1,roots:0}},'偏弱');
 assert(findTask(rootLostPrint,'seal-body').state===0, 'visible print with no usable root cannot independently supply effective support');
 const supportedDay=coreFixture('印',{'比肩':{position:2,clear:false},'正印':{position:1}},'偏弱');
@@ -1673,9 +1688,9 @@ assert(mixedWithRemovedRisk.direction==='mixed', 'the same new or removed nondec
 const improvedButUncertain=coreFixture('伤',{'比肩':{position:3},'伤官':{position:0},'正印':{position:1},'正官':{position:2},'七杀':{position:0,damaged:true}},'弱');
 const improvingWithRisk=rules.compare(mixedWithUnknownKill,improvedButUncertain,coreAnalysis);
 assert(improvingWithRisk.direction==='pending' && improvingWithRisk.tendency==='positive', 'confirmed improvement plus consequential unknowns may offer a provisional tendency while keeping the verdict pending');
-assert(rules.label(improvingWithRisk,'previous').label==='倾向上升（需复核）', 'provisional previous-luck labels must retain their review qualifier');
+assert(improvingWithRisk.assessment==='conditional' && rules.label(improvingWithRisk,'previous').label==='已有改善因素' && improvingWithRisk.summary.includes('整体表现还取决于'), 'partial improvement must not claim an overall rise when consequential uncertainty remains');
 const worseningWithRisk=rules.compare(improvedButUncertain,mixedWithUnknownKill,coreAnalysis);
-assert(worseningWithRisk.tendency==='negative' && rules.label(worseningWithRisk,'previous').label==='倾向下降（需复核）', 'reversing the comparison must reverse the provisional tendency');
+assert(worseningWithRisk.tendency==='negative' && rules.label(worseningWithRisk,'previous').label==='已有受阻因素', 'reversing the comparison must reverse the confirmed partial effect');
 assert(!rules.compare(mixedWithUnknownKill,matchingHurt,{monthCommand:{ambiguous:true}}).tendency && !rules.compare(ordinaryCarry,thresholdCarry,coreAnalysis).tendency, 'month-use ambiguity and numerical threshold changes cannot manufacture provisional directions');
 assert(mixedWithRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.conditions.includes('变化前：未见对应实际作用')) && mixedWithRemovedRisk.reservations.some(x=>x.taskId==='handle-kill'&&x.conditions.includes('变化后：未见对应实际作用')), 'new or removed unknowns must expose the actual missing side instead of copying the old conditions to both sides');
 
@@ -1701,9 +1716,9 @@ assert(findTask(footBridged,'carry-wealth').state===1 && findTask(footBridged,'c
 assert(rules.label({direction:'mixed'},'annual').label==='吉凶并见' && rules.label({direction:'mixed'},'increment').label==='利弊并存', 'annual overall and annual increment must use their respective mixed labels');
 assert(!engine.includes('function outlookElements(') && !engine.includes('var ranks={已破:0'), 'the old generic element and rank direction shortcuts must be removed');
 const missingOutlook = outlookEngine.evaluateLuckOutlook({ pillars: { day: '甲子' }, dayStem: '甲' }, '壬寅', null, outlookYearRows);
-assert(missingOutlook.natal.label === '待判' && missingOutlook.years.every((year) => year.annual.label === '待判'), 'missing natal inputs must not become neutral');
+assert(missingOutlook.natal.direction === 'pending' && missingOutlook.natal.assessment==='input-error' && missingOutlook.years.every((year) => year.annual.label === '资料需核对'), 'missing natal inputs need a specific input issue, never a neutral or directional verdict');
 const mismatchedOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', 'not-a-pillar', [{ year: 2026, gz: '甲子' }]);
-assert(mismatchedOutlook.previous.label === '待判' && mismatchedOutlook.years[0].annual.label === '待判', 'invalid previous luck or mismatched annual stem-branch must remain pending');
+assert(mismatchedOutlook.previous.label === '资料需核对' && mismatchedOutlook.years[0].annual.label === '资料需核对', 'invalid previous luck or mismatched annual stem-branch must remain explicit input issues');
 assert(JSON.stringify(outlookConditionChart) === outlookInputSnapshot, 'outlook evaluation must not mutate its chart');
 const staleScoreChart = Object.assign({}, outlookConditionChart, { scores: { 木:100,火:100,土:0,金:0,水:100 }, patternAnalysis: { mainPattern:'stale' } });
 assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅', '庚午', outlookYearRows)) === JSON.stringify(outlookHelp), 'saved scores or saved analysis must not become the natal comparison baseline');
@@ -1712,7 +1727,7 @@ const realChartOutlook = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '�
 assert(realChartOutlook.years.length === 10 && JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart)) === natalBeforeOutlook, 'a real calendar reference should expose ten annual results without changing its natal analysis');
 vm.runInContext('GZ60', scriptContext).forEach((gz) => {
   const reviewed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, gz, '癸亥', [{ year: 2026, gz: '丙午' }]);
-  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && (['偏吉','平','偏凶','吉凶并见','待判'].includes(reviewed.years[0].annual.label)||/^(倾向偏吉|倾向偏凶|已有吉凶并见)（需复核）$/.test(reviewed.years[0].annual.label)), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
+  assert(!/undefined|NaN/.test(JSON.stringify(reviewed)) && ['偏吉','平','偏凶','吉凶并见','可能偏吉','可能偏凶','已有有利因素','已有不利因素','已有吉凶并见','分条件看','暂缺整体结论'].includes(reviewed.years[0].annual.label), `complete calendar chart should produce finite, explicit evidence or a stated uncertainty for ${gz}`);
   if(reviewed.years[0].annual.direction==='pending')assert(reviewed.years[0].annual.uncertainty.length>0, 'pending needs the actual missing condition');
   const reversed = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '癸亥', gz, []);
   const opposite = { positive:'negative', negative:'positive', neutral:'neutral', mixed:'mixed', pending:'pending' };
@@ -1749,6 +1764,115 @@ const hostileOutlookBox = scriptContext.renderOutlookBox('<img src=x>', { label:
 assert(!hostileOutlookBox.includes('<script>') && hostileOutlookBox.includes('&lt;img'), 'new evidence rendering must escape labels and prose');
 assert(hostileOutlookBox.includes('<details class="outlook-details"><summary>查看判断依据</summary>') && selectedOutlookHtml.includes('<summary>合冲关系与判断口径</summary>'), 'full reasoning and repeated technical context should be collapsed by default');
 const conciseOutlookBox=scriptContext.renderOutlookBox('较上一运',rules.label(improvingWithRisk,'previous'));
-assert(conciseOutlookBox.includes('倾向上升（需复核）') && conciseOutlookBox.indexOf('待复核：')>conciseOutlookBox.indexOf('查看判断依据'), 'provisional summary must retain its qualifier and expose the uncertainty on demand');
+assert(conciseOutlookBox.includes('已有改善因素') && conciseOutlookBox.includes('整体表现还取决于') && conciseOutlookBox.indexOf('关键条件：')>conciseOutlookBox.indexOf('查看判断依据') && !conciseOutlookBox.includes('需复核'), 'the summary must explain the partial effect and deciding condition without repeating internal review wording');
+const conditionalAiContext=scriptContext.outlookContextText('较上一运',rules.label(improvingWithRisk,'previous'));
+assert(conditionalAiContext.includes('条件分析，不代表已确认整体方向') && conditionalAiContext.includes(improvingWithRisk.summary) && improvingWithRisk.uncertainty.every(text=>conditionalAiContext.includes(text)), 'AI must retain both the conditional assessment and every consequential uncertainty shown by the engine');
+assert(rules.compare(noUsablePath,noUsablePath,coreAnalysis).assessment==='unsupported' && rules.label(rules.compare(noUsablePath,noUsablePath,coreAnalysis),'previous').label==='暂缺整体结论', 'a genuine rule-coverage gap cannot masquerade as conditional analysis or a neutral verdict');
+const loadedOutlookEngine=scriptContext.BaziEngine;
+scriptContext.BaziEngine=undefined;scriptContext.selectedLuckOutlookCache=null;
+const unavailableEngineOutlook=scriptContext.getSelectedLuckOutlook(wenZhenLuckChart,firstSelectionContext);
+assert(unavailableEngineOutlook.natal.assessment==='engine-error' && unavailableEngineOutlook.natal.label==='暂无法计算' && unavailableEngineOutlook.natal.summary.includes('刷新'), 'engine load failure needs a recovery instruction, not a metaphysical verdict');
+scriptContext.BaziEngine=loadedOutlookEngine;scriptContext.selectedLuckOutlookCache=null;
 
-console.log('bazi page checks ok (including luck outlooks)');
+async function checkBaziRecordActions() {
+  // Exercise the real controller/storage functions without a network request or user records.
+  const nodes=new Map(),storage=new Map(),alerts=[],confirmations=[];
+  let allowConfirm=true,failWrites=false,failReads=false,apiKey='test-key',requests=0;
+  const node=id=>{
+    if(!nodes.has(id))nodes.set(id,{value:'',checked:false,hidden:false,disabled:false,innerHTML:'',textContent:'',style:{},
+      classList:{toggle(){},add(){},remove(){}},focus(){},scrollIntoView(){},remove(){},
+      querySelector(){return this.innerHTML.includes('class="fact-check"')?{}:null}});
+    return nodes.get(id);
+  };
+  scriptContext.document={getElementById:node,querySelectorAll:()=>[],querySelector:()=>({value:'男'})};
+  scriptContext.window={scrollTo(){},matchMedia:()=>({matches:true})};
+  scriptContext.localStorage={getItem(key){if(failReads)throw new Error('storage denied');return storage.get(key)||null},setItem(key,value){if(failWrites)throw new Error('quota');storage.set(key,String(value))}};
+  scriptContext.alert=message=>alerts.push(message);
+  scriptContext.confirm=message=>{confirmations.push(message);return allowConfirm};
+  scriptContext.getApiKey=()=>apiKey;
+  scriptContext.setInterval=()=>1;scriptContext.clearInterval=()=>{};
+  const profile=name=>scriptContext.BaziEngine.createBaziProfile({person:name,gender:'男',input:{year:1998,month:10,day:10,hour:1,minute:50},useTrueSolar:false});
+  let nextChart=profile('记录甲');
+  scriptContext.calculateBazi=()=>JSON.parse(JSON.stringify(nextChart));
+  scriptContext.currentBazi=null;scriptContext.activeBaziRecordId=null;scriptContext.aiHistory=[];
+  scriptContext.editingActiveRecord=false;scriptContext.baziRecordSaveFailed=false;
+  node('aiMode').value='brief';node('btnAi').textContent='AI 分析';node('btnAiFollowup').textContent='继续问';
+  const records=()=>JSON.parse(storage.get(scriptContext.BAZI_RECORDS)||'[]');
+  const saved=id=>records().find(item=>item.id===id);
+
+  node('autoSaveBuild').checked=true;
+  assert(scriptContext.buildBazi()===true && records().length===1 && node('btnSaveChart').hidden, 'successful build auto-save must hide the redundant manual save entry');
+  const firstId=scriptContext.activeBaziRecordId;
+  const emptyPanel=scriptContext.renderAiPanel();
+  assert(!emptyPanel.includes('id="btnSaveBazi"') && emptyPanel.includes('id="aiFollowup" hidden') && emptyPanel.includes('id="aiHistoryTools" hidden'), 'before the first answer, redundant AI save and continuation tools must not clutter the panel');
+  node('autoSaveBuild').checked=false;
+  scriptContext.newBaziChart();nextChart=profile('记录乙');scriptContext.buildBazi();
+  assert(records().length===1 && !scriptContext.activeBaziRecordId && !node('btnSaveChart').hidden, 'unchecked charting must retain manual save without creating a record');
+  allowConfirm=false;scriptContext.newBaziChart();
+  assert(scriptContext.currentBazi.person==='记录乙', 'canceling new must preserve an unsaved chart');
+  allowConfirm=true;
+  assert(scriptContext.saveBaziRecord() && records().length===2 && node('btnSaveChart').hidden, 'manual save must remain available and hide only after success');
+  const secondId=scriptContext.activeBaziRecordId;
+  assert(secondId!==firstId && scriptContext.saveBaziRecord() && records().length===2, 'saving again must update the same record');
+
+  scriptContext.newBaziChart();nextChart=profile('记录丙');scriptContext.buildBazi();
+  node('aiQuestion').value='首问';apiKey='';
+  await scriptContext.analyzeBazi();
+  assert(records().length===2, 'canceling API-key entry must not generate an empty AI record');
+  apiKey='test-key';
+  let finish;
+  scriptContext.DeepSeekClient={requestFinal:()=>{requests++;return new Promise(resolve=>{finish=resolve})}};
+  const firstAnswer=scriptContext.analyzeBazi(),thirdId=scriptContext.activeBaziRecordId;
+  assert(records().length===3 && saved(thirdId).aiHistory.length===0 && scriptContext.baziAiPendingRequest, 'valid AI start must save an unchecked chart before requesting an answer');
+  assert(node('aiFollowup').hidden && !node('aiResult').hidden && node('btnNewBazi').disabled, 'first-request loading must remain visible while continuation stays hidden');
+  scriptContext.newBaziChart();scriptContext.editCurrentBaziInput();scriptContext.loadBaziRecord(firstId);scriptContext.deleteBaziRecord(thirdId);
+  assert(scriptContext.activeBaziRecordId===thirdId && records().length===3, 'new, edit, load and active deletion must not steal or discard an in-flight answer');
+  node('aiQuestion').value='还没发送的新问题';
+  finish({answer:'第一条模拟回答'});await firstAnswer;
+  assert(saved(thirdId).aiHistory.length===1 && records().length===3 && !node('aiFollowup').hidden && !node('btnNewBazi').disabled, 'the answer must attach to the same record and reveal continuation');
+  assert(node('aiQuestion').value==='还没发送的新问题', 'a newly composed draft must survive completion of the preceding request');
+  scriptContext.DeepSeekClient={requestFinal:async()=>{requests++;return {answer:'第二条模拟回答'}}};
+  node('aiFollowupQuestion').value='追问';await scriptContext.analyzeBazi('aiFollowupQuestion');
+  assert(saved(thirdId).aiHistory.length===2 && records().length===3 && saved(firstId).aiHistory.length===0, 'follow-up must append without duplicating or contaminating other records');
+
+  const created=saved(thirdId).createdTs,confirmationCount=confirmations.length;
+  scriptContext.editCurrentBaziInput();nextChart=JSON.parse(JSON.stringify(scriptContext.currentBazi));nextChart.person='记录丙改名';scriptContext.buildBazi();
+  assert(saved(thirdId).aiHistory.length===2 && saved(thirdId).createdTs===created && confirmations.length===confirmationCount, 'name-only edits must preserve answers and creation time without a destructive confirmation');
+  const customTitleItems=records();customTitleItems.find(item=>item.id===thirdId).name='自定义保存标题';storage.set(scriptContext.BAZI_RECORDS,JSON.stringify(customTitleItems));
+  scriptContext.syncActiveBaziRecord();assert(saved(thirdId).name==='自定义保存标题', 'automatic conversation saves must retain a custom record title');
+  scriptContext.editCurrentBaziInput();nextChart=scriptContext.BaziEngine.createBaziProfile({person:'记录丙改名',gender:'男',input:{year:1998,month:10,day:10,hour:2,minute:50},useTrueSolar:false});
+  allowConfirm=false;
+  assert(scriptContext.buildBazi()===false && scriptContext.aiHistory.length===2 && saved(thirdId).aiHistory.length===2, 'canceling birth replacement must leave both live and stored answers intact');
+  allowConfirm=true;scriptContext.buildBazi();
+  assert(scriptContext.activeBaziRecordId===thirdId && saved(thirdId).aiHistory.length===0 && saved(thirdId).createdTs===created, 'confirmed birth replacement must update the same record and clear only its old answers');
+
+  scriptContext.newBaziChart();nextChart=profile('记录丁');scriptContext.buildBazi();
+  failWrites=true;const beforeRequests=requests;node('aiQuestion').value='保存失败前的首问';
+  await scriptContext.analyzeBazi();
+  assert(requests===beforeRequests && scriptContext.baziRecordSaveFailed && !node('btnSaveChart').hidden && records().length===3, 'failed initial persistence must retain recovery and avoid a paid request whose record cannot be created');
+  failWrites=false;assert(scriptContext.saveBaziRecord(), 'manual retry must recover initial save failure');
+  const fourthId=scriptContext.activeBaziRecordId;
+  scriptContext.DeepSeekClient={requestFinal:async()=>{requests++;failWrites=true;return {answer:'保存失败仍保留的模拟回答'}}};
+  await scriptContext.analyzeBazi();
+  assert(scriptContext.aiHistory.length===1 && saved(fourthId).aiHistory.length===0 && !node('btnSaveChart').hidden, 'failed answer persistence must retain the visible answer and a retry entry');
+  assert(scriptContext.buildBaziReport().includes('保存失败仍保留的模拟回答'), 'report export must still recover an answer that could not be persisted');
+  allowConfirm=false;scriptContext.newBaziChart();assert(scriptContext.aiHistory.length===1, 'unsaved answers must not disappear when new is canceled');
+  failWrites=false;allowConfirm=true;scriptContext.saveBaziRecord();scriptContext.loadBaziRecord(fourthId);
+  assert(scriptContext.aiHistory.length===1 && !scriptContext.renderAiPanel().includes('id="aiFollowup" hidden'), 'reopening the saved record must restore its conversation and follow-up entry');
+  scriptContext.deleteBaziAiTurn(0);
+  assert(saved(fourthId).aiHistory.length===0 && node('aiFollowup').hidden && node('aiHistoryTools').hidden, 'deleting the final answer must also hide continuation and empty history controls');
+
+  scriptContext.newBaziChart();nextChart=profile('记录戊');scriptContext.buildBazi();
+  scriptContext.DeepSeekClient={requestFinal:async()=>{requests++;throw new Error('模拟请求失败')}};
+  await scriptContext.analyzeBazi();
+  assert(scriptContext.aiHistory.length===0 && !node('aiResult').hidden && node('aiFollowup').hidden && node('aiResult').innerHTML.includes('模拟请求失败'), 'first-request failure must show the error without a fake answer or continuation entry');
+  const goodRaw=storage.get(scriptContext.BAZI_RECORDS);storage.set(scriptContext.BAZI_RECORDS,'{broken');
+  assert(!scriptContext.saveBaziRecord() && storage.get(scriptContext.BAZI_RECORDS)==='{broken', 'invalid existing storage must never be replaced by an automatically created record');
+  storage.set(scriptContext.BAZI_RECORDS,goodRaw);
+  failReads=true;assert(!scriptContext.saveBaziRecord() && storage.get(scriptContext.BAZI_RECORDS)===goodRaw, 'denied record reads must report failure and preserve stored data');failReads=false;
+  const requestsBeforeKeyFailure=requests;
+  scriptContext.getApiKey=()=>{throw new Error('key storage denied')};await scriptContext.analyzeBazi();
+  assert(requests===requestsBeforeKeyFailure && alerts.some(text=>text.includes('API Key')), 'API-key storage failure must be visible and must not issue a request');
+  assert(alerts.length>0 && saved(firstId) && saved(secondId), 'recovery messages must be surfaced while earlier records remain intact');
+}
+checkBaziRecordActions().then(()=>console.log('bazi page checks ok (including luck outlooks and record/AI actions)')).catch(error=>{console.error(error);process.exitCode=1});
