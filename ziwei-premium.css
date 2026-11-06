@@ -144,6 +144,8 @@ html[data-theme="dark"] .zw .button.primary{color:#141a3c;background:linear-grad
 .zw .zw-entry .panel-heading p{margin:0;font-size:12px;color:var(--zw-muted)}
 .zw #birthForm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem 1rem;align-items:end;margin-top:.9rem}
 .zw #birthForm>*{margin-top:0}
+.zw #birthForm>*,.zw #birthForm .field{min-width:0}
+.zw #birthForm input[type="date"],.zw #birthForm input[type="time"]{box-sizing:border-box;width:100%;min-width:0;max-width:100%}
 .zw #birthForm>.name-field{grid-column:1/-1;max-width:480px;width:100%}
 .zw .save-choice{display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:100%;font-size:14px;color:var(--zw-text)}
 .zw .save-choice input{width:auto;min-height:0}
@@ -460,8 +462,6 @@ html[data-theme="dark"] .zw .ai-header-tools .api-key-button:hover{background:#d
   .zw .appbar{flex-wrap:wrap;padding:.6rem 0}
   .zw .header-actions{width:100%;justify-content:space-between}
   .zw #birthForm{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .zw #birthForm>#solarFields,.zw #birthForm>#lunarFields,.zw #birthForm>.field{min-width:0}
-  .zw #birthForm input[type="date"],.zw #birthForm input[type="time"]{min-width:0;max-width:100%}
   .zw .horoscope-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
   .zw .zw-timeline{grid-template-columns:repeat(6,minmax(0,1fr))}
 }
@@ -556,7 +556,7 @@ html[data-theme="dark"] .zw .ai-header-tools .api-key-button:hover{background:#d
 }
 @media (max-width:420px){
   .zw .zw-entry-summary{align-items:flex-start}
-  .zw #birthForm{grid-template-columns:1fr 1fr}
+  .zw #birthForm{grid-template-columns:repeat(2,minmax(0,1fr))}
   .zw .horoscope-summary{grid-template-columns:1fr 1fr}
   .zw .theme-control{margin-left:0}
 }
