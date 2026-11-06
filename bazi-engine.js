@@ -12,9 +12,10 @@
   var ctrl={木:'土',土:'水',水:'火',火:'金',金:'木'};
   var combineStem={甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'};
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
-  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.07.15.2';
-  var PATTERN_RULE_VERSION='ZP-2026.07.14.3';
-  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v9';
+  var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.11.06.2';
+  var PATTERN_RULE_VERSION='ZP-2026.11.06.2';
+  var USEFUL_DECISION_VERSION='ZP-USE-2026.11.06-v2';
+  var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v11';
   var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.15-v4';
   var LUCK_RECHECK_VERSION='ZP-LUCK-2026.07.14-v1';
   var PATTERN_LEVELS=['偏低','中等','偏高','高','顶级'];
@@ -50,8 +51,8 @@
     {grade:'顶级',label:'78分及以上',min:78,max:100.1}
   ];
   var THEORETICAL_BASELINE_CONFIG={start:'1984-02-04',endExclusive:'2044-02-04',stepDays:11,hours:[0,2,4,6,8,10,12,14,16,18,20,22],timezone:'Asia/Shanghai',referenceLongitude:120,trueSolarCorrection:false,deduplicate:'fourPillars'};
-  var THEORETICAL_BASELINE_HISTOGRAM={40:1,42:38,43:7,44:28,45:16,46:209,47:89,48:881,49:216,50:1185,51:643,52:1821,53:485,54:995,55:358,56:811,57:1348,58:1305,59:636,60:249,61:727,62:1023,63:458,64:663,65:79,66:2093,67:505,68:69,69:235,70:64,71:705,72:386,73:242,74:307,75:3086,76:760,77:60,78:88,79:27,80:92,81:7,82:18,83:166,84:27,85:3,86:520,87:152,89:33};
-  var THEORETICAL_BASELINE_STATS={sampleCount:23916,uniqueCount:23916,duplicateCount:0,scoreRange:{min:40,max:89},mean:62.553144,standardDeviation:10.115352,quantiles:{p5:48,p20:52,p50:61,p80:75,p95:76},candidateGradeCounts:{偏低:1221,中等:3471,偏高:14232,高:3864,顶级:1128},gradeCounts:{偏低:1221,中等:3471,偏高:14313,高:4021,顶级:890},gradePercentages:{偏低:5.11,中等:14.51,偏高:59.85,高:16.81,顶级:3.72},ruleVersion:'ZP-2026.07.14.3',engineVersion:'BAZI-PATTERN-2026.07.15.2',scoreModelVersion:'ZP-SCORE-2026.07.15-v4'};
+  var THEORETICAL_BASELINE_HISTOGRAM={"40":1,"41":1,"42":37,"43":7,"44":28,"45":15,"46":213,"47":89,"48":872,"49":214,"50":1170,"51":631,"52":1825,"53":482,"54":1004,"55":363,"56":798,"57":1375,"58":1277,"59":649,"60":254,"61":705,"62":1036,"63":461,"64":670,"65":79,"66":2101,"67":519,"68":73,"69":235,"70":66,"71":692,"72":377,"73":243,"74":317,"75":3084,"76":773,"77":63,"78":88,"79":26,"80":89,"81":7,"82":18,"83":157,"84":27,"85":3,"86":518,"87":152,"89":32};
+  var THEORETICAL_BASELINE_STATS={"sampleCount":23916,"uniqueCount":23916,"duplicateCount":0,"scoreRange":{"min":40,"max":89},"mean":62.564559,"standardDeviation":10.098332,"quantiles":{"p5":48,"p20":52,"p50":61,"p80":75,"p95":76},"candidateGradeCounts":{"偏低":1216,"中等":3439,"偏高":14267,"高":3882,"顶级":1112},"gradeCounts":{"偏低":1216,"中等":3439,"偏高":14349,"高":4034,"顶级":878},"gradePercentages":{"偏低":5.08,"中等":14.38,"偏高":60,"高":16.87,"顶级":3.67},"ruleVersion":"ZP-2026.11.06.2","engineVersion":"BAZI-PATTERN-2026.11.06.2","scoreModelVersion":"ZP-SCORE-2026.07.15-v4"};
   var AUTHORITY_PATTERN_RULES={
     财:{id:'ZP-MG-01',gods:['正财','偏财'],principle:'财星当令，重在身能任财，并见食神生财或财生官护。',success:['身能任财','食伤生财','财生官'],breakers:['比劫夺财','身弱不任财'],rescues:['官星制比护财','印比扶身承财']},
     官:{id:'ZP-MG-02',gods:['正官'],principle:'正官当令，喜财生、印护，忌伤官与官杀混杂。',success:['财生官','官生印'],breakers:['伤官见官','官杀混杂','身弱官重'],rescues:['印制伤护官','去杀留官']},
@@ -582,17 +583,24 @@
       '得地：'+rootState+(roots.length?'（'+roots.map(function(x){return x.text}).join('、')+'）':''),
       '得势：'+momentumState+(interactionAdjustment?'；合会变气反馈'+(interactionAdjustment>0?'+':'')+Math.round(interactionAdjustment*10)/10:'')
     ];
-    var confidence=roots.some(function(x){return x.attacked})?'中':'高';
-    return {support:Math.round(Math.max(0,Math.min(100,support))*10)/10,total:100,scope:hasFlowYear?'大运与流年第五、六柱':(hasLuck?'当前大运第五柱':'原局四柱'),temporalPillar:hasFlowYear?'luck+flowYear':(hasLuck?'luck':''),parts:parts,dimensions:{command:{score:command.score,max:Math.round(STRENGTH_WEIGHTS.monthBranch*weightScale*10)/10},roots:{score:Math.round(rootScore*10)/10,items:roots},momentum:{score:Math.round(momentum*10)/10,interactionAdjustment:Math.round(interactionAdjustment*10)/10}},interactions:interactions,confidence:confidence,evidence:evidence};
+    var commander=humanCommander(pillars.month[1],options.time),commanderElement=commander&&STEM_WX[commander.stem],seasonSupported=!!commander&&(commanderElement===dayWx||commanderElement===resource);
+    var seasonal={available:!!commander,commander:commander&&commander.stem||'',elapsedDays:commander&&commander.elapsedDays,source:'项目采用的人元分野表（各家分日有异，不视为唯一古法）',method:commander&&commander.method||'缺少可对照的出生日期，未计算月内司令',effect:commander?(seasonSupported?'司令生扶日主':'司令不直接生扶日主'):'月内深浅未知',evidence:commander?['节后'+commander.elapsedDays+'日，'+commander.stem+'司令',commander.stem+'属'+commanderElement+'，'+(seasonSupported?'提供得时依据，但不抵消泄耗制或根损':'其职责须结合印比及泄耗制判断')]:[],missing:commander?[]:['可靠出生日期与时刻']};
+    var value=Math.round(Math.max(0,Math.min(100,support))*10)/10,tendency=strengthBand(value),conflicts=[];
+    if(value<42&&seasonSupported)conflicts.push('扶身指数偏弱，但当前司令提供生扶；不能把低指数等同完全失时无根');
+    if(value>=55&&commander&&!seasonSupported)conflicts.push('扶身指数偏强，但司令不直接生扶；须辨根气与泄耗制是否形成出口');
+    if(roots.some(function(x){return x.attacked||x.transformedAway}))conflicts.push('有效根气须按合冲裁决后的结果使用');
+    // The numeric inventory is kept reproducible. Seasonal evidence is not an
+    // uncalibrated bonus; it enters the separate task/route conditions below.
+    var summary='固定比例扶身指数'+value+'，倾向'+tendency+'；'+seasonal.effect+'；'+rootState+'；'+momentumState+(conflicts.length?'。'+conflicts.join('；'):'');
+    evidence=evidence.concat(seasonal.evidence.length?seasonal.evidence:['月内司令：缺少时间证据，不以月支本气冒充司令']);
+    var confidence=!commander||conflicts.length?'中':'高';
+    return {support:value,total:100,method:'固定比例扶身指标，不是五行物理能量或完整旺衰真值',seasonal:seasonal,assessment:{tendency:tendency,summary:summary,conflicts:conflicts,method:'指数、司令、有效根及透干分层；承载按具体任务判断'},scope:hasFlowYear?'大运与流年第五、六柱':(hasLuck?'当前大运第五柱':'原局四柱'),temporalPillar:hasFlowYear?'luck+flowYear':(hasLuck?'luck':''),parts:parts,dimensions:{command:{score:command.score,max:Math.round(STRENGTH_WEIGHTS.monthBranch*weightScale*10)/10},roots:{score:Math.round(rootScore*10)/10,items:roots},momentum:{score:Math.round(momentum*10)/10,interactionAdjustment:Math.round(interactionAdjustment*10)/10}},interactions:interactions,confidence:confidence,evidence:evidence};
   }
+  function strengthBand(value){return value>=65?'强':value>=55?'偏强':value>=42?'中和':value>=30?'偏弱':'弱'}
   function assessStrength(dayStem,pillarsOrMonthBranch,scores,options){
     if(pillarsOrMonthBranch&&typeof pillarsOrMonthBranch==='object'&&pillarsOrMonthBranch.month){
       var weighted=strengthScore(dayStem,pillarsOrMonthBranch,options),value=weighted.support;
-      if(value>=65)return '强';
-      if(value>=55)return '偏强';
-      if(value>=42)return '中和';
-      if(value>=30)return '偏弱';
-      return '弱';
+      return strengthBand(value);
     }
     var monthBranch=pillarsOrMonthBranch;
     var dayWx=STEM_WX[dayStem],resource=Object.keys(gen).find(function(k){return gen[k]===dayWx});
@@ -606,7 +614,7 @@
     if(value>=0.26)return '偏弱';
     return '弱';
   }
-  function carryingCapacityFeedback(strength,weightedStrength){
+  function carryingCapacityFeedback(strength,weightedStrength,profiles){
     var roots=weightedStrength&&weightedStrength.dimensions&&weightedStrength.dimensions.roots.items||[];
     var usableRoots=roots.filter(function(item){return item.usable!==false&&!item.transformedAway}),cleanRoots=usableRoots.filter(function(item){return !item.attacked&&!item.changedByGroup}),partialRoots=usableRoots.filter(function(item){return item.attacked||item.changedByGroup}),rootPower=usableRoots.reduce(function(sum,item){return sum+(item.rootPower||0)},0),exactRootPower=usableRoots.filter(function(item){return item.exactStem}).reduce(function(sum,item){return sum+(item.rootPower||0)},0);
     var damagedRoots=roots.filter(function(item){return item.usable===false||item.transformedAway||item.attacked});
@@ -618,7 +626,16 @@
     var lostRoots=damagedRoots.filter(function(item){return item.usable===false||item.transformedAway});
     if(lostRoots.length)reasons.push('失用根气'+lostRoots.map(function(item){return item.text}).join('、'));
     reasons.push('扶身权重'+support);
-    return {ruleId:'ZP-FB-01',ruleVersion:PATTERN_RULE_VERSION,canCarryWealth:canCarry,canCarryOutputKill:canCarry,usableRootCount:usableRoots.length,usableRootPower:Math.round(rootPower*100)/100,exactRootPower:Math.round(exactRootPower*100)/100,damagedRootCount:damagedRoots.length,support:support,status:canCarry?'承载可用':'承载不足',text:(canCarry?'日主仍具任财、承泄或任杀的基础':'日主根气受损、同干根力不足或随合会变气，暂不足以单凭财、食杀组合认定承载成立')+'；'+reasons.join('；')};
+    profiles=profiles||{};
+    function force(names){return names.reduce(function(sum,name){var p=profiles[name]||{};return sum+(p.revealed||0)+(p.rootPower||0)+(p.monthCommand?1:0)},0)}
+    var seal=force(['正印','偏印']),peer=force(['比肩','劫财']),wealth=force(['正财','偏财']),output=force(['食神','伤官']),officer=force(['正官','七杀']),seasonal=weightedStrength&&weightedStrength.seasonal||{},seasonSupported=seasonal.available&&seasonal.effect==='司令生扶日主';
+    function task(id,load,mitigation,restriction){
+      var conditions=[{id:'effective-root',passed:usableRoots.length>0,evidence:'有效同类根力'+Math.round(rootPower*100)/100},{id:'season-or-support',passed:!weak||seasonSupported||seal+peer>0,evidence:seasonal.effect||'月内深浅未知'},{id:id+'-outlet',passed:mitigation,evidence:restriction},{id:'strict-formation-gate',passed:canCarry,evidence:'保留旧保守成格入口；数值参数不代表现实能力'}];
+      var supported=canCarry&&mitigation,status=supported?'supported':((usableRoots.length>0&&(seasonSupported||seal+peer>0))||mitigation?'conditional':'limited');
+      return {status:status,load:load,conditions:conditions,evidence:conditions.map(function(c){return c.evidence}),restrictions:supported?[]:[restriction,'局部有作用不等于完整组合成格'],strictFormationEligible:supported};
+    }
+    var tasks={wealth:task('wealth',wealth,seal+peer>0||!weak,'任财须看印比承接及财是否转生过重官杀'),output:task('output',output,seal>0||!weak,'承泄须有根源补充，食伤已有过重时不能再增'),officer:task('officer',officer,seal>0||output>officer||(!weak&&usableRoots.length>0),'任官杀须看印化或食制，不能用财生杀代替承接')};
+    return {ruleId:'ZP-CAP-02',ruleVersion:PATTERN_RULE_VERSION,canCarryWealth:canCarry,canCarryOutputKill:canCarry,strictFormationEligible:canCarry,tasks:tasks,engineeringBoundary:'1.4 根力与扶身指数门槛仅是严格成格的工程保守入口，不是命中不能承财或现实收入结论',usableRootCount:usableRoots.length,usableRootPower:Math.round(rootPower*100)/100,exactRootPower:Math.round(exactRootPower*100)/100,damagedRootCount:damagedRoots.length,support:support,status:canCarry?'严格成格承载入口通过':'严格成格承载入口未通过，局部作用另论',text:(canCarry?'保守成格入口通过，任财、承泄、任官杀仍须分别核对作用条件':'保守成格入口未通过，不据此否认局部通关、调候或得时作用')+'；'+reasons.join('；')+'；'+(seasonal.effect||'月内深浅未知')};
   }
   function unique(arr){
     return (arr||[]).filter(function(x,i,a){return x&&a.indexOf(x)===i});
@@ -641,7 +658,7 @@
     context=context||{};
     var tiaohou=context.tiaohou||{},pattern=context.pattern||{},fuyi=context.fuyi||{};
     var monthStem=context.monthCommandStem||(HIDDEN[context.monthBranch]||[])[0],monthElement=STEM_WX[monthStem],monthGod=context.monthGod||(monthStem?tenGod(dayStem,monthStem):'');
-    var use=primary.slice(0,1),patternUse=unique(pattern.use||[]),restrained=unique(pattern.restrainedUse||[]),assistant=unique(patternUse.concat(primary.slice(1))).filter(function(w){return use.indexOf(w)<0&&restrained.indexOf(w)<0});
+    var use=primary.slice(),patternUse=unique(pattern.use||[]),assistant=[];
     var joy=unique(secondary).filter(function(w){return use.indexOf(w)<0&&assistant.indexOf(w)<0});
     var enemy=[];
     if(avoid.length){
@@ -669,16 +686,16 @@
     var dayWx=STEM_WX[dayStem],result={use:[],avoid:[],priority:'参考',condition:'未见明显寒暖燥湿偏枯',why:'调候不作首要。'};
     if('亥子丑'.indexOf(monthBranch)>=0){
       var cold=ratio('水')>=0.35&&ratio('火')<0.16;
-      result={use:['火','木'],avoid:['水'],priority:cold?'主用':'佐用',condition:cold?'水旺火弱，寒湿偏重':'冬令但原局仍见暖气',why:(cold?'寒湿已成偏枯，火为调候主用，木作火源。':'冬令取火木作调候佐用，不越过格局与扶抑。')};
+      result={use:['火','木'],avoid:cold?['水']:[],priority:cold?'主用':'参考',condition:cold?'水旺火弱，寒湿偏重':'冬令但原局仍见暖气',why:(cold?'寒湿已成偏枯，火为调候需要，木作火源。':'冬令火木仅作季节参考，未见明显偏枯时不自动增列喜忌。')};
     }else if('巳午未'.indexOf(monthBranch)>=0){
       var hot=ratio('火')>=0.35&&ratio('水')<0.12;
-      result={use:['水','金'],avoid:['火'],priority:hot?'主用':'佐用',condition:hot?'火旺水弱，燥热偏重':'夏令但原局仍有润气',why:(hot?'燥热已成偏枯，水为调候主用，金作水源。':'夏令取水金作调候佐用，不越过格局与扶抑。')};
+      result={use:['水','金'],avoid:hot?['火']:[],priority:hot?'主用':'参考',condition:hot?'火旺水弱，燥热偏重':'夏令但原局仍有润气',why:(hot?'燥热已成偏枯，水为调候需要，金作水源。':'夏令水金仅作季节参考，原局已有润气时不自动增水、忌火。')};
     }else if('申酉戌'.indexOf(monthBranch)>=0){
       var dry=ratio('金')>=0.28&&ratio('水')<0.12;
-      result={use:dayWx==='木'?['水','火']:['火','木'],avoid:['金'],priority:dry?'佐用':'参考',condition:dry?'金旺水弱，燥气明显':'秋令燥气未成偏枯',why:dry?'秋燥明显，以水润燥、火制金为调候辅助。':'秋令只保留火木调候参考。'};
+      result={use:dry?['水','火']:[],avoid:dry?['金']:[],priority:dry?'佐用':'参考',condition:dry?'金旺水弱，燥气明显':'秋令燥气未成偏枯',why:dry?'秋燥明显，以水润燥、火制金为调候辅助，是否可用仍看结构。':'秋令未见燥气偏枯，不凭季节固定增列喜忌。'};
     }else if('寅卯辰'.indexOf(monthBranch)>=0){
       var damp=ratio('木')>=0.3&&ratio('火')<0.12;
-      result={use:['火','土'],avoid:['木'],priority:damp?'佐用':'参考',condition:damp?'木旺火弱，湿滞不化':'春令生发尚能流通',why:damp?'春木湿滞，取火发荣、土承载为调候辅助。':'春令只保留火土调候参考。'};
+      result={use:damp?['火','土']:[],avoid:damp?['木']:[],priority:damp?'佐用':'参考',condition:damp?'木旺火弱，湿滞不化':'春令生发尚能流通',why:damp?'春木湿滞，取火发荣、土承载为调候辅助，是否可用仍看结构。':'春令未见湿滞偏枯，不凭季节固定增列喜忌。'};
     }
     return result;
   }
@@ -902,9 +919,6 @@
       return {use:transformUse,avoid:transformAvoid,why:'化气成格，顺化神旺势，兼取生助化神之气，忌克破化神或还原日主之气破化。'};
     }
     if(/专旺格/.test(mainPattern))return {use:[dayWx,resource,output],avoid:[officer,wealth],why:'专旺成格，顺日主一方旺势，兼取食伤泄秀出口，忌官杀财星逆势破格。'};
-    if(/伤官见官/.test(mainPattern))return {use:[resource,wealth],avoid:[output],why:'先看印星制伤、财星通关，避免伤官与官星直接相战。'};
-    if(/财多身弱/.test(mainPattern))return {use:[resource,dayWx],avoid:[wealth,output],why:'财星太重而身弱，先取印比扶身承财。'};
-    if(/食伤混杂/.test(mainPattern))return {use:[wealth,resource],avoid:[output],why:'食神伤官混杂，先看财星流通或印星制化，忌再增食伤。'};
     if(/财官印相生/.test(mainPattern))return {use:[wealth,officer,resource],avoid:[output],why:'格局重财官印顺生，忌食伤破官过重。'};
     if(/杀印相生|官印相生/.test(mainPattern))return {use:[resource,dayWx],avoid:[wealth,output],why:'格局以印化官杀、生扶日主为核心。'};
     if(/食神制杀/.test(mainPattern))return {use:[output,resource],avoid:[wealth],why:'格局以食神制杀为主，兼看印星护身。'};
@@ -912,7 +926,6 @@
     if(/伤官配印/.test(mainPattern))return {use:[resource],avoid:[wealth],why:'格局以印制伤、护身清局为核心。'};
     if(/食神生财/.test(mainPattern))return {use:[output,wealth],avoid:[resource],why:'格局以食神泄秀、生财承接为核心，忌枭印直接夺食。'};
     if(/伤官生财/.test(mainPattern))return {use:[output,wealth],avoid:[resource],why:'格局以食伤生财、流通成事为核心。'};
-    if(/官杀混杂|杀重混官/.test(mainPattern))return {use:[resource,dayWx],avoid:[wealth,output],why:'先清官杀混杂，再取印比化杀扶身。'};
     return {use:[],avoid:[],why:'未见可单独定用的成格组合，先按扶抑与调候。'};
   }
   function applyPatternConflictUse(dayWx,pattern,arbitration){
@@ -1003,6 +1016,147 @@
     });
     return {primary:items(primary,preferred,'主用'),secondary:items(secondary,preferred,'佐用'),avoid:avoidItems};
   }
+  function arbitrateUsefulRoutes(dayStem,strength,context,layers){
+    var dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),output=gen[dayWx],wealth=ctrl[dayWx],officer=officerElement(dayWx),weak=/弱/.test(strength),profiles=context.profiles||{},pillars=context.pillars,interactions=context.interactions||(pillars?interactionAnalysis(pillars):null),routes=[],fuyi=layers.fuyi,climate=layers.tiaohou,pattern=layers.pattern;
+    var diseases=context.patternDisease&&context.patternDisease.items||[],pending=diseases.filter(function(d){return d.status!=='已解'}),families=pending.map(function(d){return d.family}),phenomenon=(context.elementPhenomena||[])[0],main=context.patternArbitration&&context.patternArbitration.main;
+    function present(names){return names.some(function(g){var p=profiles[g]||{};return (p.count||0)>0||(p.rootPower||0)>0||p.revealed||p.monthCommand})}
+    function clear(names){return names.some(function(g){var p=profiles[g]||{};return !!(p.revealed||p.monthCommand)})}
+    function link(name){var result=interactions?interactionFlowAnalysis(name,profiles,interactions,[]):null;return result&&result.steps||[]}
+    function actionLink(from,to,action){var result=interactions?interactionFlowAnalysis('',profiles,interactions,[],[{from:from,to:to,action:action}]):null;return result&&result.steps[0]||null}
+    function route(id,name,layer,elements,benefit,risk,requirements,evidence,source,status){var item={id:id,name:name,layer:layer,status:status||'reference',priority:layer==='扶抑'?'support':layer==='调候'?'climate':layer==='格局'?'pattern':'reference',assessment:'reference',elements:unique(elements),benefit:benefit,risk:risk,requirements:requirements||[],evidence:evidence||[],reason:'',source:source,ruleId:'ZP-USE-06'};routes.push(item);return item}
+    var capacity=context.carryingCapacity||{},tasks=capacity.tasks||{},sealNames=['正印','偏印'],wealthNames=['正财','偏财'],officerNames=['正官','七杀'];
+    var hurt=present(['伤官']),hasOutput=present(['食神','伤官']),hasWealth=present(wealthNames),hasOfficer=present(officerNames),hasSeal=present(sealNames);
+    var sealNeed=families.indexOf('官伤冲战')>=0||families.indexOf('承载不足')>=0||families.indexOf('官杀承载不足')>=0;
+    var treatHurt=families.indexOf('官伤冲战')>=0||(families.indexOf('承载不足')>=0&&hurt),treatOfficer=families.indexOf('官杀承载不足')>=0;
+    var sealSteps=[];
+    if(treatHurt)sealSteps=sealSteps.concat(link('伤官配印格'));
+    if(treatOfficer){if(present(['七杀']))sealSteps=sealSteps.concat(link('杀印相生格'));if(present(['正官']))sealSteps=sealSteps.concat(link('官印相生格'))}
+    var sealEntries=sealNames.reduce(function(out,name){var p=profiles[name]||{};return out.concat((p.stemEntries||[]).filter(function(e){return e.usable!==false}).map(function(e){return {position:e.position,text:e.stem+name,usable:true}}),(p.branchEntries||[]).filter(function(e){return e.rootPower>0&&!e.transformedAway}).map(function(e){return {position:e.position,text:e.branch+'藏'+e.stem+name,usable:!(e.attacks||[]).length}}))},[]);
+    var sealSupport=sealEntries.some(function(e){return e.usable&&Math.abs(e.position-2)<=1}),sealSupportText=sealEntries.length?'印至日主：'+sealEntries.map(function(e){return e.text+'（'+(Math.abs(e.position-2)<=1?'近身':'隔位')+(e.usable?'':'、根受损')+'）'}).join('、'):'印至日主：原局未见有效印的根透承接';
+    var wealthSteps=link(hurt?'伤官生财格':'食神生财格'),officerSteps=link('财官印相生格').slice(0,1);
+    var sealReachable=sealSteps.every(function(s){return s.active})&&sealSupport,wealthReachable=wealthSteps.some(function(s){return s.active}),officerReachable=officerSteps.some(function(s){return s.active});
+    var mixed=clear(['正官'])&&clear(['七杀']),officerSealSteps=link('财官印相生格'),wealthMediated=officerSealSteps.length===2&&officerSealSteps.every(function(s){return s.active})&&!mixed;
+    var harmfulSeal=!!(main&&(main.conflicts||[]).some(function(c){return c.name==='枭神夺食'}));
+    var wealthHurtsSeal=hasSeal&&hasWealth&&godsConnected(profiles,wealthNames,sealNames,1)&&!wealthMediated&&!harmfulSeal,killFed=clear(['七杀'])&&hasWealth&&godsConnected(profiles,wealthNames,['七杀'],2);
+    var support=route('balance','扶抑承载','扶抑',fuyi.use,fuyi.why,weak?'同类可能分财、增燥；印星亦须防过量壅滞':'泄耗制须有实际出口，不能见字便断吉',['生扶或泄耗须符合当前任务承载；根气按合冲后的有效状态使用'],context.weightedStrength&&context.weightedStrength.assessment?[context.weightedStrength.assessment.summary]:['沿用兼容扶身指标；没有日期时不推断司令'],'《滴天髓阐微》衰旺、中和；固定比例为项目指标');
+    var sealName=treatHurt?(treatOfficer?'印制伤兼化官杀生身':'印制伤护身'):(treatOfficer?'印化官杀生身':'印星补充承载');
+    var sealBenefit=(treatHurt?'印制伤须落实印至伤官，':'')+(treatOfficer?'官杀生印须落实官杀至印，':'')+'生身另核印至日主的近身承接；有根未透只认潜在作用';
+    var sealRoute=route('seal-remedy',sealName,'病药',[resource],sealBenefit,wealthHurtsSeal?'财印近贴，印路有受制风险':'印过量会反夺食伤，不能无条件增印',['须有相应病点，分开核对所治病族的作用链及印至日主承接'].concat(hasSeal?(clear(sealNames)?[]:['印星须透清或由岁运接通']):['原局印不显，需补入有效印星']),sealSteps.map(function(s){return s.text}).concat([sealSupportText]), '《子平真诠》伤官、偏官、成败救应；《滴天髓阐微》通关',sealNeed?'conditional':'reference');
+    sealRoute.applicable=sealNeed;sealRoute.active=hasSeal&&sealReachable;
+    sealRoute.priority=sealNeed?'main-remedy':'reference';sealRoute.assessment=sealRoute.active?'local':(sealNeed?'proposed':'reference');
+    var wealthRequirements=['通关须逐段核对食伤→财→所保官星，不把财的存在等同整链成立'];
+    if(!hasOutput)wealthRequirements.push('须有实际食伤来源');
+    if(!hasWealth)wealthRequirements.push('财星须补入并接通');
+    if(hasOutput&&!wealthReachable)wealthRequirements.push('食伤至财的作用链须接通');
+    if(hasOfficer&&!officerReachable)wealthRequirements.push('财至所保官星的作用链须接通');
+    if(tasks.wealth&&tasks.wealth.status!=='supported')wealthRequirements.push('承财仍有条件，局部通关不等于完整生财格');
+    var wealthRisks=[];
+    if(wealthHurtsSeal)wealthRisks.push('财印近贴，可能损伤印路');
+    if(killFed)wealthRisks.push('财也可能转生七杀');
+    if(mixed)wealthRisks.push('官杀同透尚未取清，不能把生官杀全当有利');
+    if(weak&&(!tasks.wealth||tasks.wealth.status!=='supported'))wealthRisks.push('财有耗身一面，须看印比承接');
+    var wealthRoute=route('wealth-flow','食伤生财／财通关','通关',[wealth],'财可承接食伤；食伤→财→所保官星接通时具有局部通关作用',wealthRisks.join('；')||'须防财过量及比劫争财',wealthRequirements,wealthSteps.concat(officerSteps).map(function(s){return s.text}), '《子平真诠》伤官、成败救应；《滴天髓阐微》源流、通关',hasOutput&&hasWealth?(wealthRisks.length||wealthRequirements.length>1?'conditional':'reference'):'reference');
+    wealthRoute.applicable=hasOutput&&hasWealth;wealthRoute.active=wealthReachable&&(!hasOfficer||officerReachable);
+    wealthRoute.priority=wealthRoute.active&&(families.indexOf('官伤冲战')>=0||families.indexOf('食伤去留')>=0)?'main-remedy':'support';
+    wealthRoute.assessment=wealthRoute.active?'local':(wealthRoute.applicable?'proposed':'reference');
+    var climateRoute=route('climate','寒暖燥湿校正','调候',climate.use,climate.why,'调候得用不等于十神全利；须同时核对泄耗制、生杀或坏印',climate.priority==='主用'?['须有当前季节与实际偏枯证据；采用时不得忽略十神负荷']:['未达明显偏枯，仅作季节参考'],[climate.condition], '《滴天髓阐微》寒暖、燥湿；seasonTune 比例为工程门槛',climate.priority==='主用'?'conditional':'reference');
+    // A text-specific interpretation stays a separate reference, not a vote
+    // added to the default five-element union.
+    if(dayStem==='丙'&&context.monthBranch==='未'){
+      var ren=profiles['七杀']||{},geng=profiles['偏财']||{};
+      route('monthly-bing-wei','六月丙火分月取法','分月参考',['水','金'],'《穷通宝鉴》该节以壬为用、庚为辅，说明金水说法有独立出处，不只是求财标签', '原文亦论己土混壬等破点；壬为七杀，庚为偏财，不能扩大成所有金水出现都吉', ['按具体庚壬的根透、位置及原局承接判断，不覆盖默认格局取舍'],['壬：'+(ren.revealed?'透干':ren.rootPower?'藏支有根':'原局未见')+'；庚：'+(geng.revealed?'透干':geng.rootPower?'藏支有根':'原局未见')], '《穷通宝鉴》六月丙火，项目存档 qiongtong-baojian.wiki.txt 六月丙火节');
+    }
+    var patternRoute=route('formed-pattern','守成格主线','格局',pattern.use,pattern.why,'格局用神须与实际成格及破救条件一致',main?['必须维持已验真主格自身的成格条件与可达作用链']:['没有验真主格，不由诊断名称定用'],main?[main.name+'：'+main.status,main.basis||'']:[], '《子平真诠》月令、相神、成败救应',main?'conditional':'reference');
+    var selected,type,reason;
+    if(phenomenon){selected=route('phenomenon-remedy',phenomenon.name+'对症取用','病药',phenomenon.useCorrection.primary,phenomenon.conclusion,'所忌已有实际病象，不能只认其某一生扶功能便继续增加',['须满足病象的比例、受损对象、根气及反证排除条件'],[phenomenon.evidence||phenomenon.conclusion], '沿用已验真的气势病象规则 '+phenomenon.ruleId);type='病药';reason=phenomenon.name+'已验真，先处理'+(phenomenon.category==='五行气象与生扶太过病象'?'生扶太过':'既有病点')+'，其他路线只在不加重该病点时参与'}
+    else if(climate.priority==='主用'){selected=climateRoute;type='调候';reason='寒暖燥湿已达工程偏枯门槛，气候需要先进入实际取舍；承载与结构冲突逐元素保留，不由身弱标签静默排除'}
+    else if(sealNeed&&(!wealthRoute.active||families.indexOf('承载不足')>=0||treatOfficer)){selected=sealRoute;type='病药';reason='整体先兼顾未解病点与承载；对症通关另列条件取用，不因未选为主线便归忌'}
+    else if(families.indexOf('官伤冲战')>=0&&wealthRoute.active){selected=wealthRoute;type='病药';reason='官伤病点有局部通关路径，先按对症作用取舍，再分别核承载与反作用，不等于已完成救应或成格'}
+    else if(main&&pattern.use.length){selected=patternRoute;type='格局';reason='已有验真主格，先守其作用链；扶抑与调候不另列互斥并集'}
+    else{selected=support;type=/弱|强/.test(strength)?'扶抑':'流通';reason='没有可优先采用的验真成格或对症药路，按承载与流通取向处理'}
+    selected.status='selected';selected.reason=reason;
+    selected.assessment=selected===support?'proposed':selected===climateRoute?'local':selected===patternRoute?'local':selected.assessment;
+    if(selected.id==='phenomenon-remedy'){selected.priority='main-remedy';selected.assessment='local'}
+    routes.forEach(function(r){if(!r.reason)r.reason=r.status==='conditional'?'存在局部作用或替代取法，但条件、副作用未消除，不自动列入默认推荐':r.status==='reference'?'保留独立依据，未达到默认取用条件':'当前不取'});
+    var primary=unique(selected.elements),secondary=[],conditionalUse=[],routeDependent=[],avoid=[],decisions=[];
+    var monthlyRoute=routes.find(function(r){return r.id==='monthly-bing-wei'});
+    var hurtOfficerStep=actionLink(['伤官'],['正官'],'制'),wealthSealStep=actionLink(wealthNames,sealNames,'制'),wealthKillingStep=actionLink(wealthNames,['七杀'],'生'),peerWealthStep=actionLink(['比肩','劫财'],wealthNames,'制');
+    var unresolvedOutput=families.indexOf('官伤冲战')>=0&&clear(['伤官'])&&clear(['正官'])&&hurtOfficerStep&&hurtOfficerStep.active;
+    var wealthLoadDisease=pending.some(function(d){return d.family==='承载不足'&&(d.source||[]).some(function(s){return /财多身弱|身不任财/.test(s)})});
+    var peerDamage=families.indexOf('比劫分财')>=0&&anyGodForce(profiles,['比肩','劫财'])&&hasWealth&&peerWealthStep&&peerWealthStep.active;
+    var sealDamage=wealthHurtsSeal&&clear(sealNames)&&sealNeed&&sealReachable&&wealthSealStep&&wealthSealStep.active;
+    var killingDamage=killFed&&treatOfficer&&!sealReachable&&wealthKillingStep&&wealthKillingStep.active;
+    function priorityFor(element){
+      var relevant=routes.filter(function(r){return r.elements.indexOf(element)>=0&&(r.assessment==='local'||r.status==='selected')});
+      if(relevant.some(function(r){return r.priority==='main-remedy'}))return 'main-remedy';
+      if(relevant.some(function(r){return r.priority==='pattern'}))return 'pattern';
+      if(relevant.some(function(r){return r.priority==='climate'}))return 'climate';
+      return 'support';
+    }
+    WUXING.forEach(function(w){
+      var benefitEntries=[],riskEntries=[],requirements=[];
+      function benefit(r,status,text,evidence){
+        benefitEntries.push({routeId:r.id,status:status,text:text||r.benefit,evidence:(evidence||r.evidence||[]).slice()});
+      }
+      function risk(id,status,text,evidence,dominant){
+        riskEntries.push({id:id,status:status,text:text,evidence:evidence||[],dominant:!!dominant});
+      }
+      if(selected.elements.indexOf(w)>=0)benefit(selected,selected.assessment==='local'?'local':'proposed');
+      if(main&&pattern.use.indexOf(w)>=0&&selected!==patternRoute)benefit(patternRoute,'local','原局格局中的既有功能：'+pattern.why);
+      if(fuyi.use.indexOf(w)>=0&&selected!==support)benefit(support,'proposed');
+      if(wealthRoute.elements.indexOf(w)>=0&&wealthRoute.active&&selected!==wealthRoute)benefit(wealthRoute,'local','已有局部可达作用：'+wealthRoute.benefit);
+      if(w===resource&&sealNeed&&sealRoute.active&&selected!==sealRoute)benefit(sealRoute,'local');
+      if(climate.priority==='主用'&&climate.use.indexOf(w)>=0&&selected!==climateRoute)benefit(climateRoute,'local');
+      if(phenomenon&&phenomenon.useCorrection.secondary.indexOf(w)>=0)benefit(selected,'proposed','对症路线的润泄辅助');
+      if(monthlyRoute&&monthlyRoute.elements.indexOf(w)>=0)benefit(monthlyRoute,'reference');
+      if(main&&pattern.avoid.indexOf(w)>=0)risk('verified-pattern','effective','与当前已验真主格的取舍相背：'+pattern.why,[main.name+'：'+main.status,pattern.why],selected!==climateRoute&&selected.id!=='phenomenon-remedy');
+      if(fuyi.avoid.indexOf(w)>=0&&!(selected===patternRoute&&primary.indexOf(w)>=0)&&!(phenomenon&&selected.elements.indexOf(w)>=0))risk('balance-load','potential',weak?'增加泄耗，须有相应承接；这不等于已有致害作用':'印比再增须看是否阻碍现有出口；不以数量直接判害',[fuyi.why]);
+      if(climate.avoid.indexOf(w)>=0)risk(climate.priority==='主用'?'extreme-climate':'climate-limitation','effective','加重已识别的寒暖燥湿偏性',[climate.condition],climate.priority==='主用');
+      if(phenomenon&&unique(phenomenon.useCorrection.restrain.concat(phenomenon.useCorrection.avoid)).indexOf(w)>=0)risk('verified-phenomenon','effective','增加后加重'+phenomenon.name,[phenomenon.conclusion],true);
+      if(w===output&&families.indexOf('官伤冲战')>=0)risk('unresolved-output-officer',unresolvedOutput?'effective':'potential',unresolvedOutput?'未解的官伤冲突已有可达制官作用，当前不再增加伤官一方':'官伤关系尚受阻或未接通，不能仅按距离近认定已落实制官',hurtOfficerStep?[hurtOfficerStep.text]:[],!!unresolvedOutput);
+      if(w===wealth){
+        if(wealthHurtsSeal)risk('wealth-seal',sealDamage?'effective':'potential',sealDamage?'财与必要印路近贴，已有伤印牵制':'财印近贴，须区分实际坏印与潜在冲突，不能见财便否决',sealRoute.evidence);
+        if(killFed)risk('wealth-killing',killingDamage?'effective':'potential',killingDamage?'财生杀与未解的官杀承载病点相接':'财也可能生杀，须确认是否加重主要病点，不以相生关系自动判害',wealthRoute.evidence);
+        if(mixed)risk('officer-selection','potential','官杀主次尚未取清，财路须明确所保对象',pending.filter(function(d){return d.family==='官杀去留'}).map(function(d){return d.name}));
+        if(weak&&(!tasks.wealth||tasks.wealth.status!=='supported'))risk('wealth-carrying','potential','承财仍有使用条件；严格成格闸门未过不否认局部通关',tasks.wealth&&tasks.wealth.evidence||[]);
+        if(wealthLoadDisease)risk('unresolved-wealth-load','effective','原局已有未解的财重承载病点，不能无条件再增财',pending.filter(function(d){return d.family==='承载不足'}).map(function(d){return d.name+'：'+d.status}),!wealthRoute.active);
+      }
+      if(w===resource&&wealthHurtsSeal)requirements.push('印路应处理财印牵制，潜在用药不等于已经完成救应');
+      if(w===dayWx&&weak&&hasWealth&&present(['比肩','劫财'])&&godsConnected(profiles,['比肩','劫财'],wealthNames,2))risk('peer-wealth',peerDamage?'effective':'potential',peerDamage?'当前比劫分财病点未解，扶身与分财两面并存':'比劫近财存在取舍条件；不能由同类五行直接推断具体破财事件',pending.filter(function(d){return d.family==='比劫分财'}).map(function(d){return d.name+'：'+d.status}));
+      if(w===officer&&weak&&hasOfficer&&!clear(sealNames))risk('officer-carrying','potential','官杀已有负荷，未见透印承接时不作无条件增补；条件不足不直接等于忌',tasks.officer&&tasks.officer.evidence||[]);
+      var localBenefits=benefitEntries.filter(function(b){return b.status==='local'}),defaultBenefits=benefitEntries.filter(function(b){return b.status!=='reference'}),referenceBenefits=benefitEntries.filter(function(b){return b.status==='reference'});
+      var dominant=riskEntries.some(function(r){return r.status==='effective'&&r.dominant});
+      var climateCandidate=climate.priority==='主用'&&climate.use.indexOf(w)>=0;
+      var targetedLocal=wealthRoute.active&&wealthRoute.priority==='main-remedy'&&wealthRoute.elements.indexOf(w)>=0;
+      var recommended=primary.indexOf(w)>=0||((selected.layer==='病药'||selected.layer==='扶抑')&&fuyi.use.indexOf(w)>=0)||(phenomenon&&phenomenon.useCorrection.secondary.indexOf(w)>=0)||climateCandidate||targetedLocal;
+      var decision,decisionReason;
+      if(dominant){
+        primary=primary.filter(function(x){return x!==w});avoid.push(w);decision='avoid';
+        decisionReason='已有明确的守格、病点或气候制约；局部或其他取法的正向作用不能自动解除这一制约。';
+      }else if(recommended&&defaultBenefits.length){
+        if(riskEntries.length||targetedLocal&&selected!==wealthRoute){
+          if(targetedLocal)requirements=requirements.concat(wealthRoute.requirements,['通关可属病药；局部可达不等于已经化解全部病点，不把印路与财路无条件叠加']);
+          if(!requirements.length)requirements.push('在所列作用条件满足时使用，不把潜在风险当作已发生的损害');
+          var effective=riskEntries.some(function(r){return r.status==='effective'}),label=effective?'喜中带忌':'有条件',priority=priorityFor(w);
+          conditionalUse.push({element:w,label:label,priority:priority,benefit:defaultBenefits.map(function(b){return b.text}).join('；'),risk:riskEntries.map(function(r){return r.text}).join('；')||'局部收益不等于全局取用已无条件成立',requirements:unique(requirements)});
+          primary=primary.filter(function(x){return x!==w});secondary.push(w);decision='conditional';
+          var conditionalRoute=route('conditional-'+w,w+'的条件取用','条件取用',[w],conditionalUse[conditionalUse.length-1].benefit,conditionalUse[conditionalUse.length-1].risk,unique(requirements),benefitEntries.reduce(function(out,b){return out.concat(b.evidence)},[]).concat(riskEntries.reduce(function(out,r){return out.concat(r.evidence)},[])),'ZP-USE-09 同源利益、风险及条件分账','conditional');
+          conditionalRoute.priority=priority;conditionalRoute.assessment=localBenefits.length?'local':'proposed';conditionalRoute.reason='按当前作用条件保留'+label+'，不等于所有取法同时采用';
+        }else{if(primary.indexOf(w)<0)secondary.push(w);decision='use'}
+        decisionReason='按同一套作用与风险证据取舍，不因日主同类或路线名称获得豁免。';
+      }else if(localBenefits.length||referenceBenefits.length){
+        routeDependent.push(w);decision='route-dependent';decisionReason='有未选作默认增补的局部作用或独立取法依据，单列其前提，不直接并入主喜或忌。';
+      }else{decision='neutral';decisionReason='目前只有条件或风险提示，未成立明确喜用或致害结论。'}
+      decisions.push({element:w,decision:decision,decisionReason:decisionReason,benefits:unique(benefitEntries.map(function(b){return b.text})),risks:unique(riskEntries.map(function(r){return r.text})),requirements:unique(requirements),benefitEntries:benefitEntries,riskEntries:riskEntries,priority:priorityFor(w)});
+    });
+    var priorityRanks={'main-remedy':0,pattern:1,climate:2,support:3,reference:4};
+    secondary=unique(secondary).sort(function(a,b){return priorityRanks[priorityFor(a)]-priorityRanks[priorityFor(b)]});
+    conditionalUse.sort(function(a,b){return secondary.indexOf(a.element)-secondary.indexOf(b.element)});
+    var conclusion={primary:primary,secondary:secondary,conditional:conditionalUse.map(function(c){return c.element}),routeDependent:unique(routeDependent),avoid:unique(avoid)};
+    if(selected===sealRoute&&wealthRoute.priority==='main-remedy'&&wealthRoute.active&&secondary.indexOf(wealth)>=0)reason=resource+'主要用于'+(treatHurt?'制伤护身':treatOfficer?'化官杀生身':'补充承载')+'；'+wealth+'有通关作用'+(secondary.indexOf(dayWx)>=0?'，'+dayWx+'作扶身辅助':'')+'，分别按条件使用。';
+    var priority={type:type,text:reason,source:selected.id==='phenomenon-remedy'?'气势病象':selected.layer};
+    return {version:USEFUL_DECISION_VERSION,primaryRouteIds:[selected.id],priority:priority,routes:routes,conclusion:conclusion,elements:decisions,conditionalUse:conditionalUse,boundary:'默认取用不等于具体财运或健康结论；局部作用、完整成格与岁运激活分开判断；潜在风险与条件不足不直接等于忌'};
+  }
   function usefulElements(dayStem,strength,context){
     context=context||{};
     var dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),output=gen[dayWx],wealth=ctrl[dayWx],officer=officerElement(dayWx);
@@ -1012,7 +1166,7 @@
     else if(strength.indexOf('强')>=0)fuyi={use:[output,wealth,officer],avoid:[resource,dayWx],why:'日主偏强，先看泄耗制化。'};
     else fuyi={use:[output,wealth],avoid:[resource],why:'日主接近中和，取流通与成事之气。'};
     if(earthBuriedMetal){
-      fuyi.use=unique(fuyi.use.filter(function(w){return w!=='土'}).concat(earthBuriedMetal.useCorrection.primary));
+      fuyi.use=unique(earthBuriedMetal.useCorrection.primary);
       fuyi.avoid=unique(fuyi.avoid.concat(earthBuriedMetal.useCorrection.restrain));
       fuyi.why='日主金气受厚土包裹，常规印比扶身须拆开判断：取金助身，印土已有且过量，不宜再增。';
     }else if(activePhenomenon){
@@ -1021,7 +1175,9 @@
       fuyi.why=activePhenomenon.name+'显示'+(activePhenomenon.category==='五行气象与生扶太过病象'?'印星生扶太过':'食伤泄身太过')+'，先取'+activePhenomenon.useCorrection.primary.join('、')+'恢复日主承载，不再增加'+activePhenomenon.useCorrection.restrain.join('、')+'。';
     }
     var tiaohou=seasonTune(dayStem,context.monthBranch||'',context.scores||{});
-    var pattern=patternUseElements(dayWx,context.mainPattern||'');
+    var verifiedMain=context.patternArbitration&&context.patternArbitration.main;
+    var special=/从格：|化气格：|专旺格/.test(context.mainPattern||'');
+    var pattern=patternUseElements(dayWx,special?context.mainPattern:(verifiedMain&&verifiedMain.name||''));
     if(!pattern.use.length&&context.regularPattern&&context.regularPattern.formed){
       pattern=regularPatternUseElements(dayWx,context.regularPattern);
     }else if(!pattern.use.length&&context.regularPattern){
@@ -1036,7 +1192,6 @@
       pattern.restrainedUse=unique((pattern.restrainedUse||[]).concat(activePhenomenon.useCorrection.restrain));
       pattern.why+=' 原局另见'+activePhenomenon.name+'，'+(activePhenomenon.category==='五行气象与生扶太过病象'?'印星虽有生扶功能但已经过量':'食伤虽可能承担泄秀或制化功能但已经过量')+'，只认其已有作用，不再追加'+activePhenomenon.useCorrection.restrain.join('、')+'。';
     }
-    var special=/从格：|化气格：|专旺格/.test(context.mainPattern||'');
     if(special){
       var specialPrimary=unique(pattern.use),specialAvoid=unique(pattern.avoid);
       var validationLayers={fuyi:fuyi,tiaohou:tiaohou};
@@ -1053,52 +1208,23 @@
       specialRoles.finalUseGod.tenGods=[specialKind];
       specialRoles.useGod=specialRoles.finalUseGod;
       specialRoles.avoidGod.tenGods=specialAvoid.length?['破坏'+specialKind]:[];
+      var specialDecision={version:USEFUL_DECISION_VERSION,primaryRouteIds:['strict-special'],priority:{type:'顺势',text:'严格特殊格按自身语境顺势取用，普通扶抑与调候只作真假校验',source:'特殊格'},routes:[{id:'strict-special',name:context.mainPattern,layer:'顺势',status:'selected',priority:'pattern',assessment:'local',elements:specialPrimary,benefit:pattern.why,risk:'逆势或破化会损伤严格成立条件',requirements:['全部 qualification 必要条件维持成立，不能被普通扶身建议破从或破化'],evidence:['严格特殊格成立；常格规则不参与并集'],reason:pattern.why,source:'现有严格特殊格 qualification'}],conclusion:{primary:specialPrimary,secondary:[],conditional:[],routeDependent:[],avoid:specialAvoid},elements:[],conditionalUse:[]};
       return {
         use:specialPrimary,
         avoid:specialAvoid,
         why:'格局：'+pattern.why+' 特殊格局成立，扶抑与调候仅作校验，不并入总用神。',
-        primaryUse:specialPrimary,secondaryUse:[],roles:specialRoles,
+        primaryUse:specialPrimary,secondaryUse:[],conditionalUse:[],decision:specialDecision,roles:specialRoles,
         layers:{fuyi:Object.assign({},validationOnly),tiaohou:Object.assign({},validationOnly),pattern:pattern},validationLayers:validationLayers,specific:specialSpecific,
         arbitration:{type:'顺势',text:'特殊格局成立，格局顺势优先；扶抑与调候只作真假校验。',source:'格局',conflicts:[]}
       };
     }
-    var allUse=unique(pattern.use.concat(fuyi.use));
-    if(strength.indexOf('弱')>=0){
-      allUse=unique(allUse.concat(tiaohou.use.filter(function(w){return w===resource||w===dayWx})));
-    }else{
-      allUse=unique(allUse.concat(tiaohou.use));
-    }
-    var phenomenonSecondary=[];
-    if(activePhenomenon){
-      allUse=unique(activePhenomenon.useCorrection.primary.concat(activePhenomenon.useCorrection.secondary));
-      phenomenonSecondary=activePhenomenon.useCorrection.secondary.slice();
-    }
-    var avoidCandidates=unique(pattern.avoid.concat(fuyi.avoid,tiaohou.avoid,activePhenomenon?activePhenomenon.useCorrection.restrain.concat(activePhenomenon.useCorrection.avoid):[])).filter(function(w){return phenomenonSecondary.indexOf(w)<0});
-    var disease=/官杀混杂|伤官见官|财多身弱|食伤混杂/.test(context.mainPattern||'')||!!activePhenomenon,primary,type,source,priorityText;
-    if(earthBuriedMetal){primary=earthBuriedMetal.useCorrection.primary.slice();type='病药';source='气势病象';priorityText=earthBuriedMetal.name+'已达到'+earthBuriedMetal.status+'，先解除印土壅滞；格局中的印土认作已有功能，但不再追加。'}
-    else if(activePhenomenon){primary=activePhenomenon.useCorrection.primary.slice();type='病药';source='气势病象';priorityText=activePhenomenon.name+'已达到'+activePhenomenon.status+'，'+(activePhenomenon.category==='五行气象与生扶太过病象'?'先处理印星生扶太过与承载不足':'先处理食伤泄身太过')+'，再判断原有格局作用能否承接。'}
-    else if(pattern.use.length&&(disease||(context.patternArbitration&&context.patternArbitration.main))){primary=unique(pattern.use);type=disease?'病药':'格局';source='格局';priorityText=disease?'格局病药为先，先处理破格病点，再让扶抑与调候服从病药。':'格局主线已经成立，先守成格用神与相神。'}
-    else if(/弱|强/.test(strength)){primary=unique(fuyi.use);type='扶抑';source='扶抑';priorityText='原局旺衰偏枯，先以扶抑取得承载能力。'}
-    else if(tiaohou.priority==='主用'){primary=unique(tiaohou.use);type='调候';source='调候';priorityText='寒暖燥湿达到偏枯，调候提升为主用。'}
-    else{primary=unique(fuyi.use);type='流通';source='扶抑';priorityText='原局不偏枯，取流通成事之气。'}
-    var conditionalUse=[];
-    var conflicts=allUse.filter(function(w){return avoidCandidates.indexOf(w)>=0}).map(function(w){
-      var conditional=w===dayWx&&strength.indexOf('弱')>=0&&fuyi.use.indexOf(w)>=0&&primary.indexOf(w)<0;
-      if(conditional)conditionalUse.push({element:w,benefit:'可扶助日主并增强行动承载',risk:'同类比劫也可能牵动格局所忌；是否分财须另见比劫夺财的实际作用链，不能由同类五行直接推断'});
-      return {element:w,decision:primary.indexOf(w)>=0?'取':(conditional?'条件取':'不取'),why:primary.indexOf(w)>=0?source+'层优先，保留为主用':(conditional?'扶抑层可助身发用，但格局或调候层同时见忌，属于喜中带忌，不作纯喜或纯忌':'非优先层虽提出喜用，但同时触及忌神，降为不取')};
-    });
-    if(earthBuriedMetal){
-      conflicts.push({element:'土',decision:'不取',why:'印土虽能化杀生身，但原局已过量并形成'+earthBuriedMetal.name+'，由用转病，不宜再增'});
-      phenomenonSecondary.forEach(function(w){conflicts.push({element:w,decision:'佐',why:'只作润泄佐用，须服从金日主承载，不作为首用'})});
-    }else if(activePhenomenon){
-      activePhenomenon.useCorrection.restrain.forEach(function(w){conflicts.push({element:w,decision:'不取',why:'该五行已形成'+activePhenomenon.name+'，'+(activePhenomenon.category==='五行气象与生扶太过病象'?'由正常生扶转为壅滞':'由正常泄秀转为泄身太过')+'，不宜再增'})});
-    }
-    var conditionalElements=conditionalUse.map(function(x){return x.element});
-    var avoid=avoidCandidates.filter(function(w){return primary.indexOf(w)<0&&conditionalElements.indexOf(w)<0});
-    var secondary=allUse.filter(function(w){return primary.indexOf(w)<0&&avoid.indexOf(w)<0});
-    var arbitration={type:type,text:priorityText,source:source,conflicts:conflicts};
+    var decision=arbitrateUsefulRoutes(dayStem,strength,context,{fuyi:fuyi,tiaohou:tiaohou,pattern:pattern});
+    var primary=decision.conclusion.primary,secondary=decision.conclusion.secondary,conditionalUse=decision.conditionalUse,avoid=decision.conclusion.avoid;
+    var conflicts=decision.elements.filter(function(item){return item.risks.length}).map(function(item){return {element:item.element,decision:{conditional:'条件取',use:'取',avoid:'不取','route-dependent':'取法有别',neutral:'未定'}[item.decision],why:(item.benefits.length?item.benefits.join('；')+'；':'')+'限制：'+item.risks.join('；')+'；'+item.decisionReason}});
+    var arbitration=Object.assign({},decision.priority,{conflicts:conflicts});
+    decision.priority=arbitration;
     var specific=specificUsefulDecision(dayStem,primary,secondary,avoid,context,pattern);
-    return {use:unique(primary.concat(secondary)),primaryUse:primary,secondaryUse:secondary,conditionalUse:conditionalUse,avoid:avoid,roles:buildUsefulRoles(dayStem,primary,secondary,avoid,{tiaohou:tiaohou,pattern:pattern,fuyi:fuyi,monthBranch:context.monthBranch,monthGod:context.monthGod,monthCommandStem:context.monthCommandStem}),specific:specific,arbitration:arbitration,why:'主用：'+primary.join('、')+'；佐用：'+(secondary.join('、')||'无')+(conditionalUse.length?'（其中'+conditionalUse.map(function(x){return x.element+'喜中带忌'}).join('、')+'）':'')+'。 仲裁：'+type+'优先。 扶抑：'+fuyi.why+' 调候（'+tiaohou.priority+'）：'+tiaohou.why+' 格局：'+pattern.why,layers:{fuyi:fuyi,tiaohou:tiaohou,pattern:pattern}};
+    return {use:unique(primary.concat(secondary)),primaryUse:primary,secondaryUse:secondary,conditionalUse:conditionalUse,avoid:avoid,decision:decision,roles:buildUsefulRoles(dayStem,primary,secondary,avoid,{tiaohou:tiaohou,pattern:pattern,fuyi:fuyi,monthBranch:context.monthBranch,monthGod:context.monthGod,monthCommandStem:context.monthCommandStem}),specific:specific,arbitration:arbitration,why:'主用：'+(primary.join('、')||'无无条件主用')+'；佐用：'+(secondary.join('、')||'无')+(conditionalUse.length?'（其中'+conditionalUse.map(function(x){return x.element+x.label}).join('、')+'）':'')+'；忌：'+(avoid.join('、')||'无明确忌项')+(decision.conclusion.routeDependent.length?'；取法差异：'+decision.conclusion.routeDependent.join('、'):'')+'。'+arbitration.text,layers:{fuyi:fuyi,tiaohou:tiaohou,pattern:pattern}};
   }
   function normalizeDegree(value){return ((value%360)+360)%360}
   function solarLongitude(julianDay){
@@ -1804,7 +1930,7 @@
     if(!out.length)add('未见明显组合冲突','待运岁验证','未见直接破坏主格的组合冲突，重点看大运流年是否触发。');
     return out;
   }
-  function interactionFlowAnalysis(mainPattern,profiles,interactions,conflicts){
+  function interactionFlowAnalysis(mainPattern,profiles,interactions,conflicts,explicitChains){
     var chains=[];
     if(/财官印相生/.test(mainPattern))chains=[{from:['正财','偏财'],to:['正官'],action:'生'},{from:['正官'],to:['正印','偏印'],action:'生'}];
     else if(/杀印相生/.test(mainPattern))chains=[{from:['七杀'],to:['正印','偏印'],action:'生'}];
@@ -1814,6 +1940,7 @@
     else if(/伤官配印/.test(mainPattern))chains=[{from:['正印','偏印'],to:['伤官'],action:'制'}];
     else if(/伤官生财/.test(mainPattern))chains=[{from:['伤官'],to:['正财','偏财'],action:'生'}];
     else if(/食神生财/.test(mainPattern))chains=[{from:['食神'],to:['正财','偏财'],action:'生'}];
+    if(explicitChains)chains=explicitChains;
     function entries(names){
       return (names||[]).reduce(function(out,name){
         var item=profiles[name]||{};
@@ -2243,11 +2370,11 @@
     return {improved:improved,worsened:worsened,newActive:newActive,resolved:resolved,residualBefore:natalDisease&&natalDisease.residualSeverity||0,residualAfter:currentDisease&&currentDisease.residualSeverity||0};
   }
   function buildTemporalPatternContext(dayStem,pillars,analysis,options){
-    var rawScores=scoreWuxing(pillars),fullOptions={fullInteractionFeedback:true,outlookFlowYear:!!(options&&options.outlookFlowYear)},weightedStrength=strengthScore(dayStem,pillars,fullOptions),strength=assessStrength(dayStem,pillars,rawScores,fullOptions),interactions=weightedStrength.interactions,scores=effectiveWuxingScores(pillars,rawScores,interactions);
+    var rawScores=scoreWuxing(pillars),fullOptions={fullInteractionFeedback:true,outlookFlowYear:!!(options&&options.outlookFlowYear),time:analysis.analysisTime||null},weightedStrength=strengthScore(dayStem,pillars,fullOptions),strength=assessStrength(dayStem,pillars,rawScores,fullOptions),interactions=weightedStrength.interactions,scores=effectiveWuxingScores(pillars,rawScores,interactions);
     var monthCommand=analysis.monthCommand,monthGod=monthCommand&&monthCommand.ambiguous?'':monthCommand&&monthCommand.primaryGod;
     var rawCounts=tenGodCounts(dayStem,pillars),profiles=tenGodProfiles(dayStem,pillars,monthCommand,interactions,fullOptions),counts={},rootDetails=weightedStrength.dimensions.roots.items||[];
     Object.keys(profiles).forEach(function(god){counts[god]=profiles[god].count||0});
-    var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength),regular=regularPatternAssessment(dayStem,pillars,monthGod,profiles,strength,monthCommand);
+    var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength,profiles),regular=regularPatternAssessment(dayStem,pillars,monthGod,profiles,strength,monthCommand);
     if(/^(?:正财|偏财)格$/.test(regular.name)&&!carryingCapacity.canCarryWealth){
       var capacityCheck=regular.checks.find(function(item){return item.type==='成格'&&/身能任财/.test(item.label)});
       if(capacityCheck){capacityCheck.active=false;capacityCheck.evidence='完整合冲与净根力复核后仍不足任财；'+carryingCapacity.text}
@@ -3449,8 +3576,9 @@
   function analyzePattern(data){
     var pillars=data.pillars,dayStem=data.dayStem||pillars.day[0],monthBranch=pillars.month[1];
     var scores=data.scores||scoreWuxing(pillars);
-    var weightedStrength=strengthScore(dayStem,pillars);
-    var strength=assessStrength(dayStem,pillars,scores);
+    var strengthOptions={time:data.time&&data.time.used};
+    var weightedStrength=strengthScore(dayStem,pillars,strengthOptions);
+    var strength=strengthBand(weightedStrength.support);
     var interactions=weightedStrength.interactions||interactionAnalysis(pillars,scores);
     var monthCommand=monthCommandAnalysis(dayStem,pillars,interactions,data.time&&data.time.used);
     var main=monthCommand.primaryStem,monthGod=monthCommand.primaryGod,primary=patternName(dayStem,monthBranch,main),evidence=[];
@@ -3460,7 +3588,7 @@
     var regular=regularPatternAssessment(dayStem,pillars,monthGod,profiles,strength,monthCommand);
     var revealed=monthCommand.revealedStems;
     var rootDetails=weightedStrength.dimensions.roots.items||[],roots=rootDetails.filter(function(item){return item.usable!==false&&!item.transformedAway}).map(function(item){return item.text});
-    var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength);
+    var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength,profiles);
     evidence.push(monthCommand.basis);
     evidence.push('透干：'+(revealed.length?revealed.map(function(s){return s+tenGod(dayStem,s)}).join('、'):'月令藏干未明显透出')+'。');
     evidence.push('通根：'+(roots.length?dayStem+'见于'+roots.join('、'):'日主未见直接通根')+'。');
@@ -3493,7 +3621,7 @@
     if(specialDetail)interactionFlow=specialInteractionFlowAnalysis(specialDetail,interactions);
     var patternDisease=patternDiseaseAssessment(mainPattern,regular,patternIssues,profiles,interactionFlow,comboConflicts,specialDetail);
     var diagnosticPattern=[mainPattern].concat(patternIssues).join('；');
-    var useful=usefulElements(dayStem,strength,{pillars:pillars,monthBranch:monthBranch,monthGod:monthGod,monthCommandStem:main,mainPattern:diagnosticPattern,patternArbitration:arbitration,regularPattern:regular,profiles:profiles,counts:counts,scores:scores,elementPhenomena:elementPhenomena,patternDisease:patternDisease});
+    var useful=usefulElements(dayStem,strength,{pillars:pillars,monthBranch:monthBranch,monthGod:monthGod,monthCommandStem:main,mainPattern:diagnosticPattern,patternArbitration:arbitration,regularPattern:regular,profiles:profiles,counts:counts,scores:scores,elementPhenomena:elementPhenomena,patternDisease:patternDisease,weightedStrength:weightedStrength,carryingCapacity:carryingCapacity,interactions:interactions});
     if(specialDetail)evidence.push('特殊格语境：'+specialDetail.name+'已逐项验真；普通旺衰与月令常格只作真假边界，不转成扶身、泄耗或常格救应建议。');
     evidence.push('喜用：'+useful.use.join('、')+'；慎用：'+useful.avoid.join('、')+'；'+useful.why);
     var remedy=specialDetail?specialContextRemedy(specialDetail,useful):remedyAdvice(dayStem,pillars,scores,counts,diagnosticPattern,elementPhenomena);
@@ -3522,6 +3650,7 @@
     var publicPrimary=specialDetail?mainPattern:primary;
     var ordinaryContext=specialDetail?{primary:primary,regularPattern:regular,comboPatterns:combos,comboClues:comboClues,comboConflicts:comboConflicts,positivePhenomena:positivePhenomenaAnalysis(pillars,scores,strength,profiles,clarityConclusion,interactionFlow,comboConflicts,elementPhenomena)}:null;
     var result={analysisMeta:{engineVersion:PATTERN_ENGINE_VERSION,ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,baselineScope:'固定理论时间网格只用于分布与极值审计；单盘层次由结构分直接分档，不使用真人结果标签'},realizationBoundary:{model:['原局潜力','行运激活','现实兑现'],localScope:['原局潜力','行运激活'],externalFactors:['家庭','教育','时代','国家与地区','行业环境','个人选择'],text:'格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就。'},natalPatternLevel:{grade:levelResult.grade,index:levelResult.index,text:levelResult.text,scope:'原局结构固定结论',ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION},primary:publicPrimary,pattern:publicPrimary,regularPrimary:specialDetail?primary:null,pillars:pillars,monthCommand:monthCommand,patternBasis:basis,authorityBasis:authorityBasis,patternState:state,patternConfidence:confidence,patternVerdict:verdict,patternReasoning:reasoningChain,patternDisease:patternDisease,patternArbitration:arbitration,candidates:candidates,regularPattern:regularOutput,regularPatternBackground:specialDetail?regular:null,ordinaryContext:ordinaryContext,comboPatterns:specialDetail?[]:combos,comboClues:specialDetail?[]:comboClues,patternStructures:structures,mainPattern:mainPattern,patternIssues:patternIssues,diagnosticPattern:diagnosticPattern,patternLevel:level,patternLevelGrade:levelResult.grade,patternLevelIndex:levelResult.index,patternLevelQualityFloor:levelResult.qualityFloor,patternLevelTieBreak:levelResult.tieBreak,patternLevelMetrics:levelResult.metrics,patternLevelCriteria:levelResult.criteria,remedy:remedy,factors:factors,clarity:clarity,structuralClarity:structuralClarity,clarityConclusion:clarityConclusion,comboConflicts:specialDetail?[]:comboConflicts,tenGodTerms:tenGodTerms,usePriority:usePriority,specialPatterns:specials,specialPatternDetails:(specials.details||[]),specialPatternQualification:specialDetail,classifiedClues:clues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,interactions:interactions,interactionFlow:interactionFlow,strength:strength,strengthScore:weightedStrength,carryingCapacity:carryingCapacity,tenGodCounts:counts,tenGodProfiles:profiles,useful:useful,evidence:evidence};
+    result.analysisTime=strengthOptions.time||null;
     var raw=patternStructureRawScore(result),percentile=percentileFromHistogram(raw.score,THEORETICAL_BASELINE_HISTOGRAM);
     result.patternRawScore=raw.score;
     result.patternRawScoreBreakdown=raw;
