@@ -116,6 +116,7 @@
     ["陷", "其他", "亮度最弱（落陷），星曜的短处较容易显现，需要别的星配合。", []],
     ["真太阳时", "其他", "按出生地经度和日期修正后的“当地太阳时间”，可能和北京时间差几十分钟；靠近时辰交界时可能改变时辰。", []],
     ["北京时间", "其他", "直接用钟表上的时间起盘，不按出生地经度修正。", []],
+    ["夏令时", "其他", "出生记录采用中国大陆1986至1991年夏令钟表时间时，先减去一小时，再按所选时间口径排盘；已自行减时的请勿重复勾选。", []],
     ["时辰", "其他", "古代把一天分成十二个时辰，每个约两小时（子、丑、寅……亥），紫微按出生时辰起盘。", []],
   ];
 
@@ -461,9 +462,9 @@
     function renderCard(term, line, withAi) {
       return `<div class="zw-pop-head"><span class="zw-pop-group">${esc(term.group)}</span><strong id="zwTermPopTitle">${esc(term.key)}</strong>
           <button type="button" class="zw-pop-x" data-zw-pop-close aria-label="关闭">×</button></div>
-        <p class="zw-pop-text">${esc(term.text)}</p>
+        ${term.key === '夏令时' && root.BirthTime ? `<div class="zw-pop-text">${root.BirthTime.helpHtml}</div>` : `<p class="zw-pop-text">${esc(term.text)}</p>`}
         ${line ? `${mineHtml(line)}<p class="zw-pop-note">${MEANING_NOTE}</p>` : ""}
-        <div class="zw-pop-actions">${withAi ? `<button type="button" class="zw-pop-ai" data-zw-ask="${esc(term.key)}">问 AI 详细讲讲</button>` : ""}<button type="button" class="zw-pop-dict" data-zw-dict="${esc(term.key)}">新手词典</button></div>`;
+        <div class="zw-pop-actions">${withAi && term.key !== '夏令时' ? `<button type="button" class="zw-pop-ai" data-zw-ask="${esc(term.key)}">问 AI 详细讲讲</button>` : ""}<button type="button" class="zw-pop-dict" data-zw-dict="${esc(term.key)}">新手词典</button></div>`;
     }
     function place(anchor) {
       pop.classList.toggle("zw-pop-sheet", mobile());

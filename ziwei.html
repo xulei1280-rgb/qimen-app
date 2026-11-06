@@ -331,6 +331,7 @@
       line-height: 1.55;
     }
     .solar-preview strong { color: var(--jade); }
+    #birthForm > .time-basis-field, #daylightSavingPreview { grid-column: 1 / -1; }
     .solar-preview.warning { border-color: var(--gold); background: rgba(207,167,90,.065); }
     .solar-preview.warning strong { color: var(--gold-pale); }
     .solar-preview.error { border-color: var(--red); color: #ffc0ba; background: rgba(240,107,107,.06); }
@@ -1230,13 +1231,15 @@
           </label>
 
 
-            <fieldset>
+            <fieldset class="time-basis-field">
               <legend>时间口径 <button type="button" class="zw-help zw-help-inline" data-zw-term="真太阳时" aria-label="真太阳时是什么意思">?</button></legend>
               <div class="radio-row">
                 <label><input class="chart-input" type="radio" name="timeBasis" value="beijing" checked> 北京时间</label>
                 <label><input class="chart-input" type="radio" name="timeBasis" value="trueSolar"> 真太阳时</label>
+                <label><input class="chart-input" id="useDaylightSaving" type="checkbox"> 夏令时</label><button type="button" class="zw-help zw-help-inline" data-zw-term="夏令时" aria-label="夏令时适用时间说明">?</button>
               </div>
             </fieldset>
+            <div class="solar-preview" id="daylightSavingPreview" role="status" aria-live="polite" hidden></div>
 
             <div class="location-field" id="longitudeField" hidden>
               <button class="location-trigger" id="locationTrigger" type="button" aria-expanded="false" aria-controls="locationPanel">
@@ -1428,7 +1431,7 @@
       <h2 id="time-confirm-title">真太阳时跨越时辰</h2>
       <p>修正后的时间落入另一个时辰，命盘可能发生变化。请核对后再确认排盘。</p>
       <div class="time-comparison">
-        <div class="time-box"><small>原北京时间</small><strong id="inputDateTime"></strong></div>
+        <div class="time-box"><small>标准北京时间</small><strong id="inputDateTime"></strong></div>
         <span aria-hidden="true">→</span>
         <div class="time-box"><small>真太阳时</small><strong id="effectiveDateTime"></strong></div>
       </div>
@@ -1441,11 +1444,12 @@
   </dialog>
 
   <script src="vendor/iztro/2.5.8/iztro.min.js"></script>
-  <script src="ziwei-engine.js?v=20261102.1"></script>
+  <script src="birth-time.js?v=20261107.1"></script>
+  <script src="ziwei-engine.js?v=20261107.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
-  <script src="ziwei-page.js?v=20261102.9"></script>
+  <script src="ziwei-page.js?v=20261107.1"></script>
   <script src="premium-base.js?v=20261101.2"></script>
   <script src="ziwei-premium.js?v=20261102.5"></script>
-  <script src="ziwei-glossary.js?v=20261102.2"></script>
+  <script src="ziwei-glossary.js?v=20261107.1"></script>
 </body>
 </html>

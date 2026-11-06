@@ -1,5 +1,6 @@
 (function(root){
   'use strict';
+  var birthTime=root.BirthTime||(typeof module==='object'&&module.exports?require('./birth-time.js'):null);
 
   var STEMS='甲乙丙丁戊己庚辛壬癸'.split('');
   var BRANCHES='子丑寅卯辰巳午未申酉戌亥'.split('');
@@ -3929,18 +3930,21 @@
 
   // Shared birth-profile entry point.  Both the Bazi page and any caller that
   // creates a saved profile use the same true-solar correction and analysis.
-  function birthDayOfYear(y,m,d){var start=new Date(y,0,0);return Math.floor((new Date(y,m-1,d)-start)/86400000)}
+  function birthDayOfYear(y,m,d){return Math.floor((Date.UTC(y,m-1,d)-Date.UTC(y,0,0))/86400000)}
   function birthEquationOfTimeMinutes(y,m,d,hour,minute){
     var n=birthDayOfYear(y,m,d),clock=(Number(hour)||0)+(Number(minute)||0)/60;
     var gamma=2*Math.PI/365*(n-1+(clock-12)/24);
     return 229.18*(0.000075+0.001868*Math.cos(gamma)-0.032077*Math.sin(gamma)-0.014615*Math.cos(2*gamma)-0.040849*Math.sin(2*gamma));
   }
-  function addBirthMinutes(t,mins){var dt=new Date(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(mins));return {year:dt.getFullYear(),month:dt.getMonth()+1,day:dt.getDate(),hour:dt.getHours(),minute:dt.getMinutes()}}
-  function buildBirthTime(input,location,enabled){
+  function addBirthMinutes(t,mins){var dt=new Date(Date.UTC(t.year,t.month-1,t.day,t.hour,t.minute+Math.round(mins)));return {year:dt.getUTCFullYear(),month:dt.getUTCMonth()+1,day:dt.getUTCDate(),hour:dt.getUTCHours(),minute:dt.getUTCMinutes()}}
+  function buildBirthTime(input,location,enabled,useDaylightSaving){
     var t={year:Number(input.year),month:Number(input.month),day:Number(input.day),hour:Number(input.hour),minute:Number(input.minute)||0};
+    var normalized=birthTime?birthTime.normalize(t,useDaylightSaving):{standard:t,daylightSaving:false,daylightSavingMinutes:0};
+    if(useDaylightSaving&&!birthTime)throw new Error('时间校正模块未加载，请刷新后重试。');
+    var standard=normalized.standard;
     var loc=location||{},lng=Number(loc.lng),safeLocation={name:loc.name||'自定义地点',lng:Number.isFinite(lng)?lng:120,lat:loc.lat==null?null:Number(loc.lat)};
-    var longitudeCorrection=(safeLocation.lng-120)*4,equationCorrection=birthEquationOfTimeMinutes(t.year,t.month,t.day,t.hour,t.minute),correction=longitudeCorrection+equationCorrection;
-    return {input:t,used:enabled===false?t:addBirthMinutes(t,correction),correction:correction,longitudeCorrection:longitudeCorrection,equationCorrection:equationCorrection,enabled:enabled!==false,location:safeLocation};
+    var longitudeCorrection=(safeLocation.lng-120)*4,equationCorrection=birthEquationOfTimeMinutes(standard.year,standard.month,standard.day,standard.hour,standard.minute),correction=longitudeCorrection+equationCorrection;
+    return {input:t,standard:standard,daylightSaving:normalized.daylightSaving,daylightSavingMinutes:normalized.daylightSavingMinutes,used:enabled===false?standard:addBirthMinutes(standard,correction),correction:correction,longitudeCorrection:longitudeCorrection,equationCorrection:equationCorrection,enabled:enabled!==false,location:safeLocation};
   }
   function birthRelations(pillars){
     var arr=[],branches=[pillars.year[1],pillars.month[1],pillars.day[1],pillars.hour[1]],rel={'子丑':'六合','寅亥':'六合','卯戌':'六合','辰酉':'六合','巳申':'六合','午未':'六合','子午':'冲','丑未':'冲','寅申':'冲','卯酉':'冲','辰戌':'冲','巳亥':'冲'};
@@ -3955,7 +3959,7 @@
   }
   function createBaziProfile(options){
     options=options||{};
-    var time=options.time||buildBirthTime(options.input||{},options.location,options.useTrueSolar),pillars=buildPillars(time.used),dayStem=pillars.day[0],scores=scoreWuxing(pillars),strength=assessStrength(dayStem,pillars,scores);
+    var time=options.time||buildBirthTime(options.input||{},options.location,options.useTrueSolar,options.useDaylightSaving),pillars=buildPillars(time.used),dayStem=pillars.day[0],scores=scoreWuxing(pillars),strength=assessStrength(dayStem,pillars,scores);
     var data={person:(options.person||'').trim(),gender:options.gender==='女'?'女':'男',time:time,pillars:pillars,dayStem:dayStem,dayElement:STEM_WX[dayStem],scores:scores,strength:strength,useful:usefulElements(dayStem,strength),pattern:patternName(dayStem,pillars.month[1]),relations:birthRelations(pillars)};
     data.patternAnalysis=analyzePattern(data);
     data.strength=data.patternAnalysis.strength;

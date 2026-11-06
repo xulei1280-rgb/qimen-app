@@ -292,7 +292,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="bazi-engine.js?v=20261107.1-review"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261107.1-review-dst"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -340,6 +340,7 @@ assert(/@media\(max-width:520px\)[\s\S]*pillar-table tr:last-child td\{font-size
 
 const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
 const scriptContext = {
+  BirthTime: require('./birth-time.js'),
   console,
   Date,
   Math,

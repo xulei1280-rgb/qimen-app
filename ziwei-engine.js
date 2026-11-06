@@ -5,11 +5,12 @@
       : typeof module === "object" && module.exports
         ? require("./vendor/iztro/2.5.8/iztro.min.js")
         : null,
+    root && root.BirthTime ? root.BirthTime : typeof module === 'object' && module.exports ? require('./birth-time.js') : null,
   );
 
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.ZiweiEngine = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (iztro) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (iztro, birthTime) {
   "use strict";
 
   if (!iztro || !iztro.astro) throw new Error("IZTRO_ENGINE_NOT_LOADED");
@@ -305,6 +306,15 @@
     }
   }
 
+  function getInputClock(value) {
+    const type = normalizeCalendarType(value.calendarType || 'solar');
+    const clock = parseTime(value.time);
+    const source = type === 'solar' ? parseDate(value.date, '出生日期') : parseLunarDate(value.lunarDate);
+    const solar = preliminarySolarDate(type, source, timeIndexFromHour(clock.hour), normalizeGender(value.gender));
+    const date = parseDate(solar, '换算后的公历日期');
+    return { year: date.year, month: date.month, day: date.day, hour: clock.hour, minute: clock.minute };
+  }
+
   function buildNatal(input) {
     const value = input || {};
     const calendarType = normalizeCalendarType(value.calendarType || "solar");
@@ -314,15 +324,19 @@
       ? parseDate(value.date, "出生日期")
       : parseLunarDate(value.lunarDate);
     const timeBasis = normalizeTimeBasis(value.timeBasis);
-    const originalTimeIndex = timeIndexFromHour(clock.hour);
-    const standardSolarDate = preliminarySolarDate(calendarType, sourceDate, originalTimeIndex, gender);
+    const originalClock = getInputClock(value);
+    if (value.useDaylightSaving && !birthTime) throw engineError('TIME_MODULE_NOT_LOADED', '时间校正模块未加载，请刷新后重试。');
+    const normalized = birthTime ? birthTime.normalize(originalClock, value.useDaylightSaving) : { standard: originalClock };
+    const standard = normalized.standard;
+    const normalizedDate = `${standard.year}-${pad(standard.month)}-${pad(standard.day)}`;
+    const normalizedClock = parseTime(`${pad(standard.hour)}:${pad(standard.minute)}`);
     let trueSolar = null;
-    let effectiveSolarDate = standardSolarDate;
-    let effectiveTime = clock.text;
-    let effectiveTimeIndex = originalTimeIndex;
+    let effectiveSolarDate = normalizedDate;
+    let effectiveTime = normalizedClock.text;
+    let effectiveTimeIndex = timeIndexFromHour(standard.hour);
 
     if (timeBasis === "trueSolar") {
-      trueSolar = trueSolarCorrection(standardSolarDate, clock, Number(value.longitude));
+      trueSolar = trueSolarCorrection(normalizedDate, normalizedClock, Number(value.longitude));
       if (trueSolar.confirmationRequired && !value.confirmedTimeShift) {
         throw engineError(
           "TIME_BRANCH_CONFIRMATION_REQUIRED",
@@ -354,6 +368,7 @@
         clockTime: clock.text,
         gender,
         timeBasis,
+        useDaylightSaving: Boolean(value.useDaylightSaving),
         longitude: timeBasis === "trueSolar" ? Number(value.longitude) : null,
       },
       effective: {
@@ -361,6 +376,9 @@
         clockTime: effectiveTime,
         timeIndex: effectiveTimeIndex,
         trueSolar,
+        daylightSaving: Boolean(value.useDaylightSaving),
+        daylightSavingMinutes: value.useDaylightSaving ? -60 : 0,
+        standardDateTime: `${normalizedDate} ${normalizedClock.text}`,
       },
       engineInput: { solarDate: effectiveSolarDate, timeIndex: effectiveTimeIndex, gender },
       calendar: {
@@ -442,5 +460,5 @@
     return RULE_META;
   }
 
-  return deepFreeze({ buildNatal, getHoroscope, getRuleMeta });
+  return deepFreeze({ buildNatal, getInputClock, getHoroscope, getRuleMeta });
 });

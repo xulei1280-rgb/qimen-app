@@ -146,7 +146,7 @@ function runEngineContracts() {
   assert(rules.rules.timeBranchBoundary.includes("[01:00,03:00) ox") && rules.rules.timeBranchBoundary.includes("[23:00,24:00) late rat"), "时辰整点边界没有明确冻结");
   assert(rules.rules.decadalStemMethod === "use natal palace heavenly stem; no direction-based re-layout", "大限宫干口径没有明确冻结");
   assert(rules.rules.algorithm.includes("do not mix Zhongzhou"), "门派隔离规则错误");
-  assert(stable(Object.keys(engine).sort()) === stable(["buildNatal", "getHoroscope", "getRuleMeta"].sort()), "公开接口发生意外变化");
+  assert(stable(Object.keys(engine).sort()) === stable(["buildNatal", "getInputClock", "getHoroscope", "getRuleMeta"].sort()), "公开接口发生意外变化");
   checkDeepFrozen(rules, "ruleMeta");
 
   const solar = engine.buildNatal({ calendarType: "solar", date: "2000-08-16", time: "00:30", gender: "male", timeBasis: "beijing" });
@@ -272,6 +272,7 @@ function createPageSandbox(pageSource) {
     confirm() { return true; },
     fetch() { throw new Error("checker must not call network"); },
     ZiweiEngine: engine,
+    BirthTime: require('./birth-time.js'),
     DeepSeekClient: deepseekClient,
   };
   sandbox.window = sandbox;
@@ -283,7 +284,7 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="ziwei-engine.js?v=20261102.1"') && html.includes('src="ziwei-page.js?v=20261102.9"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261107.1"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");

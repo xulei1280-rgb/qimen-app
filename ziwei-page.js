@@ -2,6 +2,7 @@
   "use strict";
 
   const engine = window.ZiweiEngine;
+  const pad = (value) => String(value).padStart(2, '0');
   const STORAGE_KEY = "ziwei_records_v1";
   const API_KEY_STORAGE = "qimen_deepseek_api_key";
   const THEME_STORAGE_KEY = "ziwei_theme_v1";
@@ -367,6 +368,27 @@
   }
 
   function refreshSolarPreview() {
+    const option = $("useDaylightSaving"), panel = $("daylightSavingPreview");
+    try {
+      const input = collectBirthInput(true);
+      const original = engine.getInputClock(input);
+      const status = window.BirthTime.daylightStatus(original);
+      const cleared = option.checked && !status.applicable;
+      if (cleared) option.checked = input.useDaylightSaving = false;
+      option.disabled = !status.applicable;
+      let text = cleared ? "日期已离开适用时段，已取消夏令时。" : window.BirthTime.hint(status);
+      if (option.checked) {
+        const standard = window.BirthTime.normalize(original, true).standard;
+        text += ` 夏令时已校正 −1小时；标准北京时间：${standard.year}-${pad(standard.month)}-${pad(standard.day)} ${pad(standard.hour)}:${pad(standard.minute)}。`;
+      }
+      panel.textContent = text;
+      panel.hidden = !text;
+    } catch (error) {
+      panel.textContent = error.message;
+      panel.hidden = false;
+      elements.solarPreview.textContent = "请先核对出生时间。";
+      return;
+    }
     if (formValue("timeBasis") !== "trueSolar") return;
     if (!state.selectedLocation) {
       elements.solarPreview.className = "solar-preview";
@@ -379,7 +401,7 @@
       const equationCorrection = preview.correctionMinutes - longitudeCorrection;
       const warning = preview.crossesTimeBranch || preview.crossesDate;
       elements.solarPreview.className = `solar-preview${warning ? " warning" : ""}`;
-      elements.solarPreview.innerHTML = `原北京时间 <strong>${escapeHtml(preview.inputDateTime)}</strong><br>经度修正 ${escapeHtml(formatCorrection(longitudeCorrection))} · 均时差 ${escapeHtml(formatCorrection(equationCorrection))}<br>生效真太阳时 <strong>${escapeHtml(preview.effectiveDateTime)}</strong>${preview.crossesDate ? " · 跨日期" : ""}${preview.crossesTimeBranch ? " · 跨时辰，排盘时须确认" : " · 未跨时辰"}`;
+      elements.solarPreview.innerHTML = `标准北京时间 <strong>${escapeHtml(preview.inputDateTime)}</strong><br>经度修正 ${escapeHtml(formatCorrection(longitudeCorrection))} · 均时差 ${escapeHtml(formatCorrection(equationCorrection))}<br>生效真太阳时 <strong>${escapeHtml(preview.effectiveDateTime)}</strong>${preview.crossesDate ? " · 跨日期" : ""}${preview.crossesTimeBranch ? " · 跨时辰，排盘时须确认" : " · 未跨时辰"}`;
     } catch (error) {
       elements.solarPreview.className = "solar-preview error";
       elements.solarPreview.textContent = error.message;
@@ -401,6 +423,7 @@
       gender: formValue("gender"),
       time: elements.birthTime.value,
       timeBasis: formValue("timeBasis"),
+      useDaylightSaving: $("useDaylightSaving").checked,
       longitude: elements.longitude.value === "" ? null : Number(elements.longitude.value),
       confirmedTimeShift: Boolean(confirmedTimeShift),
     };
@@ -440,6 +463,10 @@
     return true;
   }
 
+  function birthInputFingerprint(input) {
+    return JSON.stringify([input.calendarType, input.sourceDate, input.clockTime, input.gender, input.timeBasis, input.longitude, Boolean(input.useDaylightSaving)]);
+  }
+
   function buildFromForm(confirmedTimeShift) {
     if (aiBusy()) return;
     const input = collectBirthInput(confirmedTimeShift);
@@ -447,7 +474,7 @@
       if (input.timeBasis === "trueSolar" && !state.selectedLocation) throw new Error("请选择出生地点后再使用真太阳时排盘。");
       const snapshot = engine.buildNatal(input);
       const existing = currentRecord();
-      const changed = existing && JSON.stringify(existing.natalSnapshot.input) !== JSON.stringify(snapshot.input);
+      const changed = existing && birthInputFingerprint(existing.natalSnapshot.input) !== birthInputFingerprint(snapshot.input);
       if (changed && existing.aiHistory.length && !window.confirm("出生资料已改变。更新当前命盘会覆盖原出生资料，并清空该盘的旧 AI 问答，避免旧解读混入新盘；此操作无法撤销。确定更新吗？（取消可保留原盘，或点击新建命盘）")) return;
       let saved = null;
       if (existing || $("autoSaveBuild").checked) {
@@ -483,7 +510,7 @@
   function showTimeConfirmation(details) {
     elements.inputDateTime.textContent = details.inputDateTime;
     elements.effectiveDateTime.textContent = details.effectiveDateTime;
-    elements.correctionNote.textContent = `修正 ${formatCorrection(details.correctionMinutes)}；${TIME_BRANCH_LABELS[details.inputTimeIndex] || "原时辰"} → ${TIME_BRANCH_LABELS[details.timeIndex] || "生效时辰"}${details.crossesDate ? "，同时跨越日期" : ""}。确认后将以真太阳时重新排盘。`;
+    elements.correctionNote.textContent = `${state.pendingBirthInput?.useDaylightSaving ? "已先减去夏令时1小时；" : ""}修正 ${formatCorrection(details.correctionMinutes)}；${TIME_BRANCH_LABELS[details.inputTimeIndex] || "原时辰"} → ${TIME_BRANCH_LABELS[details.timeIndex] || "生效时辰"}${details.crossesDate ? "，同时跨越日期" : ""}。确认后将以真太阳时重新排盘。`;
     elements.timeConfirmDialog.showModal();
   }
 
@@ -573,7 +600,7 @@
         <div class="center-grid">
           <span>命身宫<strong>命宫 ${escapeHtml(snapshot.natal.soulPalace)} · 身宫 ${escapeHtml(snapshot.natal.bodyPalace)}</strong></span>
           <span>四柱干支<strong>${escapeHtml(snapshot.calendar.sexagenary)}</strong></span>
-          <span>时间口径<strong>${timeBasis}</strong></span>
+          <span>时间口径<strong>${timeBasis}${snapshot.input.useDaylightSaving ? " · 夏令时已校正" : ""}</strong></span>
           <span>固定规则<strong>正月初一分年 · 自然年虚岁</strong></span>
         </div>
         <div class="birth-mutagens" aria-label="生年四化">${birthMutagenMarkup(snapshot.natal.birthMutagen)}</div>
@@ -857,6 +884,7 @@
       isLeapMonth: elements.isLeapMonth.checked,
       birthTime: elements.birthTime.value,
       timeBasis: formValue("timeBasis"),
+      useDaylightSaving: $("useDaylightSaving").checked,
       longitude: elements.longitude.value,
       location: state.selectedLocation ? clone(state.selectedLocation) : null,
     };
@@ -1394,6 +1422,7 @@
     elements.isLeapMonth.checked = Boolean(data.isLeapMonth);
     elements.birthTime.value = data.birthTime || "";
     elements.birthForm.elements.timeBasis.value = data.timeBasis || "beijing";
+    $("useDaylightSaving").checked = Boolean(data.useDaylightSaving);
     selectLocation(normalizeStoredLocation(data), false);
     syncConditionalFields();
   }
