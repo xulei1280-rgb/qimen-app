@@ -25,6 +25,18 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### PAT-215 规则实现与自动验证完成，浏览器待验 — 2026-11-07
+
+- 独立分支：`codex/bazi-pattern-review-20261106`；工作区：`I:\奇门起盘分析\.worktrees\bazi-rule-review`；基线 `8d73ad1`。
+- 唯一整体方案：`docs/codex/modules/pattern-review-plan-v1.md`；进度：`pattern-review-20261106.md`；迁移和敏感性：`pattern-review-audit-v1.md`（后两项位于 `docs/codex/modules/`）。
+- A/B/C/D/E02 的规则、来源合同及相关正反例收束；E03 尚欠真实桌面／手机浏览器，不得称整体完成。
+- 引擎／规则 `2026.11.07.1-review`，取用 `ZP-USE-2026.11.07-v2-review`，基准 `v13-review`；23,916 时间样本完整重建两次一致。六维权重、锚点、分档、历法、模型不改。
+- 完整八字页面（含720原局同源例）、20组取用／240合法例、18历法基线、奇门消费者、JS语法及差异空白检查均 exit 0；新增只读脚本 `check-pattern-review.js`。
+- 1,200合法四柱 A/B1/C 迁移已记录；±5%门槛扰动暴露两类特殊格取法边界，未调参遮掩，不解释为现实准确率已经提高。
+- 8082仍由既有服务指向主工作区：根地址是旧引擎；切换服务命令被执行策略拒绝，未执行。分支资源可从同服务 `/.worktrees/bazi-rule-review/` 读取，已询问用户是否允许临时该路径验收，待回复。
+- 下一步仅处理 E03 地址授权及浏览器验收；不再扩展理论路线。未经用户验收及再次授权，不合并、提交、推送。
+- 主工作区 main 的原有夏令时／紫微改动及两份旧备份原样保留。
+
 ### Bazi Useful-Element v2 Local Integration — 2026-11-06
 
 - 用户授权将已确认的取用 v2 阶段版本合入本地 `main`，不授权 GitHub 推送；只整合取用、必要展示／AI 同源合同、测试及文档，不包含另一窗口的夏令时／紫微改动。

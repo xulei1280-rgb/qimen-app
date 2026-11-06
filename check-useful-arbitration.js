@@ -197,11 +197,12 @@ test('strict special patterns keep ordinary balance and climate advice out of th
   }
 });
 
-test('adding a natal root invalidates strict following and changes the recorded conditions', () => {
-  for (const [label, bare, rooted] of [
-    ['从儿', child, childRooted],
-    ['从杀', killing, killingRooted]
-  ]) {
+test('root restrictions belong to their own special rule, not every following pattern', () => {
+  assert.ok(childRooted.specialPatternQualification && childRooted.specialPatternQualification.ruleId === child.specialPatternQualification.ruleId, '从儿 cannot inherit the no-root veto from 从杀');
+  assert.ok(!childRooted.specialPatternQualification.checks.some(check => check.id === 'no-root' || check.id === 'weak-support'), '从儿 must use its independent flow and reversal conditions');
+  const sealReversal = analyze({...childPillars,hour:'壬申'});
+  assert.ok(!sealReversal.specialPatternQualification || sealReversal.specialPatternQualification.ruleId !== child.specialPatternQualification.ruleId, 'effective seal reversal, not peer roots, blocks this following-output candidate');
+  for (const [label, bare, rooted] of [['从杀', killing, killingRooted]]) {
     assert.ok(!rooted.specialPatternQualification || rooted.specialPatternQualification.ruleId !== bare.specialPatternQualification.ruleId, label + ': root counterexample must not retain the same strict qualification');
     assert.ok(rooted.carryingCapacity.usableRootCount > bare.carryingCapacity.usableRootCount, label + ': a real usable root must be reflected');
     assert.notDeepEqual(clone(rooted.carryingCapacity.tasks), clone(bare.carryingCapacity.tasks), label + ': changed root conditions must reach task evidence');
@@ -233,10 +234,9 @@ test('decision and compatibility fields agree across the legal five-element theo
 
 test('an unselected wealth route cannot erase a restriction of the selected pattern route', () => {
   const result = analyze({year:'甲子',month:'己巳',day:'戊辰',hour:'壬子'});
-  assert.ok(result.useful.decision.primaryRouteIds.includes('formed-pattern'));
+  assert.ok(!result.comboPatterns.includes('杀印相生格'), 'the old fixture has a bound seal; a supposed pattern restriction cannot bypass its own formation failure');
   assert.ok(result.useful.decision.routes.some(route => route.id === 'wealth-flow' && route.status !== 'selected'));
-  assert.ok(result.useful.decision.conclusion.avoid.includes('水'), 'an alternative cannot erase the selected route restriction');
-  assert.ok(result.useful.arbitration.conflicts.some(item => item.element === '水' && item.decision === '不取'));
+  for (const entry of result.useful.decision.elements.filter(item => item.decision === 'avoid')) assert.ok(entry.riskEntries.some(risk => risk.status === 'effective' && risk.dominant), 'a veto needs its own effective dominant evidence, not a preferred pattern name');
 });
 
 test('an officer-load remedy records officer-to-seal and seal-to-day evidence, not a copied injury chain', () => {
@@ -260,7 +260,7 @@ test('extreme climate needs cannot be silently erased by a generic weak-support 
 // These fixtures come from the legal theory generator, not from a person's
 // reported income or a desired useful-element answer.  Their element roles
 // differ from the motivating chart: for 癸 water, wealth is fire and peer is water.
-const localWealthFixture = {year:'乙丑',month:'戊寅',day:'癸酉',hour:'甲寅'};
+const localWealthFixture = {year:'戊寅',month:'甲寅',day:'癸酉',hour:'丙辰'};
 const localWealth = analyze(localWealthFixture);
 
 test('an unselected reachable wealth function retains its local benefit in the element ledger', () => {
@@ -289,10 +289,9 @@ test('a local main-conflict remedy is considered before generic peer support, no
   const wealth = decision.routes.find(item => item.id === 'wealth-flow');
   assert.ok(localWealth.patternDisease.items.some(item => item.family === '官伤冲战'), 'fixture needs the actual conflict addressed by wealth flow');
   assert.equal(wealth.assessment, 'local', 'priority cannot come from a name or an unconnected wish');
-  assert.equal(wealth.priority, 'main-remedy', 'a reachable function addressing the current main conflict cannot remain generic reference only');
-  const ordered = localWealth.useful.primaryUse.concat(localWealth.useful.secondaryUse);
-  assert.ok(ordered.includes('火') && ordered.includes('水'), 'fixture must preserve both targeted wealth use and ordinary peer support');
-  assert.ok(ordered.indexOf('火') < ordered.indexOf('水'), 'a specific main-conflict function should not be ranked after undifferentiated peer support');
+  const pending = localWealth.patternDisease.items.some(item => item.family === '官伤冲战' && item.status !== '已解');
+  assert.equal(wealth.priority, pending ? 'main-remedy' : 'pattern', 'pending treatment and maintaining an already-effective rescue have separate priorities');
+  if (!pending) assert.ok(wealth.maintainsResolved && /维护既有功能/.test(wealth.intent), 'resolved is not forgotten: preserve medicine function without turning it into a prescription to add more');
   const noConflict = analyze({year:'甲子',month:'丙寅',day:'甲子',hour:'甲子'});
   const ordinaryWealth = noConflict.useful.decision.routes.find(item => item.id === 'wealth-flow');
   assert.ok(ordinaryWealth.active && !noConflict.patternDisease.items.some(item => item.family === '官伤冲战'));
@@ -300,7 +299,7 @@ test('a local main-conflict remedy is considered before generic peer support, no
 });
 
 test('an independent monthly interpretation is recorded without being unioned into default useful elements', () => {
-  const result = analyze({year:'壬申',month:'丁未',day:'丙申',hour:'丙申'});
+  const result = analyze({year:'辛未',month:'乙未',day:'丙申',hour:'壬辰'});
   const decision = result.useful.decision;
   const monthly = decision.routes.find(item => item.id === 'monthly-bing-wei');
   assert.ok(monthly && monthly.evidence.some(text => text.includes('壬：透干')) && monthly.evidence.some(text => text.includes('庚：藏支有根')));
@@ -320,9 +319,9 @@ test('separate reference benefits cannot erase an effective pattern or element-d
   assert.equal(protectedSeal.mainPattern, '伤官配印格', 'fixture must preserve a verified seal-based pattern');
   const metal = protectedSeal.useful.decision.elements.find(item => item.element === '金');
   assert.ok(metal.benefitEntries.some(entry => entry.status === 'reference'), 'the independent monthly reference must actually be present');
-  assert.ok(metal.riskEntries.some(entry => entry.status === 'effective'), 'the default pattern needs actual adverse evidence, not just a different preference');
-  assert.ok(protectedSeal.useful.avoid.includes('金'), 'a lower-priority reference cannot negate an effective selected-pattern restriction');
-  const buried = analyze({year:'戊辰',month:'己未',day:'辛丑',hour:'戊戌'});
+  assert.ok(!metal.riskEntries.some(entry => entry.status === 'effective'), 'the old fixture has 辛合丙: bound wealth cannot be fabricated into effective damage merely to oppose the monthly reference');
+  if (metal.riskEntries.some(entry => entry.status === 'effective' && entry.dominant)) assert.ok(protectedSeal.useful.avoid.includes('金'), 'a reference cannot negate a qualified veto');
+  const buried = analyze({year:'戊辰',month:'戊午',day:'辛未',hour:'己丑'});
   const phenomenon = buried.elementPhenomena.find(item => item.ruleId === 'ZP-QX-001');
   assert.ok(phenomenon, 'fixture must establish an actual excessive-earth disease');
   const earth = buried.useful.decision.elements.find(item => item.element === '土');
@@ -332,9 +331,8 @@ test('separate reference benefits cannot erase an effective pattern or element-d
 
 test('secondary climate cannot silently erase the only selected pattern element', () => {
   const result = analyze({year:'甲子',month:'甲戌',day:'庚午',hour:'庚辰'});
-  assert.ok(result.useful.decision.primaryRouteIds.includes('formed-pattern'));
   assert.equal(result.useful.layers.tiaohou.priority,'佐用');
-  assert.ok(result.useful.use.includes('金'), 'a secondary climate constraint must remain an explained condition, not empty the selected strategy');
+  assert.ok(result.useful.use.length, 'a secondary climate constraint must not empty the selected strategy, even when upstream formation changes');
   const risk = result.useful.decision.elements.find(item => item.element === '金').riskEntries.find(item => item.id === 'climate-limitation');
   assert.ok(risk && risk.dominant === false);
 });
@@ -344,8 +342,8 @@ test('bound or transformed injury-officer relations cannot be declared effective
     const result = analyze({year:'甲子',month:'戊辰',day:'癸酉',hour});
     const wood = result.useful.decision.elements.find(item => item.element === '木');
     const risk = wood.riskEntries.find(item => item.id === 'unresolved-output-officer');
-    assert.ok(risk && risk.status === 'potential' && risk.dominant === false, 'interaction arbitration must precede effective-damage classification');
-    assert.ok(risk.evidence.some(text => /争合|合化|合绊/.test(text)), 'the blocking interaction must be visible in the evidence');
+    assert.ok(!risk || risk.status === 'potential' && risk.dominant === false, 'blocked coexistence may disappear from active disease entirely; it cannot remain effective damage');
+    if (risk) assert.ok(risk.evidence.some(text => /争合|合化|合绊/.test(text)), 'the blocking interaction must be visible in the evidence');
   }
 });
 

@@ -137,6 +137,11 @@ node .\check-baselines.js
 
 ## Optimization Tracking
 
+本轮 PAT-215 的唯一冻结实施方案是
+[`pattern-review-plan-v1.md`](pattern-review-plan-v1.md)。继续整体复查或修复前，必须先读该方案及
+[`pattern-review-20261106.md`](pattern-review-20261106.md) 的当前任务状态；不从聊天重新推导范围，
+不把工作草稿或局部检查通过当作完成，不在用户验收前合入 main。
+
 Before continuing pattern/useful-element optimization, read and update
 [`pattern-optimization-backlog.md`](pattern-optimization-backlog.md). Every item
 has a stable ID and status so completed, deferred, and selected work remains

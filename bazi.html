@@ -998,7 +998,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 </main>
 
 <script src="qimen.js"></script>
-<script src="bazi-engine.js?v=20261106.3"></script>
+<script src="bazi-engine.js?v=20261107.1-review"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261101.2" defer></script>
@@ -2056,7 +2056,7 @@ function patternBasisText(data,technical){
   if(!technical){
     var regularBasis=analysis.regularPattern&&analysis.regularPattern.basis;
     var concise=(regularBasis||basis).replace(/；[^；，。]+当令$/,'');
-    return concise+'。'+authority.principle;
+    return concise+'。取格通则：'+authority.principle;
   }
   return basis+' 判法主线：'+authority.framework+(rule?'；规则：'+rule:'')+'；'+authority.principle+(authority.source?'；来源：'+authority.source:'');
 }
@@ -2618,7 +2618,7 @@ function deleteBaziAiTurn(index){
   syncActiveBaziRecord();
 }
 function usefulAiInstruction(){
-  return '采用本次本地取用裁决给出的主次与采用条件，不得把不同取法的候选五行合并成一组喜用；层内参考和取法差异不等于最终主用，也不等于忌。通关可以是处理主病的药，不能与病药机械二选一；按实际解决的病点和已落实的反作用解释优先级，不按路线名称固定排队。未被选用、缺少成格条件或只有潜在风险，均不能单独推出忌；局部可达只说明连接判据，不代表已经化解全局。药神藏支、局部流通或部分救应不等于格局已经成立。分月取法须保留具体天干、原有前提和取舍差异，不能与默认格局结果取并集，也不能据此断言某位师傅采用了该法。原局结论与原局层次固定，所选大运、流年、流月只说明哪些作用条件得到补足、削弱或阻断，不倒写出生原局。根据用户所问事项解释作用，不能因为问财就把财星判为喜神，也不能把局部利财扩写成整体吉。五行分布分数是内部计算参考，不是可测量的物理能量。当前版本的本地四柱、取用裁决和岁运事实优先；历史回答及其旧上下文只作对话记录，不作为本轮规则事实。';
+  return '采用本次本地取用裁决给出的主次与采用条件，不得把不同取法的候选五行合并成一组喜用；层内参考和取法差异不等于最终主用，也不等于忌。通关可以是处理主病的药，不能与病药机械二选一；按实际解决的病点和已落实的反作用解释优先级，不按路线名称固定排队。未被选用、缺少成格条件或只有潜在风险，均不能单独推出忌；局部可达只说明连接判据，不代表已经化解全局。药神藏支、局部流通或部分救应不等于格局已经成立。分月取法须保留具体天干、原有前提和取舍差异，不能与默认格局结果取并集，也不能据此断言某位师傅采用了该法。原局结论与原局层次固定，所选大运、流年、流月只说明哪些作用条件得到补足、削弱或阻断，不倒写出生原局。根据用户所问事项解释作用，不能因为问财就把财星判为喜神，也不能把局部利财扩写成整体吉。五行分布分数是内部计算参考，不是可测量的物理能量。当前版本的本地四柱、取用裁决和岁运事实优先；历史回答及其旧上下文只作对话记录，不作为本轮规则事实。格局通则不是本盘无救的判决；先区分兼见、实际相战、部分救应和已解。具体天干与位置先于五行摘要，同五行根气支持不表示十神作用者可以互换。原局药神有效只说明维护既有功能，不表示继续增加同五行越多越好。格局与喜忌是本项目所选子平框架的推论，根力比例、距离及资格门槛是工程判据，不是古籍给定的普适数值，更不是已经验证的现实因果；不得据此作收入、疾病或灾祸的确定断言。';
 }
 function buildAiPrompt(question){
   var d=currentBazi,p=d.pillars,mode=document.getElementById('aiMode').value;
