@@ -145,7 +145,8 @@ html[data-theme="dark"] .zw .button.primary{color:#141a3c;background:linear-grad
 .zw #birthForm{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem 1rem;align-items:end;margin-top:.9rem}
 .zw #birthForm>*{margin-top:0}
 .zw #birthForm>*,.zw #birthForm .field{min-width:0}
-.zw #birthForm input[type="date"],.zw #birthForm input[type="time"]{box-sizing:border-box;width:100%;min-width:0;max-width:100%}
+.zw #birthForm input[type="date"],.zw #birthForm input[type="time"]{-webkit-appearance:none;appearance:none;display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%}
+.zw #birthForm input[type="date"]::-webkit-date-and-time-value,.zw #birthForm input[type="time"]::-webkit-date-and-time-value{min-width:0;text-align:center}
 .zw #birthForm>.name-field{grid-column:1/-1;max-width:480px;width:100%}
 .zw .save-choice{display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:100%;font-size:14px;color:var(--zw-text)}
 .zw .save-choice input{width:auto;min-height:0}
