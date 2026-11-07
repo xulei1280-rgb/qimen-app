@@ -108,7 +108,8 @@ assert(sourceManifest.includes('《周易》') && sourceManifest.includes('不�
   'function shenShaForPillar',
   'function renderLuckOrigin',
   'function renderLuckSelector',
-  'function keepLuckSelectionVisible',
+  'function centerSelectedFortune',
+  'function keepSelectedMonthVisible',
   'function renderLuckDetail',
   'class="luck-overview"',
   'class="luck-rail"',
@@ -369,6 +370,12 @@ vm.createContext(scriptContext);
 vm.runInContext(qimen, scriptContext, { filename: 'qimen.js' });
 vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__patternReview={flow:interactionFlowAnalysis,context:buildTemporalPatternContext,finalize:finalizePatternLevel,rooted:godRooted,qualify:qualifyComboFlows};root.BaziEngine=api;'), scriptContext, { filename: 'bazi-engine.js' });
 inlineScripts.forEach((script, index) => vm.runInContext(script, scriptContext, { filename: `bazi-inline-${index}.js` }));
+for(const [itemLeft,expected] of [[0,0],[360,260],[840,600]]){
+  const track={scrollLeft:40,scrollWidth:880,clientWidth:280,clientLeft:2,getBoundingClientRect:()=>({left:25})};
+  track.querySelector=()=>({getBoundingClientRect:()=>({left:27+itemLeft-track.scrollLeft,width:80})});
+  scriptContext.centerSelectedFortune(track);
+  assert(track.scrollLeft===expected, 'luck selector should center its selected card and clamp at either edge');
+}
 assert(scriptContext.recordPersonFromTitle({ name: '张黎 丁酉日', bazi: { person: '测试' } }) === '张黎', 'legacy saved record should derive person from title when bazi.person is default 测试');
 assert(scriptContext.recordPersonFromTitle({ name: '事业盘 丁酉日', bazi: { person: '王五' } }) === '王五', 'saved record should keep explicit bazi.person');
 assert(scriptContext.BaziEngine, 'BaziEngine should load in VM');

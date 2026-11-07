@@ -27,6 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Mobile Luck Selection — 2026-11-08
+
+- 手机打开「大运流年」时，大运与流年分别定位选中项，首尾靠边。切换大运时保留大运行的滚动位置，只定位新流年；手动横滑位置随流年切换保留。
+- 八字页面检查、18 项基线以及 320px、390px、1440px 浏览器验证通过。用户已授权随本轮推送。
+
 ### Bazi Pattern and Useful Display — 2026-11-08
 
 - 格局喜用页覆盖 33 个显示格局。标准版分长处、短处和一句话，专业版分项解释格局喜忌，单盘结论另按现有判定展示成立、受损与救应。

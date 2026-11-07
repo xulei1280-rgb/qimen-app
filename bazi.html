@@ -592,6 +592,7 @@ body.help-popover-open #entryPanel,body.help-popover-open #entryPanel .entry-lay
   .luck-outlook-summary{grid-template-columns:1fr}
   .bazi-tabs{position:sticky;top:0;z-index:30;margin:0 -2px 14px;padding:6px 2px 8px;background:#fcfdf9;box-shadow:0 5px 12px rgba(67,58,49,.08)}
   .fortune-scroll.year-grid,.fortune-scroll.month-grid{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
+  .fortune-scroll.luck-scroll,.fortune-scroll.year-grid{scroll-snap-type:none}
   .fortune-scroll .fortune-item{min-width:0;border-radius:10px;padding:8px 7px}
   .luck-scroll .fortune-item{flex-basis:88px}
   .year-grid .fortune-item{flex-basis:78px}
@@ -1702,6 +1703,7 @@ function renderBazi(data){
   setBaziAiPendingControls(!!baziAiPendingRequest);
 }
 function switchBaziView(name){
+  var openingLuck=name==='luck'&&currentBaziView!=='luck';
   currentBaziView=name;
   document.querySelectorAll('.bazi-tabs button').forEach(function(btn){var selected=btn.getAttribute('data-view')===name;btn.classList.toggle('active',selected);btn.ariaPressed=String(selected)});
   document.querySelectorAll('.bazi-view').forEach(function(panel){panel.classList.toggle('active',panel.getAttribute('data-view-panel')===name)});
@@ -1709,6 +1711,7 @@ function switchBaziView(name){
   if(summary)summary.hidden=name!=='structure';
   var chart=document.querySelector('.basic-dashboard .result-card');
   if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,name==='luck');
+  if(openingLuck)mobileLuckTracks(document.querySelector('[data-view-panel="luck"]')).forEach(centerSelectedFortune);
 }
 function renderCoreCards(data){
   var p=data.pillars;
@@ -2998,18 +3001,38 @@ function selectLuckPart(part,index){
   if(part==='year'){luckSelection.year=index;luckSelection.month=null}
   if(part==='month')luckSelection.month=index;
   var panel=document.querySelector('[data-view-panel="luck"] .result-card');
-  if(panel&&currentBazi)panel.innerHTML=renderLuckPanel(currentBazi);
+  if(panel&&currentBazi){
+    var offsets=mobileLuckTracks(panel).map(function(track){return track.scrollLeft});
+    panel.innerHTML=renderLuckPanel(currentBazi);
+    mobileLuckTracks(panel).forEach(function(track,i){
+      if(part==='luck'&&track.classList.contains('year-grid'))centerSelectedFortune(track);
+      else if(offsets[i]!=null)track.scrollLeft=offsets[i];
+    });
+  }
   var chart=document.querySelector('.basic-dashboard .result-card');
   if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,currentBaziView==='luck');
   var aiPanel=document.querySelector('[data-view-panel="ai"] .result-card');
   if(aiPanel&&currentBazi)aiPanel.innerHTML=renderAiPanel();
-  keepLuckSelectionVisible(part);
+  if(part==='month')keepSelectedMonthVisible();
   syncActiveBaziRecord();
 }
-function keepLuckSelectionVisible(part){
-  if(typeof window==='undefined'||!window.matchMedia||!window.matchMedia('(max-width: 800px)').matches)return;
+function isMobileLuckViewport(){
+  return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width: 800px)').matches;
+}
+function mobileLuckTracks(root){
+  return root&&isMobileLuckViewport()?Array.from(root.querySelectorAll('.fortune-scroll.luck-scroll,.fortune-scroll.year-grid')):[];
+}
+function centerSelectedFortune(track){
+  var item=track.querySelector('.fortune-item.active'),max=track.scrollWidth-track.clientWidth;
+  if(!item||!track.clientWidth||max<=0)return;
+  var itemRect=item.getBoundingClientRect(),trackLeft=track.getBoundingClientRect().left+track.clientLeft;
+  var target=track.scrollLeft+itemRect.left-trackLeft+(itemRect.width-track.clientWidth)/2;
+  track.scrollLeft=Math.max(0,Math.min(max,target));
+}
+function keepSelectedMonthVisible(){
+  if(!isMobileLuckViewport())return;
   var reveal=function(){
-    var selected=document.querySelector('[data-view-panel="luck"] .fortune-item.active[data-luck-part="'+part+'"]');
+    var selected=document.querySelector('[data-view-panel="luck"] .fortune-item.active[data-luck-part="month"]');
     if(selected&&selected.scrollIntoView)selected.scrollIntoView({block:'nearest',inline:'nearest'});
   };
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(reveal);else reveal();
