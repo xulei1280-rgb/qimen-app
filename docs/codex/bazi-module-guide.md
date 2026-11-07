@@ -5,7 +5,7 @@ module document only. Expand scope only when the named interface is missing.
 
 ## Working Rules
 
-- Base branch: `codex/bazi-local-work`.
+- Base branch: the latest `main` in `I:\奇门起盘分析`. Start new worktrees from it; do not use historical branches or backups as a development baseline.
 - One worktree owns one module. Keep edits inside that module's boundary.
 - Preserve all user changes already present in the worktree.
 - Do not push GitHub or merge branches from a module worktree.

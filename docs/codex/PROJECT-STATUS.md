@@ -15,6 +15,8 @@ Use a dedicated module worktree when work must happen in parallel.
 ## Current Shared Baseline
 
 - Shared branch: `main`
+- 2026-11-07 基线确认：后续从 I 盘最新 `main` 开始。确认时为 `8753c85`，包含新格局喜用引擎和夏令时校正；此提交号是记录点，不锁定后续基线。
+- 本地已清理旧格局喜用备份及已合入的历史分支；有独有提交或未提交改动的旧分支仅保留资料，不作开发基线。下方历史交接提到的备份或分支不代表仍在原位置。
 - Project pages: Qimen homepage `index.html`; Bazi page `bazi.html`; Liuyao page `liuyao.html`; Ziwei page `ziwei.html`
 - Bazi calculation: `bazi-engine.js`
 - Liuyao calculation: `liuyao-engine.js`
