@@ -1661,6 +1661,8 @@ function switchBaziView(name){
 function renderCoreCards(data){
   var p=data.pillars;
   var useful=usefulDecisionView(data),secondaryUse=useful.secondary,primaryUse=useful.primary;
+  var secondaryText=secondaryUse.length>1&&secondaryUse.every(function(element){return useful.conditionalLabels[element]==='有条件'})
+    ?secondaryUse.join('、')+'（均有条件）':usefulElementText(secondaryUse,useful);
   var pillarNames=[['year','年'],['month','月'],['day','日'],['hour','时']];
   var pillarStack='<div class="pillar-stack-summary">'+pillarNames.map(function(item){
     var gz=p[item[0]];
@@ -1670,7 +1672,7 @@ function renderCoreCards(data){
     '<div class="core-card"><span>日主属性</span><strong class="wx-'+data.dayElement+'">'+data.dayStem+data.dayElement+'</strong><em>'+esc(data.gender)+' · '+esc(data.person||'未命名')+'</em></div>',
     '<div class="core-card"><span>四柱</span>'+pillarStack+'<em>'+(data.time.enabled?'以真太阳时排盘':data.time.daylightSaving?'夏令时已校正':'按输入时间排盘')+'</em></div>',
     '<div class="core-card"><span>旺衰参考</span><strong>'+data.strength+'</strong><em>月令 '+p.month[1]+'，'+BRANCH_WX[p.month[1]]+'气当令</em></div>',
-    '<div class="core-card"><span>喜用参考</span><strong class="core-use-value">'+esc(usefulElementText(primaryUse,useful)||'未定')+(secondaryUse.length?'<small class="core-use-secondary">佐用：'+esc(usefulElementText(secondaryUse,useful))+'</small>':'')+'</strong><details class="core-context"><summary>查看取用依据</summary><em>'+esc(usefulSummaryText(data))+'。'+esc(useful.priority.text||data.useful.why||'')+'</em></details></div>'
+    '<div class="core-card"><span>喜用参考</span><strong class="core-use-value">'+esc(usefulElementText(primaryUse,useful)||'未定')+(secondaryText?'<small class="core-use-secondary">佐用：'+esc(secondaryText)+'</small>':'')+'</strong><details class="core-context"><summary>查看取用依据</summary><em>'+esc(usefulSummaryText(data))+'。'+esc(useful.priority.text||data.useful.why||'')+'</em></details></div>'
   ].join('');
 }
 function hiddenText(dayStem,branch){
@@ -2034,6 +2036,82 @@ function usefulElementDecisionText(item,technical){
   if(item.requirements&&item.requirements.length)lines.push('采用条件：'+item.requirements.join('、'));
   return lines.map(function(line){return esc(technical?line:line.replace(/ZP-[A-Z0-9.-]+/g,''))}).join('<br>');
 }
+function compactUsefulEvidence(view,conditional){
+  var routes=view.routes,used=new Set(),facts=new Set(),sources=new Set();
+  function clean(text){return String(text||'').replace(/ZP-[A-Z0-9.-]+/g,'').replace(/[。；]+$/,'').trim()}
+  function uniqueText(items){return Array.from(new Set(items.map(clean).filter(Boolean)))}
+  function newFacts(items){return uniqueText(items).filter(function(text){if(facts.has(text))return false;facts.add(text);return true})}
+  function field(label,items){var texts=uniqueText(items);return texts.length?'<div>'+esc(label+texts.join('；'))+'。</div>':''}
+  function cite(route){
+    if(!route)return;
+    (Array.isArray(route.source)?route.source:[route.source]).forEach(function(source){
+      var label=clean(typeof source==='string'?source:(source&&source.title||'')+(source&&source.url?' '+source.url:''));
+      if(label)label.replace(/，项目存档[^；]+/g,'').replace(/seasonTune 比例/g,'调候比例').split('；').forEach(function(part){if(part)sources.add(part)});
+    });
+  }
+  function benefit(entry,route){
+    if(!route)return entry.text;
+    if(route.id==='seal-remedy')return route.name+(entry.status==='local'?'，原局有局部救应':'，须待实际接通');
+    if(route.id==='wealth-flow'&&entry.status==='local'){
+      if(route.maintainsResolved)return '维护原局已发挥的救应，不等于宜再增财';
+      return route.transmissionActive?'食伤经财通官，已有局部作用，未必全解'+(route.priority==='main-remedy'?'；作为当前病点的对症路线':''):'已见食伤承财的局部作用，不能据此判整条通关成立';
+    }
+    return (entry.status==='local'?'已有局部作用：':'取用方向：')+entry.text;
+  }
+  function risk(entry){
+    if(entry.status==='effective')return entry.text;
+    var short={
+      'wealth-seal':'须防财牵制印路', 'wealth-killing':'须防财转生七杀',
+      'wealth-carrying':'须有足够承财条件', 'officer-selection':'官杀未清，须明确所保对象',
+      'peer-wealth':'扶身时须看比劫是否牵制财星', 'officer-carrying':'官杀已有负荷，未见透印承接，不直接增补'
+    };
+    return short[entry.id]||entry.text;
+  }
+  var elements=Array.from(new Set([].concat(view.primary,view.secondary,view.conditional,view.avoid,view.routeDependent,view.elements.map(function(item){return item.element}))));
+  var decisions=elements.map(function(element){
+    var entry=view.elements.find(function(item){return item.element===element})||{};
+    var condition=conditional.find(function(item){return item.element===element});
+    var role=view.primary.includes(element)?'主用':view.secondary.includes(element)?'佐用':view.avoid.includes(element)?'忌':view.routeDependent.includes(element)?'取法差异':'不作统一喜忌';
+    if(view.conditional.includes(element))role=(role==='不作统一喜忌'?'条件用':role)+'（'+view.conditionalLabels[element]+'）';
+    var positive=[],effective=[],limits=[],proof=[],conditions=(entry.requirements||[]).slice();
+    (entry.benefitEntries||[]).filter(function(item){return item.status!=='reference'}).forEach(function(item){
+      var route=routes.find(function(candidate){return candidate.id===item.routeId});
+      positive.push(benefit(item,route));proof=proof.concat(item.evidence||[]);
+      if(route){
+        // Keep route-level conditions and sources once, even when several elements share the route.
+        if(!used.has(route.id)){
+          conditions=conditions.concat(route.requirements||[]);
+          if(route.risk&&(route.id!=='wealth-flow'||!(entry.riskEntries||[]).some(function(r){return /^(wealth-|officer-selection)/.test(r.id)})))limits.push(route.id==='balance'?route.name+'：'+route.risk:route.risk);
+        }
+        used.add(route.id);cite(route);
+      }
+    });
+    (entry.riskEntries||[]).forEach(function(item){
+      (item.status==='effective'?effective:limits).push(risk(item));proof=proof.concat(item.evidence||[]);
+    });
+    if(condition){
+      if(!(entry.benefitEntries||[]).some(function(item){return item.status!=='reference'}))positive.push(condition.benefit);
+      if(!(entry.riskEntries||[]).length)limits.push(condition.risk);
+      conditions=conditions.concat(condition.requirements||[]);
+    }
+    conditions=conditions.map(function(text){
+      if(text==='在所列作用条件满足时使用，不把潜在风险当作已发生的损害'&&limits.length)return '';
+      if(text==='通关可属病药；局部可达不等于已经化解全部病点，不把印路与财路无条件叠加')return '印路与财路不能无条件叠加';
+      return text;
+    });
+    var body=field('作用：',positive)+field('已见制约：',effective)+field('使用限制：',limits)+field('本盘依据：',newFacts(proof))+field('采用条件：',conditions);
+    return body?'<div><strong>'+esc(element+'｜'+role)+'</strong>'+body+'</div>':'';
+  }).filter(Boolean);
+  var alternatives=routes.filter(function(route){return !used.has(route.id)&&!/^conditional-/.test(route.id)&&(route.elements||[]).length}).map(function(route){
+    cite(route);
+    var label=route.status==='selected'?'本盘采用':route.status==='conditional'?'备用路线（非默认）':route.status==='rejected'?'本盘不取':route.status==='existing-function'?'原局已有作用':'参考取法（非默认）';
+    var reason=/^(保留独立依据，未达到默认取用条件|存在局部作用或替代取法，但条件、副作用未消除，不自动列入默认推荐|当前不取)$/.test(route.reason||'')?'':route.reason;
+    return '<div><strong>'+esc(route.name+'｜'+label)+'</strong>'+field('作用：',[route.benefit])+field('牵制：',[route.risk])+field('采用条件：',route.requirements||[])+field('本盘依据：',newFacts(route.evidence||[]))+field('取舍：',[reason])+'</div>';
+  });
+  return (decisions.length?'<div><strong>本盘取舍</strong></div>'+decisions.join('<br>'):'')+
+    (alternatives.length?(decisions.length?'<br>':'')+'<div><strong>'+ (decisions.length?'其他取法':'取用依据')+'</strong></div>'+alternatives.join('<br>'):'')+
+    (sources.size?'<br>'+field('来源：',Array.from(sources)):'');
+}
 function usefulPriorityText(data,technical){
   data=refreshPatternAnalysis(data);
   var view=usefulDecisionView(data),item=view.priority;
@@ -2056,7 +2134,7 @@ function usefulPriorityText(data,technical){
     var conclusion='<div class="useful-conclusion"><strong>结论：主用 '+(choices(view.primary)||'未定主用')+'</strong>'+(view.secondary.length?'<div>佐用 '+choices(view.secondary)+'</div>':'')+'<div>忌 '+(choices(view.avoid)||'无明确忌项')+'</div></div>';
     var focus=item.text?'<div class="useful-focus">'+esc(item.text)+'</div>':'';
     var routeNote=view.routeDependent.length?'<div class="useful-route-note">取法差异：'+esc(view.routeDependent.join('、'))+'。局部作用或其他取法有其前提，不并入默认喜忌。</div>':'';
-    var evidence=(elementEvidence?elementEvidence+'<br><br>':'')+(conditional.length?'<div>条件用神：'+conditional.map(function(x){return esc(x.element+'（'+x.benefit+'；限制：'+x.risk+'）')}).join('；')+'</div><br>':'')+(view.routes.length?view.routes.map(function(route){return usefulRouteText(route,false)}).join('<br><br>'):'');
+    var evidence=compactUsefulEvidence(view,conditional);
     return conclusion+focus+routeNote+(evidence?'<details class="structure-deep useful-evidence"><summary>判断依据与取法差异</summary><div class="useful-evidence-body">'+evidence+'</div></details>':'');
   }
   return item.text?(esc(item.type||'综合')+'：'+esc(item.text)+'<br>最终裁决：'+esc(usefulSummaryText(data))+(view.routes.length?'<br>裁决版本：'+esc(view.version)+'<br>各层候选不直接合并为喜用；局部作用、条件可用与成格分别判断。<br><br>'+view.routes.map(function(route){return usefulRouteText(route,true)}).join('<br><br>'):'')+(elementEvidence?'<br><br>逐元素取舍：<br>'+elementEvidence:'')+conflictText+conditionalText+specificText+(roles?'<br>'+[

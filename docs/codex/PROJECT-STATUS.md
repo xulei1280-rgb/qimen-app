@@ -25,6 +25,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Useful Display — 2026-11-07
+
+- 「用神总论」原有展开区合并重复说明，保留实际作用、限制、采用条件及独立取法。顶部佐用在多项均标「有条件」时合并标签，混合标注仍逐项显示。取用引擎、AI 与导出不变。
+- 已通过八字页面检查及 8082 桌面／390px 隔离浏览器验证。用户授权本地提交，未授权推送。
+
 ### Bazi / Ziwei Mainland Daylight Saving — 2026-11-07
 
 - 用户授权在当前 `main` 的 `f123cc3`（含新引擎 `60e3323`）基础上补完夏令时并本地提交；从该基线创建 `codex/birth-daylight-saving-20261107`，验证后本地提交并快进合入 `main`。保留新引擎定格、取用、评分和既有紫微输入修复，不推送或发布。

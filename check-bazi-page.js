@@ -624,14 +624,30 @@ assert(!/ZP-[A-Z]/.test(conciseStructureHtml) && !conciseStructureHtml.includes(
 assert(scriptContext.buildPatternContextText(conciseReferenceBazi).includes('ZP-MG-06') && scriptContext.buildPatternContextText(conciseReferenceBazi).includes('结构分：') && !scriptContext.buildPatternContextText(conciseReferenceBazi).includes('理论结构位置：'), 'AI context should retain the hidden technical rule and structure score without exposing percentile position');
 assert(['function usefulDecisionView','function usefulSummaryText','function usefulAiInstruction'].every((name) => html.includes(name)), 'page summary, details, export and AI must use the canonical decision helpers');
 assert(scriptContext.usefulAiInstruction().includes('不得把不同取法的候选五行合并') && scriptContext.usefulAiInstruction().includes('不能因为问财就把财星判为喜神') && scriptContext.usefulAiInstruction().includes('历史回答及其旧上下文只作对话记录'), 'AI must preserve route boundaries, question-specific interpretation and versioned current facts');
-assert(scriptContext.usefulPriorityText(conciseReferenceBazi).includes('本盘依据：') && scriptContext.usefulPriorityText(conciseReferenceBazi).includes('备用路线（非默认）'), 'existing detail card must expose actual evidence without mistaking an alternative route for the current recommendation');
 const usefulPublicV2 = scriptContext.usefulPriorityText(conciseReferenceBazi);
 const usefulVisibleV2 = usefulPublicV2.replace(/<details\b[\s\S]*?<\/details>/g,'');
+const usefulExpanded = usefulPublicV2.split('</summary>')[1].replace(/<[^>]+>/g,'');
+assert(['本盘取舍','其他取法','本盘依据：','参考取法（非默认）','来源：'].every(label=>usefulExpanded.includes(label)), 'compact evidence must retain actual basis, source, and explicitly non-default alternatives');
+assert(usefulExpanded.length < 1850 && (usefulExpanded.match(/己伤官生申藏庚偏财/g)||[]).length===1 && !usefulExpanded.includes('金的条件取用'), 'show an actual causal link once, not separate element, conditional, and route copies');
+assert(['金｜佐用（有条件）','火｜佐用（有条件）','土｜忌','水｜取法差异','已有局部作用，未必全解','须防财转生七杀','扶身时须看比劫是否牵制财星','己伤官制癸正官'].every(text=>usefulExpanded.includes(text)), 'compression must preserve this fixture’s canonical roles and decisive action/risk boundaries');
+const independentUsefulView=scriptContext.usefulDecisionView({useful:{primaryUse:[],conditionalUse:[{element:'火',label:'有条件',benefit:'独立条件用的作用',risk:'独立限制',requirements:['独立前提']}],avoid:[]}});
+assert(['火｜条件用（有条件）','独立条件用的作用','独立限制','独立前提'].every(text=>scriptContext.compactUsefulEvidence(independentUsefulView,[{element:'火',benefit:'独立条件用的作用',risk:'独立限制',requirements:['独立前提']}]).includes(text)), 'conditional use outside primary/secondary must remain visible, even without a ledger entry');
 assert(/<details class="structure-deep useful-evidence">/.test(usefulPublicV2) && !/<details[^>]*\bopen\b/.test(usefulPublicV2) && usefulPublicV2.includes('<summary>判断依据与取法差异</summary>'), 'useful evidence should be a native initially-collapsed disclosure in the existing card');
 assert(usefulVisibleV2.includes('结论：') && !/本盘依据：|采用条件：|来源：/.test(usefulVisibleV2), 'the initial useful card should keep the conclusion visible and its evidence inside the disclosure');
 assert(scriptContext.usefulPriorityText(conciseReferenceBazi,true).includes('逐元素取舍：') && !scriptContext.usefulPriorityText(conciseReferenceBazi,true).includes('<details'), 'AI and export technical context must retain the full evidence ledger as non-collapsed text');
 const legacyUsefulView=scriptContext.usefulDecisionView({useful:{primaryUse:['木'],secondaryUse:['火'],conditionalUse:[{element:'火',benefit:'legacy benefit',risk:'legacy risk'}],avoid:['土']}});
 assert(legacyUsefulView.conditionalLabels.火==='喜中带忌' && legacyUsefulView.routeDependent.length===0, 'older useful records should retain their compatible labels without inventing a new route disagreement');
+for (const [secondaryUse, conditionalUse, expected] of [
+  [['金','火'], [{element:'金',label:'有条件'},{element:'火',label:'有条件'}], '金、火（均有条件）'],
+  [['金','火'], [{element:'金',label:'有条件'}], '金（有条件）、火'],
+  [['金','火'], [{element:'金',label:'有条件'},{element:'火',label:'喜中带忌'}], '金（有条件）、火（喜中带忌）'],
+  [['金'], [{element:'金',label:'有条件'}], '金（有条件）'],
+  [[], [], ''],
+]) {
+  const card = scriptContext.renderCoreCards({...referenceBazi,useful:{primaryUse:['木'],secondaryUse,conditionalUse}});
+  const secondaryLabel = card.match(/<small class="core-use-secondary">佐用：([^<]*)<\/small>/);
+  assert((secondaryLabel ? secondaryLabel[1] : '') === expected, 'top card only groups repeated 有条件 labels without merging different judgments');
+}
 assert(typeof scriptContext.BaziEngine.strengthScore === 'function', 'BaziEngine should expose weighted strengthScore');
 const referenceStrength = scriptContext.BaziEngine.assessStrength(referenceBazi.dayStem, referenceBazi.pillars, scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars));
 assert(referenceStrength === '\u5f31' || referenceStrength === '\u504f\u5f31', `reference chart should be weak or slightly weak by weighted support model, got ${referenceStrength}`);
