@@ -116,7 +116,7 @@ rg -n "analyzePattern|strength|pattern|useful|special|comboConflict|remedy" bazi
   arbitration may reduce a root or obstruct a pattern chain.
 - The visible structure page is a concise report: show the main pattern,
   formation result, final useful-element decision, public level, and current
-  luck conclusion with the one-decimal structure score, but without `ZP-*` IDs,
+  luck conclusion without the numeric structure score, `ZP-*` IDs,
   engine versions, weights, percentile positions, or duplicated
   status/factor cards. The AI context keeps the complete rule IDs, checks,
   structure-score evidence and exact ten-god decisions from the same analysis object.

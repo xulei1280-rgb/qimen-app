@@ -589,9 +589,48 @@ const referenceLuck = scriptContext.getLuckData(referenceBazi);
 const referencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
 const conciseReferenceBazi = { ...referenceBazi, scores: scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars), relations: [] };
 const conciseStructureHtml = scriptContext.renderStructure(conciseReferenceBazi);
-assert(['主要格局', '格局层次', '成格结论', '用神总论', '当前大运格局'].every((label) => conciseStructureHtml.includes(label)), `structure page should keep the direct conclusion cards, got ${conciseStructureHtml}`);
-assert(conciseStructureHtml.includes('pattern-score-help-button') && conciseStructureHtml.includes('aria-label="查看结构分说明"') && conciseStructureHtml.includes('aria-controls="explain-help-structure-score"') && conciseStructureHtml.includes('aria-expanded="false"') && conciseStructureHtml.includes('role="dialog"'), 'the public structure score should expose an accessible hover, focus, and tap explanation');
-assert(['这个分数评价的是八字原局本身', '原局结构：', '行运时机：', '现实条件：', '不是人生结果'].every((text) => conciseStructureHtml.includes(text)), 'the structure-score explanation should distinguish natal structure, luck timing, and real-world conditions in plain language');
+assert(['格局结论', '格局层次', '喜用参考', '当前大运格局'].every(label => conciseStructureHtml.includes(label)) && !/用神总论|<strong>(主要格局|成格结论)<\/strong>/.test(conciseStructureHtml), 'public structure should keep formation and useful conclusions in separate, non-duplicated sections');
+assert(['<h3 class="report-heading">命格</h3><p class="pattern-result"><b class="pattern-name">伤官格','<summary>查看格局说明</summary>','<dt>长处</dt>','<dt>短处</dt>','<dt>一句话</dt>','class="pattern-reading is-favorable"><dt>喜财星承泄','喜印星制伤','class="pattern-reading is-unfavorable"><dt>忌官伤相战','忌身弱泄重','忌财印相碍','格局通则，不等于本盘喜忌','本盘落点','己伤官制癸正官','印星制伤护官、财星通关已有局部救应'].every(x=>conciseStructureHtml.includes(x)), 'injury pattern should separate its heading, standard reading, favorable/unfavorable principles and chart-specific verdict');
+assert(conciseStructureHtml.split('<h3 class="report-heading">格局结论')[1].split('</section>')[0].includes('<summary>定格依据</summary>') && !conciseStructureHtml.includes('本盘关键依据'), 'pattern basis belongs to the verdict, and element evidence must not be repeated in a standalone block');
+assert((conciseStructureHtml.match(/class="report-column"/g)||[]).length===2 && conciseStructureHtml.indexOf('格局结论')<conciseStructureHtml.indexOf('<h3 class="report-heading">喜用参考'), 'two desktop report columns must also read in the intended mobile order');
+assert(!/结构分|评分维度|未建立固定作用链|互斥并集/.test(conciseStructureHtml) && conciseStructureHtml.includes('不是人生结果'), 'public cards and disclosures must omit scores and internal placeholders');
+assert(conciseStructureHtml.includes('伤官格未成（原有条件受破坏）') && conciseStructureHtml.includes('伤官格已破') && conciseStructureHtml.includes('代表表达与突破的伤官'), 'broken pattern must retain the same verdict in both modes, with an explained cause in standard mode');
+const bladeBazi={...conciseReferenceBazi,pillars:{year:'壬午',month:'丙午',day:'丙寅',hour:'丁酉'},dayStem:'丙',dayElement:'火',time:{...conciseReferenceBazi.time,used:{year:2002,month:6,day:27,hour:18,minute:35}}};
+const bladeStructure=scriptContext.renderStructure(bladeBazi);
+assert(['class="pattern-name">月刃格','又称羊刃格','月刃格已成','年干的壬水能约束偏旺的火','年干壬水七杀透出','主用：<b class="public-use-choice wx-水">水','取法差异：<b class="public-use-choice wx-金">金','无忌项','只取局部生财，不作完整通关'].every(x=>bladeStructure.includes(x)) && !/结构分|未建立固定作用链|互斥并集/.test(bladeStructure), 'formed blade chart must distinguish formation, active water, and local gold in both modes');
+assert(['喜官杀','喜食伤','喜财星','忌无制过旺','忌冲激刃气','忌比劫叠刃'].every(x=>bladeStructure.includes('<dt>'+x+'</dt>')), 'professional blade reading should explain each of the six agreed principles individually');
+const reviewedPatternNames = [
+  '正官格','七杀格','正财格','偏财格','正印格','偏印格','食神格','伤官格','建禄格','月劫用事','月刃格',
+  '杀印相生格','食神制杀格','伤官配印格','官印相生格','财官印相生格','伤官生财格','食神生财格','财滋弱杀格','羊刃驾杀格',
+  '从格：从杀格','从格：从财格','从格：从儿格',
+  '化气格：甲己化土','化气格：乙庚化金','化气格：丙辛化水','化气格：丁壬化木','化气格：戊癸化火',
+  '专旺格：曲直格','专旺格：炎上格','专旺格：稼穑格','专旺格：从革格','专旺格：润下格',
+];
+for (const name of reviewedPatternNames) {
+  const standard = scriptContext.publicPatternReading(name, false);
+  const professional = scriptContext.publicPatternReading(name, true);
+  assert(['长处','短处','一句话'].every(label => standard.includes('<dt>'+label+'</dt>')), name+' should have its own complete standard reading');
+  assert(/is-favorable"><dt>喜/.test(professional) && /is-unfavorable"><dt>忌/.test(professional), name+' should have its own favorable and unfavorable conditions');
+}
+for (const technical of [false, true]) {
+  assert(new Set(reviewedPatternNames.map(name => scriptContext.publicPatternReading(name, technical))).size === 33, 'all reviewed names should have distinct readings in both modes');
+}
+function assertPublicEffect(data,role,element,effect,detail){
+  const rows=scriptContext.publicUsefulRows(data);
+  const [overview, disclosure]=rows.split('<summary>查看取用依据</summary>');
+  const heading=role+'：<b class="public-use-choice wx-'+element+'">'+element+'</b>';
+  const item=overview.split(heading)[1]?.split('</dd>')[0]||'';
+  const evidence=disclosure?.split(heading)[1]?.split('</dd>')[0]||'';
+  assert(item.includes('<b class="public-use-effect">'+effect+'</b>') && (!detail || evidence.includes(detail)), 'show the element effect in the overview and keep its evidence under the shared disclosure: '+role+element);
+}
+assertPublicEffect(conciseReferenceBazi,'主用','木','救应作用');
+assertPublicEffect(conciseReferenceBazi,'佐用','金','通关作用','部分');
+assertPublicEffect(conciseReferenceBazi,'佐用','火','扶身作用');
+assertPublicEffect(conciseReferenceBazi,'忌','土','加重官伤冲突');
+assertPublicEffect(conciseReferenceBazi,'取法差异','水','调候参考');
+assertPublicEffect(bladeBazi,'主用','水','制刃作用');
+assertPublicEffect(bladeBazi,'取法差异','金','生财作用','完整通关');
+assert(scriptContext.renderCoreCards(bladeBazi).includes('无忌项') && !scriptContext.renderCoreCards(bladeBazi).includes('互斥并集'), 'top summary must use the same public conclusions');
 assert(!conciseStructureHtml.includes('格局层次表示命盘结构与行运承接，不代表人的价值'), 'the old bottom disclaimer should be removed after the full explanation moves beside the structure score');
 const contextHelpContracts = {
   missing: '五行缺失不等于命里一定不好',
@@ -610,10 +649,9 @@ Object.entries(contextHelpContracts).forEach(([key, expected]) => {
   assert(tip.includes(`data-help="${key}"`) && tip.includes('class="explain-help-button"') && tip.includes(`aria-controls="explain-help-${key}"`) && tip.includes(`id="explain-help-${key}"`) && tip.includes('role="dialog"') && tip.includes('aria-label="关闭说明"') && tip.includes(expected), `${key} should expose its agreed question-mark explanation, got ${tip}`);
 });
 ['function setHelpPopoverState','function closeAllHelpPopovers','function toggleHelpPopover','function closeHelpPopover','help-popover-open','explain-help-backdrop','max-height:calc(100dvh - 32px)','.explain-help:not(.is-open) .explain-help-popover'].forEach((needle) => assert(html.includes(needle), `mobile help dialog safeguard missing ${needle}`));
-assert(['missing', 'useful', 'main-pattern', 'formation', 'strength', 'current-luck', 'interaction'].every((key) => conciseStructureHtml.includes(`data-help="${key}"`)), 'always-visible structure sections should render all agreed question-mark explanations');
-const usefulNoteHtml = conciseStructureHtml.match(/<div class="note-line"><strong>喜用参考：<\/strong>(.*?)<\/div>/)[1];
-const missingNoteHtml = conciseStructureHtml.match(/<div class="note-line"><strong>五行缺失：<\/strong>(.*?)<\/div>/)[1];
-assert(usefulNoteHtml.indexOf('主 ') < usefulNoteHtml.indexOf('data-help="useful"') && missingNoteHtml.indexOf('五行皆有') < missingNoteHtml.indexOf('data-help="missing"'), 'top summary help controls should appear after the full useful-element and missing-element conclusions');
+assert(['missing', 'useful', 'formation', 'strength', 'current-luck', 'interaction'].every((key) => conciseStructureHtml.includes(`data-help="${key}"`)), 'always-visible structure sections should render the remaining question-mark explanations');
+const usefulNoteHtml = conciseStructureHtml.split('<h3 class="report-heading">喜用参考')[1].split('</section>')[0];
+assert(usefulNoteHtml.includes('主用：') && usefulNoteHtml.includes('data-help="useful"') && conciseStructureHtml.includes('<div class="report-chart-note">五行齐全') && conciseStructureHtml.includes('data-help="missing"'), 'the useful heading and compact chart note should retain their contextual help');
 assert(["structureDetailBox('气势病象',phenomenon,data,contextHelp('phenomenon'))", "structureDetailBox('清秀气象',positivePhenomenon,data,contextHelp('positive-phenomenon'))", "structureDetailBox('特殊格局',specialPatternText(data.patternAnalysis),data,contextHelp('special-pattern'),null,classicalTransformNote(data.patternAnalysis))"].every((source) => html.includes(source)), 'conditional phenomenon and special-pattern cards should attach their agreed explanations when rendered in both display modes');
 const diseaseQuote = '有病方为贵，无伤不是奇；格中如去病，财禄两相随。';
 assert(conciseStructureHtml.includes(`class="classical-pattern-note">古诀参考：“${diseaseQuote}”——《渊海子平·五言独步》`) && conciseStructureHtml.indexOf('<strong>病药通关</strong>') < conciseStructureHtml.indexOf(diseaseQuote) && conciseStructureHtml.indexOf(diseaseQuote) < conciseStructureHtml.indexOf('<strong>当前大运格局</strong>'), 'the disease-remedy card should show the verified classical line as a direct small-print note without another help control');
@@ -624,29 +662,47 @@ assert(!/ZP-[A-Z]/.test(conciseStructureHtml) && !conciseStructureHtml.includes(
 assert(scriptContext.buildPatternContextText(conciseReferenceBazi).includes('ZP-MG-06') && scriptContext.buildPatternContextText(conciseReferenceBazi).includes('结构分：') && !scriptContext.buildPatternContextText(conciseReferenceBazi).includes('理论结构位置：'), 'AI context should retain the hidden technical rule and structure score without exposing percentile position');
 assert(['function usefulDecisionView','function usefulSummaryText','function usefulAiInstruction'].every((name) => html.includes(name)), 'page summary, details, export and AI must use the canonical decision helpers');
 assert(scriptContext.usefulAiInstruction().includes('不得把不同取法的候选五行合并') && scriptContext.usefulAiInstruction().includes('不能因为问财就把财星判为喜神') && scriptContext.usefulAiInstruction().includes('历史回答及其旧上下文只作对话记录'), 'AI must preserve route boundaries, question-specific interpretation and versioned current facts');
-const usefulPublicV2 = scriptContext.usefulPriorityText(conciseReferenceBazi);
-const usefulVisibleV2 = usefulPublicV2.replace(/<details\b[\s\S]*?<\/details>/g,'');
-const usefulExpanded = usefulPublicV2.split('</summary>')[1].replace(/<[^>]+>/g,'');
-assert(['本盘取舍','其他取法','本盘依据：','参考取法（非默认）','来源：'].every(label=>usefulExpanded.includes(label)), 'compact evidence must retain actual basis, source, and explicitly non-default alternatives');
-assert(usefulExpanded.length < 1850 && (usefulExpanded.match(/己伤官生申藏庚偏财/g)||[]).length===1 && !usefulExpanded.includes('金的条件取用'), 'show an actual causal link once, not separate element, conditional, and route copies');
-assert(['金｜佐用（有条件）','火｜佐用（有条件）','土｜忌','水｜取法差异','已有局部作用，未必全解','须防财转生七杀','扶身时须看比劫是否牵制财星','己伤官制癸正官'].every(text=>usefulExpanded.includes(text)), 'compression must preserve this fixture’s canonical roles and decisive action/risk boundaries');
-const independentUsefulView=scriptContext.usefulDecisionView({useful:{primaryUse:[],conditionalUse:[{element:'火',label:'有条件',benefit:'独立条件用的作用',risk:'独立限制',requirements:['独立前提']}],avoid:[]}});
-assert(['火｜条件用（有条件）','独立条件用的作用','独立限制','独立前提'].every(text=>scriptContext.compactUsefulEvidence(independentUsefulView,[{element:'火',benefit:'独立条件用的作用',risk:'独立限制',requirements:['独立前提']}]).includes(text)), 'conditional use outside primary/secondary must remain visible, even without a ledger entry');
-assert(/<details class="structure-deep useful-evidence">/.test(usefulPublicV2) && !/<details[^>]*\bopen\b/.test(usefulPublicV2) && usefulPublicV2.includes('<summary>判断依据与取法差异</summary>'), 'useful evidence should be a native initially-collapsed disclosure in the existing card');
-assert(usefulVisibleV2.includes('结论：') && !/本盘依据：|采用条件：|来源：/.test(usefulVisibleV2), 'the initial useful card should keep the conclusion visible and its evidence inside the disclosure');
+const usefulProof=scriptContext.publicUsefulEvidence(conciseReferenceBazi);
+const usefulExpanded=Object.values(usefulProof).join('');
+assert(usefulExpanded.length < 230 && ['未藏乙正印制己伤官','己伤官生申藏庚偏财','申藏庚偏财生癸正官','己伤官制癸正官','《穷通宝鉴》'].every(x=>usefulExpanded.includes(x)) && !/采用条件|扶身指数|有条件/.test(usefulExpanded), 'expanded public evidence should keep only key natal facts and the source of the different interpretation');
+const independentUseful={useful:{primaryUse:[],conditionalUse:[{element:'火',label:'有条件',benefit:'独立条件用的作用',risk:'独立限制',requirements:['独立前提']}],avoid:[]}};
+assert(['条件用：','独立条件用的作用','独立限制','依据：独立前提'].every(text=>scriptContext.publicUsefulRows(independentUseful).includes(text)), 'conditional use outside primary/secondary must remain visible, even without a ledger entry');
+assert(usefulProof.金.includes('己伤官生申藏庚偏财') && !usefulProof.木.includes('己伤官生申藏庚偏财'), 'evidence follows its own element only');
+assertPublicEffect(bladeBazi,'取法差异','金','生财作用','依据：午藏己伤官生酉藏辛正财');
+assert(!/（有条件）|（均有条件）|（喜中带忌）/.test(usefulNoteHtml) && /但/.test(usefulNoteHtml), 'element labels omit status suffixes while the explanation keeps the actual limits');
+assert((usefulNoteHtml.match(/<details /g)||[]).length===1 && usefulNoteHtml.includes('<summary>查看取用依据</summary>'), 'both modes should share one initially collapsed useful-evidence control');
+const topExpanded=scriptContext.renderCoreCards(conciseReferenceBazi).split('查看其他取用结论</summary>')[1].split('</details>')[0];
+assert(!/主用|佐用|public-use-copy/.test(topExpanded) && topExpanded.includes('忌：') && topExpanded.includes('取法差异：'), 'top disclosure should only add compact secondary conclusions');
+assert(!/（有条件）|（均有条件）/.test(scriptContext.usefulSummaryText(conciseReferenceBazi,true,true)) && scriptContext.usefulSummaryText(conciseReferenceBazi).includes('有条件'), 'page summaries omit secondary suffixes without changing AI/export summaries');
 assert(scriptContext.usefulPriorityText(conciseReferenceBazi,true).includes('逐元素取舍：') && !scriptContext.usefulPriorityText(conciseReferenceBazi,true).includes('<details'), 'AI and export technical context must retain the full evidence ledger as non-collapsed text');
 const legacyUsefulView=scriptContext.usefulDecisionView({useful:{primaryUse:['木'],secondaryUse:['火'],conditionalUse:[{element:'火',benefit:'legacy benefit',risk:'legacy risk'}],avoid:['土']}});
 assert(legacyUsefulView.conditionalLabels.火==='喜中带忌' && legacyUsefulView.routeDependent.length===0, 'older useful records should retain their compatible labels without inventing a new route disagreement');
 for (const [secondaryUse, conditionalUse, expected] of [
-  [['金','火'], [{element:'金',label:'有条件'},{element:'火',label:'有条件'}], '金、火（均有条件）'],
-  [['金','火'], [{element:'金',label:'有条件'}], '金（有条件）、火'],
-  [['金','火'], [{element:'金',label:'有条件'},{element:'火',label:'喜中带忌'}], '金（有条件）、火（喜中带忌）'],
-  [['金'], [{element:'金',label:'有条件'}], '金（有条件）'],
+  [['金','火'], [{element:'金',label:'有条件'},{element:'火',label:'有条件'}], '金、火'],
+  [['金','火'], [{element:'金',label:'有条件'}], '金、火'],
+  [['金','火'], [{element:'金',label:'有条件'},{element:'火',label:'喜中带忌'}], '金、火'],
+  [['金'], [{element:'金',label:'有条件'}], '金'],
   [[], [], ''],
 ]) {
   const card = scriptContext.renderCoreCards({...referenceBazi,useful:{primaryUse:['木'],secondaryUse,conditionalUse}});
-  const secondaryLabel = card.match(/<small class="core-use-secondary">佐用：([^<]*)<\/small>/);
-  assert((secondaryLabel ? secondaryLabel[1] : '') === expected, 'top card only groups repeated 有条件 labels without merging different judgments');
+  const secondaryLabel = card.match(/class="core-use-row core-use-secondary"><span class="core-use-label">佐用<\/span><span class="core-use-elements">(.*?)<\/span>/);
+  assert((secondaryLabel ? secondaryLabel[1].replace(/<[^>]+>/g,'') : '') === expected, 'top card omits status suffixes from secondary element names');
+}
+const secondaryOnlyBazi={...referenceBazi,useful:{primaryUse:[],secondaryUse:['金','水'],conditionalUse:[{element:'水',label:'喜中带忌'}]}};
+const secondaryOnlyCard=scriptContext.renderCoreCards(secondaryOnlyBazi);
+assert(secondaryOnlyCard.includes('<span>取用参考</span>') && secondaryOnlyCard.includes('>金</b>、<b class="public-use-choice wx-水">水</b>') && !/不单列|core-use-primary|core-use-secondary|喜中带忌/.test(secondaryOnlyCard), 'secondary-only charts should show a neutral overview without an empty primary row');
+assert(scriptContext.usefulDecisionView(secondaryOnlyBazi).primary.length===0 && scriptContext.usefulDecisionView(secondaryOnlyBazi).secondary.join('、')==='金、水', 'the neutral overview must not promote secondary elements');
+const alternateInjuryCases=[
+  [{year:'乙丑',month:'甲申',day:'己丑',hour:'丁卯'},'伤官格已成','印星制伤护身',['火'],[]],
+  [{year:'甲子',month:'戊辰',day:'丁卯',hour:'壬寅'},'伤官格待成','杂气多神并用',['火'],['土']],
+  [{year:'辛酉',month:'丁午',day:'甲寅',hour:'丙戌'},'伤官格已破','官伤冲突未解',['水','木'],['金']],
+];
+for(const [pillars,title,reason,primary,secondary] of alternateInjuryCases){
+  const data=scriptContext.refreshPatternAnalysis({pillars,dayStem:pillars.day[0]});
+  const verdict=scriptContext.patternConclusionText(data,true);
+  const choices=scriptContext.usefulDecisionView(data);
+  assert(verdict.includes(title)&&verdict.includes(reason)&&!verdict.includes('己伤官制癸正官'), 'same named injury pattern must report this chart’s own verdict and basis: '+verdict);
+  assert(choices.primary.join()===primary.join()&&choices.secondary.join()===secondary.join(), 'general 喜财／喜印 must not override the different chart’s actual engine selection');
 }
 assert(typeof scriptContext.BaziEngine.strengthScore === 'function', 'BaziEngine should expose weighted strengthScore');
 const referenceStrength = scriptContext.BaziEngine.assessStrength(referenceBazi.dayStem, referenceBazi.pillars, scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars));
@@ -714,7 +770,8 @@ assert(Array.isArray(weakWinterPattern.useful.primaryUse) && Array.isArray(weakW
 assert(!weakWinterPattern.useful.primaryUse.some((x) => weakWinterPattern.useful.avoid.includes(x)), `primary useful elements must not also appear as avoid, got ${JSON.stringify(weakWinterPattern.useful)}`);
 assert(['得令', '得地', '得势'].every((label) => weakScore.evidence.some((x) => x.startsWith(label))), `strength evidence should expose qualitative 子平 dimensions, got ${JSON.stringify(weakScore.evidence)}`);
 assert(!weakScore.evidence.some((x) => /\/40|\/100|\d+(?:\.\d+)?分/.test(x)), `displayed strength evidence should not present internal numeric thresholds as doctrine, got ${JSON.stringify(weakScore.evidence)}`);
-assert(scriptContext.usefulPriorityText(weakSeasonBazi).includes('结论：主用') && !scriptContext.usefulPriorityText(weakSeasonBazi).includes('月令用神（定格）'), 'structure view should show one concise final useful-element decision');
+const weakPublicUseful=scriptContext.publicUsefulRows(scriptContext.refreshPatternAnalysis(weakSeasonBazi));
+assert(weakPublicUseful.includes('主用') && !weakPublicUseful.includes('月令用神（定格）'), 'structure view should show one concise final useful-element decision');
 assert(['月令用神（定格）', '扶抑喜用', '调候神', '最终主用'].every((label) => scriptContext.usefulPriorityText(weakSeasonBazi, true).includes(label)), 'technical useful context should retain the detailed role split');
 const extremeColdPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '壬子', month: '癸亥', day: '丁酉', hour: '壬子' }, dayStem: '丁' });
 assert(extremeColdPattern.useful.layers.tiaohou.priority === '主用', `water-heavy winter chart should elevate climate correction, got ${JSON.stringify(extremeColdPattern.useful.layers.tiaohou)}`);
@@ -884,7 +941,7 @@ if (process.env.BAZI_FULL_PATTERN_BASELINE === '1') {
 }
 assert(!referencePattern.mainPattern.includes('食神制杀'), 'a score cannot rescue the previously rejected strict food-control formation');
 const referenceScoreText = '结构分：' + referencePattern.patternStructureScore.toFixed(1);
-assert(!scriptContext.patternLevelText(referenceBazi).includes('理论结构位置：') && !scriptContext.patternLevelText(referenceBazi).includes('理论位置：') && !scriptContext.patternLevelText(referenceBazi).includes(referencePattern.patternPercentileText) && !scriptContext.patternLevelText(referenceBazi).includes('ZP-') && scriptContext.patternLevelText(referenceBazi).startsWith(referencePattern.patternLevelGrade) && scriptContext.patternLevelText(referenceBazi).endsWith(referenceScoreText), 'the page must render the canonical grade and one-decimal score, not a cached pre-fix answer');
+assert(scriptContext.patternLevelText(referenceBazi)===referencePattern.patternLevelGrade, 'the public page must render the canonical qualitative grade without the internal score');
 assert(!scriptContext.patternLevelText(referenceBazi, true).includes('理论结构位置：') && !scriptContext.patternLevelText(referenceBazi, true).includes(referencePattern.patternPercentileText) && scriptContext.patternLevelText(referenceBazi, true).includes(referenceScoreText) && scriptContext.patternLevelText(referenceBazi, true).includes('评分维度：') && scriptContext.patternLevelText(referenceBazi, true).includes('ZP-SCORE-2026.07.15-v4'), 'technical level context must retain the canonical ledger without P position');
 assert(referencePattern.natalPatternLevel.grade === referencePattern.patternLevelGrade && referencePattern.natalPatternLevel.scope === '原局结构固定结论' && referencePattern.realizationBoundary.localScope.length === 2 && referencePattern.realizationBoundary.text.includes('不代表人的价值'), `natal level and reality boundary should be explicit structured outputs, got ${JSON.stringify({ level: referencePattern.natalPatternLevel, boundary: referencePattern.realizationBoundary })}`);
 const repeatedReferencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
@@ -915,6 +972,11 @@ assert(killSealPattern.elementPhenomena[0].canonicalName === '土厚埋金' && k
 assert(killSealPattern.elementPhenomena[0].scope.includes('不作为正式命格') && killSealPattern.elementPhenomena[0].behaviorProfile.scene.includes('任务边界不清') && killSealPattern.elementPhenomena[0].behaviorProfile.counterCondition.includes('目标明确'), `phenomenon should expose scope and falsifiable behavior conditions, got ${JSON.stringify(killSealPattern.elementPhenomena[0])}`);
 assert(scriptContext.BaziEngine.normalizePhenomenonName('土多埋金') === '土厚埋金' && scriptContext.BaziEngine.normalizePhenomenonName('金多土虚') === '金多土变', 'phenomenon aliases should normalize to one canonical term');
 assert(killSealPattern.patternStructures.some((x) => x.name === '杀印相生格' && x.role === '主格' && x.status === '成而有瑕' && x.issues.includes('土厚埋金')), `buried-metal disease should retain kill-seal as main pattern while lowering its finish, got ${JSON.stringify(killSealPattern.patternStructures)}`);
+const killSealStructure = scriptContext.renderStructure({ ...killSealBazi, scores: scriptContext.BaziEngine.scoreWuxing(killSealBazi.pillars), relations: [] });
+const killSealReading = killSealStructure.split('<summary>查看格局说明</summary>')[1].split('</details>')[0];
+assert(['<dt>长处</dt>','有人指点，有人给机会，也有人在关键时出手相助。','<dt>短处</dt>','<dt>一句话</dt>','贵人相助，不止指路。','class="pattern-reading is-favorable"><dt>喜印能化杀生身','class="pattern-reading is-unfavorable"><dt>忌财坏印','<dt>忌印重壅身</dt>'].every(x=>killSealReading.includes(x)) && !killSealReading.includes('土厚埋金'), 'kill-seal reading should provide standard traits and professional principles without implying that buried metal is universal');
+const killSealVerdict = killSealStructure.split('<h3 class="report-heading">格局结论')[1].split('<summary>定格依据</summary>')[0];
+assert(['杀印相生格成而有瑕','土太重，反而削弱了土对辛金的扶助','七杀能生印，但土印过重，土厚埋金，印生身受限'].every(x=>killSealVerdict.includes(x)), 'buried metal should be explained as a chart-specific restriction on the seal-to-self leg in both modes');
 const killSealPotentialDimension = killSealPattern.patternRawScoreBreakdown.dimensions.find((item) => item.key === 'potential');
 assert(killSealPotentialDimension.components.length === 1 && killSealPotentialDimension.components[0].ruleId !== 'ZP-CG-02', `the synthetic kill-seal disease case must not acquire food-control potential from a hidden food clue, got ${JSON.stringify(killSealPotentialDimension)}`);
 assert(killSealPattern.useful.primaryUse.join('、') === '金' && killSealPattern.useful.avoid.includes('土'), `excess seal-earth should stop being an incremental useful element, got ${JSON.stringify(killSealPattern.useful)}`);
@@ -1009,7 +1071,7 @@ assert(foodKillRobbedPattern.monthCommand.baseGod === '比肩' && foodKillRobbed
 assert(foodKillRobbedPattern.useful.primaryUse.includes('火') && foodKillRobbedPattern.useful.conditionalUse.some(x => x.element === '土') && foodKillRobbedPattern.useful.decision.elements.find((x) => x.element === '土').riskEntries.some((x) => x.id === 'unconnected-pattern-remedy' && x.status === 'potential') && !foodKillRobbedPattern.useful.use.includes('水') && foodKillRobbedPattern.useful.layers.pattern.why.includes('枭夺食'), 'food-control should retain food; blocked wealth rescue must be conditional rather than an invented established remedy');
 assert(foodKillRobbedPattern.interactionFlow.steps.some((x) => x.action === '制' && x.status === '作用可达') && foodKillRobbedPattern.interactionFlow.sequence.some((x) => x.name === '枭神夺食' && x.verdict), `food-control with owl damage should expose the reachable control chain and break/rescue order, got ${JSON.stringify(foodKillRobbedPattern.interactionFlow)}`);
 assert(foodKillRobbedPattern.useful.specific.primary.some((x) => x.tenGods.includes('食神')) && foodKillRobbedPattern.useful.specific.avoid.some((x) => x.tenGods.includes('偏印') && !x.tenGods.includes('正印')), `specific useful roles should avoid only owl rather than every seal sharing its element, got ${JSON.stringify(foodKillRobbedPattern.useful.specific)}`);
-assert(!scriptContext.usefulPriorityText(foodKillRobbedBazi).includes('具体十神：') && scriptContext.usefulPriorityText(foodKillRobbedBazi, true).includes('具体十神：') && scriptContext.usefulPriorityText(foodKillRobbedBazi, true).includes('偏印'), 'technical useful context should retain stem and exact ten-god decisions without crowding the page');
+assert(!scriptContext.publicUsefulRows(foodKillRobbedBazi).includes('具体十神：') && scriptContext.usefulPriorityText(foodKillRobbedBazi, true).includes('具体十神：') && scriptContext.usefulPriorityText(foodKillRobbedBazi, true).includes('偏印'), 'technical useful context should retain stem and exact ten-god decisions without crowding the page');
 const unformedFoodKillBazi = {
   person: '食神制杀线索样本',
   gender: '男',
@@ -1135,7 +1197,7 @@ assert(!killSealCandidates.includes('、'), `pattern candidate UI should show on
 assert(!killSealCandidates.includes('用神') && !killSealCandidates.includes('忌神'), 'pattern candidates should not repeat useful/avoid elements');
 assert(scriptContext.specialPatternText(killSealPattern).includes('未见明显从格/化格'), 'normal chart should state no obvious follow/transform pattern');
 assert(scriptContext.publicPatternLevel('偏低') === '偏低' && scriptContext.publicPatternLevel('中等') === '中等' && scriptContext.publicPatternLevel('偏高') === '偏高' && scriptContext.publicPatternLevel('高') === '高' && scriptContext.publicPatternLevel('顶级') === '顶级' && scriptContext.publicPatternLevel('中下') === '中等' && scriptContext.publicPatternLevel('中高') === '高', 'public level labels should expose the agreed five grades directly while retaining legacy-record compatibility');
-assert(scriptContext.patternLevelText(killSealBazi).startsWith(killSealPattern.patternLevelGrade) && scriptContext.patternLevelText(killSealBazi).includes('结构分：' + killSealPattern.patternStructureScore.toFixed(1)) && !/[（(](?:蓄力|稳进|可展|发挥|拓展)档[）)]/.test(scriptContext.patternLevelText(killSealBazi)), 'pattern level must render the current canonical grade and score, not freeze a pre-repair score');
+assert(scriptContext.patternLevelText(killSealBazi)===killSealPattern.patternLevelGrade, 'pattern level must render only the current canonical public grade');
 assert(!html.includes('贵格杂格'), 'structure view should not classify shensha as noble/misc patterns');
 assert(!html.includes('命格线索'), 'structure view should use direct 命格 label');
 const officerMixedBazi = {
@@ -1251,6 +1313,10 @@ positivePhenomenonCases.forEach((item) => {
 });
 const strictKillSealPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '戊申', month: '丁午', day: '辛酉', hour: '壬辰' }, dayStem: '辛' });
 assert(strictKillSealPattern.mainPattern === '杀印相生格' && strictKillSealPattern.patternLevelTieBreak.tier === 2 && strictKillSealPattern.patternLevelTieBreak.label === '严格成格组合', `a clean kill-seal structure should share the strict-combination tie tier instead of relying on a hard-coded name rank, got ${JSON.stringify(strictKillSealPattern.patternLevelTieBreak)}`);
+for (const technical of [false, true]) {
+  const cleanVerdict = scriptContext.patternConclusionText({ patternAnalysis: strictKillSealPattern }, technical);
+  assert(cleanVerdict.includes('杀印相生格已成') && !cleanVerdict.includes('土厚埋金'), 'a clean kill-seal chart must not inherit the buried-metal caveat');
+}
 assert(strictKillSealPattern.patternLevelQualityFloor === '' && strictKillSealPattern.patternLevelHardGate.floorGrade === '偏低' && strictKillSealPattern.patternLevelHardGate.topEligible && strictKillSealPattern.patternLevelGrade === '顶级' && strictKillSealPattern.patternLevelCriteria.some((x) => x.name === '严格成格组合' && x.met) && strictKillSealPattern.patternLevelCriteria.some((x) => x.name === '同分优先级' && x.result.includes('严格成格组合')), `strict kill-seal should reach top grade only after its direct score and strict top gates pass, without a second noble-pattern floor, got ${JSON.stringify({ floor: strictKillSealPattern.patternLevelQualityFloor, grade: strictKillSealPattern.patternLevelGrade, gate: strictKillSealPattern.patternLevelHardGate, criteria: strictKillSealPattern.patternLevelCriteria })}`);
 const strictBladeKillBazi = { pillars: { year: '甲子', month: '丙子', day: '壬子', hour: '戊申' }, dayStem: '壬' };
 assertLegalReviewPillars(strictBladeKillBazi.pillars);
@@ -1621,7 +1687,7 @@ assert(html.includes('function usefulPriorityText'), 'structure UI should includ
 assert(html.includes('function comboConflictText'), 'structure UI should include combo conflict helper');
 assert(html.includes('function currentLuckPatternText'), 'structure UI should include current-luck pattern conclusion helper');
 assert(html.includes('function publicPatternLevel'), 'structure UI should include the agreed public level-label helper');
-assert(html.includes('这个分数评价的是八字原局本身') && html.includes('现实兑现边界：'), 'the page explanation and AI context should expose the agreed realization boundary');
+assert(html.includes('这里评价的是命盘结构的完整程度，不是人生结果') && html.includes('现实兑现边界：'), 'the page explanation and AI context should expose the agreed realization boundary');
 const yiMaoLuck = referenceLuck.rows.find((r) => r.gz === '乙卯');
 assert(referenceLuck.startAge === 4, `reference luck start age should use the exact term-to-birth duration, got ${referenceLuck.startAge}`);
 assert(yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck) === 2026, `乙卯 luck should start in 2026, got ${yiMaoLuck && scriptContext.luckStartYear(referenceBazi, yiMaoLuck)}`);
