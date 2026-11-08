@@ -236,7 +236,7 @@ assert(/function renderBazi\(data\)[\s\S]*currentBaziView='structure'/.test(html
 assert(html.includes('<button type="button" class="active" data-view="structure"'), 'structure tab should be active by default');
 assert(html.includes('<div class="bazi-view active" data-view-panel="structure"'), 'structure panel should be visible by default');
 assert(html.indexOf('<div class="bazi-tabs"') < html.indexOf('<section class="basic-dashboard"'), 'result tabs should appear before basic dashboard content');
-assert(html.indexOf('<section class="basic-dashboard"') > html.indexOf('data-view-panel="structure"'), 'the shared natal table must follow the conclusion instead of preceding it');
+assert(html.indexOf('<section class="basic-dashboard"') < html.indexOf('data-view-panel="structure"'), 'the summary and natal table must precede the detailed structure grid');
 assert(/function switchBaziView\(name\)[\s\S]*renderPillarTable\(currentBazi,name==='luck'\)/.test(html), 'switching result views should retain the shared natal chart and add transit columns only for luck');
 assert(!html.includes('luckStickyMount') && !html.includes('luck-sticky-context'), 'luck comparison should not add a sticky duplicate table that can flicker on mobile');
 assert(html.includes('id="structureSummary"') && /function switchBaziView\(name\)[\s\S]*summary\.hidden=name!=='structure'/.test(html), 'day-master, pillar, strength, and useful summary cards should show only in the structure view');
@@ -599,7 +599,7 @@ const conciseReferenceBazi = { ...referenceBazi, scores: scriptContext.BaziEngin
 const conciseStructureHtml = scriptContext.renderStructure(conciseReferenceBazi);
 assert(conciseStructureHtml.includes('data-verdict="已破"') && conciseStructureHtml.includes('原有配合受到破坏') && conciseStructureHtml.includes('伤官格：已破'), 'both display modes share the frozen broken verdict');
 assert(!/结构分|评分维度|格局层次：|未损日主根[01]|变化前：|变化后：/.test(conciseStructureHtml), 'all expanded public structure excludes score tiers and internal logs');
-assert(conciseStructureHtml.indexOf('本盘结论')<conciseStructureHtml.indexOf('本盘帮助与限制') && conciseStructureHtml.indexOf('本盘帮助与限制')<conciseStructureHtml.indexOf('一般配合原则'), 'conclusion and actual help precede general references');
+assert(conciseStructureHtml.includes('class="structure-report"') && conciseStructureHtml.indexOf('一般配合原则')<conciseStructureHtml.indexOf('本盘结论') && conciseStructureHtml.indexOf('本盘结论')<conciseStructureHtml.indexOf('本盘帮助与限制'), 'the old column grid presents general principles, conclusion, and actual help');
 assert(conciseStructureHtml.includes('表达和做事方式与规则要求相互牵制') && conciseStructureHtml.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
 const bladeBazi={...conciseReferenceBazi,pillars:{year:'壬午',month:'丙午',day:'丙寅',hour:'丁酉'},dayStem:'丙',dayElement:'火',time:{...conciseReferenceBazi.time,used:{year:2002,month:6,day:27,hour:18,minute:35}}};
 const bladeStructure=scriptContext.renderStructure(bladeBazi);

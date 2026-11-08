@@ -1060,7 +1060,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="bazi-engine.js?v=20261108.3-mixed-copy"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
-<script src="bazi-premium.js?v=20261101.2" defer></script>
+<script src="bazi-premium.js?v=20261108.4-layout" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1694,11 +1694,11 @@ function renderBazi(data){
     '<button type="button" data-view="luck" aria-pressed="false" onclick="switchBaziView(\'luck\')">'+modeCopy('阶段与年度','大运流年')+'</button>'+
     '<button type="button" data-view="ai" aria-pressed="false" onclick="switchBaziView(\'ai\')">AI分析</button>'+
     '</div>'+
+    '<section class="basic-dashboard"><div id="structureSummary" class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
     '<div class="bazi-view" data-view-panel="basic"><section class="result-card">'+renderBasicInfo(data)+'</section></div>'+
     '<div class="bazi-view active" data-view-panel="structure"><section class="result-card">'+renderStructure(data)+'</section></div>'+
     '<div class="bazi-view" data-view-panel="luck"><section class="result-card">'+renderLuckPanel(data)+'</section></div>'+
-    '<div class="bazi-view" data-view-panel="ai"><section class="result-card">'+renderAiPanel()+'</section></div>'+
-    '<section class="basic-dashboard" hidden><div id="structureSummary" class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>';
+    '<div class="bazi-view" data-view-panel="ai"><section class="result-card">'+renderAiPanel()+'</section></div>';
   updateBaziSaveButton();
   setBaziAiPendingControls(!!baziAiPendingRequest);
 }
@@ -1710,7 +1710,7 @@ function switchBaziView(name){
   var summary=document.getElementById('structureSummary');
   if(summary)summary.hidden=name!=='structure';
   var dashboard=document.querySelector('.basic-dashboard');
-  if(dashboard)dashboard.hidden=name!=='basic'&&name!=='luck';
+  if(dashboard)dashboard.hidden=name==='ai';
   var chart=document.querySelector('.basic-dashboard .result-card');
   if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,name==='luck');
   if(openingLuck)mobileLuckTracks(document.querySelector('[data-view-panel="luck"]')).forEach(centerSelectedFortune);
@@ -1994,7 +1994,26 @@ function outlookDisplayView(result){
 }
 
 function renderCoreCards(data){
-  return '<div class="core-card"><span>出生日期对应的五行</span><strong>'+data.dayStem+data.dayElement+'</strong></div><div class="core-card"><span>出生组合</span><div class="pillar-stack-summary">'+Object.values(data.pillars).join(' ')+'</div></div><div class="core-card"><span>自身支撑</span><strong>'+(/弱/.test(data.strength)?'支撑较少':/强/.test(data.strength)?'力量较充足':'力量较均衡')+'</strong></div><div class="core-card">'+modeCopy(usefulSummaryText(data,false,true),usefulSummaryText(data,false,false))+'</div>';
+  var p=data.pillars;
+  var useful=usefulDecisionView(data),secondaryUse=useful.secondary,primaryUse=useful.primary;
+  var primaryText=publicUseChoices(primaryUse),secondaryText=publicUseChoices(secondaryUse);
+  var extra=modeCopy(esc(usefulSummaryText(data,true,true)),esc(usefulSummaryText(data,true,false)));
+  function usefulRow(label,kind,content){
+    return '<span class="core-use-row core-use-'+kind+'"><span class="core-use-label">'+label+'</span><span class="core-use-elements">'+content+'</span></span>';
+  }
+  var useRows=primaryText?usefulRow('主用','primary',primaryText)+(secondaryText?usefulRow('佐用','secondary',secondaryText):''):
+    (secondaryText?'<span class="core-use-elements">'+secondaryText+'</span>':'<small>暂无主用或佐用</small>');
+  var pillarNames=[['year','年'],['month','月'],['day','日'],['hour','时']];
+  var pillarStack='<div class="pillar-stack-summary">'+pillarNames.map(function(item){
+    var gz=p[item[0]];
+    return '<div class="pillar-stack"><small>'+item[1]+'</small><b class="wx-'+STEM_WX[gz[0]]+'">'+gz[0]+'</b><b class="wx-'+BRANCH_WX[gz[1]]+'">'+gz[1]+'</b></div>';
+  }).join('')+'</div>';
+  return [
+    '<div class="core-card"><span>日主属性</span><strong class="wx-'+data.dayElement+'">'+data.dayStem+data.dayElement+'</strong><em>'+esc(data.gender)+' · '+esc(data.person||'未命名')+'</em></div>',
+    '<div class="core-card"><span>四柱</span>'+pillarStack+'<em>'+(data.time.enabled?'以真太阳时排盘':data.time.daylightSaving?'夏令时已校正':'按输入时间排盘')+'</em></div>',
+    '<div class="core-card"><span>旺衰参考</span><strong>'+data.strength+'</strong><em>月令 '+p.month[1]+'，'+BRANCH_WX[p.month[1]]+'气当令</em></div>',
+    '<div class="core-card"><span>'+(primaryText?'喜用参考':'取用参考')+'</span><strong class="core-use-value">'+useRows+'</strong><details class="core-context"><summary>查看其他取用结论</summary>'+extra+'</details></div>'
+  ].join('');
 }
 function hiddenText(dayStem,branch){
   return (HIDDEN[branch]||[]).map(function(s){return '<span class="wx-'+STEM_WX[s]+'">'+s+tenGod(dayStem,s)+'</span>'}).join('<br>');
@@ -2042,20 +2061,25 @@ function renderStructure(data){
   data=refreshPatternAnalysis(data);var view=caseDisplayView(data),a=data.patternAnalysis||{};
   var max=Math.max.apply(null,WUXING.map(function(w){return data.scores[w]}));
   var bars=WUXING.map(function(w){return '<div class="wx-row"><span class="wx-'+w+'">'+w+'</span><div><i style="width:'+(max?Math.round(data.scores[w]/max*100):0)+'%"></i></div><em>'+data.scores[w].toFixed(1)+'</em></div>'}).join('');
-  var extra=view.support.slice(3),missing=WUXING.filter(function(w){return data.scores[w]<0.2});
+  var missing=WUXING.filter(function(w){return data.scores[w]<0.2});
   var phenomenon=a.elementPhenomena||[],positivePhenomenon=a.positivePhenomena||[],specials=a.specialPatterns||[];
-  return '<div class="structure-title-row"><div class="section-title">'+modeCopy('本盘说明','格局喜用')+'</div>'+renderDisplayModeControl()+'</div>'+
+  return '<div class="structure-title-row"><div class="section-title">'+modeCopy('本盘说明','格局喜用')+'</div>'+renderDisplayModeControl()+'</div><div class="structure-report"><div class="report-column"><section class="report-section"><h3 class="report-heading">'+modeCopy('一般配合原则','命格')+'</h3>'+modeCopy('','<p class="pattern-result"><b class="pattern-name">'+esc(view.name)+'</b></p>')+'<details class="report-disclosure"><summary>查看格局说明</summary>'+modeCopy('这里只说明一般配合，不能把理想条件当作本人的能力或结果。','<p>格局通则，不等于本盘喜忌。</p>'+publicPatternReading(view.name,true))+'</details></section>'+
     '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">'+modeCopy('本盘结论','格局结论')+contextHelp('formation')+'</h3>'+modeCopy(patternConclusionText(data,false),patternConclusionText(data,true))+modeCopy(caseReadingText(data,false),caseReadingText(data,true))+'</section>'+
-    '<section class="report-section"><h3 class="report-heading">'+modeCopy('本盘帮助与限制','本盘喜用')+contextHelp('useful')+'</h3>'+publicUsefulRows(data)+'</section>'+
+    '</div><div class="report-column"><section class="report-section"><h3 class="report-heading">'+modeCopy('本盘帮助与限制','本盘喜用')+contextHelp('useful')+'</h3>'+publicUsefulRows(data)+'</section>'+
     '<details class="report-disclosure"><summary>本盘作用说明</summary>'+modeCopy(esc('已有支持只说明相应作用接通；上面列出的阻碍仍按本盘状态保留。'),esc('局部救应不代替最终成败；成格、病药与喜用均采用原局已确认结论。'))+'</details>'+
-    '<details class="report-disclosure"><summary>一般配合原则</summary>'+modeCopy('这里只说明一般配合，不能把理想条件当作本人的能力或结果。',publicPatternReading(view.name,true))+'</details>'+
-    '<details class="report-disclosure"><summary>五行分布</summary>'+bars+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div><p>分布值只作排盘参考，不代表现实结果。</p></details>'+
-    '<details class="structure-deep"><summary>完整作用依据</summary>'+modeCopy(extra.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),extra.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))+
-    '<h4>'+modeCopy('自身支撑依据','旺衰依据')+contextHelp('strength')+'</h4>'+modeCopy(caseAuditText(data,false),caseAuditText(data,true))+'<h4>'+modeCopy('相互作用','干支作用')+contextHelp('interaction')+'</h4>'+modeCopy(caseReadingText(data,false),caseReadingText(data,true))+'<p>'+modeCopy('出生组合：','四柱：')+Object.values(data.pillars).join(' ')+'</p><p>'+modeCopy('原有问题与已接通的支持已在本盘结论逐项列出。','同源病点归并；对应药路仍按原局事实保留。')+'</p>'+
+    '<section class="report-section"><h3 class="report-heading">五行分布</h3><div class="report-chart">'+bars+'</div>'+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div><p>分布值只作排盘参考，不代表现实结果。</p></section></div></div>'+
+    '<details class="structure-deep"><summary>完整作用依据</summary><div class="detail-grid">'+
+    detailBox(modeCopy('主要帮助','格局用神'),modeCopy(esc(usefulSummaryText(data,true,true)),esc(usefulSummaryText(data,true,false))))+
+    detailBox(modeCopy('支撑与季节参考','扶抑与调候'),modeCopy(esc(usefulSummaryText(data,true,true)),esc(usefulSummaryText(data,true,false))))+
+    detailBox(modeCopy('自身支撑依据','旺衰依据'),modeCopy(caseAuditText(data,false),caseAuditText(data,true)),contextHelp('strength'))+
+    detailBox(modeCopy('出生力量核对','根气与透藏'),modeCopy(caseAuditText(data,false),caseAuditText(data,true)))+
     (phenomenon.length?detailBox(modeCopy('力量偏性','气势病象'),modeCopy(view.limits.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join('')||'<p>现有配合的限制已在上方列出，不据偏性另判现实结果。</p>',phenomenon.map(function(x){return '<p>'+esc(x.canonicalName||x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('phenomenon')):'')+
     (positivePhenomenon.length?detailBox(modeCopy('优势配合','清秀气象'),modeCopy(view.support.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),positivePhenomenon.map(function(x){return '<p>'+esc(x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('positive-phenomenon')):'')+
-    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false),esc(specialPatternText(a))+caseAuditText(data,true)),contextHelp('special-pattern')):'')+'</details>'+
-    '<p>'+contextHelp('current-luck')+'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button></p><p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
+    detailBox(modeCopy('配合与牵制','清浊去留'),modeCopy(caseReadingText(data,false),caseReadingText(data,true)))+
+    (view.limits.length?detailBox(modeCopy('已有阻碍','组合冲突'),modeCopy(view.limits.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),view.limits.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))):'')+
+    detailBox(modeCopy('问题与支持路径','病药通关'),modeCopy(caseReadingText(data,false),caseReadingText(data,true)))+
+    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false),esc(specialPatternText(a))+caseAuditText(data,true)),contextHelp('special-pattern')):'')+detailBox(modeCopy('当前阶段参考','当前大运格局'),'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button>',contextHelp('current-luck'))+detailBox(modeCopy('相互作用','干支作用'),modeCopy(caseReadingText(data,false),caseReadingText(data,true)),contextHelp('interaction'))+'</div></details>'+
+    '<p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
 }
 function modeCopy(standardBody,professionalBody){
   return '<div class="mode-copy standard-only" data-standard-copy>'+standardBody+'</div><div class="mode-copy professional-only" data-professional-copy>'+professionalBody+'</div>';
