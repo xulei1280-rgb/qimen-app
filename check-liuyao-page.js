@@ -390,7 +390,7 @@ assert.match(fs.readFileSync('./liuyao-usegod.js','utf8'),/本人问自身疾病
 assert.match(fs.readFileSync('./liuyao-usegod.js','utf8'),/medicineWords/);
 assert.doesNotMatch(html,/暂按初爻到上爻列出第一个候选/);
 assert.match(html,/confidence!==['"]高['"]/);
-assert.match(html,/src="bazi-engine\.js\?v=20260905\.1"/);
+assert.match(html,/src="bazi-engine\.js\?v=20261108\.3-mixed-copy"/);
 assert.match(html,/@media\(max-width:620px\)/);
 assert.match(html,/min-height:44px/);
 assert.match(html,/<script src="liuyao-engine\.js\?v=20261101\.1/);
