@@ -27,6 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Useful Priority Fallback — 2026-11-09
+
+- 原裁决没有主用且已有佐用时，按原顺序把佐用升为主用。各项条件和限制保留，岁运仍按原有证据要求判断。
+- 顶部与喜用区共用裁决，顶部展开只显示忌与取法差异。两种卡片状态已在本地 8082 核对，八字、岁运和历法回归通过。
+
 ### Bazi Mobile Luck Selection — 2026-11-08
 
 - 手机打开「大运流年」时，大运与流年分别定位选中项，首尾靠边。切换大运时保留大运行的滚动位置，只定位新流年；手动横滑位置随流年切换保留。

@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261108.3-mixed-copy"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261109.1-useful-priority"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -693,10 +693,16 @@ assert(usefulProof.金.includes('己伤官生申藏庚偏财') && !usefulProof.�
 assert(scriptContext.usefulAiInstruction().includes('不得把不同取法的候选五行合并') && scriptContext.usefulAiInstruction().includes('不能因为问财就把财星判为喜神'), 'AI preserves existing useful-role boundaries');
 const legacyUsefulView=scriptContext.usefulDecisionView({useful:{primaryUse:['木'],secondaryUse:['火'],conditionalUse:[{element:'火',benefit:'legacy benefit',risk:'legacy risk'}],avoid:['土']}});
 assert(legacyUsefulView.conditionalLabels.火==='喜中带忌' && legacyUsefulView.routeDependent.length===0, 'older useful records should retain their compatible labels without inventing a new route disagreement');
-const secondaryOnlyBazi={...referenceBazi,useful:{primaryUse:[],secondaryUse:['金','水'],conditionalUse:[{element:'水',label:'喜中带忌'}]}};
-const secondaryOnlyCard=scriptContext.renderCoreCards(secondaryOnlyBazi);
-assert(secondaryOnlyCard.includes('主用：不单立')&&secondaryOnlyCard.includes('佐用：金、水'),'empty primary must be explicit without promoting secondary in either mode');
-assert(scriptContext.usefulDecisionView(secondaryOnlyBazi).primary.length===0&&scriptContext.usefulDecisionView(secondaryOnlyBazi).secondary.join('、')==='金、水','display never changes secondary roles');
+const promotedBazi=scriptContext.refreshPatternAnalysis({...referenceBazi,pillars:{year:'戊寅',month:'戊午',day:'辛丑',hour:'壬辰'},dayStem:'辛',dayElement:'金'});
+const promotedDecision=promotedBazi.useful.decision;
+assert(promotedDecision.promotedPrimary.join('、')==='金、水'&&promotedBazi.useful.primaryUse.join('、')==='金、水'&&!promotedBazi.useful.secondaryUse.length,'existing secondary choices fill an empty primary in the canonical result');
+assert(promotedDecision.conclusion.conditional.join('、')==='金、水'&&promotedDecision.conditionalUse.some(x=>x.element==='水'&&x.label==='喜中带忌'&&x.risk.includes('制午藏丁七杀')),'promotion retains the evidence and limits of conditional choices');
+const promotedCard=scriptContext.renderCoreCards(promotedBazi);
+const promotedRows=scriptContext.publicUsefulRows(promotedBazi);
+assert(promotedCard.includes('core-use-primary')&&!promotedCard.includes('core-use-secondary')&&promotedRows.includes('data-use-role="primary" data-element="水"')&&promotedRows.includes('原本生印的七杀'),'both page surfaces use the promoted roles and the detailed rows explain the risk');
+const coreExtras=scriptContext.renderCoreCards(conciseReferenceBazi).split('查看其他取用结论</summary>')[1].split('</details>')[0];
+assert(coreExtras.includes('忌：')&&coreExtras.includes('取法差异：')&&!/主用|佐用/.test(coreExtras),'expanded card shows only complementary conclusions');
+assert(scriptContext.renderCoreCards({...referenceBazi,useful:{primaryUse:[],secondaryUse:[]}}).includes('暂无取用结论'),'a chart without primary or secondary choices shows an empty state');
 const alternateInjuryCases=[
   [{year:'乙丑',month:'甲申',day:'己丑',hour:'丁卯'},'伤官格已成','印星制伤护身',['火'],[]],
   [{year:'甲子',month:'戊辰',day:'丁卯',hour:'壬寅'},'伤官格待成','杂气多神并用',['火'],['土']],

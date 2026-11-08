@@ -15,7 +15,7 @@
   var branchGroup={申:'申子辰',子:'申子辰',辰:'申子辰',寅:'寅午戌',午:'寅午戌',戌:'寅午戌',巳:'巳酉丑',酉:'巳酉丑',丑:'巳酉丑',亥:'亥卯未',卯:'亥卯未',未:'亥卯未'};
   var PATTERN_ENGINE_VERSION='BAZI-PATTERN-2026.11.07.1-review';
   var PATTERN_RULE_VERSION='ZP-2026.11.07.1-review';
-  var USEFUL_DECISION_VERSION='ZP-USE-2026.11.07-v2-review';
+  var USEFUL_DECISION_VERSION='ZP-USE-2026.11.09-v3';
   var THEORETICAL_BASELINE_VERSION='ZP-TB-1984-2044-D11-H12-v13-review';
   var PATTERN_SCORE_MODEL_VERSION='ZP-SCORE-2026.07.15-v4';
   var LUCK_RECHECK_VERSION='ZP-LUCK-2026.11.07-v2-review';
@@ -1236,10 +1236,17 @@
     var priorityRanks={'main-remedy':0,pattern:1,climate:2,support:3,reference:4};
     secondary=unique(secondary).sort(function(a,b){return priorityRanks[priorityFor(a)]-priorityRanks[priorityFor(b)]});
     conditionalUse.sort(function(a,b){return secondary.indexOf(a.element)-secondary.indexOf(b.element)});
-    var conclusion={primary:primary,secondary:secondary,conditional:conditionalUse.map(function(c){return c.element}),routeDependent:unique(routeDependent),avoid:unique(avoid)};
     if(selected===sealRoute&&wealthRoute.priority==='main-remedy'&&wealthRoute.active&&secondary.indexOf(wealth)>=0)reason=resource+'主要用于'+(treatHurt?'制伤护身':treatOfficer?'化官杀生身':'补充承载')+'；'+wealth+'有通关作用'+(secondary.indexOf(dayWx)>=0?'，'+dayWx+'作扶身辅助':'')+'，分别按条件使用。';
+    var promotedPrimary=[];
+    if(!primary.length&&secondary.length){
+      promotedPrimary=secondary.slice();
+      primary=secondary;
+      secondary=[];
+      reason=reason.replace(/[。；]+$/,'')+'。原裁决无主用，'+primary.join('、')+'由佐用升为主用，仍按各自条件采用。';
+    }
+    var conclusion={primary:primary,secondary:secondary,conditional:conditionalUse.map(function(c){return c.element}),routeDependent:unique(routeDependent),avoid:unique(avoid)};
     var priority={type:type,text:reason,source:selected.id==='phenomenon-remedy'?'气势病象':selected.layer};
-    return {version:USEFUL_DECISION_VERSION,primaryRouteIds:[selected.id],priority:priority,routes:routes,conclusion:conclusion,elements:decisions,conditionalUse:conditionalUse,boundary:'默认取用不等于具体财运或健康结论；局部作用、完整成格与岁运激活分开判断；潜在风险与条件不足不直接等于忌'};
+    return {version:USEFUL_DECISION_VERSION,primaryRouteIds:[selected.id],priority:priority,routes:routes,conclusion:conclusion,promotedPrimary:promotedPrimary,elements:decisions,conditionalUse:conditionalUse,boundary:'默认取用不等于具体财运或健康结论；局部作用、完整成格与岁运激活分开判断；潜在风险与条件不足不直接等于忌'};
   }
   function usefulElements(dayStem,strength,context){
     context=context||{};
@@ -3265,9 +3272,10 @@
       var outlet=[{from:['比肩','劫财'],to:['食神','伤官'],action:'生'}];
       difference(2,'Y4-blade-outlet','刃禄食伤出口',stepFacts(flow(before,outlet)),stepFacts(flow(after,outlet)),1);
     }
-    usefulLayer(useful.primaryUse,3,1);
-    // Conditional secondary routes count only when their original verified medicine is active now.
-    usefulLayer((useful.secondaryUse||[]).filter(function(wx){
+    // The natal priority fallback does not supply new evidence for a luck-period action.
+    var promotedPrimary=useful.decision&&useful.decision.promotedPrimary||[];
+    usefulLayer((useful.primaryUse||[]).filter(function(wx){return promotedPrimary.indexOf(wx)<0}),3,1);
+    usefulLayer((useful.secondaryUse||[]).concat(promotedPrimary).filter(function(wx){
       var item=(useful.decision&&useful.decision.elements||[]).find(function(x){return x.element===wx});
       var ownSupport=wx===STEM_WX[day]&&element(after,wx).usable&&!element(after,wx).uncertain;
       return ownSupport||!item||!(item.requirements||[]).length||(useful.decision.routes||[]).some(function(r){return (r.elements||[]).indexOf(wx)>=0&&r.active&&r.steps&&r.steps.length&&interactionFlowAnalysis('',after.profiles,after.interactions,[],r.steps).steps.every(function(x){return x.active})});

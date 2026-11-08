@@ -58,7 +58,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
  assert.equal(JSON.stringify(verdicts.standard),JSON.stringify(verdicts.professional),'wording cannot change verdict/direction');
  assert.equal(JSON.stringify(data),frozen,'display never mutates natal facts');
  const dv=context.usefulDecisionView(data),original=data.useful.decision.conclusion;
- if(!original.primary.length&&original.secondary.length){const copy=context.publicUsefulRows(data);assert.ok(copy.includes('主用：不单立')&&copy.includes('佐用：'),'empty primary is an explicit arbitration result, not an unlabelled promoted secondary');}
+ assert.ok(original.primary.length||!original.secondary.length,'secondary choices must fill an empty primary before rendering');
  for(const entry of data.useful.decision.elements){
   const role=dv.routeDependent.includes(entry.element)?'other':dv.avoid.includes(entry.element)?'avoid':dv.primary.includes(entry.element)?'primary':dv.secondary.includes(entry.element)?'secondary':null;
   if(!role)continue;

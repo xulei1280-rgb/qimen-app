@@ -1057,7 +1057,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
-<script src="bazi-engine.js?v=20261108.3-mixed-copy"></script>
+<script src="bazi-engine.js?v=20261109.1-useful-priority"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -1784,6 +1784,13 @@ function caseReadingText(data,technical,view){
 }
 function usefulDisplayReason(data,element,role,technical){
   var view=usefulDecisionView(data),entry=view.elements.find(function(x){return x.element===element})||{},a=data.patternAnalysis||{};
+  var decision=data.useful&&data.useful.decision||{};
+  var promoted=role==='primary'&&(decision.promotedPrimary||[]).includes(element);
+  var condition=promoted&&(decision.conditionalUse||[]).find(function(item){return item.element===element});
+  if(condition){
+    if(!technical)return standardUsefulReason(data,element,role);
+    return condition.benefit.replace(/[。；]+$/,'')+'。取用限制：'+condition.risk.replace(/[。；]+$/,'')+'。'+condition.requirements.join('；');
+  }
   var benefits=entry.benefitEntries||[],benefit=benefits.find(function(b){return view.routes.some(function(r){return r.id===b.routeId&&r.status==='selected'})})||benefits.find(function(b){return b.status==='local'})||benefits.find(function(b){return b.status==='reference'});
   var route=benefit&&view.routes.find(function(r){return r.id===benefit.routeId}),steps=route&&(route.steps||[]).filter(function(s){return s.active})||[];
   function withLimit(text){
@@ -1814,7 +1821,7 @@ function usefulDisplayReason(data,element,role,technical){
   var blocked=(a.patternDisease&&a.patternDisease.items||[]).flatMap(function(d){return d.medicines||[]}).flatMap(function(m){return m.steps||[]}).find(function(s){return !s.active&&s.left&&gods.indexOf(s.left.god)>=0});
   if(blocked)return technical?displayStep(blocked,true)+'受阻；只列原裁决的补充方向，不宣称药路已成。':element+'（'+displayRole(blocked.left.god)+'）的现有作用被牵住，尚未接到需要支持的一方；这里只列补充方向。';
   if(element===data.dayElement)return technical?'比劫补充承载；扶身不自动等于争财。':element+'（自身的同类支持）用于补足支撑；未把同类增加直接认作资源争夺。';
-  if((a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'}))return technical?element+'按金助身、水润泄的原仲裁保留，不升级佐用。':element+'（'+(element==='金'?'增强自身支撑':'给积压的力量安排出口')+'）只作补充帮助，不升为主要帮助。';
+  if((a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'}))return technical?element+'按金助身、水润泄的原有作用取用。':element+'用于'+(element==='金'?'增强自身支撑':'给积压的力量安排出口')+'。';
   if(route&&route.id==='formed-pattern')return technical?'按原已成主格保留'+element+'的任用角色；具体生克仍核对有效路径。':element+'（约束偏旺力量）用于维持已有配合，不表示增加越多越好。';
   if(role==='other')return technical?'保留该独立取法，不并入默认主佐忌。':element+'另有局部用途；这条用途不列入默认增加方向。';
   return technical?'保留原取用仲裁的'+element+'角色，不据元素出现宣布完整成格。':element+'用于补足本盘已有配合；增加它本身不等于所有问题都已解除。';
@@ -1822,8 +1829,9 @@ function usefulDisplayReason(data,element,role,technical){
 function usefulRowsForMode(data,technical,other){
   var view=usefulDecisionView(data),groups=other?[['other',view.routeDependent],['conditional',publicUsefulSeparate(view)]]:[['primary',view.primary],['secondary',view.secondary],['avoid',view.avoid]];
   var labels={primary:'主用',secondary:'佐用',avoid:'忌',other:'独立作用',conditional:'条件用'};
-  return '<dl class="public-use-list">'+groups.map(function(g){
-    if(!g[1].length)return other?'':'<div class="public-use-row"><dt>'+labels[g[0]]+'：'+(g[0]==='primary'?'不单立':'不另列')+'</dt><dd>'+(g[0]==='primary'?'按下方补充方向使用。':g[0]==='avoid'?'不表示其他力量均宜增加。':'')+'</dd></div>';
+  var empty=!other&&!view.primary.length&&!view.secondary.length?'<p class="public-use-empty">暂无取用结论</p>':'';
+  return empty+'<dl class="public-use-list">'+groups.map(function(g){
+    if(!g[1].length)return g[0]==='avoid'?'<div class="public-use-row"><dt>忌：不另列</dt><dd>不表示其他力量均宜增加。</dd></div>':'';
     return g[1].map(function(e){return '<div class="public-use-row" data-use-role="'+g[0]+'" data-element="'+e+'"><dt>'+labels[g[0]]+'：'+publicUseChoices([e])+'</dt><dd>'+esc(technical?usefulDisplayReason(data,e,g[0],true):standardUsefulReason(data,e,g[0]))+'</dd></div>'}).join('');
   }).join('')+'</dl>';
 }
@@ -1997,12 +2005,12 @@ function renderCoreCards(data){
   var p=data.pillars;
   var useful=usefulDecisionView(data),secondaryUse=useful.secondary,primaryUse=useful.primary;
   var primaryText=publicUseChoices(primaryUse),secondaryText=publicUseChoices(secondaryUse);
-  var extra=modeCopy(esc(usefulSummaryText(data,true,false)),esc(usefulSummaryText(data,true,false)));
+  var extra=publicUsefulSummaryRows(useful);
   function usefulRow(label,kind,content){
     return '<span class="core-use-row core-use-'+kind+'"><span class="core-use-label">'+label+'</span><span class="core-use-elements">'+content+'</span></span>';
   }
-  var useRows=primaryText?usefulRow('主用','primary',primaryText)+(secondaryText?usefulRow('佐用','secondary',secondaryText):''):
-    (secondaryText?'<span class="core-use-elements">'+secondaryText+'</span>':'<small>暂无主用或佐用</small>');
+  var useRows=(primaryText?usefulRow('主用','primary',primaryText):'')+
+    (secondaryText?usefulRow('佐用','secondary',secondaryText):'');
   var pillarNames=[['year','年'],['month','月'],['day','日'],['hour','时']];
   var pillarStack='<div class="pillar-stack-summary">'+pillarNames.map(function(item){
     var gz=p[item[0]];
@@ -2012,7 +2020,7 @@ function renderCoreCards(data){
     '<div class="core-card"><span>日主属性</span><strong class="wx-'+data.dayElement+'">'+data.dayStem+data.dayElement+'</strong><em>'+esc(data.gender)+' · '+esc(data.person||'未命名')+'</em></div>',
     '<div class="core-card"><span>四柱</span>'+pillarStack+'<em>'+(data.time.enabled?'以真太阳时排盘':data.time.daylightSaving?'夏令时已校正':'按输入时间排盘')+'</em></div>',
     '<div class="core-card"><span>旺衰参考</span><strong>'+data.strength+'</strong><em>月令 '+p.month[1]+'，'+BRANCH_WX[p.month[1]]+'气当令</em></div>',
-    '<div class="core-card"><span>'+(primaryText?'喜用参考':'取用参考')+'</span><strong class="core-use-value">'+useRows+'</strong><details class="core-context"><summary>查看其他取用结论</summary>'+extra+'</details></div>'
+    '<div class="core-card"><span>喜用参考</span><strong class="core-use-value">'+(useRows||'<small>暂无取用结论</small>')+'</strong><details class="core-context"><summary>查看其他取用结论</summary>'+extra+'</details></div>'
   ].join('');
 }
 function hiddenText(dayStem,branch){
@@ -2157,14 +2165,14 @@ function standardUsefulReason(data,element,role){
     else job='会加重本盘已有的格局损伤，不宜再增加';
   }else if(route&&route.id==='monthly-bing-wei')job=element==='水'?'壬水可缓解夏季暑热，但本盘承担官杀压力的不足仍在，故只作另一取法':'庚金可配合壬水调节暑热，不能替代本盘扶身的需要';
   else if(buried&&element==='金')job='给'+data.dayStem+data.dayElement+'日主添底气，帮你扛住官杀带来的压力';
-  else if(buried&&element==='水')job='润开厚土，让金的才华有出口，用时也要保住印星化解压力的帮助';
+  else if(buried&&element==='水')job='润开厚土，让金的才华有出口'+(risk&&risk.id==='verified-pattern'?'，用水也会牵制原本生印的七杀，要保住这条化杀路径':'，用时也要保住印星化解压力的帮助');
   else if(god==='印星'){
     var controls=steps.some(function(s){return standardGodGroup(s.left.god)==='印星'&&standardGodGroup(s.right.god)==='食伤'});
     var feeds=caseDisplayView(data).support.some(function(x){return x.step&&standardActorElement(x.step.left)===element&&x.step.right.god==='日主'});
     job=(controls?'帮你把才华用得更有章法，':'')+(feeds?'给'+data.dayStem+data.dayElement+'日主添后劲，让你更有底气应对赚钱和做事的压力':'可给自身添后劲，但盘中这份支持还没能充分帮到你');
   }else if(god==='比劫'){
     var blocked=(a.patternDisease&&a.patternDisease.items||[]).flatMap(function(d){return d.medicines||[]}).flatMap(function(m){return m.steps||[]}).some(function(s){return !s.active&&s.left&&standardGodGroup(s.left.god)==='比劫'&&s.right&&s.right.god==='日主'});
-    job='代表和你同类的力量，能帮你扛住压力'+(blocked?'；盘中这份帮扶受牵制，所以只作辅助':'');
+    job='代表和你同类的力量，能帮你扛住压力'+(blocked?'，盘中这份帮扶仍受牵制'+(role==='secondary'?'，所以只作辅助':''):'');
   }
   else if(god==='官杀')job=/强|旺/.test(data.strength)?'给强旺的你立规矩，让冲劲用在做事上':'带来规则和责任，需要先给自己补足应对压力的底气';
   else if(god==='财星')job='能把才华转成收入'+(steps.some(function(s){return standardGodGroup(s.right.god)==='官杀'})?'，再用资源支持规则和责任':'');
@@ -2178,6 +2186,7 @@ function standardUsefulReason(data,element,role){
   }
   if(role!=='avoid'&&risks.some(function(r){return r.id==='wealth-seal'&&r.status==='effective'}))job+='，但求财不能削弱印星给你的支持';
   else if(role!=='avoid'&&risks.some(function(r){return r.id==='wealth-seal'&&r.status==='potential'}))job+='，用时也要保住印星给你的支持';
+  if(role==='primary'&&(data.useful?.decision?.promotedPrimary||[]).includes(element)&&risks.some(function(r){return r.id==='peer-wealth'}))job+='，用时要兼顾资源分配';
   return element+'是'+god+'，'+job+'。';
 }
 function standardStructureAudit(data){
@@ -2453,7 +2462,7 @@ function publicUsefulSeparate(view){
 function publicUsefulSummaryRows(view){
   function row(label,elements){return elements.length?'<span class="core-use-extra">'+label+'：'+publicUseChoices(elements)+'</span>':''}
   return (row('忌',view.avoid)||'<span class="core-use-extra">无忌项</span>')+
-    row('取法差异',view.routeDependent)+row('条件用',publicUsefulSeparate(view));
+    row('取法差异',view.routeDependent);
 }
 function publicUsefulReason(data,view,e,role,technical){
   var entry=view.elements.find(function(item){return item.element===e})||{};

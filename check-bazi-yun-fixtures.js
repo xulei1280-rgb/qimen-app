@@ -35,7 +35,7 @@ for(const pillars of seeds){
 
   save('generate-primary',has('Y5-role-action',e=>e.level==='Y5-primary'&&e.taskId.includes('生喜用')),record);
   save('control-primary',has('Y5-role-action',e=>e.level==='Y5-primary'&&e.taskId.includes('制喜用')),record);
-  save('empty-primary-effective-secondary',!analysis.useful.primaryUse.length&&has('Y5-role-root',e=>e.level==='Y5-secondary-avoid'&&e.taskId.includes('喜用')),record);
+  save('promoted-primary-keeps-luck-guard',!!analysis.useful.decision.promotedPrimary?.length&&has('Y5-role-root',e=>e.level==='Y5-secondary-avoid'&&e.taskId.includes('喜用')),record);
   save('avoid-generated',has('Y5-role-action',e=>e.taskId.includes('生忌')),record);
   save('avoid-controlled',has('Y5-role-action',e=>e.taskId.includes('制忌')),record);
   save('medicine-restored',has('Y3-medicine',e=>e.direction==='positive'),record);
@@ -101,7 +101,7 @@ const contested=R.context('己',{...receivingPillars,luck:'甲寅',flowYear:'己
 assert.equal(contested.interactions.dayMaster.effect,'contest');assert.equal(contested.interactions.dayMaster.usable,false);
 assert.ok(R.compare(receivingBase,contested,receivingAnalysis).review.layerEvidence.flat().some(e=>e.ruleId==='Y3-carry-support'&&e.direction==='negative'),'actual contest still restricts the support, unlike ordinary day combine');
 assert.equal(JSON.stringify(receivingAnalysis.patternDisease),originalMedicine,'temporal receiving guard never edits natal medicine ranks');
-const required=['protected-determined-against-lower-rule','generate-primary','control-primary','empty-primary-effective-secondary','avoid-generated','avoid-controlled','medicine-restored','medicine-damaged','partial-medicine-not-cure','alternate-killing-path','required-path-damaged','required-path-rescued','root-bound-with-alternative','root-bound-without-alternative','nominal-harm-not-root-loss','internal-control-with-bridge','internal-control-without-bridge','transformed-actor-alternate-demand','independent-same-layer-conflict','verified-continuity','Y8-actor-gap'];
+const required=['protected-determined-against-lower-rule','generate-primary','control-primary','promoted-primary-keeps-luck-guard','avoid-generated','avoid-controlled','medicine-restored','medicine-damaged','partial-medicine-not-cure','alternate-killing-path','required-path-damaged','required-path-rescued','root-bound-with-alternative','root-bound-without-alternative','nominal-harm-not-root-loss','internal-control-with-bridge','internal-control-without-bridge','transformed-actor-alternate-demand','independent-same-layer-conflict','verified-continuity','Y8-actor-gap'];
 const missing=required.filter(name=>!found[name]);
 if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify({pairs,legalCharts:seeds.length,found:records,missing,thresholdOnly:{pillars:p,direction:numeric.direction},invalidUnavailable:true},null,2));
 assert.deepEqual(missing,[],'every requested minimal rule family needs a real legal witness');
