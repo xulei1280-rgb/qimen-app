@@ -340,6 +340,7 @@ assert(/pillar-table tr:last-child th,\.pillar-table tr:last-child td\{vertical-
 assert(/@media\(max-width:520px\)[\s\S]*pillar-table tr:last-child td\{font-size:10px;line-height:1\.3;text-align:center\}/.test(html), 'mobile shensha cells should stay horizontally aligned with pillar columns');
 
 const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+const helpDocumentEvents={};
 const scriptContext = {
   BirthTime: require('./birth-time.js'),
   console,
@@ -350,7 +351,7 @@ const scriptContext = {
   confirm: () => true,
   localStorage: { getItem: () => null, setItem: () => {} },
   document: {
-    addEventListener() {},
+    addEventListener(type,handler) {(helpDocumentEvents[type]||(helpDocumentEvents[type]=[])).push(handler)},
     querySelector: () => ({ value: '男' }),
     querySelectorAll: () => [],
     getElementById: () => ({
@@ -618,6 +619,52 @@ for (const name of reviewedPatternNames) {
 }
 for (const technical of [false, true]) {
   assert(new Set(reviewedPatternNames.map(name => scriptContext.publicPatternReading(name, technical))).size === 33, 'all reviewed names should have distinct readings in both modes');
+}
+
+const contextHelpContracts = {
+  missing: '五行缺失不等于命里一定不好',
+  strength: '旺衰不是命好命坏的评分',
+  useful: '不等于数量越多越好',
+  'main-pattern': '格局名称只说明命盘的主要作用路线',
+  'current-luck': '不会把原局永久改成另一个层次',
+  phenomenon: '不是医学诊断，也不等于固定性格',
+  'positive-phenomenon': '不代表才华或成就必然兑现',
+  interaction: '不能单独等同于结婚、破财、疾病',
+  'special-pattern': '条件不足只能作为特殊结构线索',
+  formation: '成而有瑕',
+};
+Object.entries(contextHelpContracts).forEach(([key, expected]) => {
+  const tip = scriptContext.contextHelp(key);
+  assert(tip.includes(`data-help="${key}"`) && tip.includes('class="explain-help-button"') && tip.includes(`aria-controls="explain-help-${key}"`) && tip.includes(`id="explain-help-${key}"`) && tip.includes('role="dialog"') && tip.includes('aria-label="关闭说明"') && tip.includes(expected), `${key} should expose its agreed question-mark explanation, got ${tip}`);
+});
+['function setHelpPopoverState','function closeAllHelpPopovers','function toggleHelpPopover','function closeHelpPopover','help-popover-open','explain-help-backdrop','max-height:calc(100dvh - 32px)','.explain-help:not(.is-open) .explain-help-popover'].forEach((needle) => assert(html.includes(needle), `mobile help dialog safeguard missing ${needle}`));
+assert((html.match(/contextHelp\(/g)||[]).length===10,'all nine semantic context-help render calls plus declaration must survive');
+assert(['missing','useful','formation','strength','current-luck','interaction'].every(key=>conciseStructureHtml.includes(`data-help="${key}"`)), 'current equivalent structure sections render all six unconditional explanations');
+assert(conciseStructureHtml.includes('class="report-chart-note">五行齐全') && conciseStructureHtml.includes('data-help="missing"'), 'the distribution note retains contextual help');
+const helpUsefulSection=conciseStructureHtml.split('data-help="useful"')[1].split('</section>')[0];
+assert(helpUsefulSection.includes('主用：') && helpUsefulSection.includes('主要帮助：'), 'help remains beside the actual useful roles in both modes');
+// Exercise the original common click/touch and keyboard dialog handling, not just helper markup.
+{
+  const doc=scriptContext.document,saved={querySelector:doc.querySelector,querySelectorAll:doc.querySelectorAll,body:doc.body};
+  const helps=[];let focused=0,prevented=0,stopped=0;
+  function help(){const flags=new Set(),attrs={},popover={setAttribute(k,v){attrs[k]=v}},button={setAttribute(k,v){attrs[k]=v},focus(){focused++},closest(){return h}},close={closest(){return h}};
+    const h={flags,attrs,button,close,classList:{contains(k){return flags.has(k)},toggle(k,v){v?flags.add(k):flags.delete(k)}},querySelector(q){return q==='.explain-help-button'?button:q==='.explain-help-close'?close:popover},contains(x){return x===button||x===close}};helps.push(h);return h;}
+  doc.querySelector=()=>helps.find(h=>h.flags.has('is-open'))||null;
+  doc.querySelectorAll=()=>helps.filter(h=>h.flags.has('is-open'));
+  const bodyFlags=new Set();doc.body={classList:{toggle(k,v){v?bodyFlags.add(k):bodyFlags.delete(k)}}};
+  const a=help(),b=help(),event={preventDefault(){prevented++},stopPropagation(){stopped++}};
+  scriptContext.toggleHelpPopover(event,a.button);
+  assert(a.attrs['aria-expanded']==='true'&&a.attrs['aria-hidden']==='false'&&bodyFlags.has('help-popover-open'),'button click/touch opens an announced dialog and body safeguard');
+  scriptContext.toggleHelpPopover(event,b.button);
+  assert(a.attrs['aria-hidden']==='true'&&b.attrs['aria-expanded']==='true','opening another help closes the previous dialog');
+  helpDocumentEvents.keydown.filter(fn=>String(fn).includes("event.key!=='Escape'")).forEach(fn=>fn({...event,key:'Escape'}));
+  assert(b.attrs['aria-expanded']==='false'&&focused===1&&!bodyFlags.has('help-popover-open'),'Escape closes dialog and restores focus');
+  scriptContext.toggleHelpPopover(event,a.button);scriptContext.closeHelpPopover(event,a.close);
+  assert(focused===2&&a.attrs['aria-hidden']==='true','close/backdrop control restores focus');
+  scriptContext.toggleHelpPopover(event,a.button);
+  helpDocumentEvents.click.filter(fn=>String(fn).includes('open.contains')).forEach(fn=>fn({target:{}}));
+  assert(a.attrs['aria-expanded']==='false'&&prevented===stopped,'outside click dismisses help and dialog controls stop propagation');
+  Object.assign(doc,saved);
 }
 
 const usefulNoteHtml=scriptContext.publicUsefulRows(scriptContext.refreshPatternAnalysis(conciseReferenceBazi));
@@ -2061,3 +2108,18 @@ async function checkBaziRecordActions() {
   assert(alerts.length>0 && saved(firstId) && saved(secondId), 'recovery messages must be surfaced while earlier records remain intact');
 }
 checkBaziRecordActions().then(()=>console.log('bazi page checks ok (including luck outlooks and record/AI actions)')).catch(error=>{console.error(error);process.exitCode=1});
+
+// Conditional help cards must follow actual analyzed facts, and disappear without those facts.
+const conditionalHelpSeen=new Set();
+for(const source of [referenceBazi,conciseReferenceBazi,killSealBazi,transformBazi,...positivePhenomenonCases]){
+  const d=scriptContext.refreshPatternAnalysis({...conciseReferenceBazi,pillars:source.pillars,dayStem:source.pillars.day[0]});
+  const rendered=scriptContext.renderStructure(d),a=d.patternAnalysis;
+  for(const [field,key] of [['elementPhenomena','phenomenon'],['positivePhenomena','positive-phenomenon'],['specialPatterns','special-pattern']]){
+    assert(rendered.includes(`data-help="${key}"`)===!!(a[field]||[]).length,`${key} card and explanation follow actual conditional facts`);
+    if((a[field]||[]).length)conditionalHelpSeen.add(key);
+    if((a[field]||[]).length)assert(rendered.indexOf(`data-help="${key}"`)>rendered.indexOf('完整作用依据'), 'conditional help is in the reachable full-basis disclosure');
+  }
+}
+assert(scriptContext.outlookTaskMeaning('handle-kill')==='七杀压力的食神制杀或印化杀承接路径','structured handle-kill translation must explain the specific domain rather than raw internal task label');
+
+assert(conditionalHelpSeen.size===3,'real analyzed fixtures must exercise all three conditional help cards');

@@ -26,12 +26,13 @@ function visible(markup,selected){
 }
 function expandedArtifact(markup,selected){
  const expanded=markup.replace(/<details\b([^>]*)>/g,(all,attrs)=>/\bopen\b/.test(attrs)?all:'<details'+attrs+' open>');
- return '<!doctype html><meta charset="utf-8"><title>Offline expanded copy audit</title><style>.'+(selected==='standard'?'professional-only':'standard-only')+'{display:none!important}</style><body data-display-mode="'+selected+'">'+expanded+'</body>';
+ return '<!doctype html><meta charset="utf-8"><title>Offline expanded copy audit</title><style>.'+(selected==='standard'?'professional-only':'standard-only')+'{display:none!important}</style><body data-display-mode="'+selected+'">'+expanded.replace(/aria-hidden="true"/g,'aria-hidden="false"').replace(/class="explain-help /g,'class="explain-help is-open ')+'</body>';
 }
 const jargon=/正财格|偏财格|伤官格|月刃格|杀印相生|身不任财|印星|伤官见官|杀重身轻|土厚埋金|主用|佐用|月令|根被合|十神|正官|七杀|食神|伤官|正财|偏财|正印|偏印|比肩|劫财|日主|合绊|通根|成格|破格|喜用|扶身|承杀|泄秀|药神/g;
-const forbidden=/可能|或许|看条件|不明确|分情况|分条件|取决于|尚未确认|暂缺整体结论|未定主用|无明确忌项|一部分|看情况|需结合全盘|未损日主根[01]|变化前：|变化后：|固定比例扶身指数|合会变气反馈|旧路径须按共同需求比较|格局层次：[偏中高顶]|结构分：|评分维度：|百分位[：位置]/g;
+const forbidden=/ZP-[A-Z0-9-]+|taskId|beforeTasks|afterTasks|possibleStates|共同任用需求|共同需求|旧路径须按|(?:carry|handle|food|hurt|officer|wealth|special|verified)-(?:wealth|output|officer|kill|seal|mixed|sharing|flow|reversal|continuity)|LK-\d+|Y[2-8]-[a-z-]+|可能|或许|看条件|不明确|分情况|分条件|取决于|尚未确认|暂缺整体结论|未定主用|无明确忌项|一部分|看情况|需结合全盘|未损日主根[01]|变化前：|变化后：|固定比例扶身指数|合会变气反馈|旧路径须按共同需求比较|格局层次：[偏中高顶]|结构分：|评分维度：|百分位[：位置]/g;
 const inputs=[['色魔','男',1993,11,24,5,2],['笠夏','男',1993,7,14,8,40],['小蔓','女',1998,6,23,9,30],['香肠','男',1993,12,13,8,5],['陈伟伟','男',2002,6,27,19,45]];
 const snapshots=[],errors=[];let scanned=0;
+for(const key of ['missing','strength','useful','main-pattern','current-luck','phenomenon','positive-phenomenon','interaction','special-pattern','formation'])for(const selected of ['standard','professional'])audit('help/'+key+'/'+selected,visible(context.contextHelp(key),selected),selected==='standard');
 function audit(label,text,isStandard){scanned++;const bad=text.match(forbidden)||[],terms=isStandard?text.match(jargon)||[]:[];if(bad.length||terms.length)errors.push({label,bad,terms});}
 for(const [person,gender,year,month,day,hour,minute] of inputs){
  const data=context.BaziEngine.createBaziProfile({person,gender,input:{year,month,day,hour,minute},location:{name:'云南省 曲靖市 师宗县',lng:103.9936,lat:24.8222},useTrueSolar:true,useDaylightSaving:false});
@@ -39,6 +40,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
  const luck=context.getLuckData(data,new AuditDate());const cycle=luck.rows.findIndex(r=>context.luckStartYear(data,r)<=2026&&context.luckStartYear(data,r)+10>2026);
  context.luckSelection={luck:cycle,year:2026-context.luckStartYear(data,luck.rows[cycle]),month:null};
  const ctx=context.getSelectedLuckContext(data),outlook=context.getSelectedLuckOutlook(data,ctx),view=context.caseDisplayView(data),parts={basic:context.renderBasicInfo(data),structure:context.renderStructure(data),luck:context.renderLuckPanel(data),aiBasis:context.renderReasoningBasis(data)};
+ for(const key of ['formation','useful','missing','strength','interaction','current-luck'])assert.ok(parts.structure.includes('data-help="'+key+'"'),'rendered page preserves '+key+' help');
  const verdicts={};
  for(const selected of ['standard','professional']){
   mode=selected;context.setDisplayMode(selected,false);
@@ -46,6 +48,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
   const row={person,mode:selected,verdict:verdicts[selected],html:parts,text:{},report:context.buildBaziReport(),prompt:context.buildAiPrompt('解释当前选中的年度与阶段，说明实际帮助和限制')};
   for(const [name,markup] of Object.entries(parts)){row.text[name]=visible(markup,selected);audit(person+'/'+selected+'/'+name,row.text[name],selected==='standard');}
   audit(person+'/'+selected+'/report',row.report,selected==='standard');
+  if(person==='小蔓'&&selected==='professional')assert.ok(row.text.luck.includes('七杀压力的食神制杀或印化杀承接路径：原先可用，本期受到未解破坏。')&&row.report.includes('七杀压力的食神制杀或印化杀承接路径：原先可用，本期受到未解破坏。'),'actual Xiaoman page and export translate handle-kill by domain with its original transition');
   assert.ok(row.prompt.includes('禁止外显结构档位、结构分、评分权重或百分位'));assert.ok(row.prompt.includes('当前显示模式：'+selected));
   // Prompt facts are an internal machine context; visible-answer constraints are audited separately.
   assert.ok(!/层次高低|格局层次：|结构分：|评分维度：/.test(row.prompt),'prompt cannot solicit or publish tiers');

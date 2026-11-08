@@ -1894,7 +1894,7 @@ function mixedOutlookReadout(result){
         'carry-kill':['自身对外部压力的支撑','任杀承载',['B','K']],
         'output-wealth':['产出与资源的衔接','食伤生财任用',['U','W']],
         'wealth-officer':['资源与规则要求的衔接','财生官任用',['W','O']],
-        'handle-kill':['外部压力的承接','制杀化杀的共同需求',['K','B']],
+        'handle-kill':['外部压力的承接','七杀压力的制杀化杀承接路径',['K','B']],
         'officer-blade':['对偏旺力量的约束','官制刃任用',['O','B']]
       },meaning=tasks[e.taskId];
       if(meaning){var conflict=e.taskId==='hurt-officer'||e.taskId==='officer-kill-mixed';standardHeading=meaning[0]+(conflict?(positive?'减轻':'加重'):(positive?'改善':'受阻'));professionalHeading=meaning[1]+(conflict?(positive?'减轻':'加重'):(positive?'改善':'受阻'));groups=meaning[2];}
@@ -1924,6 +1924,19 @@ function mixedOutlookReadout(result){
     provenance:{evidenceSource:'final-adopted-evidence',selection:'highest layer per sign, then rule/task key; actor key identifies the fact only',strengthDominance:false,
       standard:same?'这两项作用同层并列，说明顺序不代表哪一项更强；原有两面结论不变。':'先说明'+layerNames[main.level][0]+'的作用，再列'+layerNames[other.level][0]+'的另一面；这只是呈现重点，原有两面结论不变。',
       professional:same?'两项已采用证据同层并列，不用条数或透藏字面强排；原 mixed 裁决不变。':layerNames[main.level][1]+'先于'+layerNames[other.level][1]+'，仅作呈现聚焦，原 mixed 裁决不变。'}};
+}
+
+function outlookTaskMeaning(id){
+  return ({'handle-kill':'七杀压力的食神制杀或印化杀承接路径',
+    'carry-wealth':'印比对任财的承载支持','carry-output':'印比对食伤泄身的承载支持',
+    'carry-officer':'印比对任官的承载支持','carry-kill':'印比对任杀的承载支持',
+    'hurt-officer':'伤官与正官冲战的制伤护官路径','officer-kill-mixed':'官杀去留的制化配合',
+    'kill-seal':'官杀经印生身的承接路径','food-kill':'食神对七杀的实际制约',
+    'hurt-seal':'印对伤官的约束路径','output-wealth':'食伤生财的接续路径',
+    'wealth-officer':'财生官的接续路径','officer-blade':'官制刃的约束路径',
+    'wealth-sharing':'比劫扶身与实际分财的配合','special-flow':'特殊格顺势与出口路径',
+    'special-reversal':'特殊格的有效逆势作用','climate':'寒暖燥湿对任用的牵制',
+    'verified-continuity':'已核验作用路径'})[id]||'原已核验作用路径';
 }
 
 function outlookDisplayView(result){
@@ -1957,7 +1970,7 @@ function outlookDisplayView(result){
       var stableTask=e.direction==='neutral'&&result.review&&(result.review.afterTasks||[]).find(function(t){return t.state!==null&&t.state!==0});
       var a=e.before||(result.review&&result.review.beforeTasks||[]).find(function(t){return t.id===e.taskId}),b=e.after||(result.review&&result.review.afterTasks||[]).find(function(t){return t.id===e.taskId}),task=a&&a.label||b&&b.label||stableTask&&stableTask.label;
       var plain={'carry-wealth':'自身支撑与资源负担','carry-output':'自身支撑与产出消耗','carry-officer':'自身支撑与规则要求','carry-kill':'自身支撑与外部压力','handle-kill':'处理外部压力的支持路径','hurt-officer':'表达方式与规则要求的冲突','officer-kill-mixed':'不同规则与压力的配合','kill-seal':'承接外部压力并支持自身的路径','output-wealth':'把产出接到资源上的路径','verified-continuity':'已经逐项核对的支持与限制'}[e.taskId||stableTask&&stableTask.id]||'已经核对的实际配合';
-      if(task||e.direction==='neutral')items.push({standard:plain+(e.direction==='positive'?'得到改善。':e.direction==='negative'?'受到更多牵制。':e.direction==='mixed'?'的独立帮助与牵制同时存在。':'保持原有状态。'),professional:(task||'已核验作用')+(a&&b&&a.state!==undefined?'：'+({1:'有效',0:'尚待补足','-1':'存在破坏'}[a.state]||'原状态')+' → '+({1:'有效',0:'尚待补足','-1':'存在破坏'}[b.state]||'现状态'):'延续。'),ruleId:e.ruleId,direction:e.direction});
+      if(task||e.direction==='neutral')items.push({standard:plain+(e.direction==='positive'?'得到改善。':e.direction==='negative'?'受到更多牵制。':e.direction==='mixed'?'的独立帮助与牵制同时存在。':'保持原有状态。'),professional:outlookTaskMeaning(e.taskId||stableTask&&stableTask.id)+(a&&b&&a.state!==undefined?'：'+({1:'原先可用',0:'原先尚待补足','-1':'原先受到未解破坏'}[a.state]||'原先已核验')+'，'+({1:'本期可用',0:'本期尚待补足','-1':'本期受到未解破坏'}[b.state]||'本期已核验')+'。':'延续。'),ruleId:e.ruleId,direction:e.direction});
     }
   });
   if(!items.length&&result.review&&result.review.residualDetails){
@@ -1973,7 +1986,7 @@ function outlookDisplayView(result){
   var unresolved=(result.review&&result.review.afterTasks||[]).find(function(t){return t.state===null&&t.applicable!==false&&!t.auxiliary});
   if(unresolved){
     var bottleneck={'carry-wealth':'资源负担与自身支撑的衔接','carry-output':'产出消耗与自身支撑的衔接','carry-officer':'规则要求与自身支撑的衔接','carry-kill':'外部压力与自身支撑的衔接','handle-kill':'处理外部压力的支持路径','food-kill':'产出对外部压力的约束力度','hurt-seal':'学习支持对表达产出的约束力度','kill-seal':'外部压力转接到自身支持的路径'}[unresolved.id]||'这项配合的实际承接力度';
-    selected=selected.slice(0,2).concat([{standard:'未解瓶颈：'+bottleneck+'还缺充分的强弱依据；以上结论只覆盖已核验作用。',professional:'未解任务：'+unresolved.label+'的力度尚缺充分证据，未将其判为有效或失效。',direction:'neutral',taskId:unresolved.id}]);
+    selected=selected.slice(0,2).concat([{standard:'未解瓶颈：'+bottleneck+'还缺充分的强弱依据；以上结论只覆盖已核验作用。',professional:'未解作用：'+outlookTaskMeaning(unresolved.id)+'的力度尚缺充分证据，未将其判为有效或失效。',direction:'neutral',taskId:unresolved.id}]);
   }
   var mixed=direction==='mixed'?mixedOutlookReadout(result):null;
   if(mixed)label='助：'+mixed.benefit.short.standard+'；牵：'+mixed.cost.short.standard;
@@ -2029,16 +2042,20 @@ function renderStructure(data){
   data=refreshPatternAnalysis(data);var view=caseDisplayView(data),a=data.patternAnalysis||{};
   var max=Math.max.apply(null,WUXING.map(function(w){return data.scores[w]}));
   var bars=WUXING.map(function(w){return '<div class="wx-row"><span class="wx-'+w+'">'+w+'</span><div><i style="width:'+(max?Math.round(data.scores[w]/max*100):0)+'%"></i></div><em>'+data.scores[w].toFixed(1)+'</em></div>'}).join('');
-  var extra=view.support.slice(3);
+  var extra=view.support.slice(3),missing=WUXING.filter(function(w){return data.scores[w]<0.2});
+  var phenomenon=a.elementPhenomena||[],positivePhenomenon=a.positivePhenomena||[],specials=a.specialPatterns||[];
   return '<div class="structure-title-row"><div class="section-title">'+modeCopy('本盘说明','格局喜用')+'</div>'+renderDisplayModeControl()+'</div>'+
-    '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">'+modeCopy('本盘结论','格局结论')+'</h3>'+modeCopy(patternConclusionText(data,false),patternConclusionText(data,true))+modeCopy(caseReadingText(data,false),caseReadingText(data,true))+'</section>'+
-    '<section class="report-section"><h3 class="report-heading">'+modeCopy('本盘帮助与限制','本盘喜用')+'</h3>'+publicUsefulRows(data)+'</section>'+
+    '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">'+modeCopy('本盘结论','格局结论')+contextHelp('formation')+'</h3>'+modeCopy(patternConclusionText(data,false),patternConclusionText(data,true))+modeCopy(caseReadingText(data,false),caseReadingText(data,true))+'</section>'+
+    '<section class="report-section"><h3 class="report-heading">'+modeCopy('本盘帮助与限制','本盘喜用')+contextHelp('useful')+'</h3>'+publicUsefulRows(data)+'</section>'+
     '<details class="report-disclosure"><summary>本盘作用说明</summary>'+modeCopy(esc('已有支持只说明相应作用接通；上面列出的阻碍仍按本盘状态保留。'),esc('局部救应不代替最终成败；成格、病药与喜用均采用原局已确认结论。'))+'</details>'+
     '<details class="report-disclosure"><summary>一般配合原则</summary>'+modeCopy('这里只说明一般配合，不能把理想条件当作本人的能力或结果。',publicPatternReading(view.name,true))+'</details>'+
-    '<details class="report-disclosure"><summary>五行分布</summary>'+bars+'<p>分布值只作排盘参考，不代表现实结果。</p></details>'+
+    '<details class="report-disclosure"><summary>五行分布</summary>'+bars+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div><p>分布值只作排盘参考，不代表现实结果。</p></details>'+
     '<details class="structure-deep"><summary>完整作用依据</summary>'+modeCopy(extra.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),extra.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))+
-    modeCopy(caseAuditText(data,false),caseAuditText(data,true))+'<p>'+modeCopy('出生组合：','四柱：')+Object.values(data.pillars).join(' ')+'</p><p>'+modeCopy('原有问题与已接通的支持已在本盘结论逐项列出。','同源病点归并；对应药路仍按原局事实保留。')+'</p></details>'+
-    '<p><button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button></p><p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
+    '<h4>'+modeCopy('自身支撑依据','旺衰依据')+contextHelp('strength')+'</h4>'+modeCopy(caseAuditText(data,false),caseAuditText(data,true))+'<h4>'+modeCopy('相互作用','干支作用')+contextHelp('interaction')+'</h4>'+modeCopy(caseReadingText(data,false),caseReadingText(data,true))+'<p>'+modeCopy('出生组合：','四柱：')+Object.values(data.pillars).join(' ')+'</p><p>'+modeCopy('原有问题与已接通的支持已在本盘结论逐项列出。','同源病点归并；对应药路仍按原局事实保留。')+'</p>'+
+    (phenomenon.length?detailBox(modeCopy('力量偏性','气势病象'),modeCopy(view.limits.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join('')||'<p>现有配合的限制已在上方列出，不据偏性另判现实结果。</p>',phenomenon.map(function(x){return '<p>'+esc(x.canonicalName||x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('phenomenon')):'')+
+    (positivePhenomenon.length?detailBox(modeCopy('优势配合','清秀气象'),modeCopy(view.support.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),positivePhenomenon.map(function(x){return '<p>'+esc(x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('positive-phenomenon')):'')+
+    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false),esc(specialPatternText(a))+caseAuditText(data,true)),contextHelp('special-pattern')):'')+'</details>'+
+    '<p>'+contextHelp('current-luck')+'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button></p><p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
 }
 function modeCopy(standardBody,professionalBody){
   return '<div class="mode-copy standard-only" data-standard-copy>'+standardBody+'</div><div class="mode-copy professional-only" data-professional-copy>'+professionalBody+'</div>';
@@ -2138,17 +2155,29 @@ function contextHelp(key){
   var items={
     missing:{label:'查看五行缺失说明',title:'五行缺失怎么看？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的是喜神、忌神，还是对格局没有关键作用。</p>'},
     strength:{label:'查看旺衰说明',title:'旺衰代表什么？',body:'<p>旺衰不是命好命坏的评分。它主要说明日主能否承受财官、泄秀和压力，以及应该扶助、疏泄还是制衡。</p>'},
-    useful:{label:'查看喜用说明',title:'喜用怎么看？',body:'<p>喜用表示某种五行或十神在当前结构中能够解决什么问题，不等于数量越多越好。用神过量、位置不对或同时破坏其他结构，也可能由喜转忌。</p>'},
+    useful:{label:'查看喜用说明',title:'喜用怎么看？',body:'<p>喜用表示某种五行或十神在当前结构中能够解决什么问题，不等于数量越多越好。用神过量、位置不对或同时破坏其他结构，也有由喜转忌的边界。</p>'},
     'main-pattern':{label:'查看主要格局说明',title:'主要格局代表什么？',body:'<p>格局名称只说明命盘的主要作用路线，不代表见到某个格名就一定富贵。是否真正成格，还要看根透、清纯、作用可达、破格和救应。</p>'},
     'current-luck':{label:'查看当前大运格局说明',title:'当前大运会改变原局吗？',body:'<p>大运可以补格、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把原局永久改成另一个层次。</p>'},
-    phenomenon:{label:'查看气势病象说明',title:'气势病象是什么？',body:'<p>这里的“病象”是命理结构术语，不是医学诊断，也不等于固定性格。它只说明某种五行气势可能造成的结构偏差与表现倾向。</p>'},
+    phenomenon:{label:'查看气势病象说明',title:'气势病象是什么？',body:'<p>这里的“病象”是命理结构术语，不是医学诊断，也不等于固定性格。它只说明某种五行气势对应的结构偏差与表现倾向。</p>'},
     'positive-phenomenon':{label:'查看清秀气象说明',title:'清秀气象代表什么？',body:'<p>清秀气象表示某类优势具备较好的结构条件，不代表才华或成就必然兑现。是否发挥仍要看整体格局、行运与现实条件。</p>'},
     interaction:{label:'查看干支作用说明',title:'干支作用怎么看？',body:'<p>合、冲、刑、害、破只说明干支之间发生了什么作用，不能单独等同于结婚、破财、疾病或其他具体事件。</p>'},
     'special-pattern':{label:'查看特殊格局说明',title:'特殊格局为什么要严判？',body:'<p>从格、化气格和专旺格必须满足严格条件；条件不足只能作为特殊结构线索，不能直接定为特殊格局。</p>'},
     formation:{label:'查看成格结论说明',title:'成格状态怎么看？',body:'<ul><li><strong>已成：</strong>主要条件成立。</li><li><strong>成而有瑕：</strong>结构成立，但仍有损伤或限制。</li><li><strong>待成：</strong>关键条件不足，只能保留成格方向。</li><li><strong>已破：</strong>关键作用链受损，且救应不足。</li></ul>'}
   };
-  var item=items[key];
-  return item?helpPopover(key,item.label,item.title,item.body,'context-help'):'';
+  var standard={
+    missing:{title:'少了一种五行代表什么？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的力量是在帮助本盘、增加负担，还是没有关键作用。</p>'},
+    strength:{title:'自身支撑代表什么？',body:'<p>自身支撑不是命好命坏的评分。它说明自身能否承受资源、责任、产出消耗和压力，以及该增加支持、疏通出口还是加强约束。</p>'},
+    useful:{title:'帮助与限制怎么看？',body:'<p>这里表示某种五行在当前组合中能够解决什么问题，不等于数量越多越好。帮助过量、位置不对或同时破坏其他配合，也会转成负担。</p>'},
+    'main-pattern':{title:'主要配合代表什么？',body:'<p>名称只说明出生组合的主要作用路线，不代表见到某个名称就一定富贵。还要核对实际支持、连接、阻碍及缓解路径。</p>'},
+    'current-luck':{title:'当前十年会改变出生组合吗？',body:'<p>当前十年能补充支持、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把出生组合永久改成另一个层次。</p>'},
+    phenomenon:{title:'力量偏性是什么？',body:'<p>这里的偏性是传统结构解释，不是医学诊断，也不等于固定性格。它只说明某种五行力量对应的配合偏差与表现倾向。</p>'},
+    'positive-phenomenon':{title:'优势配合代表什么？',body:'<p>这里表示某类优势具备较好的配合条件，不代表才华或成就必然兑现。实际发挥仍受整体配合、当前阶段与现实条件约束。</p>'},
+    interaction:{title:'出生组合的相互作用怎么看？',body:'<p>相连、冲突和牵制只说明不同力量之间发生了什么作用，不能单独等同于结婚、破财、疾病或其他具体事件。</p>'},
+    'special-pattern':{title:'特殊配合为什么要严格核验？',body:'<p>顺着全盘集中方向看或按组合变化后的力量看，都必须满足严格条件；条件不足只能作为线索，不能直接采用特殊判断。</p>'},
+    formation:{title:'配合状态怎么看？',body:'<ul><li><strong>已成：</strong>主要条件成立。</li><li><strong>成而有瑕：</strong>配合成立，但仍有损伤或限制。</li><li><strong>待成：</strong>关键条件不足，只保留原有方向。</li><li><strong>已破：</strong>关键连接受损，且缓解不足。</li></ul>'}
+  };
+  var item=items[key],plain=standard[key];
+  return item?helpPopover(key,item.label,modeCopy(plain.title,item.title),modeCopy(plain.body,item.body),'context-help'):'';
 }
 function renderTenGodSummary(data){
   var counts={};
