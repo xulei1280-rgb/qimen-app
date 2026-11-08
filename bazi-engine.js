@@ -2785,7 +2785,7 @@
     var activationStatus=recheck&&recheck.specialLost.length?'特殊格运中受损':(recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持'))));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261107.1-review';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261108.3-mixed-copy';
   function outlookPending(reason){
     return {direction:'pending',assessment:'input-error',summary:reason,evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'资料校验未通过'};
   }
@@ -2878,9 +2878,18 @@
     var source={title:'《子平真诠》'+({官:'正官',财:'财',印:'印绶',食:'食神',杀:'偏官',伤:'伤官',刃:'阳刃',禄:'建禄月劫'}[family]||'行运')+'取运',url:'https://chinesebooks.github.io/yijingshuji/zipingzhenquan/'+(OUTLOOK_SOURCES[family]||'215729')+'.html'};
     function task(id,label,state,keys,reason,life,ruleId,counter){
       var conditions=unique(keys.reduce(function(out,key){return out.concat(g[key].facts)},[]).concat(reason));
+      // Presentation-only actor snapshots; task states, signatures and arbitration do not read these.
+      var actorGroups={};
+      keys.forEach(function(key){
+        function actor(x,kind){return {pillar:x.pillar,position:x.position,stem:x.stem,branch:x.branch||null,kind:kind,
+          god:x.pillar==='day'&&kind==='干'?'日主':tenGod(dayStem,x.stem),text:(x.branch?x.branch+'藏':'')+x.stem+(x.pillar==='day'&&kind==='干'?'日主':tenGod(dayStem,x.stem)),
+          usable:x.usable!==false&&!x.transformedAway,restricted:kind==='支'&&outlookRootRestricted(x)}}
+        actorGroups[key]={names:g[key].names,command:g[key].command,usable:g[key].usable,uncertain:g[key].uncertain,
+          stems:g[key].stems.map(function(x){return actor(x,'干')}),roots:g[key].roots.map(function(x){return actor(x,'支')})};
+      });
       var taskSource=ruleId==='LK-10'?{title:(analysis.specialPatternQualification.source||['《滴天髓阐微》从象、化象与独象']).join('；'),url:'https://zh.wikisource.org/zh-hans/滴天髓阐微'}:source;
       // LK-03 checks a specific harmful mechanism; its rescue is neutral here, with benefits checked by the usable paths.
-      tasks.push({id:id,label:label,state:state,possibleStates:state===null?(ruleId==='LK-03'?[-1,0]:[-1,0,1]):[state],ruleId:ruleId||'LK-02',source:taskSource,conditions:conditions,counterEvidence:counter||[],
+      tasks.push({id:id,label:label,state:state,actorGroups:actorGroups,possibleStates:state===null?(ruleId==='LK-03'?[-1,0]:[-1,0,1]):[state],ruleId:ruleId||'LK-02',source:taskSource,conditions:conditions,counterEvidence:counter||[],
         reason:reason,life:life||'相关发挥条件发生变化，仍需结合尚存的限制。',signature:JSON.stringify(keys.map(function(key){return g[key].signature}).concat(reason))});
     }
     function possibilities(item){return item.state===null?item.possibleStates:[item.state]}
@@ -3084,6 +3093,243 @@
     var theme=/官杀.*承载/.test(family)?'工作职责、规则要求与承受能力之间的压力':(/承载/.test(family)?'任务与自身承受能力之间的压力':(/比劫分财/.test(family)?'竞争、合作及资源分配上的矛盾':(/财印/.test(family)?'资源投入与学习、支持条件之间的冲突':(/印/.test(family)?'学习及支持资源受到的牵制':(/食伤/.test(family)?'表达、产出及成果转化上的牵制':'相关事务中的矛盾')))));
     return theme+(better?'有所缓解。':'可能加重，需要更多精力协调。');
   }
+  // Y1–Y8 are project arbitration policies; natal qualification and scores stay frozen.
+  function settleTemporalOutlook(before,after,analysis,legacy){
+    if(!analysis.useful)return legacy;
+    var day=before.pillars.day[0],useful=analysis.useful||{},layers=[[],[],[],[],[],[]],checked=[],seen={};
+    function actorKey(x){return [x.pillar,x.kind||'根',x.stem||x.text,x.god||''].join(':')}
+    function element(ctx,wx){return outlookGod(ctx,godNamesForElement(day,wx))}
+    function actors(ctx,wx){
+      var g=element(ctx,wx);
+      // Internal control without a bridge/other root does not become effective support.
+      if(g.uncertain)return [];
+      return g.stems.filter(function(x){return g.roots.length>0}).map(function(x){return Object.assign({kind:'干'},x)}).concat(g.roots.filter(function(x){return !outlookRootRestricted(x)}));
+    }
+    function facts(list){return list.map(function(x){return {key:actorKey(x),pillar:x.pillar,stem:x.stem||null,text:x.text||((x.branch||'')+'藏'+x.stem),kind:x.kind||'根'}})}
+    function add(level,id,direction,subject,a,b,reason){
+      var key=id+':'+direction+':'+JSON.stringify([a,b]);if(seen[key])return;seen[key]=true;
+      var item={ruleId:id,taskId:subject,direction:direction,kind:'temporal-action',text:subject+'：'+reason,life:'',
+        source:{title:'项目 Y1–Y8 岁运工程裁决政策',url:''},level:['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'][level],actors:{before:a,after:b},before:a,after:b,
+        adoptedReason:reason,excludedReason:'较低层不覆盖本层；同因作用只结算一次',conditions:[],counterEvidence:[]};
+      layers[level].push(item);return item;
+    }
+    function difference(level,id,subject,a,b,sign){
+      var ak=a.map(function(x){return x.key}),bk=b.map(function(x){return x.key}),lost=a.filter(function(x){return bk.indexOf(x.key)<0}),gained=b.filter(function(x){return ak.indexOf(x.key)<0});
+      checked.push({subject:subject,before:a,after:b});
+      if(gained.length&&lost.length){
+        checked.push({subject:subject+'替代作用核验',before:a,after:b,reason:'同一任用需求仍有实际路径；替代演员不作为两个独立利弊，不按数量比较强弱'});
+        return;
+      }
+      if(gained.length)add(level,id,sign>0?'positive':'negative',subject,a,b,'新增可用作用：'+gained.map(function(x){return x.text}).join('、'));
+      if(lost.length)add(level,id,sign>0?'negative':'positive',subject,a,b,'原可用作用受限：'+lost.map(function(x){return x.text}).join('、'));
+    }
+    function flow(ctx,chains){
+      var interactions=ctx.interactions,recipient=interactions.dayMaster;
+      // 普通日主合入仍可受生；只在岁运受生末段沿用已有 receivingScope，不把合入擅判真化。
+      if(recipient&&recipient.usable!==false&&recipient.effect==='daymaster-combine'&&chains.some(function(c){return c.to.indexOf('日主')>=0})){
+        interactions=Object.assign({},interactions,{stemCombines:(interactions.stemCombines||[]).filter(function(c){return !(c.effect==='daymaster-combine'&&(c.leftKey==='day'||c.rightKey==='day')&&c.dayTransformQualification&&c.dayTransformQualification.eligible===false)})});
+      }
+      if(chains.length!==1)return interactionFlowAnalysis('',ctx.profiles,interactions,[],chains).steps;
+      var chain=chains[0],steps=[];
+      function entries(names){return names.reduce(function(out,name){
+        var p=ctx.profiles[name]||(name==='日主'?{stemEntries:[ctx.interactions.dayMaster||{position:2,pillar:'day',stem:day,usable:true}]}:{});
+        return out.concat((p.stemEntries||[]).map(function(x){return {god:name,stemEntries:[x],branchEntries:[]}}),(p.branchEntries||[]).map(function(x){return {god:name,stemEntries:[],branchEntries:[x]}}));
+      },[])}
+      // Enumerate concrete pairs through the existing reachability judge, so selecting
+      // a new best actor never makes another still-active actor disappear.
+      entries(chain.from).forEach(function(a){entries(chain.to).forEach(function(b){
+        var profiles=Object.assign({},ctx.profiles);
+        unique(chain.from.concat(chain.to)).forEach(function(name){profiles[name]={stemEntries:[],branchEntries:[]}});
+        profiles[a.god]=a;profiles[b.god]=b;
+        steps=steps.concat(interactionFlowAnalysis('',profiles,interactions,[],[{from:[a.god],to:[b.god],action:chain.action}]).steps);
+      })});
+      return steps;
+    }
+    function stepFacts(steps){return steps.filter(function(x){return x.active}).map(function(x){return {key:actorKey(x.left)+'>'+x.action+'>'+actorKey(x.right),text:x.text,left:x.left,right:x.right,active:true}})}
+    function medicineFacts(item){return (item&&item.medicines||[]).filter(function(m){return m.rank>0}).reduce(function(out,m){return out.concat(stepFacts(m.steps||[]))},[]).filter(function(x,i,a){return a.findIndex(function(y){return x.key===y.key})===i})}
+    var special=analysis.specialPatternQualification;
+    if(special){
+      var lt=legacy.review.beforeTasks.filter(function(t){return t.ruleId==='LK-10'}),rt=legacy.review.afterTasks.filter(function(t){return t.ruleId==='LK-10'});
+      lt.forEach(function(a){var b=rt.find(function(t){return t.id===a.id});if(!b||a.state===null||b.state===null)return;
+        if(a.state!==b.state)add(0,'Y2-special',b.state>a.state?'positive':'negative',b.label,a.conditions,b.conditions,b.reason);
+      });
+    }
+    (analysis.patternDisease&&analysis.patternDisease.items||[]).forEach(function(anchor){
+      function find(ctx){
+        var found=(ctx.patternDisease.items||[]).find(function(x){return x.family===anchor.family&&(x.source||[]).some(function(s){return anchor.source.indexOf(s)>=0})});
+        if(found)return found;
+        // A renamed/absent diagnosis still rechecks the fixed natal medicines; it is never an automatic cure.
+        var medicines=anchor.medicines.map(function(m){var steps=flow(ctx,m.steps||[]);return {name:m.name,steps:steps,rank:steps.some(function(x){return x.active})?1:0}});
+        var rank=medicines.some(function(m){return m.rank>0})?1:0;
+        return {family:anchor.family,source:anchor.source,status:rank?'部分化解':'未解',bestRank:rank,medicines:medicines,anchorRecheck:true};
+      }
+      var a=find(before),b=find(after),af=medicineFacts(a),bf=medicineFacts(b);
+      function anchoredState(ctx,item){
+        var steps=anchor.medicines.reduce(function(out,m){return out.concat(flow(ctx,m.steps||[]))},[]);
+        var load=outlookGod(ctx,anchor.family==='官杀承载不足'?['正官','七杀']:['正财','偏财']);
+        return {rank:item.bestRank,steps:steps.map(function(x){return {from:x.from,to:x.to,action:x.action,active:x.active}}),load:{usable:load.usable,uncertain:load.uncertain,actors:facts(load.stems),roots:facts(load.roots)}};
+      }
+      checked.push({subject:anchor.family+'药路与负荷逐项核验',before:anchoredState(before,a),after:anchoredState(after,b)});
+
+      checked.push({subject:anchor.family,before:{status:a&&a.status,rank:a&&a.bestRank,steps:af},after:{status:b&&b.status,rank:b&&b.bestRank,steps:bf}});
+      function medicineDemand(item){return {family:anchor.family,source:anchor.source,status:item.status,rank:item.bestRank,
+        medicines:item.medicines.filter(function(m){return m.rank>0}).map(function(m){return {name:m.name,rank:m.rank,steps:(m.steps||[]).map(function(s){return {from:s.from,to:s.to,action:s.action,active:s.active}})}})}}
+      if(a.bestRank>0&&b.bestRank>0&&af.length&&bf.length&&JSON.stringify(medicineDemand(a))===JSON.stringify(medicineDemand(b)))
+        checked.push({subject:anchor.family+'同需求药路延续',before:medicineDemand(a),after:medicineDemand(b),physicalEvidence:{before:af,after:bf}});
+
+      // Disappearance of a diagnostic is not proof of cure; demand actual chain changes.
+      if(a&&b&&a.bestRank!==b.bestRank&&JSON.stringify(af)!==JSON.stringify(bf)){
+        var medicineChange=add(1,'Y3-medicine',b.bestRank>a.bestRank?'positive':'negative',anchor.family,af,bf,'对应药路'+a.status+' → '+b.status+'；'+bf.map(function(x){return x.text}).join('；'));
+        if(medicineChange)medicineChange.causalChange={family:anchor.family,source:anchor.source,beforeRank:a.bestRank,afterRank:b.bestRank,
+          verifiedCompleteTransition:!a.anchorRecheck&&!b.anchorRecheck&&((a.bestRank===0&&b.bestRank===2)||(a.bestRank===2&&b.bestRank===0))};
+      }else if(a&&b){
+        var ar=af.map(function(x){return x.key}),br=bf.map(function(x){return x.key});
+        // Replacing a path treating the same disease is not simultaneous gain and loss.
+        if(!af.length&&bf.length)add(1,'Y3-medicine','positive',anchor.family,af,bf,'对应药路接通，'+b.status);
+        else if(af.length&&!bf.length)add(1,'Y3-medicine','negative',anchor.family,af,bf,'原有效药路受阻，'+b.status);
+        else if(JSON.stringify(ar)!==JSON.stringify(br))checked.push({subject:anchor.family+'替代药路',before:af,after:bf,reason:'同需求仍有药路，不凭演员替换判损益'});
+      }
+      if(/承载/.test(anchor.family)){
+        var supportA=stepFacts(flow(before,[{from:['正印','偏印'],to:['日主'],action:'生'}])).concat(stepFacts(flow(before,[{from:['比肩','劫财'],to:['日主'],action:'扶'}])));
+        var supportB=stepFacts(flow(after,[{from:['正印','偏印'],to:['日主'],action:'生'}])).concat(stepFacts(flow(after,[{from:['比肩','劫财'],to:['日主'],action:'扶'}])));
+        // The day stem itself is not an extra supporter.
+        supportA=supportA.filter(function(x){return x.left.pillar!=='day'||x.left.kind!=='干'});
+        supportB=supportB.filter(function(x){return x.left.pillar!=='day'||x.left.kind!=='干'});
+        if((analysis.elementPhenomena||[]).some(function(x){return x.name==='土厚埋金'})){
+          // 印土既有化杀功能保留审计；新增同一印土的生身不抵销其壅身反作用。
+          supportA=supportA.filter(function(x){return !/印/.test(x.left.god)});
+          supportB=supportB.filter(function(x){return !/印/.test(x.left.god)});
+        }
+        if(!layers[1].some(function(x){return x.taskId===anchor.family}))difference(1,'Y3-carry-support',anchor.family+'实际扶身',supportA,supportB,1);
+        var loadNames=anchor.family==='官杀承载不足'?['正官','七杀']:['正财','偏财'];
+        var loadChain=anchor.family==='官杀承载不足'?[{from:loadNames,to:['日主'],action:'制'}]:[{from:['日主'],to:loadNames,action:'制'}];
+        var loadA=stepFacts(flow(before,loadChain)),loadB=stepFacts(flow(after,loadChain));
+        // Added load only harms when its corresponding carrying need remains unmet.
+        if(!after.carryingCapacity.canCarryOutputKill&&JSON.stringify(supportA)===JSON.stringify(supportB))difference(1,'Y3-carry-load',anchor.family+'有效负荷',loadA,loadB,-1);
+      }
+    });
+    (analysis.elementPhenomena||[]).filter(function(x){return x.name==='土厚埋金'}).forEach(function(anchor){
+      ['金','水','土','火'].forEach(function(wx){
+        var a=facts(actors(before,wx)),b=facts(actors(after,wx));
+        // Water must actually receive metal; fire must actually feed earth.
+        if(wx==='水'||wx==='火'){
+          var from=wx==='水'?'金':'火',to=wx==='水'?'水':'土';
+          function effective(ctx){return stepFacts(flow(ctx,[{from:godNamesForElement(day,from),to:godNamesForElement(day,to),action:'生'}]))}
+          a=effective(before);b=effective(after);
+        }
+        difference(1,'Y3-earth-metal',anchor.name+'·'+wx,a,b,wx==='金'||wx==='水'?1:-1);
+      });
+    });
+    // Verified natal main-chain participants are anchors, not a dictionary inferred from its name.
+    (analysis.interactionFlow&&analysis.interactionFlow.steps||[]).filter(function(x){return x.active}).forEach(function(anchor){
+      var a={active:flow(before,[anchor]).some(function(x){return x.active})},b={active:flow(after,[anchor]).some(function(x){return x.active})};
+      checked.push({subject:'必要链 '+anchor.from+'→'+anchor.to,before:a,after:b});
+      if(a.active!==b.active)add(1,'Y3-required-path',b.active?'positive':'negative',anchor.from.join('/')+anchor.action+anchor.to.join('/'),stepFacts(flow(before,[anchor])),stepFacts(flow(after,[anchor])),b.active?'原局必要链接通':'原局必要链受阻');
+    });
+    // 承泄与出口只按实际日主→食伤链；偏弱未新增承接时，泄身不作助力。
+    var outputChain=[{from:['日主'],to:['食神','伤官'],action:'生'}];
+    var supportChain=[{from:['正印','偏印'],to:['日主'],action:'生'}];
+    var supportBefore=stepFacts(flow(before,supportChain)),supportAfter=stepFacts(flow(after,supportChain));
+    if(/强/.test(analysis.strength||before.strength))difference(2,'Y4-output','实际食伤出口',stepFacts(flow(before,outputChain)),stepFacts(flow(after,outputChain)),1);
+    else if(/弱/.test(analysis.strength||before.strength)&&JSON.stringify(supportBefore)===JSON.stringify(supportAfter))difference(2,'Y4-output-load','未增承接时的实际泄身',stepFacts(flow(before,outputChain)),stepFacts(flow(after,outputChain)),-1);
+    if(before.carryingCapacity.canCarryOutputKill&&after.carryingCapacity.canCarryOutputKill){
+      var outletA=stepFacts(flow(before,outputChain)),outletB=stepFacts(flow(after,outputChain));
+      if(outletA.length&&outletB.length&&/强/.test(analysis.strength||before.strength))checked.push({subject:'承泄需求与有效出口延续',before:{canCarry:true,outletActive:true},after:{canCarry:true,outletActive:true},physicalEvidence:{before:outletA,after:outletB}});
+    }
+    // Existing determinate tasks remain the conventional structure layer, with real physical changes.
+    legacy.evidence.filter(function(x){return x.direction==='positive'||x.direction==='negative'}).forEach(function(x){
+      var a=legacy.review.beforeTasks.find(function(t){return t.id===x.taskId}),b=legacy.review.afterTasks.find(function(t){return t.id===x.taskId});
+      if((a||b)&&(!a||!b||a.signature!==b.signature))layers[x.ruleId==='LK-10'?0:2].push(Object.assign({},x,{level:x.ruleId==='LK-10'?'Y2':'Y4',before:a||null,after:b||null,actors:{before:a?a.conditions:[],after:b?b.conditions:[]},adoptedReason:'既有已核验作用：'+x.text,excludedReason:'固定原局主病药或必要链优先；任务缺边仍保留已验真因果'}));
+    });
+    function usefulLayer(elements,level,sign){
+      (elements||[]).forEach(function(wx){
+        difference(level,'Y5-role-root',(sign>0?'喜用':'忌')+wx+'可用根透',facts(actors(before,wx)),facts(actors(after,wx)),sign);
+        // Only concrete reachable one-step actions; no remote five-element-ring inference.
+        ['木','火','土','金','水'].forEach(function(from){
+          if(gen[from]!==wx&&ctrl[from]!==wx)return;
+          var action=gen[from]===wx?'生':'制',chains=[{from:godNamesForElement(day,from),to:godNamesForElement(day,wx),action:action}];
+          function active(ctx){
+            var source=element(ctx,from),target=element(ctx,wx);
+            if(!source.present||source.uncertain||!target.present||target.uncertain)return [];
+            return stepFacts(flow(ctx,chains));
+          }
+          var a=active(before),b=active(after);
+          // Control of an avoid actor requires a verified adverse role, not a generic counter-element.
+          if(sign<0&&action==='制'&&!(useful.decision&&useful.decision.elements||[]).some(function(x){return x.element===wx&&(x.riskEntries||[]).some(function(r){return r.status==='effective'})}))return;
+          difference(level,'Y5-role-action',from+action+(sign>0?'喜用':'忌')+wx,a,b,action==='生'?sign:-sign);
+        });
+      });
+    }
+    // 刃禄已确认偏强时，核验实际食伤出口，不要求先有官杀制刃。
+    if(['刃','禄'].indexOf(before.regularPattern.authority.key)>=0&&/强/.test(analysis.strength||before.strength)&&!layers[2].some(function(x){return x.ruleId==='Y4-output'})){
+      var outlet=[{from:['比肩','劫财'],to:['食神','伤官'],action:'生'}];
+      difference(2,'Y4-blade-outlet','刃禄食伤出口',stepFacts(flow(before,outlet)),stepFacts(flow(after,outlet)),1);
+    }
+    usefulLayer(useful.primaryUse,3,1);
+    // Conditional secondary routes count only when their original verified medicine is active now.
+    usefulLayer((useful.secondaryUse||[]).filter(function(wx){
+      var item=(useful.decision&&useful.decision.elements||[]).find(function(x){return x.element===wx});
+      var ownSupport=wx===STEM_WX[day]&&element(after,wx).usable&&!element(after,wx).uncertain;
+      return ownSupport||!item||!(item.requirements||[]).length||(useful.decision.routes||[]).some(function(r){return (r.elements||[]).indexOf(wx)>=0&&r.active&&r.steps&&r.steps.length&&interactionFlowAnalysis('',after.profiles,after.interactions,[],r.steps).steps.every(function(x){return x.active})});
+    }),4,1);
+    usefulLayer(useful.avoid,4,-1);
+    legacy.review.beforeTasks.forEach(function(a){
+      var b=legacy.review.afterTasks.find(function(t){return t.id===a.id});
+      if(b&&a.state!==null&&a.state!==0&&a.state===b.state&&a.signature===b.signature)
+        checked.push({subject:a.label,before:a.conditions,after:b.conditions});
+    });
+    var climate=useful.layers&&useful.layers.tiaohou;
+    if(climate&&climate.priority==='主用'&&climate.qualification&&climate.qualification.ratioCandidate){
+      (climate.use||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局'+climate.condition+'·'+wx,facts(actors(before,wx)),facts(actors(after,wx)),1)});
+      (climate.avoid||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局偏性增援·'+wx,facts(actors(before,wx)),facts(actors(after,wx)),-1)});
+    }
+    var first=layers.findIndex(function(x){return x.length}),selected=first>=0?layers[first]:[],positive=selected.some(function(x){return x.direction==='positive'}),negative=selected.some(function(x){return x.direction==='negative'});
+    var direction=positive&&negative?'mixed':(positive?'positive':(negative?'negative':null));
+    if(!direction){
+      // Continuity needs nonempty checked actors and states; empty evidence never becomes neutral.
+      var stable=checked.filter(function(x){return JSON.stringify(x.before)===JSON.stringify(x.after)&&JSON.stringify(x.before)!=='[]'&&x.before!=null});
+      var knownStable=stable.filter(function(x){return Array.isArray(x.before)?x.before.length:!!(x.before.steps&&x.before.steps.length||x.before.medicines&&x.before.medicines.length||x.before.active||x.before.canCarry&&x.before.outletActive)});
+      if(knownStable.length&&!special&&!(analysis.monthCommand&&analysis.monthCommand.ambiguous)){
+        direction='neutral';selected=[{ruleId:'Y7-continuity',source:{title:'项目 Y7 逐项延续核验',url:''},level:'Y7',taskId:'verified-continuity',direction:'neutral',kind:'stable',text:'已核验主线延续：'+knownStable.map(function(x){return x.subject}).join('、'),before:knownStable.map(function(x){return x.before}),after:knownStable.map(function(x){return x.after}),actors:{before:knownStable.map(function(x){return x.physicalEvidence?x.physicalEvidence.before:x.before}),after:knownStable.map(function(x){return x.physicalEvidence?x.physicalEvidence.after:x.after})},conditions:[],counterEvidence:[],life:'',adoptedReason:'同一角色的实际作用与可用状态逐项延续'}];
+      }
+    }
+    var review=Object.assign({},legacy.review,{policyVersion:LUCK_OUTLOOK_VERSION,checkedLayers:['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'],checked:checked,layerEvidence:layers,legacyDirection:legacy.direction,legacyTendency:legacy.tendency,legacyAssessment:legacy.assessment});
+    // Y7.4: new coverage rules do not revoke a completed causal verdict by default.
+    if(legacy.assessment==='determined'){
+      var priority=function(e){return e.ruleId==='LK-10'?0:(e.ruleId==='LK-03'||e.ruleId==='LK-05'?1:2)};
+      var oldPriority=Math.min.apply(null,legacy.evidence.filter(function(e){return e.direction!=='neutral'}).map(priority).concat([2]));
+      review.protectedDetermined={direction:legacy.direction,candidateDirection:direction,candidatePriority:first,oldPriority:oldPriority,
+        decision:'preserved',candidateEvidence:selected,oldEvidence:legacy.evidence,
+        reason:'旧判 '+legacy.direction+'：'+legacy.evidence.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。候选第'+first+'层：'+selected.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。'+(first>=oldPriority?'候选不高于旧判第'+oldPriority+'层，不取代原净作用裁决。':'候选未证明同源病药在全失效与整链有效之间切换，不取代原净作用裁决。')};
+      var certificate=first===1&&oldPriority>1&&selected.length&&selected.every(function(e){return e.ruleId==='Y3-medicine'&&e.causalChange&&e.causalChange.verifiedCompleteTransition});
+      if(certificate&&direction!==legacy.direction){
+        review.protectedDetermined.decision='higher-priority-override';
+        review.protectedDetermined.certificate=selected.map(function(e){return {ruleId:e.ruleId,change:e.causalChange,beforeActors:e.before,afterActors:e.after,
+          reason:'旧判仅结算常规格局任务：'+legacy.evidence.map(function(x){return x.text}).join('；')+'；遗漏固定原病 '+e.causalChange.family+' 的对应整链由 rank '+e.causalChange.beforeRank+' 转 '+e.causalChange.afterRank+'：'+e.text+'。Y3 先于旧 Y4。'}});
+      }else{
+      var oldEvidence=legacy.evidence.map(function(e){
+        var a=legacy.review.beforeTasks.find(function(t){return t.id===e.taskId}),b=legacy.review.afterTasks.find(function(t){return t.id===e.taskId});
+        return Object.assign({},e,{level:['Y2','Y3','Y4'][priority(e)],before:a||legacy.review.beforeTasks,after:b||legacy.review.afterTasks,
+          actors:{before:a?a.conditions:legacy.review.beforeTasks.map(function(t){return t.conditions}),after:b?b.conditions:legacy.review.afterTasks.map(function(t){return t.conditions})},
+          adoptedReason:'Y7.4 保留已确定的'+e.text});
+      });
+      return Object.assign({},legacy,{evidence:oldEvidence,review:review});
+      }
+    }
+    if(!direction){
+      var transforms=(after.interactions.stemCombines||[]).filter(function(x){return x.active!==false&&x.effect==='transform'});
+      var replacement=checked.find(function(x){return /替代作用核验/.test(x.subject)&&Array.isArray(x.before)&&x.before.length&&Array.isArray(x.after)&&x.after.length});
+      if(replacement)review.residualDetails={subject:replacement.subject,beforeActors:replacement.before,afterActors:replacement.after,
+        obstruction:(after.interactions.stemCombines||[]).filter(function(x){return x.active!==false&&x.effect!=='transform'}).map(function(x){return {effect:x.effect,left:x.leftKey,right:x.rightKey,text:x.text}}),
+        carryingBefore:before.carryingCapacity.canCarryOutputKill,carryingAfter:after.carryingCapacity.canCarryOutputKill};
+      return Object.assign({},legacy,{assessment:'unsupported',direction:'pending',tendency:null,possibleDirections:[],
+        residualCode:replacement?'Y8-REPLACEMENT-MEDICINE-STRENGTH':transforms.length?'Y8-TRANSFORM-CARRY-ACTOR':'Y8-ACTOR-PATH-GAP',
+        missingFields:replacement?['同一承载需求下印生身与比劫扶身替代药路的药力对照']:transforms.length?['已变气日主的承载主体映射','变气后替代药路的可达作用者']:['可核验的必要角色或有效作用链'],
+        checkedLayers:review.checkedLayers,knownFacts:[before.rawMainPattern,before.strength].concat(transforms.map(function(x){return x.text})).concat(replacement?replacement.before.map(function(x){return '原有效作用：'+x.text}).concat(replacement.after.map(function(x){return '现有效作用：'+x.text})):[]),review:review});
+    }
+    return Object.assign({},legacy,{direction:direction,tendency:null,assessment:'determined',possibleDirections:[direction],summary:'',evidence:selected,
+      reservations:layers.slice(first+1).reduce(function(out,x){return out.concat(x)},[]).concat(legacy.reservations),life:[],basis:'固定原局角色；实际作用与病药优先裁决',review:review});
+  }
   function compareOutlookContexts(before,after,analysis){
     var left=outlookCore(before,analysis),right=outlookCore(after,analysis),evidence=[],reservations=[],uncertainty=[],risks=[];
     var states={1:'有效',0:'未采用或尚待补足','-1':'存在未解破坏'},ids=unique(left.tasks.concat(right.tasks).map(function(x){return x.id}));
@@ -3191,7 +3437,7 @@
     var focus=risks.length?risks[0].task.id:'';
     var subject=/^carry-/.test(focus)?'自身基础与可用支持能否承接当前压力':(/kill/.test(focus)?'任务压力能否得到有效承接':(/wealth|sharing/.test(focus)?'资源转化、分配与自身支持能否配合':(/seal/.test(focus)?'学习与支持资源能否有效发挥作用':(/output|food|hurt/.test(focus)?'表达产出能否得到有效承接':'主要助力能否形成实际作用'))));
     var summary=assessment==='conditional'?(positive&&negative?'已有独立助益与牵制，整体表现还取决于':(positive?'已有改善依据，整体表现还取决于':(negative?'已有受阻依据，整体表现还取决于':'整体表现取决于')))+subject+'。':(assessment==='unsupported'?'当前规则尚不足以归纳这个组合的整体方向。':'');
-    return {direction:direction,tendency:tendency,assessment:assessment,summary:summary,possibleDirections:assessment==='unsupported'?[]:possibleDirections,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}};
+    return settleTemporalOutlook(before,after,analysis,{direction:direction,tendency:tendency,assessment:assessment,summary:summary,possibleDirections:assessment==='unsupported'?[]:possibleDirections,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}});
   }
   function labelOutlook(result,kind){
     var labels={natal:{positive:'助益',neutral:'持平',negative:'受阻',mixed:'利弊并存',pending:'待判'},previous:{positive:'上升',neutral:'持平',negative:'下降',mixed:'利弊并存',pending:'待判'},annual:{positive:'偏吉',neutral:'平',negative:'偏凶',mixed:'吉凶并见',pending:'待判'},increment:{positive:'改善',neutral:'维持',negative:'拖累',mixed:'利弊并存',pending:'待判'}};
