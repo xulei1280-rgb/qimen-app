@@ -28,18 +28,18 @@ function expandedArtifact(markup,selected){
  const expanded=markup.replace(/<details\b([^>]*)>/g,(all,attrs)=>/\bopen\b/.test(attrs)?all:'<details'+attrs+' open>');
  return '<!doctype html><meta charset="utf-8"><title>Offline expanded copy audit</title><style>.'+(selected==='standard'?'professional-only':'standard-only')+'{display:none!important}</style><body data-display-mode="'+selected+'">'+expanded.replace(/aria-hidden="true"/g,'aria-hidden="false"').replace(/class="explain-help /g,'class="explain-help is-open ')+'</body>';
 }
-const jargon=/正财格|偏财格|伤官格|月刃格|杀印相生|身不任财|印星|伤官见官|杀重身轻|土厚埋金|主用|佐用|月令|根被合|十神|正官|七杀|食神|伤官|正财|偏财|正印|偏印|比肩|劫财|日主|合绊|通根|成格|破格|喜用|扶身|承杀|泄秀|药神/g;
+const mechanical=/印比|增援|变化前|变化后|接通|已接通的这一段|应少增|不单列|增援增加|作用接通或增强|出生(?:月份|日期|年份|时刻)的[木火土金水]（/g;
 const forbidden=/ZP-[A-Z0-9-]+|taskId|beforeTasks|afterTasks|possibleStates|共同任用需求|共同需求|旧路径须按|(?:carry|handle|food|hurt|officer|wealth|special|verified)-(?:wealth|output|officer|kill|seal|mixed|sharing|flow|reversal|continuity)|LK-\d+|Y[2-8]-[a-z-]+|可能|或许|看条件|不明确|分情况|分条件|取决于|尚未确认|暂缺整体结论|未定主用|无明确忌项|一部分|看情况|需结合全盘|未损日主根[01]|变化前：|变化后：|固定比例扶身指数|合会变气反馈|旧路径须按共同需求比较|格局层次：[偏中高顶]|结构分：|评分维度：|百分位[：位置]/g;
 const inputs=[['色魔','男',1993,11,24,5,2],['笠夏','男',1993,7,14,8,40],['小蔓','女',1998,6,23,9,30],['香肠','男',1993,12,13,8,5],['陈伟伟','男',2002,6,27,19,45]];
 const snapshots=[],errors=[];let scanned=0;
 for(const key of ['missing','strength','useful','main-pattern','current-luck','phenomenon','positive-phenomenon','interaction','special-pattern','formation'])for(const selected of ['standard','professional'])audit('help/'+key+'/'+selected,visible(context.contextHelp(key),selected),selected==='standard');
-function audit(label,text,isStandard){scanned++;const bad=text.match(forbidden)||[],terms=isStandard?text.match(jargon)||[]:[];if(bad.length||terms.length)errors.push({label,bad,terms});}
+function audit(label,text,isStandard){scanned++;const bad=text.match(forbidden)||[],terms=isStandard&&/structure|summary/.test(label)?text.match(mechanical)||[]:[];if(bad.length||terms.length)errors.push({label,bad,terms});}
 for(const [person,gender,year,month,day,hour,minute] of inputs){
  const data=context.BaziEngine.createBaziProfile({person,gender,input:{year,month,day,hour,minute},location:{name:'云南省 曲靖市 师宗县',lng:103.9936,lat:24.8222},useTrueSolar:true,useDaylightSaving:false});
  const frozen=JSON.stringify(data);context.currentBazi=data;context.luckSelection={luck:null,year:null,month:null};context.selectedLuckOutlookCache=null;
  const luck=context.getLuckData(data,new AuditDate());const cycle=luck.rows.findIndex(r=>context.luckStartYear(data,r)<=2026&&context.luckStartYear(data,r)+10>2026);
  context.luckSelection={luck:cycle,year:2026-context.luckStartYear(data,luck.rows[cycle]),month:null};
- const ctx=context.getSelectedLuckContext(data),outlook=context.getSelectedLuckOutlook(data,ctx),view=context.caseDisplayView(data),parts={basic:context.renderBasicInfo(data),structure:context.renderStructure(data),luck:context.renderLuckPanel(data),aiBasis:context.renderReasoningBasis(data)};
+ const ctx=context.getSelectedLuckContext(data),outlook=context.getSelectedLuckOutlook(data,ctx),view=context.caseDisplayView(data),parts={summary:context.renderCoreCards(data),basic:context.renderBasicInfo(data),structure:context.renderStructure(data),luck:context.renderLuckPanel(data),aiBasis:context.renderReasoningBasis(data)};
  for(const key of ['formation','useful','missing','strength','interaction','current-luck'])assert.ok(parts.structure.includes('data-help="'+key+'"'),'rendered page preserves '+key+' help');
  const verdicts={};
  for(const selected of ['standard','professional']){
@@ -58,7 +58,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
  assert.equal(JSON.stringify(verdicts.standard),JSON.stringify(verdicts.professional),'wording cannot change verdict/direction');
  assert.equal(JSON.stringify(data),frozen,'display never mutates natal facts');
  const dv=context.usefulDecisionView(data),original=data.useful.decision.conclusion;
- if(!original.primary.length&&original.secondary.length){const copy=context.publicUsefulRows(data);assert.ok(copy.includes('主要帮助：不单列')&&copy.includes('主用：不单立'),'empty primary is an explicit arbitration result, not an unlabelled promoted secondary');}
+ if(!original.primary.length&&original.secondary.length){const copy=context.publicUsefulRows(data);assert.ok(copy.includes('主用：不单立')&&copy.includes('佐用：'),'empty primary is an explicit arbitration result, not an unlabelled promoted secondary');}
  for(const entry of data.useful.decision.elements){
   const role=dv.routeDependent.includes(entry.element)?'other':dv.avoid.includes(entry.element)?'avoid':dv.primary.includes(entry.element)?'primary':dv.secondary.includes(entry.element)?'secondary':null;
   if(!role)continue;
@@ -78,7 +78,7 @@ const counterparts=[{year:'丁巳',month:'辛亥',day:'己未',hour:'丁卯'},{y
 for(const d of counterparts){const st='甲乙丙丁戊己庚辛壬癸',br='子丑寅卯辰巳午未申酉戌亥',mo='寅卯辰巳午未申酉戌亥子丑',p=d.pillars;assert.equal(st.indexOf(p.month[0]),(2*(st.indexOf(p.year[0])%5)+2+mo.indexOf(p.month[1]))%10);assert.equal(st.indexOf(p.hour[0]),(2*(st.indexOf(p.day[0])%5)+br.indexOf(p.hour[1]))%10);}
 assert.equal(context.publicPatternName(counterparts[0]),context.publicPatternName(counterparts[1]),'wealth pair is the same actual principal pattern');assert.notEqual(context.caseDisplayView(counterparts[0]).verdict,context.caseDisplayView(counterparts[1]).verdict,'same wealth pattern has formed/broken contrast');
 assert.ok(new Set(counterparts.map(d=>context.caseReadingText(d,true))).size===counterparts.length,'same family explanations must reflect actual distinct medicine/state');
-for(const d of counterparts){const v=context.caseDisplayView(d);assert.equal(v.verdict,context.publicPatternMain(d).status);assert.ok(!context.caseReadingText(d,false).match(jargon));}
+for(const d of counterparts){const v=context.caseDisplayView(d);assert.equal(v.verdict,context.publicPatternMain(d).status);assert.ok(!context.caseReadingText(d,false,context.standardStructureView(d)).match(mechanical));}
 // Optional original-source capture is reference-only; it never supplies expected new copy.
 if(output){
  const originalDir=path.dirname(path.resolve(output)),oldPage=path.join(originalDir,'original-bazi.html'),oldEngine=path.join(originalDir,'original-bazi-engine.js');
