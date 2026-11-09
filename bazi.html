@@ -808,8 +808,9 @@ h1{font-family:"Noto Serif CJK SC","Source Han Serif SC","Songti SC",SimSun,seri
 .pattern-reading.is-unfavorable dt{color:var(--red)}
 .pattern-reading dd{margin:0}
 .pattern-rules-heading{margin:10px 0 4px;font-size:13px;font-weight:600;color:var(--ink)}
+.pattern-traits-note{margin:14px 0 0;color:#74685d;font-size:12px;line-height:1.5}
 .pattern-rules-copy{margin:0}
-.pattern-reading.is-traits{margin-top:14px}
+.pattern-reading.is-traits{margin-top:4px}
 .pattern-reading+.pattern-reading{margin-top:10px}
 .report-fact{margin:10px 0 0}
 .report-fact b{font-weight:500;color:var(--gold)}
@@ -1066,7 +1067,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
-<script src="bazi-engine.js?v=20261109.2-noble-pattern"></script>
+<script src="bazi-engine.js?v=20261110.1-resource-restraint"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -1699,8 +1700,8 @@ function renderBazi(data){
     '<div class="result-heading"><div><h2>'+esc(data.person||'未命名')+'的命盘</h2><p>'+esc(data.gender)+' · '+formatTime(data.time.input)+' · '+esc(data.time.location.name)+'</p></div><div class="result-actions"><button type="button" id="btnEditBazi" onclick="editCurrentBaziInput()">修改出生信息</button><button type="button" id="btnNewBazi" onclick="newBaziChart()">新建八字排盘</button><button type="button" id="btnSaveChart" onclick="saveBaziRecord()">保存命盘</button></div></div>'+
     '<div class="bazi-tabs" role="group" aria-label="命盘分析内容">'+
     '<button type="button" data-view="basic" aria-pressed="false" onclick="switchBaziView(\'basic\')">基本信息</button>'+
-    '<button type="button" class="active" data-view="structure" aria-pressed="true" onclick="switchBaziView(\'structure\')">'+modeCopy('本盘说明','格局喜用')+'</button>'+
-    '<button type="button" data-view="luck" aria-pressed="false" onclick="switchBaziView(\'luck\')">'+modeCopy('阶段与年度','大运流年')+'</button>'+
+    '<button type="button" class="active" data-view="structure" aria-pressed="true" onclick="switchBaziView(\'structure\')">格局喜用</button>'+
+    '<button type="button" data-view="luck" aria-pressed="false" onclick="switchBaziView(\'luck\')">大运流年</button>'+
     '<button type="button" data-view="ai" aria-pressed="false" onclick="switchBaziView(\'ai\')">AI分析</button>'+
     '</div>'+
     '<section class="basic-dashboard"><div id="structureSummary" class="core-cards">'+renderCoreCards(data)+'</div><section class="result-card">'+renderPillarTable(data,false)+'</section></section>'+
@@ -1795,9 +1796,9 @@ function caseReadingText(data,technical,view,highlightGods){
   var renderText=highlightGods?reportGodText:esc;
   var support=view.support.slice(0,3).map(function(item){return item[key]}).join('');
   var limits=view.limits.map(function(item){return item[key]}).join('')||'无';
-  var basis=view.formationBasis?'<dt>成格依据</dt><dd>'+renderText(view.formationBasis)+'</dd>':'';
-  var supportRow=support||!basis?'<dt>'+(technical?'已有救应':'已有支撑')+'</dt><dd>'+renderText(support||'无')+'</dd>':'';
-  return '<dl class="pattern-reading">'+basis+supportRow+'<dt>主要受限</dt><dd>'+renderText(limits)+'</dd></dl>';
+  var basis=view.formationBasis?'<dt>成格依据：</dt><dd>'+renderText(view.formationBasis)+'</dd>':'';
+  var supportRow=support||!basis?'<dt>'+(technical?'已有救应':'已有支撑')+'：</dt><dd>'+renderText(support||'无')+'</dd>':'';
+  return '<dl class="pattern-reading">'+basis+supportRow+'<dt>主要受限：</dt><dd>'+renderText(limits)+'</dd></dl>';
 }
 function monthlyBingWeiReference(data,element,technical){
   var positions={year:'年',month:'月',day:'日',hour:'时'};
@@ -2312,8 +2313,41 @@ function caseUsefulLinkText(data){
   var main=choices(view.primary,'primary'),secondary=choices(view.secondary,'secondary'),avoid=choices(view.avoid,'avoid');
   return [main&&'以'+main+'为主',secondary&&'用'+secondary+'辅助',avoid&&'忌'+avoid].filter(Boolean).join('，');
 }
-function caseLocalWealthReading(data){
+function earthRestraintIsReference(view,review){
+  return review.phenomenon==='土厚埋金'&&review.step&&review.step.active&&view.routeDependent.includes(review.element)&&review.source;
+}
+function resourceRestraintCopy(view,review){
+  var route=view.routes.find(function(item){return item.id==='wealth-flow'&&item.active&&!item.transmissionActive});
+  var contact=review.step,protection=review.protectedPattern;
+  var effect=review.phenomenon==='土厚埋金'?'木可以疏土，缓解土厚埋金':review.element+'可以制约过重的'+review.excess+'，减轻'+review.phenomenon;
+  var localWealth=route&&route.elements.includes(review.element)&&(route.steps||[]).find(function(item){return item.active});
+  var standard=effect+'。'+(contact&&contact.active?'本盘'+contact.left.text+'能牵制'+contact.right.text+'。':'本盘尚未见这条制约接通'+(contact&&contact.left?'（'+contact.status+'）':'')+'。');
+  var professional=effect+'。'+(contact?contact.text+'。':'');
+  if(localWealth){
+    standard+='原局另有局部生财的作用。';
+    professional+='另有局部生财，'+displayStep(localWealth,true)+'。';
+  }
+  if(protection){
+    var reason=review.element+'也会牵制'+protection.name+'所用的印星';
+    standard+=reason+(protection.replaceable?'。原局另有可用的印星配合，但还要看加用'+review.element+'后能保住多少支撑。':'。现有配合里未见完整替代。');
+    professional+=protection.step.left.text+'制'+protection.step.right.text+'，触及'+protection.name+'所需印路'+(protection.replaceable?'。原局另有可达印路，加用后仍须复核。':'，当前未见完整替代链。');
+  }
+  if(review.capacity!=='supported'){
+    standard+='日主偏弱，用财还要有足够的力量承接。';
+    professional+='任财条件尚未充分落实。';
+  }
+  var conclusion=view.avoid.includes(review.element)?'本盘仍列为忌。':(view.primary.includes(review.element)||view.secondary.includes(review.element))?'按上方所列作用取用，制印还需单独核实。':'暂未确认加用后能减轻'+review.phenomenon+'，所以未列入主用、佐用。';
+  return {standard:standard+conclusion,professional:professional+conclusion};
+}
+function caseAlternativeUseReading(data){
   var view=usefulDecisionView(data);
+  var remedy=view.routes.find(function(item){return item.resourceRestraint});
+  if(remedy){
+    var review=remedy.resourceRestraint;
+    if(earthRestraintIsReference(view,review))return '';
+    var copy=resourceRestraintCopy(view,review),source='取法见'+review.source+'。';
+    return modeCopy('<p class="report-fact">'+reportGodText(copy.standard+source)+'</p>','<p class="report-fact">'+reportGodText(copy.professional+source)+'</p>');
+  }
   var route=view.routes.find(function(item){return item.id==='wealth-flow'&&item.active&&!item.transmissionActive});
   if(!route)return '';
   var entry=view.elements.find(function(item){
@@ -2343,15 +2377,15 @@ function renderStructure(data){
   var usefulLink=caseUsefulLinkText(data);
   var patternAlias={'月刃格':'羊刃格','从格：从儿格':'从食伤格'}[view.name];
   var noblePattern=a.natalNoblePattern;
-  return '<div class="structure-title-row"><div class="section-title">'+modeCopy('本盘说明','格局喜用')+'</div>'+renderDisplayModeControl()+'</div><div class="structure-report"><div class="report-column"><section class="report-section"><h3 class="report-heading">命格</h3>'+
+  return '<div class="structure-title-row"><div class="section-title">格局喜用</div>'+renderDisplayModeControl()+'</div><div class="structure-report"><div class="report-column"><section class="report-section"><h3 class="report-heading">命格</h3>'+
     '<p class="pattern-result"><b class="pattern-name">'+esc(view.name)+(noblePattern?'·<span class="pattern-noble">贵格</span>':'')+'</b>'+
     (patternAlias?'<span class="pattern-alias">又称'+esc(patternAlias)+'</span>':'')+'</p>'+
-    '<h4 class="pattern-rules-heading">格局喜忌</h4>'+
+    '<h4 class="pattern-rules-heading">格局喜忌：</h4>'+
     modeCopy('<p class="pattern-rules-copy">'+reportGodText(standardPatternPrinciple(view.name))+'</p>',publicPatternReading(view.name,true))+
     publicPatternReading(view.name,false)+'</section>'+
-    '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">'+modeCopy('本盘结论','格局结论')+contextHelp('formation')+'</h3>'+modeCopy(patternConclusionText(data,false,view),patternConclusionText(data,true,view))+modeCopy(caseReadingText(data,false,view,true),caseReadingText(data,true,view,true))+caseLocalWealthReading(data)+(usefulLink?'<p class="report-fact">本盘取用'+reportGodText(usefulLink)+'。</p>':'')+'</section>'+
+    '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">本盘命格结论'+contextHelp('formation')+'</h3>'+modeCopy(patternConclusionText(data,false,view),patternConclusionText(data,true,view))+modeCopy(caseReadingText(data,false,view,true),caseReadingText(data,true,view,true))+caseAlternativeUseReading(data)+(usefulLink?'<p class="report-fact">本盘取用'+reportGodText(usefulLink)+'。</p>':'')+'</section>'+
     '</div><div class="report-column"><section class="report-section"><h3 class="report-heading">'+modeCopy('喜用参考','喜用参考')+contextHelp('useful')+'</h3>'+publicUsefulRows(data)+'</section>'+
-    '<section class="report-section"><h3 class="report-heading">五行分布</h3><div class="report-chart">'+bars+'</div>'+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div><p>分布值只作排盘参考，不代表现实结果。</p></section></div></div>'+
+    '<section class="report-section"><h3 class="report-heading">五行分布</h3><div class="report-chart">'+bars+'</div>'+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div></section></div></div>'+
     '<details class="structure-deep"><summary>完整作用依据</summary><div class="detail-grid">'+
     detailBox(modeCopy('主要帮助','格局用神'),modeCopy(esc(usefulSummaryText(data,true,false)),esc(usefulSummaryText(data,true,false))))+
     detailBox(modeCopy('支撑与季节参考','扶抑与调候'),modeCopy('喜用先按本盘格局取舍；季节调节的独立用途另列，不把两种取法合成一组。',esc(usefulSummaryText(data,true,false))))+
@@ -2635,19 +2669,29 @@ function publicUsefulEffect(data,view,element,role){
 }
 function publicUsefulRows(data){
   var view=usefulDecisionView(data);
+  var remedy=view.routes.find(function(route){return route.resourceRestraint&&earthRestraintIsReference(view,route.resourceRestraint)});
+  var review=remedy&&remedy.resourceRestraint,restraintCopy=review&&resourceRestraintCopy(view,review);
   var references=view.routes.filter(function(route){
     return route.status==='reference'&&route.source&&
       (route.id==='monthly-bing-wei'||route.id.startsWith('special-conditional-'))&&
       route.elements.some(function(element){return view.routeDependent.includes(element)});
   });
+  function referenceRow(label,element,copy){
+    return '<p class="public-use-reference"><strong>'+label+' · '+publicUseChoices([element])+'</strong>　'+reportGodText(copy)+'</p>';
+  }
   function render(technical){
-    return usefulRowsForMode(data,technical)+references.map(function(route){
+    var rows=usefulRowsForMode(data,technical)+references.map(function(route){
       var monthly=route.id==='monthly-bing-wei';
       var element=route.elements.find(function(item){return view.routeDependent.includes(item)});
-      var label=monthly?'调候参考':'顺势取法参考 · '+publicUseChoices([element]);
+      var label=monthly?'调候参考':'顺势取法参考';
       var text=monthly?monthlyBingWeiReference(data,element,technical):route.source+'。'+usefulDisplayReason(data,element,'other',technical);
-      return '<p class="public-use-reference"><b>'+label+'</b>　'+reportGodText(text)+'</p>';
+      return referenceRow(label,element,text);
     }).join('');
+    if(review){
+      var source=review.source.includes('《穷通宝鉴·三夏辛金》')?'《穷通宝鉴·三夏辛金》论午月辛金：「若水土多见，见甲方妙。」':'取法见'+review.source+'。';
+      rows+=referenceRow('疏土参考',review.element,source+(technical?restraintCopy.professional:restraintCopy.standard));
+    }
+    return rows;
   }
   return modeCopy(render(false),render(true));
 }
@@ -3152,10 +3196,11 @@ function publicPatternReading(name,technical){
   function list(items,kind){
     var labels={长处:'正面特质',短处:'负面特质'};
     return '<dl class="pattern-reading is-'+kind+'">'+items.map(function(row){
-      return '<dt>'+reportGodText(labels[row[0]]||row[0])+'</dt><dd>'+reportGodText(row[1])+'</dd>';
+      return '<dt>'+reportGodText(labels[row[0]]||row[0])+(kind==='traits'?'：':'')+'</dt><dd>'+reportGodText(row[1])+'</dd>';
     }).join('')+'</dl>';
   }
-  return technical?list(rows[1],'favorable')+list(rows[2],'unfavorable'):list(rows[0],'traits');
+  if(technical)return list(rows[1],'favorable')+list(rows[2],'unfavorable');
+  return '<p class="pattern-traits-note">成格时的特质，本盘见下方「本盘命格结论」</p>'+list(rows[0],'traits');
 }
 function publicPatternMeaning(name,technical){
   var meanings={

@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261109.2-noble-pattern"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261110.1-resource-restraint"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -602,7 +602,8 @@ const conciseStructureText=withoutGodHighlight(conciseStructureHtml);
 assert(conciseStructureHtml.includes('data-verdict="已破"') && conciseStructureText.includes('伤官格破格：伤官见官') && conciseStructureText.includes('伤官格：已破'), 'both display modes share the frozen broken verdict');
 assert(!/结构分|评分维度|格局层次：|未损日主根[01]|变化前：|变化后：/.test(conciseStructureHtml), 'all expanded public structure excludes score tiers and internal logs');
 const patternHeading=conciseStructureHtml.indexOf('<h3 class="report-heading">命格</h3>');
-assert(conciseStructureHtml.includes('class="structure-report"') && patternHeading>=0 && patternHeading<conciseStructureHtml.indexOf('本盘结论') && conciseStructureHtml.indexOf('本盘结论')<conciseStructureHtml.indexOf('喜用参考'), 'the column grid presents the chart pattern, conclusion, and actual help');
+const natalConclusionHeading=conciseStructureHtml.indexOf('<h3 class="report-heading">本盘命格结论');
+assert(conciseStructureHtml.includes('class="structure-report"') && patternHeading>=0 && patternHeading<natalConclusionHeading && natalConclusionHeading<conciseStructureHtml.indexOf('喜用参考'), 'the column grid presents the chart pattern, conclusion, and actual help');
 assert(conciseStructureText.includes('表达和做事方式与规则要求冲突') && conciseStructureText.includes('官杀又带来规则与压力，自己难以同时应付') && !conciseStructureText.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
 assert(scriptContext.standardGodGroup('伤官')==='食伤' && scriptContext.standardGodGroup('劫财')==='比劫', 'standard labels retain the actual ten-god family');
 assert(withoutGodHighlight(conciseStructureHtml).includes('木是印星，作用是制伤护身，帮你把才华用得更有章法') && withoutGodHighlight(conciseStructureHtml).includes('土是食伤，再添会加重官伤冲突。伤官已经冲击所需官星'), 'standard useful copy explains the chart-specific job and damage');
@@ -618,7 +619,7 @@ assert(!/出生月份的木（学习和支持）|应少增|已有缓解，尚未
       for(const item of view.support.slice(0,3))if(item.step&&useful.avoid.includes(scriptContext.standardActorElement(item.step.left)))assert(item.standard.includes('原局已有的')&&item.standard.includes('不宜再添'), person+' supporting taboo element must not imply adding more');
       assert(!view.support.some(item=>/同时也加重|不能消除自身/.test(item.standard)),person+' support entries keep limitations in the limits section');
       if(person==='笠夏')assert(view.limits.filter(item=>item.standard&&/身弱|自身力量不足/.test(item.standard)).length===1,'overlapping carrying limits are stated once');
-      if(person==='陈伟伟')assert(copy.includes('<dt>主要受限</dt><dd>无</dd>'),'formed blade shows an empty limits field directly');
+      if(person==='陈伟伟')assert(copy.includes('<dt>主要受限：</dt><dd>无</dd>'),'formed blade shows an empty limits field directly');
     }
   } finally {scriptContext.modeCopy=modeCopy;}
 }
@@ -638,7 +639,7 @@ const reviewedPatternNames = [
 for (const name of reviewedPatternNames) {
   const standard = scriptContext.publicPatternReading(name, false);
   const professional = scriptContext.publicPatternReading(name, true);
-  assert(['正面特质','负面特质','一句话'].every(label => standard.includes('<dt>'+label+'</dt>')), name+' should have its own complete plain-language traits');
+  assert(['正面特质','负面特质','一句话'].every(label => standard.includes('<dt>'+label+'：</dt>')), name+' should have its own complete plain-language traits');
   assert(/is-favorable"><dt>喜/.test(professional) && /is-unfavorable"><dt>忌/.test(professional), name+' should have its own favorable and unfavorable conditions');
 }
 for (const technical of [false, true]) {
@@ -711,7 +712,7 @@ for(const technical of [false,true]){
   assertUsefulRow(rows,'secondary','火','比劫','扶身');
   assertUsefulRow(rows,'avoid','土','食伤','加重官伤冲突');
   const alternate=usefulNoteHtml.split(technical?'data-professional-copy>':'data-standard-copy>')[1].split('</div><div class="mode-copy')[0];
-  assert(alternate.includes('<p class="public-use-reference"><b>调候参考</b>'),'the sourced seasonal note is visible below the regular rows in both modes');
+  assert(alternate.includes('<strong>调候参考 · <b class="public-use-choice wx-水">水</b></strong>'),'the sourced seasonal note identifies water in the heading in both modes');
   assert(alternate.includes('《穷通宝鉴·三夏丙火》')&&alternate.includes('壬透于时干，庚藏在日支申，己透于月干')&&alternate.includes('官杀'),'both modes tie the seasonal reference to actual natal placements and the remaining limit');
   assert(alternate.includes(technical?'壬水为用，取庚辅佐。':'可用壬水，配合庚金。'),'the seasonal source is quoted or explained for the current mode');
 }
@@ -734,9 +735,13 @@ assert(promotedDecision.promotedPrimary.join('、')==='金、水'&&promotedBazi.
 assert(promotedDecision.conclusion.conditional.join('、')==='金、水'&&promotedDecision.conditionalUse.some(x=>x.element==='水'&&x.label==='喜中带忌'&&x.risk.includes('制午藏丁七杀')),'promotion retains the evidence and limits of conditional choices');
 const promotedCard=scriptContext.renderCoreCards(promotedBazi);
 const promotedRows=scriptContext.publicUsefulRows(promotedBazi);
-assert(!/public-use-reference|其他作用说明|独立作用|局部生财/.test(promotedRows),'local wealth flow does not create a sourced alternate reference in the useful panel');
+const promotedWoodNotes=[...withoutGodHighlight(promotedRows).matchAll(/<p class="public-use-reference"><strong>疏土参考 · <b class="public-use-choice wx-木">木<\/b><\/strong>\s*([^<]+)<\/p>/g)].map(match=>match[1]);
+assert(promotedWoodNotes.length===2&&promotedWoodNotes.every(note=>note.startsWith('《穷通宝鉴·三夏辛金》论午月辛金：「若水土多见，见甲方妙。」')&&note.includes('木可以疏土，缓解土厚埋金')),'both modes should show the sourced earth-restraint reference next to the useful elements');
+assert(promotedWoodNotes[0].includes('木也会牵制杀印相生格所用的印星')&&promotedWoodNotes[1].includes('壬伤官生辰藏乙偏财')&&promotedWoodNotes[1].includes('寅藏甲正财制戊正印'),'the reference keeps the original contact, local wealth benefit and seal constraint');
 const promotedConclusion=withoutGodHighlight(scriptContext.renderStructure({...promotedBazi,scores:scriptContext.BaziEngine.scoreWuxing(promotedBazi.pillars)})).match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
-assert(promotedConclusion.includes('木在原局有局部生财的作用，但财星也会牵制格局所需的印星')&&promotedConclusion.includes('壬伤官生辰藏乙偏财')&&promotedConclusion.includes('寅藏甲正财制戊正印'),'the conclusion explains the local wealth action and its verified constraint in both modes');
+assert(promotedConclusion&&!promotedConclusion.includes('木可以疏土')&&!promotedConclusion.includes('《穷通宝鉴·三夏辛金》'),'the sourced wood reference belongs to useful elements, without repeating it in the natal conclusion');
+const promotedWoodReview=promotedDecision.routes.find(route=>route.resourceRestraint)?.resourceRestraint;
+assert(promotedWoodReview?.step.active&&promotedWoodReview.capacity==='conditional'&&promotedWoodReview.protectedPattern?.replaceable,'wood review must keep the effective contact, remaining capacity condition and surviving seal path separate');
 assert(promotedCard.includes('core-use-primary')&&!promotedCard.includes('core-use-secondary')&&promotedRows.includes('data-use-role="primary" data-element="水"')&&withoutGodHighlight(promotedRows).includes('原本生印的七杀'),'both page surfaces use the promoted roles and the detailed rows explain the risk');
 const coreExtras=scriptContext.renderCoreCards(conciseReferenceBazi).split('查看其他取用结论</summary>')[1].split('</details>')[0];
 assert(coreExtras.includes('忌：')&&coreExtras.includes('取法差异：')&&!/主用|佐用/.test(coreExtras),'expanded card shows only complementary conclusions');
@@ -1071,10 +1076,10 @@ outputExcessCases.forEach((item) => {
   assert(result.patternLevelCriteria.some((x) => x.name === '气势病象' && x.result.includes(item.name)), `${item.name} should enter attributable pattern-level criteria, got ${JSON.stringify(result.patternLevelCriteria)}`);
 });
 const resourceExcessCases = [
-  { name: '木多火塞', ruleId: 'ZP-QX-002', pillars: { year: '甲寅', month: '乙卯', day: '丁酉', hour: '甲寅' }, primary: '火', avoid: '木' },
-  { name: '火多土焦', ruleId: 'ZP-QX-003', pillars: { year: '丙午', month: '丁巳', day: '戊子', hour: '丙午' }, primary: '土', avoid: '火' },
-  { name: '金多水浊', ruleId: 'ZP-QX-004', pillars: { year: '庚申', month: '辛酉', day: '壬午', hour: '庚申' }, primary: '水', avoid: '金' },
-  { name: '水多木漂', ruleId: 'ZP-QX-005', pillars: { year: '壬子', month: '癸亥', day: '甲午', hour: '壬子' }, primary: '木', avoid: '水' },
+  { name: '木多火塞', ruleId: 'ZP-QX-002', pillars: { year: '甲寅', month: '乙卯', day: '丁酉', hour: '甲寅' }, primary: '火', avoid: '木', candidate: '金', reachable: false },
+  { name: '火多土焦', ruleId: 'ZP-QX-003', pillars: { year: '丙午', month: '丁巳', day: '戊子', hour: '丙午' }, primary: '土', avoid: '火', candidate: '水', reachable: false },
+  { name: '金多水浊', ruleId: 'ZP-QX-004', pillars: { year: '庚申', month: '辛酉', day: '壬午', hour: '庚申' }, primary: '水', avoid: '金', candidate: '火', reachable: true },
+  { name: '水多木漂', ruleId: 'ZP-QX-005', pillars: { year: '壬子', month: '癸亥', day: '甲午', hour: '壬子' }, primary: '木', avoid: '水', candidate: '土', reachable: false },
 ];
 const expectedPhenomenonNames = ['土厚埋金', '木多火塞', '火多土焦', '金多水浊', '水多木漂', '水多金沉', '木盛水缩', '火多木焚', '土多火晦', '金多土变'];
 const coveredPhenomenonNames = [killSealPattern.elementPhenomena[0].name]
@@ -1087,9 +1092,14 @@ resourceExcessCases.forEach((item) => {
   assert(phenomenon.causalChain.includes('生扶太过') && phenomenon.counterEvidence.length && phenomenon.scope.includes('不作为正式命格'), `${item.name} should expose its resource-excess cause, counterevidence, and non-pattern boundary, got ${JSON.stringify(phenomenon)}`);
   assert(result.useful.primaryUse.includes(item.primary) && result.useful.avoid.includes(item.avoid) && result.usePriority.text.includes('生扶太过'), `${item.name} should restore recipient capacity and stop adding excessive resource, got ${JSON.stringify(result.useful)}`);
   assert(result.remedy.some((x) => x.title === item.name && x.text.includes('生扶作用')) && result.clarity.text.includes(item.name), `${item.name} should feed one direct conclusion into remedy and clarity, got ${JSON.stringify({ remedy: result.remedy, clarity: result.clarity })}`);
+  const review=result.useful.decision.routes.find(route=>route.resourceRestraint)?.resourceRestraint;
+  assert(review?.element===item.candidate&&review.excess===item.avoid&&review.step.active===item.reachable&&review.source.includes('《滴天髓·反局》'), item.name+' must review the actual resource restraint and preserve whether it reaches');
+  const note=withoutGodHighlight(scriptContext.caseAlternativeUseReading({useful:result.useful}));
+  assert(note.includes(item.reachable?'午藏丁正财制辛正印':'本盘尚未见这条制约接通（根气受冲）')&&note.includes('《滴天髓·反局》'), item.name+' should display the applicable local evidence with its source');
 });
 const rootedFireWithWood = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '甲寅', month: '乙卯', day: '丁巳', hour: '甲寅' }, dayStem: '丁' });
 assert(!rootedFireWithWood.elementPhenomena.some((x) => x.name === '木多火塞'), `wood should remain usable resource when fire has a direct main root, got ${JSON.stringify(rootedFireWithWood.elementPhenomena)}`);
+assert(!rootedFireWithWood.useful.decision.routes.some(route=>route.resourceRestraint), 'ordinary resource support should not trigger a resource-excess restraint review');
 assert(scriptContext.BaziEngine.normalizePhenomenonName('火炎土燥') === '火多土焦' && scriptContext.BaziEngine.normalizePhenomenonName('水泛木浮') === '水多木漂', 'resource-excess aliases should normalize to one canonical professional term');
 const earthDimsFireBazi = { person: '土多火晦样本', gender: '男', pillars: outputExcessCases.find((x) => x.name === '土多火晦').pillars, dayStem: '丁', dayElement: '火', time: { used: { year: 1997, month: 1, day: 8, hour: 8, minute: 0 }, input: { year: 1997, month: 1, day: 8, hour: 8, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } } };
 assert(scriptContext.elementPhenomenonText(earthDimsFireBazi).includes('土多火晦（明确成立；程度：严重；置信：') && scriptContext.elementPhenomenonText(earthDimsFireBazi).includes('辰丑湿土') && scriptContext.elementPhenomenonText(earthDimsFireBazi).includes('火少火晦'), `土多火晦 view should expose wet-earth evidence and its authority boundary, got ${scriptContext.elementPhenomenonText(earthDimsFireBazi)}`);
@@ -1498,11 +1508,11 @@ const trueFollowKillLuckPattern = scriptContext.BaziEngine.analyzePattern(trueFo
 const followKillInput=scriptContext.BaziEngine.createBaziProfile({input:{year:2008,month:12,day:3,hour:0,minute:30},useTrueSolar:false,useDaylightSaving:false});
 const followKillPage=withoutGodHighlight(scriptContext.renderStructure(followKillInput));
 const followKillConclusion=followKillPage.match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
-assert(followKillConclusion.split('<dt>成格依据</dt><dd>亥月水旺，本盘的七杀成势，原局顺着水势取用。</dd>').length===3&&!/已有支撑<\/dt><dd>无|已有救应<\/dt><dd>无/.test(followKillConclusion),'both modes show the actual formation evidence rather than an empty rescue row');
+assert(followKillConclusion.split('<dt>成格依据：</dt><dd>亥月水旺，本盘的七杀成势，原局顺着水势取用。</dd>').length===3&&!/<dt>(?:已有支撑|已有救应)：<\/dt><dd>无/.test(followKillConclusion),'both modes show the actual formation evidence rather than an empty rescue row');
 const woodPatternInput=scriptContext.BaziEngine.createBaziProfile({input:{year:2003,month:4,day:1,hour:4,minute:30},useTrueSolar:false,useDaylightSaving:false});
 const woodPatternPage=withoutGodHighlight(scriptContext.renderStructure(woodPatternInput));
 const woodPatternConclusion=woodPatternPage.match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
-assert(woodPatternConclusion.split('<dt>成格依据</dt><dd>甲木生于卯月，地支见寅、卯、辰，会成木方，原局木势集中。</dd>').length===3,'both modes explain the actual wood formation');
+assert(woodPatternConclusion.split('<dt>成格依据：</dt><dd>甲木生于卯月，地支见寅、卯、辰，会成木方，原局木势集中。</dd>').length===3,'both modes explain the actual wood formation');
 assert(woodPatternPage.includes('顺势取法参考 · <b class="public-use-choice wx-土">土</b>')&&woodPatternPage.includes('顺势取法参考 · <b class="public-use-choice wx-木">木</b>')&&woodPatternPage.includes('《滴天髓阐微·体用、独象》条件解释。食伤已有出口时可继续生财。财转生官杀逆局时不能采用。列为独立取法。'),'alternate references identify each element while preserving the source and conditions');
 const trueFollowKillLuckSnapshot = JSON.stringify(trueFollowKillLuckPattern);
 const brokenFollowKillLuck = scriptContext.BaziEngine.evaluateLuckImpact('甲', '壬寅', trueFollowKillLuckPattern);

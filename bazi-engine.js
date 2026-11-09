@@ -1132,8 +1132,8 @@
       r.actors=unique((r.steps||[]).filter(function(step){return step.active}).reduce(function(out,step){return out.concat([step.left,step.right])},[]).filter(function(actor){return actor&&r.elements.some(function(element){return godNamesForElement(dayStem,element).indexOf(actor.god)>=0})}).map(function(actor){return JSON.stringify(actor)})).map(function(actor){return JSON.parse(actor)});
       r.intent='维护既有功能；新增同五行仍须重新满足承接与反作用条件';
     });
-    function patternRestriction(element){
-      if(!main||pattern.avoid.indexOf(element)<0)return null;
+    function patternRestriction(element,checkResourceRestraint){
+      if(!main||(!checkResourceRestraint&&pattern.avoid.indexOf(element)<0))return null;
       var protectedFlow=link(main.name),targetGods=unique(protectedFlow.reduce(function(out,step){return out.concat(step.from||[],step.to||[])},[])).filter(function(god){return godNamesForElement(dayStem,ctrl[element]).indexOf(god)>=0});
       var damaging=actionLink(godNamesForElement(dayStem,element),targetGods,'制');
       // An element label is not proof of damage: only its controlling ten-god
@@ -1191,6 +1191,15 @@
       if(phenomenon&&phenomenon.useCorrection.secondary.indexOf(w)>=0)benefit(selected,'proposed','对症路线的润泄辅助');
       if(monthlyRoute&&monthlyRoute.elements.indexOf(w)>=0)benefit(monthlyRoute,'reference');
       var restriction=patternRestriction(w);
+      if(phenomenon&&(phenomenon.useCorrection.conditional||[]).indexOf(w)>=0){
+        var protectedPattern=restriction||patternRestriction(w,true);
+        selected.resourceRestraint={
+          element:w,excess:phenomenon.useCorrection.restrain[0],phenomenon:phenomenon.name,
+          step:wealthSealStep,capacity:tasks.wealth&&tasks.wealth.status,
+          protectedPattern:protectedPattern?{name:protectedPattern.protectedFunction,step:protectedPattern.damage,replaceable:protectedPattern.replaceable}:null,
+          source:'《滴天髓·反局》'+(dayStem==='辛'&&context.monthBranch==='午'?'、《穷通宝鉴·三夏辛金》':'')
+        };
+      }
       if(restriction)risk('verified-pattern','effective','对'+restriction.protectedFunction+'必要对象有可达制约：'+restriction.damage.text,[restriction.damage.text,restriction.replaceable?'仍有完整替代链':'当前未见完整替代链',restriction.withdrawal],restriction.dominant&&selected!==climateRoute&&selected.id!=='phenomenon-remedy');
       else if(main&&pattern.avoid.indexOf(w)>=0)risk('pattern-boundary','potential','格局通则有制约提示，但未证明当前作用必然破坏必要功能',[pattern.why]);
       if(fuyi.avoid.indexOf(w)>=0&&!(selected===patternRoute&&primary.indexOf(w)>=0)&&!(phenomenon&&selected.elements.indexOf(w)>=0))risk('balance-load','potential',weak?'增加泄耗，须有相应承接；这不等于已有致害作用':'印比再增须看是否阻碍现有出口；不以数量直接判害',[fuyi.why]);
