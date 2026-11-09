@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261109.1-useful-priority"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261109.2-noble-pattern"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -597,12 +597,15 @@ const referenceLuck = scriptContext.getLuckData(referenceBazi);
 const referencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
 const conciseReferenceBazi = { ...referenceBazi, scores: scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars), relations: [] };
 const conciseStructureHtml = scriptContext.renderStructure(conciseReferenceBazi);
-assert(conciseStructureHtml.includes('data-verdict="已破"') && conciseStructureHtml.includes('伤官格破格：伤官见官') && conciseStructureHtml.includes('伤官格：已破'), 'both display modes share the frozen broken verdict');
+function withoutGodHighlight(markup){return markup.replace(/<span class="report-god" data-god-group="[^"]+">([^<]+)<\/span>/g,'$1');}
+const conciseStructureText=withoutGodHighlight(conciseStructureHtml);
+assert(conciseStructureHtml.includes('data-verdict="已破"') && conciseStructureText.includes('伤官格破格：伤官见官') && conciseStructureText.includes('伤官格：已破'), 'both display modes share the frozen broken verdict');
 assert(!/结构分|评分维度|格局层次：|未损日主根[01]|变化前：|变化后：/.test(conciseStructureHtml), 'all expanded public structure excludes score tiers and internal logs');
-assert(conciseStructureHtml.includes('class="structure-report"') && conciseStructureHtml.indexOf('一般配合原则')<conciseStructureHtml.indexOf('本盘结论') && conciseStructureHtml.indexOf('本盘结论')<conciseStructureHtml.indexOf('喜用参考'), 'the old column grid presents general principles, conclusion, and actual help');
-assert(conciseStructureHtml.includes('表达和做事方式与规则要求冲突') && conciseStructureHtml.includes('官杀又带来规则与压力，自己难以同时应付') && !conciseStructureHtml.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
+const patternHeading=conciseStructureHtml.indexOf('<h3 class="report-heading">命格</h3>');
+assert(conciseStructureHtml.includes('class="structure-report"') && patternHeading>=0 && patternHeading<conciseStructureHtml.indexOf('本盘结论') && conciseStructureHtml.indexOf('本盘结论')<conciseStructureHtml.indexOf('喜用参考'), 'the column grid presents the chart pattern, conclusion, and actual help');
+assert(conciseStructureText.includes('表达和做事方式与规则要求冲突') && conciseStructureText.includes('官杀又带来规则与压力，自己难以同时应付') && !conciseStructureText.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
 assert(scriptContext.standardGodGroup('伤官')==='食伤' && scriptContext.standardGodGroup('劫财')==='比劫', 'standard labels retain the actual ten-god family');
-assert(conciseStructureHtml.includes('木是印星，帮你把才华用得更有章法') && conciseStructureHtml.includes('土是食伤，伤官已经冲击所需官星'), 'standard useful copy explains the chart-specific job and damage');
+assert(withoutGodHighlight(conciseStructureHtml).includes('木是印星，作用是制伤护身，帮你把才华用得更有章法') && withoutGodHighlight(conciseStructureHtml).includes('土是食伤，再添会加重官伤冲突。伤官已经冲击所需官星'), 'standard useful copy explains the chart-specific job and damage');
 assert(!/出生月份的木（学习和支持）|应少增|已有缓解，尚未完全解除/.test(conciseStructureHtml), 'standard tab removes mechanical translation and repeated tails');
 {
   const modeCopy=scriptContext.modeCopy;
@@ -615,13 +618,16 @@ assert(!/出生月份的木（学习和支持）|应少增|已有缓解，尚未
       for(const item of view.support.slice(0,3))if(item.step&&useful.avoid.includes(scriptContext.standardActorElement(item.step.left)))assert(item.standard.includes('原局已有的')&&item.standard.includes('不宜再添'), person+' supporting taboo element must not imply adding more');
       assert(!view.support.some(item=>/同时也加重|不能消除自身/.test(item.standard)),person+' support entries keep limitations in the limits section');
       if(person==='笠夏')assert(view.limits.filter(item=>item.standard&&/身弱|自身力量不足/.test(item.standard)).length===1,'overlapping carrying limits are stated once');
-      if(person==='陈伟伟')assert(copy.includes('没有明显的破格因素。'),'formed blade uses a plain limits sentence');
+      if(person==='陈伟伟')assert(copy.includes('<dt>主要受限</dt><dd>无</dd>'),'formed blade shows an empty limits field directly');
     }
   } finally {scriptContext.modeCopy=modeCopy;}
 }
 const bladeBazi={...conciseReferenceBazi,pillars:{year:'壬午',month:'丙午',day:'丙寅',hour:'丁酉'},dayStem:'丙',dayElement:'火',time:{...conciseReferenceBazi.time,used:{year:2002,month:6,day:27,hour:18,minute:35}}};
 const bladeStructure=scriptContext.renderStructure(bladeBazi);
 assert(bladeStructure.includes('月刃格：已成') && bladeStructure.includes('月刃格成格：') && bladeStructure.includes('data-use-role="primary" data-element="水"'), 'formed blade keeps its actual verdict and water role');
+const highlightedOfficer='<span class="report-god" data-god-group="官杀">官杀</span>';
+assert(bladeStructure.includes('成格要'+highlightedOfficer+'有力约束')&&bladeStructure.includes('水是'+highlightedOfficer+'，作用是制刃'),'the same term has matching inline emphasis in the principle and this chart’s useful explanation');
+assert(bladeStructure.includes('水（'+highlightedOfficer+'）能约束')&&bladeStructure.includes('土：<span class="report-god" data-god-group="食伤">食伤</span>生财'),'the chart verdict and its supporting evidence use the same inline emphasis');
 const reviewedPatternNames = [
   '正官格','七杀格','正财格','偏财格','正印格','偏印格','食神格','伤官格','建禄格','月劫用事','月刃格',
   '杀印相生格','食神制杀格','伤官配印格','官印相生格','财官印相生格','伤官生财格','食神生财格','财滋弱杀格','羊刃驾杀格',
@@ -632,7 +638,7 @@ const reviewedPatternNames = [
 for (const name of reviewedPatternNames) {
   const standard = scriptContext.publicPatternReading(name, false);
   const professional = scriptContext.publicPatternReading(name, true);
-  assert(['长处','短处','一句话'].every(label => standard.includes('<dt>'+label+'</dt>')), name+' should have its own complete standard reading');
+  assert(['正面特质','负面特质','一句话'].every(label => standard.includes('<dt>'+label+'</dt>')), name+' should have its own complete plain-language traits');
   assert(/is-favorable"><dt>喜/.test(professional) && /is-unfavorable"><dt>忌/.test(professional), name+' should have its own favorable and unfavorable conditions');
 }
 for (const technical of [false, true]) {
@@ -686,7 +692,29 @@ assert(helpUsefulSection.includes('主用：') && helpUsefulSection.includes('�
 }
 
 const usefulNoteHtml=scriptContext.publicUsefulRows(scriptContext.refreshPatternAnalysis(conciseReferenceBazi));
-assert(usefulNoteHtml.includes('主用：')&&usefulNoteHtml.includes('佐用：')&&usefulNoteHtml.includes('其他作用说明'),'both modes retain main, secondary and avoid labels with separate alternate routes');
+assert(usefulNoteHtml.includes('主用：')&&usefulNoteHtml.includes('佐用：')&&usefulNoteHtml.includes('忌：')&&!/<details|其他作用说明|独立作用/.test(usefulNoteHtml),'useful roles and sourced references are shown directly');
+const patternSection=conciseStructureHtml.slice(patternHeading,conciseStructureHtml.indexOf('</section>',patternHeading));
+assert(!/查看格局说明|成格与破格只说明|<details/.test(patternSection)&&patternSection.includes('格局喜忌')&&patternSection.includes('is-favorable')&&patternSection.includes('is-unfavorable'),'both modes show pattern guidance without a disclosure');
+assert(patternSection.split('is-traits').length===2&&patternSection.indexOf('is-traits')>patternSection.indexOf('is-unfavorable'),'the shared traits appear once after the mode-specific guidance');
+assert(!conciseStructureHtml.includes('本盘作用说明')&&conciseStructureHtml.includes('本盘取用以木（制伤护身）为主'),'the verdict links to this chart’s use choices without a separate redundant disclosure');
+function assertUsefulRow(html,role,element,group,effect){
+  const row=html.split('data-use-role="'+role+'" data-element="'+element+'"')[1]?.split('</div>')[0];
+  const label=row?.match(/<dt>(.*?)<\/dt>/)?.[1].replace(/<[^>]+>/g,'');
+  const description=row?.match(/<dd>(.*?)<\/dd>/)?.[1];
+  assert(label===({primary:'主用',secondary:'佐用',avoid:'忌'}[role]+'：'+element),element+' keeps only its role and element in the label');
+  assert(description&&withoutGodHighlight(description).startsWith(element+'是'+group+'，'+(role==='avoid'?'再添会':'作用是')+effect),element+' explains its ten-god group and effect in the description');
+}
+for(const technical of [false,true]){
+  const rows=scriptContext.usefulRowsForMode(conciseReferenceBazi,technical);
+  assertUsefulRow(rows,'primary','木','印星','制伤护身');
+  assertUsefulRow(rows,'secondary','金','财星','局部通关');
+  assertUsefulRow(rows,'secondary','火','比劫','扶身');
+  assertUsefulRow(rows,'avoid','土','食伤','加重官伤冲突');
+  const alternate=usefulNoteHtml.split(technical?'data-professional-copy>':'data-standard-copy>')[1].split('</div><div class="mode-copy')[0];
+  assert(alternate.includes('<p class="public-use-reference"><b>调候参考</b>'),'the sourced seasonal note is visible below the regular rows in both modes');
+  assert(alternate.includes('《穷通宝鉴·三夏丙火》')&&alternate.includes('壬透于时干，庚藏在日支申，己透于月干')&&alternate.includes('官杀'),'both modes tie the seasonal reference to actual natal placements and the remaining limit');
+  assert(alternate.includes(technical?'壬水为用，取庚辅佐。':'可用壬水，配合庚金。'),'the seasonal source is quoted or explained for the current mode');
+}
 assert(!/格局层次|结构分|评分维度/.test(scriptContext.buildPatternContextText(conciseReferenceBazi)),'public context hides structural tiers and scores');
 const usefulProof=scriptContext.publicUsefulEvidence(conciseReferenceBazi);
 assert(usefulProof.金.includes('己伤官生申藏庚偏财') && !usefulProof.木.includes('己伤官生申藏庚偏财'), 'source evidence remains attached to its actual route');
@@ -694,12 +722,22 @@ assert(scriptContext.usefulAiInstruction().includes('不得把不同取法的候
 const legacyUsefulView=scriptContext.usefulDecisionView({useful:{primaryUse:['木'],secondaryUse:['火'],conditionalUse:[{element:'火',benefit:'legacy benefit',risk:'legacy risk'}],avoid:['土']}});
 assert(legacyUsefulView.conditionalLabels.火==='喜中带忌' && legacyUsefulView.routeDependent.length===0, 'older useful records should retain their compatible labels without inventing a new route disagreement');
 const promotedBazi=scriptContext.refreshPatternAnalysis({...referenceBazi,pillars:{year:'戊寅',month:'戊午',day:'辛丑',hour:'壬辰'},dayStem:'辛',dayElement:'金'});
+for(const technical of [false,true]){
+  const rows=scriptContext.usefulRowsForMode(promotedBazi,technical);
+  assertUsefulRow(rows,'primary','金','比劫','扶身');
+  assertUsefulRow(rows,'primary','水','食伤','润泄');
+  const alternateText=scriptContext.usefulDisplayReason(promotedBazi,'木','other',technical);
+  assert(alternateText.includes('壬伤官生辰藏乙偏财')&&alternateText.includes('寅藏甲正财制戊正印'),'the alternate wealth path retains its own local benefit and verified conflict');
+}
 const promotedDecision=promotedBazi.useful.decision;
 assert(promotedDecision.promotedPrimary.join('、')==='金、水'&&promotedBazi.useful.primaryUse.join('、')==='金、水'&&!promotedBazi.useful.secondaryUse.length,'existing secondary choices fill an empty primary in the canonical result');
 assert(promotedDecision.conclusion.conditional.join('、')==='金、水'&&promotedDecision.conditionalUse.some(x=>x.element==='水'&&x.label==='喜中带忌'&&x.risk.includes('制午藏丁七杀')),'promotion retains the evidence and limits of conditional choices');
 const promotedCard=scriptContext.renderCoreCards(promotedBazi);
 const promotedRows=scriptContext.publicUsefulRows(promotedBazi);
-assert(promotedCard.includes('core-use-primary')&&!promotedCard.includes('core-use-secondary')&&promotedRows.includes('data-use-role="primary" data-element="水"')&&promotedRows.includes('原本生印的七杀'),'both page surfaces use the promoted roles and the detailed rows explain the risk');
+assert(!/public-use-reference|其他作用说明|独立作用|局部生财/.test(promotedRows),'local wealth flow does not create a sourced alternate reference in the useful panel');
+const promotedConclusion=withoutGodHighlight(scriptContext.renderStructure({...promotedBazi,scores:scriptContext.BaziEngine.scoreWuxing(promotedBazi.pillars)})).match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
+assert(promotedConclusion.includes('木在原局有局部生财的作用，但财星也会牵制格局所需的印星')&&promotedConclusion.includes('壬伤官生辰藏乙偏财')&&promotedConclusion.includes('寅藏甲正财制戊正印'),'the conclusion explains the local wealth action and its verified constraint in both modes');
+assert(promotedCard.includes('core-use-primary')&&!promotedCard.includes('core-use-secondary')&&promotedRows.includes('data-use-role="primary" data-element="水"')&&withoutGodHighlight(promotedRows).includes('原本生印的七杀'),'both page surfaces use the promoted roles and the detailed rows explain the risk');
 const coreExtras=scriptContext.renderCoreCards(conciseReferenceBazi).split('查看其他取用结论</summary>')[1].split('</details>')[0];
 assert(coreExtras.includes('忌：')&&coreExtras.includes('取法差异：')&&!/主用|佐用/.test(coreExtras),'expanded card shows only complementary conclusions');
 assert(scriptContext.renderCoreCards({...referenceBazi,useful:{primaryUse:[],secondaryUse:[]}}).includes('暂无取用结论'),'a chart without primary or secondary choices shows an empty state');
@@ -710,7 +748,7 @@ const alternateInjuryCases=[
 ];
 for(const [pillars,title,reason,primary,secondary] of alternateInjuryCases){
   const data=scriptContext.refreshPatternAnalysis({pillars,dayStem:pillars.day[0]});
-  const verdict=scriptContext.patternConclusionText(data,true);
+  const verdict=withoutGodHighlight(scriptContext.patternConclusionText(data,true));
   const choices=scriptContext.usefulDecisionView(data);
   assert(verdict.includes(title.replace('格','格：'))&&scriptContext.caseDisplayView(data).verdict===title.slice(3)&&!verdict.includes('己伤官制癸正官'), 'same named injury pattern must report this chart’s own verdict and basis: '+verdict);
   assert(choices.primary.join()===primary.join()&&choices.secondary.join()===secondary.join(), 'general 喜财／喜印 must not override the different chart’s actual engine selection');
@@ -985,7 +1023,8 @@ assert(scriptContext.BaziEngine.normalizePhenomenonName('土多埋金') === '土
 assert(killSealPattern.patternStructures.some((x) => x.name === '杀印相生格' && x.role === '主格' && x.status === '成而有瑕' && x.issues.includes('土厚埋金')), `buried-metal disease should retain kill-seal as main pattern while lowering its finish, got ${JSON.stringify(killSealPattern.patternStructures)}`);
 const killSealStructure = scriptContext.renderStructure({ ...killSealBazi, scores: scriptContext.BaziEngine.scoreWuxing(killSealBazi.pillars), relations: [] });
 assert(killSealStructure.includes('杀印相生格：成而有瑕')&&killSealStructure.includes('印土既有化杀功能')&&killSealStructure.includes('印土过重压住金的发挥'),'chart-specific copy retains seal function and earth obstruction in the same frozen verdict');
-assert(!killSealStructure.includes('有人在关键时出手相助')&&!killSealStructure.includes('贵人相助，不止指路'),'idealized personality promises must not appear as current-chart support');
+const killSealTraits=killSealStructure.match(/<dl class="pattern-reading is-traits">[\s\S]*?<\/dl>/)?.[0]||'';
+assert(killSealTraits.includes('容易遇到贵人')&&killSealTraits.includes('遇事有贵人指点，也能把压力练成本事。')&&!killSealStructure.replace(killSealTraits,'').includes('容易遇到贵人'),'plain-language traits are shared without making them current-chart support');
 const killSealPotentialDimension = killSealPattern.patternRawScoreBreakdown.dimensions.find((item) => item.key === 'potential');
 assert(killSealPotentialDimension.components.length === 1 && killSealPotentialDimension.components[0].ruleId !== 'ZP-CG-02', `the synthetic kill-seal disease case must not acquire food-control potential from a hidden food clue, got ${JSON.stringify(killSealPotentialDimension)}`);
 assert(killSealPattern.useful.primaryUse.join('、') === '金' && killSealPattern.useful.avoid.includes('土'), `excess seal-earth should stop being an incremental useful element, got ${JSON.stringify(killSealPattern.useful)}`);
@@ -1340,6 +1379,7 @@ assert(unformedBladeKillPattern.mainPattern !== '羊刃驾杀格' && unformedBla
 const wealthDamagePositiveBazi = { pillars: { year: '甲子', month: '丙寅', day: '癸酉', hour: '庚申' }, dayStem: '癸' };
 assertLegalReviewPillars(wealthDamagePositiveBazi.pillars);
 const wealthDamagesInjurySeal = scriptContext.BaziEngine.analyzePattern(wealthDamagePositiveBazi);
+assert(!wealthDamagesInjurySeal.natalNoblePattern, 'wealth damaging the required seal must block the noble badge');
 assert(wealthDamagesInjurySeal.comboConflicts.some((x) => x.name === '财坏印') && wealthDamagesInjurySeal.patternLevelQualityFloor === '' && wealthDamagesInjurySeal.patternLevelTieBreak.tier < 2 && wealthDamagesInjurySeal.patternLevelCriteria.some((x) => x.name === '伤官配印严检' && !x.met), `wealth damaging the seal must remove the injury-seal quality floor and strict-combination priority rather than treating every 伤官见印 as a贵格, got ${JSON.stringify({ conflicts: wealthDamagesInjurySeal.comboConflicts, floor: wealthDamagesInjurySeal.patternLevelQualityFloor, tieBreak: wealthDamagesInjurySeal.patternLevelTieBreak, criteria: wealthDamagesInjurySeal.patternLevelCriteria })}`);
 assert(wealthDamagesInjurySeal.patternLevelIndex <= strictInjurySealPattern.patternLevelIndex, `adding a direct wealth-damages-seal breaker must not improve the natal level, got clean ${strictInjurySealPattern.patternLevelGrade} vs damaged ${wealthDamagesInjurySeal.patternLevelGrade}`);
 assert(scoreDimension(wealthDamagesInjurySeal, 'potential').score < strictInjuryPotential.score && !scoreDimension(wealthDamagesInjurySeal, 'potential').components.some((x) => x.ruleId === 'ZP-CG-03') && !wealthDamagesInjurySeal.patternLevelHardGate.topEligible, `财坏印 must block the validated 伤官配印 potential instead of preserving a name-based noble bonus, got ${JSON.stringify({ potential: scoreDimension(wealthDamagesInjurySeal, 'potential'), gate: wealthDamagesInjurySeal.patternLevelHardGate })}`);
@@ -1438,6 +1478,8 @@ const luckFormsInjurySealPattern = scriptContext.BaziEngine.analyzePattern(luckF
 const luckFormsInjurySealSnapshot = JSON.stringify(luckFormsInjurySealPattern);
 const luckFormsInjurySealImpact = scriptContext.BaziEngine.evaluateLuckImpact('壬', '辛亥', luckFormsInjurySealPattern);
 const luckFormsInjurySealReview = luckFormsInjurySealImpact.conditionReview;
+assert(!luckFormsInjurySealPattern.natalNoblePattern && !luckFormsInjurySealReview.natalNoblePattern,
+  'a combination completed by current luck must not confer a natal noble badge');
 const luckSealFlow = luckFormsInjurySealReview.interactionFlow.steps.find((x) => x.from.some((god) => god.includes('印')) && x.to.includes('伤官'));
 assert(!luckFormsInjurySealPattern.comboPatterns.includes('伤官配印格') && luckFormsInjurySealPattern.comboClues.some((x) => x.name === '伤官配印线索参考') && luckFormsInjurySealReview.strictFormation && luckFormsInjurySealReview.effectiveAdded.includes('伤官配印格') && luckFormsInjurySealImpact.toMain === '伤官配印格' && luckFormsInjurySealImpact.toStatus === '已成' && luckFormsInjurySealImpact.activationStatus === '运中补格' && luckFormsInjurySealImpact.scoreLedger.numericOwner === '格局状态迁移' && !luckFormsInjurySealImpact.scoreLedger.elementCounted, `a complete reachable luck remedy may form 伤官配印 only in the current luck context and receive one terminal formation score, got ${JSON.stringify(luckFormsInjurySealImpact)}`);
 assert(luckSealFlow && luckSealFlow.active && luckSealFlow.left.pillar === 'luck' && luckSealFlow.left.position === 4 && luckSealFlow.right.position === 1 && luckSealFlow.effectiveDistance === 1 && luckFormsInjurySealReview.clarityChange.direction === '改善' && JSON.stringify(luckFormsInjurySealPattern) === luckFormsInjurySealSnapshot, 'current formation uses the actual luck seal to month injury path without mutating natal analysis');
@@ -1453,6 +1495,15 @@ assert(JSON.stringify(luckDamagesSealPattern) === luckDamagesSealSnapshot, 'a da
 
 const trueFollowKillLuckBazi = { pillars: { year: '辛酉', month: '辛酉', day: '甲戌', hour: '庚午' }, dayStem: '甲' };
 const trueFollowKillLuckPattern = scriptContext.BaziEngine.analyzePattern(trueFollowKillLuckBazi);
+const followKillInput=scriptContext.BaziEngine.createBaziProfile({input:{year:2008,month:12,day:3,hour:0,minute:30},useTrueSolar:false,useDaylightSaving:false});
+const followKillPage=withoutGodHighlight(scriptContext.renderStructure(followKillInput));
+const followKillConclusion=followKillPage.match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
+assert(followKillConclusion.split('<dt>成格依据</dt><dd>亥月水旺，本盘的七杀成势，原局顺着水势取用。</dd>').length===3&&!/已有支撑<\/dt><dd>无|已有救应<\/dt><dd>无/.test(followKillConclusion),'both modes show the actual formation evidence rather than an empty rescue row');
+const woodPatternInput=scriptContext.BaziEngine.createBaziProfile({input:{year:2003,month:4,day:1,hour:4,minute:30},useTrueSolar:false,useDaylightSaving:false});
+const woodPatternPage=withoutGodHighlight(scriptContext.renderStructure(woodPatternInput));
+const woodPatternConclusion=woodPatternPage.match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
+assert(woodPatternConclusion.split('<dt>成格依据</dt><dd>甲木生于卯月，地支见寅、卯、辰，会成木方，原局木势集中。</dd>').length===3,'both modes explain the actual wood formation');
+assert(woodPatternPage.includes('顺势取法参考 · <b class="public-use-choice wx-土">土</b>')&&woodPatternPage.includes('顺势取法参考 · <b class="public-use-choice wx-木">木</b>')&&woodPatternPage.includes('《滴天髓阐微·体用、独象》条件解释。食伤已有出口时可继续生财。财转生官杀逆局时不能采用。列为独立取法。'),'alternate references identify each element while preserving the source and conditions');
 const trueFollowKillLuckSnapshot = JSON.stringify(trueFollowKillLuckPattern);
 const brokenFollowKillLuck = scriptContext.BaziEngine.evaluateLuckImpact('甲', '壬寅', trueFollowKillLuckPattern);
 assert(trueFollowKillLuckPattern.mainPattern === '从格：从杀格' && brokenFollowKillLuck.conditionReview.specialLost.includes('从格：从杀格') && !brokenFollowKillLuck.conditionReview.specialPatternQualification && brokenFollowKillLuck.conditionReview.strengthScore.dimensions.roots.items.some((x) => x.position === 'luck' && x.grade === '本气根') && brokenFollowKillLuck.toMain === trueFollowKillLuckPattern.mainPattern && brokenFollowKillLuck.toStatus === '已破' && brokenFollowKillLuck.activationStatus === '特殊格运中受损', 'lost special qualification must be explicit in the current period and cannot simultaneously be 运中补格');
@@ -1607,12 +1658,49 @@ const assertStrictSpecialPattern = (label, result, ruleId) => {
 };
 const assertRejectedSpecialPattern = (label, result) => {
   const potential = scoreDimension(result, 'potential');
+  assert(!result.natalNoblePattern || !/^ZP-SP-/.test(result.natalNoblePattern.ruleId), `${label} must not retain a rejected special noble badge`);
   assert(!result.specialPatterns.some((item) => /^(从格：|化气格：|专旺格：)/.test(item)) && !result.specialPatternQualification, `${label} should fail strict special-pattern qualification, got ${JSON.stringify({ specialPatterns: result.specialPatterns, qualification: result.specialPatternQualification })}`);
   assert(!potential.components.some((item) => /^ZP-SP-/.test(item.ruleId || '')), `${label} must not receive special-pattern potential after qualification fails, got ${JSON.stringify(potential)}`);
 };
 
+function renderNobleFixture(pillars) {
+  const engine = scriptContext.BaziEngine;
+  return scriptContext.renderStructure({
+    pillars, dayStem: pillars.day[0], dayElement: engine.constants.STEM_WX[pillars.day[0]],
+    scores: engine.scoreWuxing(pillars), relations: []
+  });
+}
+const nobleBadge = '<span class="pattern-noble">贵格</span>';
+const damagedNoblePillars = { year: '甲子', month: '丙寅', day: '癸巳', hour: '辛酉' };
+assertLegalReviewPillars(damagedNoblePillars);
+const damagedNoblePattern = scriptContext.BaziEngine.analyzePattern({ pillars: damagedNoblePillars });
+assert(damagedNoblePattern.mainPattern === '伤官配印格' && !damagedNoblePattern.natalNoblePattern &&
+  !renderNobleFixture(damagedNoblePillars).includes(nobleBadge), 'a same-name damaged pattern must render without a noble badge');
+assert(renderNobleFixture(injurySealPositiveBazi.pillars).includes('伤官配印格·' + nobleBadge),
+  'strict injury-seal must render the noble badge alongside the main pattern');
+
+const nobleInjuryWealthPillars = { year: '甲子', month: '丙寅', day: '癸酉', hour: '壬子' };
+assertLegalReviewPillars(nobleInjuryWealthPillars);
+const nobleInjuryWealth = scriptContext.BaziEngine.analyzePattern({ pillars: nobleInjuryWealthPillars });
+assert(nobleInjuryWealth.natalNoblePattern?.ruleId === 'ZP-CG-06' && !nobleInjuryWealth.patternLevelHardGate.topEligible,
+  'injury-to-wealth badge must be independent of the scoring system top-grade gate');
+
+const nobleWealthOfficerPillars = { year: '甲子', month: '己巳', day: '壬子', hour: '己酉' };
+const plainWealthPillars = { year: '甲子', month: '己巳', day: '丁卯', hour: '庚子' };
+assertLegalReviewPillars(nobleWealthOfficerPillars);
+assertLegalReviewPillars(plainWealthPillars);
+const nobleWealthOfficerHtml = withoutGodHighlight(renderNobleFixture(nobleWealthOfficerPillars));
+assert(nobleWealthOfficerHtml.includes('偏财格·' + nobleBadge) &&
+  nobleWealthOfficerHtml.includes('本盘财旺生官。') && nobleWealthOfficerHtml.includes('财旺生官：财得令有根'),
+  'a qualified wealth-to-officer pattern must retain its wealth name and explain the badge in both modes');
+const plainWealthPattern = scriptContext.BaziEngine.analyzePattern({ pillars: plainWealthPillars });
+assert(plainWealthPattern.regularPattern.status === '已成' && !renderNobleFixture(plainWealthPillars).includes(nobleBadge),
+  'an established wealth pattern without a verified wealth-to-officer route must not show the badge');
+
 const followWealthPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '己巳', month: '戊戌', day: '甲午', hour: '丙戌' }, dayStem: '甲' });
 assertStrictSpecialPattern('从财格', followWealthPattern, 'ZP-SP-04');
+assert(followWealthPattern.natalNoblePattern?.ruleId === 'ZP-SP-04' && transformPattern.natalNoblePattern?.ruleId === 'ZP-SP-09',
+  'true follow and transformation charts can earn a noble badge from natal evidence');
 assert(followWealthPattern.useful.use.includes('火') && followWealthPattern.useful.avoid.includes('金') && !followWealthPattern.clarityConclusion.remove.includes('食伤逆势'), `从财格 should keep 食伤生财 as useful, mark 官杀泄财 as a break boundary, and never describe 食伤 itself as breaking the pattern, got ${JSON.stringify({ useful: followWealthPattern.useful, clarity: followWealthPattern.clarityConclusion })}`);
 const rootedFollowWealthPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '己巳', month: '戊戌', day: '甲寅', hour: '丙戌' }, dayStem: '甲' });
 assertRejectedSpecialPattern('日主有根的假从财', rootedFollowWealthPattern);
@@ -1632,6 +1720,7 @@ const additionalTransformSpecialCases = [
 additionalTransformSpecialCases.forEach((item) => {
   const result = scriptContext.BaziEngine.analyzePattern({ pillars: item.pillars, dayStem: item.pillars.day[0] });
   assertStrictSpecialPattern(item.label, result, item.ruleId);
+  assert(result.natalNoblePattern?.ruleId === item.ruleId, `${item.label} should receive the noble badge once strictly established`);
 });
 assert(new Set(additionalTransformSpecialCases.map((item) => item.ruleId).concat(transformPattern.specialPatternQualification.ruleId)).size === 5, 'the four added 化气 cases plus the existing 丁壬化木 case should lock all five classical stem transformations');
 const rootedTransformSpecialCases = [

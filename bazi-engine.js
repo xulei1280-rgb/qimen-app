@@ -2232,6 +2232,48 @@
     var verdict=!steps.length?'特殊格局未建立验真链':(active===steps.length?'特殊格局顺势链完整':(active?'特殊格局顺势链部分成立':'特殊格局顺势链未成立'));
     return {steps:steps,sequence:[],verdict:verdict,interactionArbitration:interactions&&interactions.arbitration,text:[verdict].concat(steps.map(function(item){return item.text})).join('；')+'。',specialRuleId:detail&&detail.ruleId||''};
   }
+  function natalNoblePatternQualification(analysis){
+    var main=analysis.patternStructures.find(function(item){return item.role==='主格'});
+    var disease=analysis.patternDisease;
+    if(!main||main.status!=='已成'||!/^(清|较清)$/.test(analysis.clarity.level)||
+      disease.unresolved.length||disease.partial.length||analysis.elementPhenomena.length)return null;
+
+    var special=analysis.specialPatternQualification,qualification=main.qualification;
+    var steps=analysis.interactionFlow.steps;
+    if(steps.length&&steps.every(function(step){return step.active})){
+      if(special&&SPECIAL_PATTERN_RULES[special.key]&&special.ruleId===main.ruleId&&
+        special.checks.length&&special.checks.every(function(check){return check.met})){
+        return {ruleId:main.ruleId,mainRuleId:main.ruleId,name:main.name};
+      }
+      if(CLASSICAL_PATTERN_POTENTIAL_RULES[main.ruleId]&&qualification&&qualification.rootedAndClear){
+        if(main.ruleId==='ZP-CG-03'){
+          var profilesWithDay=Object.assign({},analysis.tenGodProfiles,{'日主':{stemEntries:[analysis.interactions.dayMaster]}});
+          var support=interactionFlowAnalysis('',profilesWithDay,analysis.interactions,[],[
+            {from:['正印','偏印'],to:['伤官'],action:'制'},
+            {from:['正印','偏印'],to:['日主'],action:'生'}
+          ]);
+          if(!support.steps.every(function(step){return step.active}))return null;
+        }
+        return {ruleId:main.ruleId,mainRuleId:main.ruleId,name:main.name};
+      }
+    }
+
+    // 《子平真诠·论财》：取原局财星当令、实际生官的一路。只裁决页面贵格资格。
+    if(main.ruleId!=='ZP-MG-01')return null;
+    var profiles=analysis.tenGodProfiles,tasks=analysis.carryingCapacity.tasks;
+    var wealth=['正财','偏财'].filter(function(god){
+      return godForce(profiles,god)&&godRooted(profiles,god);
+    });
+    var injury=profiles['伤官']||{};
+    if(!wealth.length||!godForce(profiles,'正官')||!tasks.wealth.strictFormationEligible||
+      !tasks.officer.strictFormationEligible||(injury.stemEntries||[]).length||
+      godClear(profiles,'七杀'))return null;
+    var step=interactionFlowAnalysis('',profiles,analysis.interactions,[],[
+      {from:wealth,to:['正官'],action:'生'}
+    ]).steps[0];
+    if(!step.active)return null;
+    return {ruleId:'ZP-NOBLE-01',mainRuleId:main.ruleId,name:'财旺生官',source:'《子平真诠·论财》',steps:[step]};
+  }
   function conflictsForPattern(name,conflicts){
     return (conflicts||[]).filter(function(item){
       return (/食神制杀|食神生财/.test(name)&&item.name==='枭神夺食')||
@@ -4170,6 +4212,7 @@
     var ordinaryContext=specialDetail?{primary:primary,regularPattern:regular,comboPatterns:combos,comboClues:comboClues,comboConflicts:comboConflicts,positivePhenomena:positivePhenomenaAnalysis(pillars,scores,strength,profiles,clarityConclusion,interactionFlow,comboConflicts,elementPhenomena)}:null;
     var result={analysisMeta:{engineVersion:PATTERN_ENGINE_VERSION,ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,baselineScope:'固定理论时间网格只用于分布与极值审计；单盘层次由结构分直接分档，不使用真人结果标签'},realizationBoundary:{model:['原局潜力','行运激活','现实兑现'],localScope:['原局潜力','行运激活'],externalFactors:['家庭','教育','时代','国家与地区','行业环境','个人选择'],text:'格局层次表示命盘结构与行运承接，不代表人的价值，也不保证现实成就。'},natalPatternLevel:{grade:levelResult.grade,index:levelResult.index,text:levelResult.text,scope:'原局结构固定结论',ruleVersion:PATTERN_RULE_VERSION,baselineVersion:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION},primary:publicPrimary,pattern:publicPrimary,regularPrimary:specialDetail?primary:null,pillars:pillars,monthCommand:monthCommand,patternBasis:basis,authorityBasis:authorityBasis,patternState:state,patternConfidence:confidence,patternVerdict:verdict,patternReasoning:reasoningChain,patternDisease:patternDisease,patternArbitration:arbitration,candidates:candidates,regularPattern:regularOutput,regularPatternBackground:specialDetail?regular:null,ordinaryContext:ordinaryContext,comboPatterns:specialDetail?[]:combos,comboClues:specialDetail?[]:comboClues,patternStructures:structures,mainPattern:mainPattern,patternIssues:patternIssues,diagnosticPattern:diagnosticPattern,patternLevel:level,patternLevelGrade:levelResult.grade,patternLevelIndex:levelResult.index,patternLevelQualityFloor:levelResult.qualityFloor,patternLevelTieBreak:levelResult.tieBreak,patternLevelMetrics:levelResult.metrics,patternLevelCriteria:levelResult.criteria,remedy:remedy,factors:factors,clarity:clarity,structuralClarity:structuralClarity,clarityConclusion:clarityConclusion,comboConflicts:specialDetail?[]:comboConflicts,tenGodTerms:tenGodTerms,usePriority:usePriority,specialPatterns:specials,specialPatternDetails:(specials.details||[]),specialPatternQualification:specialDetail,classifiedClues:clues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,interactions:interactions,interactionFlow:interactionFlow,strength:strength,strengthScore:weightedStrength,carryingCapacity:carryingCapacity,tenGodCounts:counts,tenGodProfiles:profiles,useful:useful,evidence:evidence};
     result.analysisTime=strengthOptions.time||null;
+    result.natalNoblePattern=natalNoblePatternQualification(result);
     var raw=patternStructureRawScore(result),percentile=percentileFromHistogram(raw.score,THEORETICAL_BASELINE_HISTOGRAM);
     result.patternRawScore=raw.score;
     result.patternRawScoreBreakdown=raw;
