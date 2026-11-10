@@ -2100,10 +2100,17 @@ const selectedOutlook = scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, s
 const summaryBeforeMonth = JSON.stringify(selectedOutlook);
 const selectedOutlookHtml = scriptContext.renderLuckDetail(wenZhenLuckChart, selectedOutlookContext);
 assert(selectedOutlookHtml.includes('本运对原局') && selectedOutlookHtml.includes('较上一运') && selectedOutlookHtml.includes('年度综合') && selectedOutlookHtml.includes('该流年对本运的影响'), 'detail must expose all four comparison scopes');
-{ // Standard year card: 比上一年 then 比这十年大运的常态; luck 1 year 0 compares with the last year of luck 0. Professional keeps 比这十年平常 only.
-  const std=(selectedOutlookHtml.match(/data-standard-copy>(?:(?!<\/div>)[\s\S])*比上一年：[^<]*<\/p><p[^>]*>比这十年大运的常态：[^<]*<\/p>/)||[])[0];
-  assert(std && selectedOutlook.years[0].previousYear, 'standard year card shows 比上一年 before 比这十年大运的常态, first year of a later decade uses the previous decade');
-  assert(/data-professional-copy><p[^>]*>比这十年平常：/.test(selectedOutlookHtml) && !/data-professional-copy>[^]*?比上一年/.test(selectedOutlookHtml.split('前后比较细节')[0].replace(/data-standard-copy>[\s\S]*?<\/div>/g,'')), 'professional year card unchanged');
+{ // Standard year card rows: 比上一年 (hidden when the two years' labels disagree) then 在这步大运的十年中; professional keeps 比这十年平常 only when the engine has a conclusion.
+  const std=[...selectedOutlookHtml.matchAll(/data-standard-copy>((?:(?!<\/div>)[\s\S])*)<\/div>/g)].map(m=>m[1]).join('\n');
+  assert(selectedOutlook.years[0].previousYear, 'first year of a later decade compares with last year under the previous decade');
+  assert(/在这步大运的十年中：(顺|平稳|有起有落|难)，[^<]*的一年</.test(std) && (!std.includes('比上一年：') || std.indexOf('比上一年：') < std.indexOf('在这步大运的十年中：')), 'standard rows: 比上一年 above 在这步大运的十年中');
+  assert(!/比上一年：(更顺|更难|差不多|有升有降)</.test(selectedOutlookHtml) && !selectedOutlookHtml.includes('比这十年大运的常态') && !/比这十年平常：(当前作用重点|待判|暂缺)/.test(selectedOutlookHtml), 'new wording only; no odd no-conclusion rows');
+  assert(!/>[^<]*年比这十年平常</.test(selectedOutlookHtml), 'comparison card renamed');
+  const ctxV = { yearIndex: 1, luckIndex: 1, luck: selectedOutlookContext.luck, flowYear: selectedOutlookContext.years[1] };
+  for (const [now, prev, dir, want] of [['positive','positive','negative','没去年那么顺'],['negative','negative','positive','比去年轻松一些'],['positive','negative','negative',''],['negative','negative','negative','比去年更难'],['mixed','mixed','neutral','和去年差不多']]) {
+    const fake = { natal: selectedOutlook.natal, years: [{ annual: { direction: prev, evidence: [], reservations: [] } }, { annual: { direction: now, evidence: [], reservations: [] }, previousYear: { direction: dir, evidence: [], reservations: [] } }] };
+    assert(scriptContext.outlookYearVsLastText(wenZhenLuckChart, ctxV, fake) === want, 'year-vs-last wording '+now+'/'+prev+'/'+dir);
+  }
   scriptContext.restoreLuckSelection({ luck: 0, year: 0, month: null });
   const firstCtx = scriptContext.getSelectedLuckContext(wenZhenLuckChart), firstHtml = scriptContext.renderLuckDetail(wenZhenLuckChart, firstCtx);
   assert(!scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, firstCtx).years[0].previousYear && !firstHtml.includes('比上一年：'), 'the very first year has no previous year row');
