@@ -1927,9 +1927,10 @@ function luckParen(actors){
   return tags.length?'（'+tags.join('；')+'）':'';
 }
 // One plain clause per fact: outcome first, terms in a single parenthesis.
+function luckAction(f){return f.action||(f.key&&(f.key.match(/>([^>]+)>/)||[])[1])||'生'}
 function luckStepCore(f,lost,paren){
-  var action=f.action||(f.key&&(f.key.match(/>([^>]+)>/)||[])[1])||'生',l=luckActorInfo(f.left),r=luckActorInfo(f.right),control=action==='制';
-  var core=r.role==='忌'?(control?(lost?r.name+'不再被'+l.name+'压住':r.name+'被'+l.name+'压住'):(lost?r.name+'少了'+l.name+'的助长':r.name+'被'+l.name+'助长')):
+  var l=luckActorInfo(f.left),r=luckActorInfo(f.right),control=luckAction(f)==='制';
+  var core=l.self?(control?(lost?'你不再出力压住'+r.name:'你出力压住'+r.name):(lost?'你少花力气去生'+r.name:'你要花力气去生'+r.name)):r.role==='忌'?(control?(lost?r.name+'不再被'+l.name+'压住':r.name+'被'+l.name+'压住'):(lost?r.name+'少了'+l.name+'的助长':r.name+'被'+l.name+'助长')):
     (control?(lost?r.name+'摆脱了'+l.name+'的压制':r.name+'受到'+l.name+'的压制'):(lost?r.name+'少了'+l.name+'的帮助':r.name+'得到'+l.name+'的帮助'));
   return core+(paren===false?'':luckParen([l,r]));
 }
@@ -1937,8 +1938,21 @@ function luckFactCore(f,lost,paren){
   if(f.left&&f.right)return luckStepCore(f,lost,paren);
   var a=luckActorInfo(f);return a.name+(lost?'的力量被牵住':'的力量变强')+(paren===false?'':luckParen([a]));
 }
-function luckFactText(f,lost,direction){
-  return luckWhen(f)+luckFactCore(f,lost)+(direction==='positive'?'，对你有利。':direction==='negative'?'，对你不利。':'。');
+// +1 when the bare fact is good for you, -1 when bad, 0 when only the task can tell (your own output, neutral actors).
+function luckFactSign(f,lost){
+  var s;
+  if(f.left&&f.right){
+    var l=luckActorInfo(f.left),r=luckActorInfo(f.right),control=luckAction(f)==='制';
+    if(l.self||!r.self&&!r.role)return 0;
+    s=(control?-1:1)*(r.role==='忌'?-1:1);
+  }else{var a=luckActorInfo(f);if(!a.self&&!a.role)return 0;s=a.role==='忌'?-1:1}
+  return lost?-s:s;
+}
+// The verdict comes from the evidence task; when the bare fact does not show it, say that task outright.
+function luckFactText(f,lost,direction,e){
+  var want=direction==='positive'?1:direction==='negative'?-1:0;
+  var reason=e&&want&&luckFactSign(f,lost)!==want?luckMixedHeading(e,want>0,[{actor:f,change:lost?'lost':'gained'}]):'';
+  return luckWhen(f)+luckFactCore(f,lost)+(reason?'，'+reason:'')+(want>0?'，对你有利。':want<0?'，对你不利。':'。');
 }
 function luckMixedHeading(e,positive,refs){
   function pn(p,n){return positive?p:n}
@@ -2103,7 +2117,7 @@ function outlookDisplayView(result){
       if(physical){
         var action=(physical.key.match(/>([^>]+)>/)||[])[1]||'生',step={left:physical.left,right:physical.right,action:action};
         var sl=luckActorInfo(step.left),sr=luckActorInfo(step.right);
-        items.push({standard:luckWhen(step)+sr.name+'照旧'+(step.action==='制'?'受'+sl.name+'压制':'得到'+sl.name+'的帮助')+luckParen([sl,sr])+'，'+(luckRoleInfo().name||'原局')+'的格局主线不变。',professional:displayStep(step,true)+'继续可达；同一任用需求的已核验状态延续。',ruleId:e.ruleId,direction:'neutral'});
+        items.push({standard:luckWhen(step)+(sl.self?'你照旧'+(step.action==='制'?'出力压住':'花力气去生')+sr.name:sr.name+'照旧'+(step.action==='制'?'受'+sl.name+'压制':'得到'+sl.name+'的帮助'))+luckParen([sl,sr])+'，'+(luckRoleInfo().name||'原局')+'的格局主线不变。',professional:displayStep(step,true)+'继续可达；同一任用需求的已核验状态延续。',ruleId:e.ruleId,direction:'neutral'});
         return;
       }
     }
@@ -2112,7 +2126,7 @@ function outlookDisplayView(result){
       af.forEach(function(x){changes.push({fact:x,change:'新增'})});bf.forEach(function(x){changes.push({fact:x,change:'受限'})});
     }
     changes.forEach(function(c){var f=c.fact,key=f.key+':'+c.change;if(seen[key])return;seen[key]=true;
-      var standard=f.left&&f.right||f.stem?luckFactText(f,c.change!=='新增',e.direction):'';
+      var standard=f.left&&f.right||f.stem?luckFactText(f,c.change!=='新增',e.direction,e):'';
       var professional=f.left&&f.right?f.text.split('：')[0]:f.text;
       if(standard)items.push({standard:standard,professional:professional+'：'+c.change+'。',ruleId:e.ruleId,direction:e.direction});
     });
@@ -2138,6 +2152,7 @@ function outlookDisplayView(result){
     var bottleneck={'carry-wealth':'资源负担与自身支撑的衔接','carry-output':'产出消耗与自身支撑的衔接','carry-officer':'规则要求与自身支撑的衔接','carry-kill':'外部压力与自身支撑的衔接','handle-kill':'处理外部压力的支持路径','food-kill':'产出对外部压力的约束力度','hurt-seal':'学习支持对表达产出的约束力度','kill-seal':'外部压力转接到自身支持的路径'}[unresolved.id]||'这项配合的实际承接力度';
     selected=selected.slice(0,2).concat([{standard:'',professional:'未解作用：'+outlookTaskMeaning(unresolved.id)+'的力度尚缺充分证据，未将其判为有效或失效。',direction:'neutral',taskId:unresolved.id}]);
   }
+  selected=selected.map(function(x,i){return x.standard&&selected.slice(0,i).some(function(y){return y.standard===x.standard})?Object.assign({},x,{standard:''}):x});
   if(direction==='positive'||direction==='negative')selected=selected.map(function(x){return x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==direction?Object.assign({},x,{standard:'另一方面，'+x.standard}):x});
   var mixed=direction==='mixed'?mixedOutlookReadout(result):null;
   if(mixed)label='助：'+mixed.benefit.short.standard+'；牵：'+mixed.cost.short.standard;
