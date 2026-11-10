@@ -82,7 +82,7 @@ function assertDecision(analysis, label) {
   assert.ok(!conclusion.primary.some(element => conclusion.secondary.includes(element)), label + ': primary and secondary levels must not duplicate each other');
   assert.ok(!conclusion.routeDependent.some(element => favorable.includes(element) || conclusion.avoid.includes(element)), label + ': a separate interpretation cannot silently become default favorable or default taboo');
   for (const element of conclusion.primary) {
-    assert.ok(decision.routes.some(route => route.status === 'selected' && route.elements.includes(element)), label + ': primary element must come from a selected route');
+    assert.ok((decision.promotedPrimary || []).includes(element) || decision.routes.some(route => route.status === 'selected' && route.elements.includes(element)), label + ': primary element must come from a selected route or the secondary promotion');
   }
   assert.deepEqual(sorted(useful.primaryUse), sorted(conclusion.primary), label + ': primary display must derive from decision');
   assert.deepEqual(sorted(useful.secondaryUse), sorted(conclusion.secondary), label + ': secondary display must derive from decision');
