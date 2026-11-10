@@ -3652,13 +3652,13 @@
     }
     if(stemFight){
       var att=ctrl[STEM_WX[ls]]===STEM_WX[ys]?'luck':'year',a=att==='luck'?[ls,lb]:[ys,yb],b=att==='luck'?[ys,yb]:[ls,lb];
-      if(seatScore(a[0],a[1])>seatScore(b[0],b[1]))hurt(STEM_WX[b[0]],'fight',[(att==='luck'?'大运的'+a[0]+'压住了流年'+b[0]:'流年'+a[0]+'压住了大运的'+b[0])+'（'+role(STEM_WX[b[0]])+'），'+(sign(role(STEM_WX[b[0]]))>0?'这层帮助打了折扣。':'正好把不利的力量压下去。'),(att==='luck'?'运伐岁':'岁伐运')+'：'+a[0]+'克'+b[0]+'，'+b[0]+'坐'+b[1]+'力弱而降（《滴天髓阐微·岁运·战》）。']);
+      if(seatScore(a[0],a[1])>seatScore(b[0],b[1]))hurt(STEM_WX[b[0]],'fight',[sign(role(STEM_WX[b[0]]))>0?((att==='luck'?'大运的'+a[0]+'压住了流年'+b[0]:'流年'+a[0]+'压住了大运的'+b[0])+'（'+role(STEM_WX[b[0]])+'），这层帮助打了折扣。'):('你更扛得住事：'+(att==='luck'?'大运的'+a[0]+'把流年'+b[0]:'流年'+a[0]+'把大运的'+b[0])+'这层不利的力量收住了。'),(att==='luck'?'运伐岁':'岁伐运')+'：'+a[0]+'克'+b[0]+'，'+b[0]+'坐'+b[1]+'力弱而降（《滴天髓阐微·岁运·战》）。']);
     }
     if(branchClash){
       var pl=partyScore(natal,luckGz,BRANCH_WX[lb]),py=partyScore(natal,yearGz,BRANCH_WX[yb]);
       if(pl!==py){var win=pl>py?lb:yb,lose=pl>py?yb:lb;hurt(BRANCH_WX[lose],'clash',[(lose===yb?'大运的'+win+'冲倒了流年'+lose:'流年'+win+'冲动了大运的'+lose)+'（'+role(BRANCH_WX[lose])+'）。',(lose===yb?'运冲岁':'岁冲运')+'：'+win+'党多胜，'+lose+'受冲（《滴天髓阐微·岁运·冲》）。'])}
     }
-    if(stemFight&&branchClash)items.push(luckEvidence('T-year-tkdc','T-year',weak?'negative':'neutral',weak?'这一年和大运天干相克、地支相冲，你的底气偏弱，这样的年份更要稳着来。':'这一年和大运天干相克、地支相冲，好在你的底气不弱，影响有限。','岁运天克地冲，日主'+(weak?'休囚必凶':'旺相虽凶无碍')+'（《滴天髓阐微·岁运》任注）。'));
+    if(stemFight&&branchClash)items.push(luckEvidence('T-year-tkdc','T-year',weak?'negative':'neutral',weak?'这一年和大运天干相克、地支相冲，自身根基偏弱，这样的年份更要稳着来。':'这一年和大运天干相克、地支相冲，好在自身根基不弱，影响有限。','岁运天克地冲，日主'+(weak?'休囚必凶':'旺相虽凶无碍')+'（《滴天髓阐微·岁运》任注）。'));
     var sc=LUCK_STEM_COMBINE[ls][0]===ys?LUCK_STEM_COMBINE[ls][1]:null,bc=LUCK_BRANCH_COMBINE[lb]&&LUCK_BRANCH_COMBINE[lb][0]===yb?LUCK_BRANCH_COMBINE[lb][1]:null;
     [sc,bc].forEach(function(wx,i){if(!wx)return;var s=sign(role(wx));if(s)items.push(luckEvidence('T-year-harmony','T-year',s>0?'positive':'negative','这一年和大运'+(i?'地支':'天干')+'相合，合出来的'+wx+'是'+role(wx)+(s>0?'，对你有利。':'，对你不利。'),'岁运'+(i?lb+yb:ls+ys)+'合化'+wx+'（'+role(wx)+'）（《滴天髓阐微·岁运·和》）。'))});
     if(ctrl[STEM_WX[day]]===STEM_WX[ys])items.push(luckEvidence('T-year-dayhit','T-year','neutral','提示：日主'+day+'克流年'+ys+'（古书叫“日犯岁君”），做事宜收敛，不单独改判。','日犯岁君（《渊海子平·继善篇》），仅作提示。'));
