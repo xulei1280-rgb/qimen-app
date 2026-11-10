@@ -40,7 +40,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
   for(const mode of ['standard','professional']){
    const now=visible(card,mode,false),expanded=visible(card,mode,true),label=visible(button,mode,false),key=mode==='standard'?'standard':'professional';rendered++;
    assert.ok(now.includes(m.benefit[key])&&now.includes(m.cost[key]),'both concrete effects visible before opening any disclosure');
-   assert.ok(label.includes('利弊并见'),'compact year card uses short mixed label; full effects live in the detail box');
+   assert.ok(label.includes(mode==='standard'?'有好有坏':'利弊并见'),'compact year card uses short mixed label; full effects live in the detail box');
    assert.ok(ctx.outlookContextText('测试比较',result,mode==='professional').includes(m.benefit[key])&&ctx.outlookContextText('测试比较',result,mode==='professional').includes(m.cost[key]),'report/prompt context shares both effects');
    const bad=expanded.match(forbidden)||[],terms=mode==='standard'?expanded.match(mechanical)||[]:[];if(bad.length||terms.length)errors.push({person,kind,cycle,year,mode,bad,terms});
    text[mode]={default:now,expanded,label};

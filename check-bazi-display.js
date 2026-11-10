@@ -48,7 +48,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
   const row={person,mode:selected,verdict:verdicts[selected],html:parts,text:{},report:context.buildBaziReport(),prompt:context.buildAiPrompt('解释当前选中的年度与阶段，说明实际帮助和限制')};
   for(const [name,markup] of Object.entries(parts)){row.text[name]=visible(markup,selected);audit(person+'/'+selected+'/'+name,row.text[name],selected==='standard');}
   audit(person+'/'+selected+'/report',row.report,selected==='standard');
-  if(person==='小蔓'&&selected==='professional')assert.ok(row.text.luck.includes('七杀压力的食神制杀或印化杀承接路径：原先可用，本期受到未解破坏。')&&row.report.includes('七杀压力的食神制杀或印化杀承接路径：原先可用，本期受到未解破坏。'),'actual Xiaoman page and export translate handle-kill by domain with its original transition');
+  if(person==='小蔓'&&selected==='professional')assert.ok(row.text.luck.includes('七杀压力的食神制杀或印化杀承接路径：原局有效，本期受破坏。')&&row.report.includes('七杀压力的食神制杀或印化杀承接路径：原局有效，本期受破坏。'),'actual Xiaoman page and export translate handle-kill by domain with its original transition');
   assert.ok(row.prompt.includes('禁止外显结构档位、结构分、评分权重或百分位'));assert.ok(row.prompt.includes('当前显示模式：'+selected));
   // Prompt facts are an internal machine context; visible-answer constraints are audited separately.
   assert.ok(!/层次高低|格局层次：|结构分：|评分维度：/.test(row.prompt),'prompt cannot solicit or publish tiers');

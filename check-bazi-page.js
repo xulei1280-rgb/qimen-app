@@ -1095,7 +1095,7 @@ resourceExcessCases.forEach((item) => {
   const review=result.useful.decision.routes.find(route=>route.resourceRestraint)?.resourceRestraint;
   assert(review?.element===item.candidate&&review.excess===item.avoid&&review.step.active===item.reachable&&review.source.includes('《滴天髓·反局》'), item.name+' must review the actual resource restraint and preserve whether it reaches');
   const note=withoutGodHighlight(scriptContext.caseAlternativeUseReading({useful:result.useful}));
-  assert(note.includes(item.reachable?'午藏丁正财制辛正印':'本盘尚未见这条制约接通（根气受冲）')&&note.includes('《滴天髓·反局》'), item.name+' should display the applicable local evidence with its source');
+  assert(note.includes(item.reachable?'午藏丁正财制辛正印':'本盘这条制约没有接上（根气受冲）')&&note.includes('《滴天髓·反局》'), item.name+' should display the applicable local evidence with its source');
 });
 const rootedFireWithWood = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '甲寅', month: '乙卯', day: '丁巳', hour: '甲寅' }, dayStem: '丁' });
 assert(!rootedFireWithWood.elementPhenomena.some((x) => x.name === '木多火塞'), `wood should remain usable resource when fire has a direct main root, got ${JSON.stringify(rootedFireWithWood.elementPhenomena)}`);
@@ -2100,7 +2100,7 @@ const selectedOutlook = scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, s
 const summaryBeforeMonth = JSON.stringify(selectedOutlook);
 const selectedOutlookHtml = scriptContext.renderLuckDetail(wenZhenLuckChart, selectedOutlookContext);
 assert(selectedOutlookHtml.includes('本运对原局') && selectedOutlookHtml.includes('较上一运') && selectedOutlookHtml.includes('年度综合') && selectedOutlookHtml.includes('该流年对本运的影响'), 'detail must expose all four comparison scopes');
-assert(selectedOutlookHtml.includes('交运边界年份') && selectedOutlookHtml.includes('全年归属需结合交运日期确认'), 'the first selected year must disclose the boundary-year scope');
+assert(selectedOutlookHtml.includes('交运边界年份') && selectedOutlookHtml.includes('以交运日期为界'), 'the first selected year must disclose the boundary-year scope');
 assert((scriptContext.renderLuckSelector(wenZhenLuckChart, selectedOutlookContext).match(/fortune-outcome/g) || []).length === 10, 'each annual button should expose a textual outcome');
 scriptContext.luckSelection.month = 3;
 assert(JSON.stringify(scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, scriptContext.getSelectedLuckContext(wenZhenLuckChart))) === summaryBeforeMonth, 'month selection must not change any luck or annual verdict');
