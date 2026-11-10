@@ -9,7 +9,8 @@ const ctx={console,Date,Math,JSON,BirthTime:require('./birth-time.js'),document:
 for(const file of ['qimen.js','bazi-engine.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
 for(const m of fs.readFileSync('bazi.html','utf8').matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(m[1],ctx);
 const E=ctx.BaziEngine,gz=vm.runInContext('GZ60',ctx),levels=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'];
-const jargon=/正财格|偏财格|伤官格|月刃格|杀印相生|身不任财|印星|伤官见官|杀重身轻|土厚埋金|主用|佐用|月令|根被合|十神|正官|七杀|食神|伤官|正财|偏财|正印|偏印|比肩|劫财|日主|合绊|通根|成格|破格|喜用|扶身|承杀|泄秀|药神/g;
+// Standard copy may name terms (格局、主用、十神); it must not use mechanical role translations or hedges.
+const mechanical=/出生(?:月份|日期|年份|时刻)的|这十年的|这一年的|作用接通或增强|应少增|原已选定|原已确认的帮助方向|主要帮助|补充帮助|不单列|未解瓶颈|以上结论只覆盖|不判断整体升降|尚待|尚缺|还缺|自身的同类支持|学习和支持|资源和机会|表达和产出|稳定产出|规则要求|外部压力（/g;
 const forbidden=/可能|或许|看条件|不明确|分情况|分条件|取决于|尚未确认|暂缺整体结论|未定主用|无明确忌项|一部分|看情况|需结合全盘|未损日主根[01]|变化前：|变化后：|固定比例扶身指数|合会变气反馈|旧路径须按共同需求比较|结构分：|评分维度：|undefined|NaN/g;
 function visible(markup,mode,expanded){let stack=[],out=[];for(const token of markup.match(/<[^>]*>|[^<]+/g)||[]){if(token.startsWith('</')){stack.pop();continue}if(token.startsWith('<')){const tag=(token.match(/^<([\w-]+)/)||[])[1];if(!tag)continue;const hidden=stack.some(Boolean)||(mode==='standard'?/professional-only/.test(token):/standard-only/.test(token))||(!expanded&&tag==='details'&&!/\bopen\b/.test(token));if(!/^(br|hr|img|input|meta|link|wbr)$/.test(tag)&&!token.endsWith('/>'))stack.push(hidden);continue}if(!stack.some(Boolean))out.push(token)}return out.join(' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\s+/g,' ').trim()}
 function resolve(result,keys){return keys.reduce((obj,key)=>obj[key],result)}
@@ -41,7 +42,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
    assert.ok(now.includes(m.benefit[key])&&now.includes(m.cost[key]),'both concrete effects visible before opening any disclosure');
    assert.ok(label.includes('利弊并见'),'compact year card uses short mixed label; full effects live in the detail box');
    assert.ok(ctx.outlookContextText('测试比较',result,mode==='professional').includes(m.benefit[key])&&ctx.outlookContextText('测试比较',result,mode==='professional').includes(m.cost[key]),'report/prompt context shares both effects');
-   const bad=expanded.match(forbidden)||[],terms=mode==='standard'?expanded.match(jargon)||[]:[];if(bad.length||terms.length)errors.push({person,kind,cycle,year,mode,bad,terms});
+   const bad=expanded.match(forbidden)||[],terms=mode==='standard'?expanded.match(mechanical)||[]:[];if(bad.length||terms.length)errors.push({person,kind,cycle,year,mode,bad,terms});
    text[mode]={default:now,expanded,label};
   }
   assert.equal(JSON.stringify(result),snap,'presentation cannot mutate raw verdict/evidence');
