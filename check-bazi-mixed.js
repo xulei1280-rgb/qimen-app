@@ -39,7 +39,8 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
   const card=ctx.renderOutlookBox(person+' '+luck+' '+(year||''),result),button=ctx.fortuneButton(String(year||cycle),'',luck,'','','year',0,false,'',result),text={};
   for(const mode of ['standard','professional']){
    const now=visible(card,mode,false),expanded=visible(card,mode,true),label=visible(button,mode,false),key=mode==='standard'?'standard':'professional';rendered++;
-   assert.ok(now.includes(m.benefit[key])&&now.includes(m.cost[key]),'both concrete effects visible before opening any disclosure');
+   const once=t=>mode==='standard'?t.replace(/（(正官|七杀|正印|偏印|食神|伤官|正财|偏财|比肩|劫财|印星|财星|官星|食伤|比劫)）/g,''):t; // standard cards gloss each term once
+   assert.ok(once(now).includes(once(m.benefit[key]))&&once(now).includes(once(m.cost[key])),'both concrete effects visible before opening any disclosure');
    assert.ok(label.includes(mode==='standard'?'有好有坏':'利弊并见'),'compact year card uses short mixed label; full effects live in the detail box');
    assert.ok(ctx.outlookContextText('测试比较',result,mode==='professional').includes(m.benefit[key])&&ctx.outlookContextText('测试比较',result,mode==='professional').includes(m.cost[key]),'report/prompt context shares both effects');
    const bad=expanded.match(forbidden)||[],terms=mode==='standard'?expanded.match(mechanical)||[]:[];if(bad.length||terms.length)errors.push({person,kind,cycle,year,mode,bad,terms});
