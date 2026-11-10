@@ -2175,8 +2175,8 @@ function outlookDisplayView(result){
   if(result.assessment==='engine-error')label='刷新后重试';
   if(!label)label=tendency==='positive'?'助力倾向':tendency==='negative'?'牵制倾向':tendency==='mixed'?'利弊并见':result.assessment==='input-error'?'校对出生资料':'当前作用重点';
   var items=[],seen={};
-  var lower=(result.reservations||[]).find(function(e){return (e.direction==='positive'||e.direction==='negative')&&e.direction!==direction&&e.before&&e.after});
-  (result.evidence||[]).concat(lower?[lower]:[]).forEach(function(e){
+  var lowers=(result.reservations||[]).filter(function(e){return (e.direction==='positive'||e.direction==='negative')&&e.direction!==direction&&e.before&&e.after}),lower=lowers[0],tiebreak=result.toneBasis==='tone-tiebreak';
+  (result.evidence||[]).concat(lower?(tiebreak?lowers:[lower]):[]).forEach(function(e){
     if(e.plainText){items.push({standard:e.plainText,professional:e.text,ruleId:e.ruleId,direction:e.direction});return;}
     var changes=[];
     if(e.direction==='neutral'&&e.ruleId==='Y7-continuity'){
@@ -2215,7 +2215,9 @@ function outlookDisplayView(result){
   if(!items.length)items.push({standard:direction==='unavailable'?'第一步没有前一阶段可比较。':result.assessment==='input-error'?'出生资料或所选年月与记录不一致，请核对。':'这段时间起作用的力量有进有出，好坏相抵，整体按'+(luckRoleInfo().name||'原局格局')+'的主线走。',professional:direction==='unavailable'?'第一步大运无前运。':result.assessment==='input-error'?'四柱或所选岁运干支校验未通过。':'本期已采用证据无具体作用增减，维持原局已确认任务。',direction:'neutral'});
   var positive=items.filter(function(x){return x.direction==='positive'}),negative=items.filter(function(x){return x.direction==='negative'});
   var selected=direction==='mixed'&&positive.length&&negative.length?[positive[0],negative[0]]:items.slice(0,3);
-  if(lower&&items.length&&selected.indexOf(items[items.length-1])<0)selected=selected.slice(0,2).concat([items[items.length-1]]);
+  var lowItem=tiebreak&&items.find(function(x){return x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==direction});
+  if(lowItem)selected=[selected[0],lowItem].concat(selected.slice(1,2).filter(function(x){return x!==lowItem}));
+  else if(lower&&items.length&&selected.indexOf(items[items.length-1])<0)selected=selected.slice(0,2).concat([items[items.length-1]]);
   var unresolved=(result.review&&result.review.afterTasks||[]).find(function(t){return t.state===null&&t.applicable!==false&&!t.auxiliary});
   if(unresolved){
     var bottleneck={'carry-wealth':'资源负担与自身根基的衔接','carry-output':'产出消耗与自身根基的衔接','carry-officer':'规则要求与自身根基的衔接','carry-kill':'外部压力与自身根基的衔接','handle-kill':'处理外部压力的化解路径','food-kill':'产出对外部压力的约束力度','hurt-seal':'靠山对表达产出的约束力度','kill-seal':'外部压力转成靠山的路径'}[unresolved.id]||'这项配合的实际承接力度';
@@ -3883,7 +3885,7 @@ function outlookGlossOnce(html){
 }
 // 喜忌底色与成格变格提示：只显示，结论以上面的判断为准。
 function outlookToneRow(result){
-  var t=result&&result.tone,s=result&&result.patternShift,said=(result&&result.evidence||[]).some(function(e){return e.level==='T-tone'});
+  var t=result&&result.tone,s=result&&result.patternShift,said=result&&result.toneBasis!=='tone-tiebreak'&&(result.evidence||[]).some(function(e){return e.level==='T-tone'});
   return (t?'<p class="outlook-note" data-luck-tone>'+modeCopy(said?'':esc(t.plain),esc(t.professional))+'</p>':'')+
     (s?'<p class="outlook-note" data-pattern-shift>'+modeCopy(esc('提示：这步运会把出生月份里藏着的力量引出来，原来的格局路线'+(s.kind==='成格'?'会更清楚。':s.kind==='变格'?'有被打乱的迹象。':'有调整的迹象。')),esc('成格变格提示：'+s.text+'（《子平真诠·论行运成格变格》）。'))+'</p>':'');
 }
@@ -3905,7 +3907,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       opposite=rest.filter(function(x){return x.direction&&x.direction!=='neutral'&&x.direction!==view.direction});
       rest=rest.filter(function(x){return opposite.indexOf(x)<0});
     }
-    var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利')+'：</b>'+opposite.map(function(x){return esc(x.standard.replace(/^另一方面，/,''))}).join('')+'</p>':'';
+    var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+opposite.map(function(x){return esc(x.standard.replace(/^另一方面，/,''))}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
   return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+outlookToneRow(result)+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
 }

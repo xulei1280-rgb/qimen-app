@@ -3555,7 +3555,7 @@
     else label='闲运';
     var unit=annual?'这一年':'这步运',lean=split&&dir?'（'+(annual?'太岁重天干':'地支为重')+'，偏'+(dir==='positive'?'喜':'忌')+'）':'';
     var plainLabel={主用运:'主用运',佐用运:'佐用运',忌运:'忌运',喜忌参半:'喜忌参半',闲运:'不涉主用和忌的闲运'}[label];
-    return {direction:dir,label:label,split:split,stemRole:sr,branchRole:br,cover:cover,cut:cut,
+    return {direction:dir,label:label,split:split,score:score,stemRole:sr,branchRole:br,cover:cover,cut:cut,
       plain:'五行上'+unit+'是'+plainLabel+lean+'。',
       professional:(annual?'流年':'大运')+'底色：'+gz[0]+sw+'为'+sr+'，'+gz[1]+bw+'为'+br+(note?'；'+note:'')+'，'+(annual?'太岁重天干':'十年合看、地支为重')+' → '+label+lean+'。'};
   }
@@ -3608,6 +3608,16 @@
       r.evidence=[toneEv].concat(y2);
       set(y2.some(function(e){return e.direction&&e.direction!==t})?'mixed':t,'special-tone');return r;
     }
+    // 结构两面同层相持时，用十年（一年）干支本身的喜忌作次一级权重：差距明显（|分|≥2，大运即地支或干支同向，流年即天干或干支同向）才定向，另一面写“也有一点”。
+    function toneTiebreak(){
+      var pd=r.review&&r.review.protectedDetermined;if(pd&&pd.decision==='cross-mixed')return r;
+      if(!t||tone.split||Math.abs(tone.score)<2)return r;
+      var order=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'];function rank(e){var i=order.indexOf(e.level);return i<0?order.length:i}
+      var ev=r.evidence.filter(function(e){return e.direction==='positive'||e.direction==='negative'}),same=ev.filter(function(e){return e.direction===t}),opp=ev.filter(function(e){return e.direction!==t});
+      if(!same.length||!opp.length)return r;
+      if(Math.min.apply(null,opp.map(rank))<Math.min.apply(null,same.map(rank)))return r;
+      set(t,'tone-tiebreak');r.evidence=same.concat([luckEvidence('T-tone','T-tone',t,(kind==='annual'?'这一年':'这步运')+'好坏两面分量相当，五行上是'+tone.label+'，所以整体'+(t==='positive'?'偏顺':'偏难')+'。','结构两面同层相持，以干支喜忌定向（《子平真诠·论行运》以运之干支配命中喜忌）：'+tone.professional)],r.evidence.filter(function(e){return e.direction!=='positive'&&e.direction!=='negative'}));r.reservations=opp.concat(r.reservations||[]);return r;
+    }
     function splitEv(){var role=luckToneRoles(analysis.useful),good=[],bad=[];[[gz[0],STEM_WX[gz[0]]],[gz[1],BRANCH_WX[gz[1]]]].forEach(function(x){var ro=role(x[1]);if(ro==='忌')bad.push(x);else if(ro!=='中')good.push(x.concat(ro))});
       return [luckEvidence('T-tone','T-tone','positive','五行上'+good.map(function(x){return x[0]+x[1]}).join('、')+'帮到了你需要的力量。',good.map(function(x){return x[0]+x[1]+'为'+x[2]}).join('、')+'。'),luckEvidence('T-tone','T-tone','negative','五行上'+bad.map(function(x){return x[0]+x[1]}).join('、')+'是你怕的力量。',bad.map(function(x){return x[0]+x[1]+'为忌'}).join('、')+'。')]}
     if(!t){if(tone.split&&(d==='neutral'||d==='pending')){set('mixed','tone-split');r.evidence=splitEv().concat(r.evidence.filter(function(e){return e.direction==='neutral'}));}return r;}
@@ -3615,7 +3625,8 @@
       if(d==='pending'&&r.tendency&&r.tendency!==t&&r.tendency!=='mixed'){set('mixed','tone-vs-tendency');r.evidence.push(toneEv);return r;}
       set(t,'tone');r.evidence=[toneEv].concat(r.evidence.filter(function(e){return e.direction===t}));return r;
     }
-    if(d===t||d==='mixed')return r;
+    if(d==='mixed')return toneTiebreak();
+    if(d===t)return r;
     var act=luckActions(analysis.useful,natal,gz),shift=kind==='natal'?luckPatternShift(analysis,natal,gz):null,reasons;
     if(t==='positive'){reasons=act.bad.slice();if(shift&&shift.kind==='变格')reasons.push(shift.text);}
     else{reasons=act.good.slice();if((r.evidence||[]).some(function(e){return e.ruleId==='Y3-medicine'&&e.direction==='positive'}))reasons.push('病药：对应药路接通');if(shift&&shift.kind==='成格')reasons.push(shift.text);}
