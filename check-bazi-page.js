@@ -156,7 +156,7 @@ assert(sourceManifest.includes('《周易》') && sourceManifest.includes('不�
   'updatedAt',
   '本地校验',
   '推理依据',
-  '结论 -> 依据 -> 反证 -> 不确定处 -> 可验证点',
+  '结论 -> 依据 -> 可验证点',
 ].forEach((needle) => assert(html.includes(needle), `missing ${needle}`));
 
 assert(html.includes('<textarea id="aiQuestion" rows="2"') && html.includes('<textarea id="aiFollowupQuestion" rows="2"'), 'AI question inputs should support multi-line entry');
@@ -1045,7 +1045,7 @@ assert(scriptContext.elementPhenomenonText(killSealBazi).includes('土厚埋金�
 assert(!scriptContext.elementPhenomenonText(killSealBazi).includes('ZP-QX-001'), 'visible phenomenon details should suppress internal rule ids');
 assert(scriptContext.elementPhenomenonText(killSealBazi).includes('<details class="phenomenon-detail"><summary>完整判断依据</summary>'), 'structure view should collapse long phenomenon evidence instead of stretching the primary card');
 const killSealPromptContext = scriptContext.buildPatternContextText(killSealBazi);
-assert(killSealPromptContext.includes('气势病象：土厚埋金') && killSealPromptContext.includes('程度依据：') && killSealPromptContext.includes('未判更重：') && killSealPromptContext.includes('ZP-QX-001（ZP-2026.11.07.1-review）') && !killSealPromptContext.includes('<details'), 'AI context should receive the complete structured and versioned phenomenon conclusion without UI markup');
+assert(killSealPromptContext.includes('气势病象：土厚埋金') && killSealPromptContext.includes('程度依据：') && killSealPromptContext.includes('反证：') && !killSealPromptContext.includes('ZP-QX-001') && !killSealPromptContext.includes('<details'), 'AI context should receive the structured phenomenon conclusion without rule ids or UI markup');
 const secondaryAttackedRoot = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '戊戌', month: '己未', day: '辛未', hour: '戊戌' }, dayStem: '辛' });
 assert(secondaryAttackedRoot.strengthScore.dimensions.roots.items.some(x => x.grade === '中气根' && x.usable && !x.attacks.includes('冲')) && !secondaryAttackedRoot.elementPhenomena.some(x => x.name === '土厚埋金'), 'secondary punishment/break must not erase a still-usable middle root and fabricate rootless burial');
 const severeBuriedMetalPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '戊辰', month: '戊午', day: '辛未', hour: '己丑' }, dayStem: '辛' });
@@ -1103,7 +1103,7 @@ assert(!rootedFireWithWood.useful.decision.routes.some(route=>route.resourceRest
 assert(scriptContext.BaziEngine.normalizePhenomenonName('火炎土燥') === '火多土焦' && scriptContext.BaziEngine.normalizePhenomenonName('水泛木浮') === '水多木漂', 'resource-excess aliases should normalize to one canonical professional term');
 const earthDimsFireBazi = { person: '土多火晦样本', gender: '男', pillars: outputExcessCases.find((x) => x.name === '土多火晦').pillars, dayStem: '丁', dayElement: '火', time: { used: { year: 1997, month: 1, day: 8, hour: 8, minute: 0 }, input: { year: 1997, month: 1, day: 8, hour: 8, minute: 0 }, enabled: false, correction: 0, location: { name: 'sample', lng: 120, lat: 30 } } };
 assert(scriptContext.elementPhenomenonText(earthDimsFireBazi).includes('土多火晦（明确成立；程度：严重；置信：') && scriptContext.elementPhenomenonText(earthDimsFireBazi).includes('辰丑湿土') && scriptContext.elementPhenomenonText(earthDimsFireBazi).includes('火少火晦'), `土多火晦 view should expose wet-earth evidence and its authority boundary, got ${scriptContext.elementPhenomenonText(earthDimsFireBazi)}`);
-assert(scriptContext.buildPatternContextText(earthDimsFireBazi).includes('气势病象：土多火晦') && scriptContext.buildPatternContextText(earthDimsFireBazi).includes('ZP-QX-009'), 'AI context should receive the same 土多火晦 rule and evidence');
+assert(scriptContext.buildPatternContextText(earthDimsFireBazi).includes('气势病象：土多火晦') && !scriptContext.buildPatternContextText(earthDimsFireBazi).includes('ZP-QX-009'), 'AI context should receive the same 土多火晦 evidence without rule ids');
 const trueFollowChildPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '壬子', month: '癸亥', day: '辛亥', hour: '壬子' }, dayStem: '辛' });
 assert(trueFollowChildPattern.specialPatterns.includes('从格：从儿格') && !trueFollowChildPattern.elementPhenomena.some((x) => x.name === '水多金沉'), `true 从儿格 should follow output rather than be misdiagnosed as 水多金沉, got ${JSON.stringify(trueFollowChildPattern)}`);
 const normalOutputPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '甲寅', month: '丙午', day: '甲寅', hour: '丁巳' }, dayStem: '甲' });
@@ -1589,7 +1589,7 @@ validateCauseOwnership(deduplicatedFollowChildScore);
 const childOutletCheck = strictFollowChildPattern.specialPatternQualification.checks.find(x => x.id === 'child-has-child');
 assert(strictFollowChildPattern.mainPattern === '从格：从儿格' && deduplicatedFollowChildScore.dimensions.find((item) => item.key === 'flow').score === 90 && deduplicatedFollowChildScore.ledger.some((item) => item.dimension === 'flow' && item.counted && item.sourceCheckId === 'child-has-child' && item.causeId === 'qualification:' + childOutletCheck.ruleId), `an independently verified 食伤生财 outlet should remain owned by flow instead of being neutralized, got ${JSON.stringify(deduplicatedFollowChildScore.dimensions.find((item) => item.key === 'flow'))}`);
 const followKillAiContext = scriptContext.buildPatternContextText(followKillBazi);
-assert(followKillAiContext.includes('命格：从格：从杀格') && followKillAiContext.includes('扶抑用神：不单独取用；特殊格已严格成立') && followKillAiContext.includes('调候用神：不单独取用；特殊格已严格成立'), `AI context should identify the true special main pattern and keep ordinary balance/climate layers validation-only, got ${followKillAiContext}`);
+assert(followKillAiContext.includes('命格：从格：从杀格') && !followKillAiContext.includes('扶抑用神') && !followKillAiContext.includes('调候用神'), `AI context should identify the true special main pattern and omit pre-arbitration balance/climate candidates, got ${followKillAiContext}`);
 assert(!followKillAiContext.includes('正官格（已破）') && !followKillAiContext.includes('官杀混杂待清') && !followKillAiContext.includes('日主弱，需印比化扶'), `AI context must not leak contradictory ordinary-pattern failure or strength advice after 从杀 strictly qualifies, got ${followKillAiContext}`);
 const unsupportedFollowKillBazi = {
   person: '非当令从杀线索样本',
