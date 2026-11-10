@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261111.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261111.2"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -606,7 +606,7 @@ const natalConclusionHeading=conciseStructureHtml.indexOf('<h3 class="report-hea
 assert(conciseStructureHtml.includes('class="structure-report"') && patternHeading>=0 && patternHeading<natalConclusionHeading && natalConclusionHeading<conciseStructureHtml.indexOf('喜用参考'), 'the column grid presents the chart pattern, conclusion, and actual help');
 assert(conciseStructureText.includes('表达和做事方式与规则要求冲突') && conciseStructureText.includes('官杀又带来规则与压力，自己难以同时应付') && !conciseStructureText.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
 assert(scriptContext.standardGodGroup('伤官')==='食伤' && scriptContext.standardGodGroup('劫财')==='比劫', 'standard labels retain the actual ten-god family');
-assert(withoutGodHighlight(conciseStructureHtml).includes('木是印星，作用是制伤护身：印星（长辈、贵人、学历证书）帮你把才华用得更有章法') && withoutGodHighlight(conciseStructureHtml).includes('土是食伤，再添会加重官伤冲突：伤官已经顶撞管你的规矩') && withoutGodHighlight(conciseStructureHtml).includes('金是财星，作用是通关：你的才华（伤官）和管你的规矩（正官）容易顶撞，财（钱财、收入）在中间搭桥，先把才华变成收入，再用收入换来职位和别人的信任。求财时别丢了印星这层靠山。'), 'standard useful copy explains the chart-specific job and damage');
+assert(withoutGodHighlight(conciseStructureHtml).includes('木是印星，作用是制伤护身：印星（长辈、贵人、学历证书）帮你把才华用得更有章法') && withoutGodHighlight(conciseStructureHtml).includes('土是食伤，再添会加重官伤冲突：伤官已经顶撞管你的规矩') && withoutGodHighlight(conciseStructureHtml).includes('金是财星，作用是通关：你的才华（伤官）和管你的规矩（正官）容易顶撞，财（钱财、收入）在中间搭桥，先把才华变成收入，再用收入换来事业和别人的信任。求财时别丢了印星这层靠山。'), 'standard useful copy explains the chart-specific job and damage');
 assert(!/出生月份的木（学业和贵人）|支撑|应少增|已有缓解，尚未完全解除/.test(conciseStructureHtml), 'standard tab removes mechanical translation and repeated tails');
 {
   const modeCopy=scriptContext.modeCopy;
