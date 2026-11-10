@@ -1075,7 +1075,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
-<script src="bazi-engine.js?v=luck-copy-20261111.2"></script>
+<script src="bazi-engine.js?v=luck-copy-20261111.3"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -1961,7 +1961,7 @@ function luckBeneficiary(f){
 function luckSpecialLine(f,lost,want){
   if(!(f.left&&f.right)||lost)return '';
   var l=luckActorInfo(f.left),r=luckActorInfo(f.right),control=luckAction(f)==='制',lg=standardGodGroup(l.god),rg=standardGodGroup(r.god);
-  if(want>0&&control&&lg==='印星'&&r.god==='伤官'&&r.role==='忌')return '事业和规矩（正官）更能稳住：'+l.term+'帮你收住'+r.term+'，少跟上司起冲突';
+  if(want>0&&control&&lg==='印星'&&r.god==='伤官'&&r.role==='忌')return '事业和规矩（正官）更能稳住：'+l.term+'帮你收住'+r.term+'，少跟规矩和权威硬碰硬';
   if(want>0&&!control&&lg==='食伤'&&rg==='财星')return '才华更能变成收入（'+r.god+'）：表达和手艺（'+l.god+'）有了出口';
   if(want>0&&!control&&l.god==='七杀'&&rg==='印星')return '压力（七杀）能转成贵人帮扶和证书学历（'+r.god+'）：有人替你挡事';
   if(want>0&&!control&&lg==='比劫'&&r.self)return '你更扛得住事：'+l.term+'和你一起分担';
@@ -3902,6 +3902,16 @@ function outlookTrendRow(comparison,label){var t=outlookTrend(comparison,label);
 function outlookUnusable(r){return !r||r.assessment==='engine-error'||r.assessment==='input-error'}
 // Year card: lead with a reason that matches the annual label; opposite increment/annual sides go under 也有一点不利/好处. Mixed years use the decade mixed layout (no yearCopy).
 function outlookBareLine(s){return String(s||'').replace(/^另一方面，/,'').replace(/^(这步大运，|这一年，|这一年|这步运)/,'');}
+// Opposite-side line: if it cites the same 冲/合 as the main line, don't repeat 因为….
+function outlookShareCause(main,also){
+  var c=(String(main||'').match(/，因为([^。]+)/)||[])[1]||'';
+  var o=(String(also||'').match(/，因为([^。]+)/)||[])[1]||'';
+  var kind;
+  if(!c||!o||c!==o)return also;
+  kind=/合住了/.test(c)?'合':/冲开了/.test(c)?'冲':'';
+  if(!kind)return also;
+  return '同一个'+kind+'也让'+outlookBareLine(also).replace(/，因为[^。]+/,'').replace(/。$/,'')+'。';
+}
 function outlookSameDirItems(view,dir){
   if(!view||!dir)return [];
   if(view.mixed){var block=dir==='negative'?view.mixed.cost:view.mixed.benefit;return block&&block.standard?[{direction:dir,standard:block.standard}]:[];}
@@ -3929,7 +3939,7 @@ function outlookYearCopy(year,natal){
     return /被拖住|弱了一些|受阻|不够/.test(a)!== /被拖住|弱了一些|受阻|不够/.test(b);
   }
   var also=[],seen={};
-  function add(dir,s){s=outlookBareLine(s);if(!s||seen[s]||main&&(main.indexOf(s)>=0||s.indexOf(main.replace(/^这一年，/,''))>=0||outlookConflicts(main,s)))return;seen[s]=1;also.push({direction:dir,text:s});}
+  function add(dir,s){s=outlookBareLine(s);if(!s||seen[s]||main&&(main.indexOf(s)>=0||s.indexOf(main.replace(/^这一年，/,''))>=0||outlookConflicts(main,s)))return;seen[s]=1;also.push({direction:dir,text:outlookShareCause(main,s)});}
   (annual.items||[]).forEach(function(x){if(x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==a)add(x.direction,x.standard);});
   if(inc.mixed){if(a!=='positive')add('positive',inc.mixed.benefit&&inc.mixed.benefit.standard);if(a!=='negative')add('negative',inc.mixed.cost&&inc.mixed.cost.standard);}
   else if((inc.direction==='positive'||inc.direction==='negative')&&inc.direction!==a)outlookSameDirItems(inc,inc.direction).forEach(function(x){add(x.direction,x.standard);});
@@ -3967,6 +3977,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
         if(mainText)mainText='这一年，'+outlookBareLine(mainText);
         if(otherText)otherText=outlookBareLine(otherText);
       }
+      if(!technical&&otherText)otherText=outlookShareCause(mainText,otherText);
       return '<p data-mixed-effect="'+main.direction+'"><b>'+(technical?'说明重点（'+(main.direction==='positive'?'助力':'代价')+'）':'主要变化')+'：</b>'+esc(mainText)+'</p>'+
         (otherText?'<p data-mixed-effect="'+other.direction+'"><b>'+(technical?(other.direction==='negative'?'同时的代价':'同时的助力'):(other.direction==='negative'?'同时也有的不利':'同时也有的好处'))+'：</b>'+esc(otherText)+'</p>':'')+
         '<p class="outlook-note">'+esc(mixed.provenance[key])+'</p>'+
@@ -3978,7 +3989,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       opposite=rest.filter(function(x){return x.direction&&x.direction!=='neutral'&&x.direction!==view.direction});
       rest=rest.filter(function(x){return opposite.indexOf(x)<0});
     }
-    var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+opposite.map(function(x){return esc(x.standard.replace(/^另一方面，/,''))}).join('')+'</p>':'';
+    var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+opposite.map(function(x){return esc(outlookShareCause(items[0].standard,x.standard.replace(/^另一方面，/,'')))}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
   return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+outlookToneRow(result)+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
 }
