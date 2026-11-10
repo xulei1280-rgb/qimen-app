@@ -3541,7 +3541,13 @@
     out.years=years.map(function(year){
       if(!Number.isInteger(year.year)||!valid(year.gz)||year.gz!==getFlowYearGZ(year.year))return {year:year.year,gz:year.gz,annual:labelOutlook(outlookPending('流年年份与干支不一致'),'annual'),increment:labelOutlook(outlookPending('流年年份与干支不一致'),'increment')};
       var current=buildTemporalPatternContext(bazi.dayStem,Object.assign({},luckPillars,{flowYear:year.gz}),analysis,{outlookFlowYear:true});
-      return {year:year.year,gz:year.gz,annual:labelOutlook(compareOutlookContexts(base,current,analysis),'annual'),increment:labelOutlook(compareOutlookContexts(luck,current,analysis),'increment')};
+      var item={year:year.year,gz:year.gz,annual:labelOutlook(compareOutlookContexts(base,current,analysis),'annual'),increment:labelOutlook(compareOutlookContexts(luck,current,analysis),'increment')};
+      // Optional year-over-year: the previous year read under the decade it belonged to.
+      var prev=year.previous;
+      if(prev)item.previousYear=Number.isInteger(prev.year)&&valid(prev.gz)&&prev.gz===getFlowYearGZ(prev.year)&&valid(prev.luckGz)?
+        labelOutlook(compareOutlookContexts(buildTemporalPatternContext(bazi.dayStem,Object.assign({},natalPillars,{luck:prev.luckGz,flowYear:prev.gz}),analysis,{outlookFlowYear:true}),current,analysis),'previous'):
+        labelOutlook(outlookPending('上一年干支或所属大运无效'),'previous');
+      return item;
     });
     return out;
   }

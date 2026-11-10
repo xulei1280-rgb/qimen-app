@@ -50,6 +50,11 @@ for(const c of report.charts){
  assert.equal(JSON.stringify(E.evaluateLuckOutlook(b,cycle.gz,null,years).years),JSON.stringify(first.years),'previous comparison cannot contaminate annual/increment');
  const reverse=E.evaluateLuckOutlook(b,cycle.gz,c.cycles[1].gz,years.slice().reverse());
  assert.equal(JSON.stringify(reverse.years.slice().reverse()),JSON.stringify(first.years),'year order cannot contaminate comparisons');
+ const yoy=E.evaluateLuckOutlook(b,cycle.gz,c.cycles[1].gz,[{year:2025,gz:E.getFlowYearGZ(2025),previous:{year:2024,gz:E.getFlowYearGZ(2024),luckGz:cycle.gz}},{year:2026,gz:E.getFlowYearGZ(2026),previous:{year:2024,gz:'甲子',luckGz:cycle.gz}}]);
+ assert.ok(['positive','negative','neutral','mixed','pending'].includes(yoy.years[0].previousYear.direction),'year-over-year uses the engine comparison');
+ assert.equal(JSON.stringify(yoy.years[0].annual),JSON.stringify(first.years[1].annual),'year-over-year cannot contaminate annual');
+ assert.equal(yoy.years[1].previousYear.direction,'pending','a mismatched previous year is not compared');
+ assert.ok(!first.years[0].previousYear,'no previous year given, no comparison');
  assert.equal(JSON.stringify(b),snapshot,'outlook must not mutate natal profile');
  assert.equal(E.evaluateLuckOutlook(b,cycle.gz,null,[]).previous.direction,'unavailable');
  assert.equal(E.evaluateLuckOutlook(b,'甲甲',null,[]).natal.assessment,'input-error');

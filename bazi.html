@@ -1075,7 +1075,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
-<script src="bazi-engine.js?v=20261110.2-new-rule-first"></script>
+<script src="bazi-engine.js?v=20261110.3-year-over-year"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -3612,7 +3612,7 @@ function selectedLuckContextText(data){
     '选中大运本地判断：本运对原局 '+outlookDisplayView(outlook.natal).label+'；较上一运 '+outlookDisplayView(outlook.previous).label+(outlook.previousGz?'（上一运 '+outlook.previousGz+'）':''),
     outlookContextText('本运对原局',outlook.natal,technical),
     outlookContextText('较上一运',outlook.previous,technical,true),
-    yearOutlook?'选中流年本地判断：年度综合 '+outlookDisplayView(yearOutlook.annual).label+'；对本运 '+outlookDisplayView(yearOutlook.increment).label+'\n'+outlookContextText('年度综合',yearOutlook.annual,technical)+'\n'+outlookContextText('对本运',yearOutlook.increment,technical,true):'流年本地判断：未选择流年',
+    yearOutlook?'选中流年本地判断：年度综合 '+outlookDisplayView(yearOutlook.annual).label+'；'+(technical===false?'比这十年大运的常态 ':'对本运 ')+outlookDisplayView(yearOutlook.increment).label+(yearOutlook.previousYear?'；比上一年 '+outlookDisplayView(yearOutlook.previousYear).label:'；比上一年 无上一年可比')+'\n'+outlookContextText('年度综合',yearOutlook.annual,technical)+'\n'+outlookContextText(technical===false?'比这十年大运的常态':'对本运',yearOutlook.increment,technical,true)+(yearOutlook.previousYear?'\n'+outlookContextText('比上一年',yearOutlook.previousYear,technical,true):''):'流年本地判断：未选择流年',
     '规则边界：本地标签就是页面结论，AI只解释依据，不改写标签；当前所处大运与选中大运分别识别，回答选中岁运问题采用选中组合。流月不改变年度或大运标签。',
     '时间口径：流年立春换年；交运当年按交运日期前后分属两步大运。'
   ].join('\n');
@@ -3622,13 +3622,20 @@ function getSelectedLuckOutlook(data,ctx){
   var key=JSON.stringify([data.pillars,data.dayStem,data.gender,data.time&&data.time.used,usefulDecisionView(data).version,ctx.luckRow.gz,previous,ctx.years.map(function(year){return [year.year,year.gz]})]);
   if(selectedLuckOutlookCache&&selectedLuckOutlookCache.key===key)return selectedLuckOutlookCache.value;
   var value;
-  if(typeof BaziEngine!=='undefined'&&BaziEngine.evaluateLuckOutlook)value=BaziEngine.evaluateLuckOutlook(data,ctx.luckRow.gz,previous,ctx.years);
+  if(typeof BaziEngine!=='undefined'&&BaziEngine.evaluateLuckOutlook)value=BaziEngine.evaluateLuckOutlook(data,ctx.luckRow.gz,previous,withPreviousYears(ctx,previous));
   else{
     var pending={label:'暂无法计算',direction:'pending',assessment:'engine-error',summary:'岁运评估尚未加载，请刷新页面后重试。',evidence:[],reservations:[],life:[],uncertainty:['本地岁运评估引擎未加载']};
     value={ruleVersion:'unavailable',previousGz:previous,natal:pending,previous:previous?pending:Object.assign({},pending,{label:'无上一柱可比较',direction:'unavailable'}),years:ctx.years.map(function(year){return {year:year.year,gz:year.gz,annual:pending,increment:pending}})};
   }
   tagOutlookPeriods(value,ctx.luckRow.gz,ctx.years);
   selectedLuckOutlookCache={key:key,value:value};return value;
+}
+// Each year also compares with the year before; the first year of a decade uses the previous decade, the very first year has none.
+function withPreviousYears(ctx,previousLuck){
+  return ctx.years.map(function(y,i){
+    var before=i?{year:ctx.years[i-1].year,gz:ctx.years[i-1].gz,luckGz:ctx.luckRow.gz}:previousLuck&&typeof BaziEngine!=='undefined'?{year:y.year-1,gz:BaziEngine.getFlowYearGZ(y.year-1),luckGz:previousLuck}:null;
+    return before?Object.assign({},y,{previous:before}):y;
+  });
 }
 // Which new pillars each comparison adds, so a lost effect can name what clashed or combined it (kept beside, never written into, engine results).
 var outlookPeriods=typeof WeakMap!=='undefined'?new WeakMap():null;
@@ -3637,7 +3644,7 @@ function tagOutlookPeriods(value,luckGz,years){
   var luck=[['大运',luckGz]];
   if(value.natal)outlookPeriods.set(value.natal,luck);
   (value.years||[]).forEach(function(y,i){var gz=y.gz||years[i]&&years[i].gz,year=[['这一年',gz]];
-    if(y.annual)outlookPeriods.set(y.annual,luck.concat(year));if(y.increment)outlookPeriods.set(y.increment,year)});
+    if(y.annual)outlookPeriods.set(y.annual,luck.concat(year));if(y.increment)outlookPeriods.set(y.increment,year);if(y.previousYear)outlookPeriods.set(y.previousYear,i?year:luck.concat(year))});
 }
 // The clash or combine from the new pillars that cut a lost effect; '' when none is visible.
 function outlookLostCause(f,result,technical){
@@ -3773,7 +3780,7 @@ function renderLuckDetail(data,ctx){
   var outlook=getSelectedLuckOutlook(data,ctx),yearOutlook=outlook.years[ctx.yearIndex],relations=selectedRelationTags(data,ctx);
   return '<section class="luck-detail-panel"><div class="luck-block-title">'+modeCopy('阶段与年度判断','岁运判断')+renderDisplayModeControl()+'</div>'+
     '<p>'+ctx.flowYear.year+' '+ctx.flowYear.gz+' · '+ctx.luckRow.gz+'（'+luckStartYear(data,ctx.luckRow)+'起）</p>'+
-    '<div class="luck-outlook-summary">'+renderOutlookBox(ctx.flowYear.year+'年运势',yearOutlook.annual,ctx.flowYear.year+' · 年度综合',{trend:outlookTrend(yearOutlook.increment,'比这十年平常'),yearLine:outlookYearOwnLine(yearOutlook,outlook.natal)})+renderOutlookBox('这十年运势',outlook.natal,'本运对原局',{trend:outlookTrend(outlook.previous,'比上一步大运')})+'</div>'+
+    '<div class="luck-outlook-summary">'+renderOutlookBox(ctx.flowYear.year+'年运势',yearOutlook.annual,ctx.flowYear.year+' · 年度综合',{trend:modeCopy(outlookTrendRow(yearOutlook.previousYear,'比上一年')+outlookTrendRow(yearOutlook.increment,'比这十年大运的常态',OUTLOOK_SOFT_WORD),outlookTrendRow(yearOutlook.increment,'比这十年平常',null,true)),trendHtml:true,yearLine:outlookYearOwnLine(yearOutlook,outlook.natal)})+renderOutlookBox('这十年运势',outlook.natal,'本运对原局',{trend:outlookTrend(outlook.previous,'比上一步大运')})+'</div>'+
     '<details class="outlook-details"><summary>前后比较细节</summary>'+modeCopy('<p class="outlook-note">这里比较的对象也不同：第一项拿这十年和上一个十年比，第二项拿'+ctx.flowYear.year+'年和这十年平常比。</p>','')+renderOutlookBox('这十年比上一个十年',outlook.previous,'较上一运',{compare:true})+renderOutlookBox(ctx.flowYear.year+'年比这十年平常',yearOutlook.increment,'该流年对本运的影响',{compare:true})+'</details>'+
     '<details class="outlook-details"><summary>关系与时间口径</summary>'+modeCopy('<p>组合关系只说明力量怎样连接或牵制，不能直接当作现实结果。</p>','<p>生克冲合采用引擎已确认作用，流月不改变大运与年度四项比较。</p>')+
     modeCopy('',relations.length?'<p>关系字面对照（不据此判断升降）：'+esc(relations.join('；'))+'</p>':'<p>未见所选干支的字面关系项；有效作用仍按上述依据。</p>')+
@@ -3789,11 +3796,16 @@ function outlookCompareWord(view){
   var d=view.direction==='pending'?'':view.direction;
   return {positive:'更顺',negative:'更难',neutral:'差不多',mixed:'有升有降',unavailable:'无可比较'}[d]||(/助力/.test(view.label)?'稍顺':/牵制/.test(view.label)?'稍难':/利弊/.test(view.label)?'有升有降':view.label);
 }
-function outlookTrend(comparison,label){
+function outlookTrend(comparison,label,soft){
+  if(!comparison)return '';
   var view=outlookDisplayView(comparison);
   if(view.direction==='unavailable'||outlookUnusable(comparison))return '';
-  return label+'：'+outlookCompareWord(view);
+  var word=outlookCompareWord(view);return label+'：'+(soft&&soft[word]||word);
 }
+// Year-vs-decade wording kept apart from the year-vs-last-year words.
+var OUTLOOK_SOFT_WORD={更顺:'稍顺一点',稍顺:'稍顺一点',更难:'稍难一点',稍难:'稍难一点'};
+// Year-card rows show only a real comparison word; an engine 'no conclusion' hides the row.
+function outlookTrendRow(comparison,label,soft,raw){var t=outlookTrend(comparison,label,soft);if(!raw&&!/：(更顺|更难|差不多|有升有降|稍顺|稍难|稍顺一点|稍难一点)$/.test(t))t='';return t?'<p class="outlook-note" data-outlook-trend>'+esc(t)+'</p>':''}
 function outlookUnusable(r){return !r||r.assessment==='engine-error'||r.assessment==='input-error'}
 // The year card speaks only for what the year itself adds to the decade; with nothing of its own it follows the decade.
 function outlookYearOwnLine(year,natal){
@@ -3838,7 +3850,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
     }
     var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利')+'：</b>'+opposite.map(function(x){return esc(x.standard.replace(/^另一方面，/,''))}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
-  return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+(extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
+  return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);

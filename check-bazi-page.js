@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261110.2-new-rule-first"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=20261110.3-year-over-year"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -2100,6 +2100,15 @@ const selectedOutlook = scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, s
 const summaryBeforeMonth = JSON.stringify(selectedOutlook);
 const selectedOutlookHtml = scriptContext.renderLuckDetail(wenZhenLuckChart, selectedOutlookContext);
 assert(selectedOutlookHtml.includes('本运对原局') && selectedOutlookHtml.includes('较上一运') && selectedOutlookHtml.includes('年度综合') && selectedOutlookHtml.includes('该流年对本运的影响'), 'detail must expose all four comparison scopes');
+{ // Standard year card: 比上一年 then 比这十年大运的常态; luck 1 year 0 compares with the last year of luck 0. Professional keeps 比这十年平常 only.
+  const std=(selectedOutlookHtml.match(/data-standard-copy>(?:(?!<\/div>)[\s\S])*比上一年：[^<]*<\/p><p[^>]*>比这十年大运的常态：[^<]*<\/p>/)||[])[0];
+  assert(std && selectedOutlook.years[0].previousYear, 'standard year card shows 比上一年 before 比这十年大运的常态, first year of a later decade uses the previous decade');
+  assert(/data-professional-copy><p[^>]*>比这十年平常：/.test(selectedOutlookHtml) && !/data-professional-copy>[^]*?比上一年/.test(selectedOutlookHtml.split('前后比较细节')[0].replace(/data-standard-copy>[\s\S]*?<\/div>/g,'')), 'professional year card unchanged');
+  scriptContext.restoreLuckSelection({ luck: 0, year: 0, month: null });
+  const firstCtx = scriptContext.getSelectedLuckContext(wenZhenLuckChart), firstHtml = scriptContext.renderLuckDetail(wenZhenLuckChart, firstCtx);
+  assert(!scriptContext.getSelectedLuckOutlook(wenZhenLuckChart, firstCtx).years[0].previousYear && !firstHtml.includes('比上一年：'), 'the very first year has no previous year row');
+  scriptContext.restoreLuckSelection({ luck: 1, year: 0, month: null });
+}
 assert(selectedOutlookHtml.includes('交运边界年份') && selectedOutlookHtml.includes('以交运日期为界'), 'the first selected year must disclose the boundary-year scope');
 assert((scriptContext.renderLuckSelector(wenZhenLuckChart, selectedOutlookContext).match(/fortune-outcome/g) || []).length === 10, 'each annual button should expose a textual outcome');
 scriptContext.luckSelection.month = 3;
