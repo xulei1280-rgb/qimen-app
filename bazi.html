@@ -1911,12 +1911,22 @@ function luckRoleInfo(){
 }
 function luckRole(wx){var v=luckRoleInfo().v;return v.primary.indexOf(wx)>=0?'主用':v.secondary.indexOf(wx)>=0?'佐用':v.avoid.indexOf(wx)>=0?'忌':''}
 function luckRoleLabel(wx,avoid){var r=luckRole(wx);return avoid?'忌'+wx:(r&&r!=='忌'?r:'喜用')+wx}
-var LUCK_GOD_SHORT={正官:'上司职位',七杀:'压力',正印:'长辈贵人',偏印:'偏门技艺',食神:'才艺口才',伤官:'表现欲',正财:'稳定收入',偏财:'外快投资',比肩:'同辈朋友',劫财:'争利的同辈'};
+var LUCK_GOD_SHORT={正官:'职位和名声',七杀:'魄力和权威',正印:'长辈贵人',偏印:'偏门技艺',食神:'才艺口才',伤官:'才华表现',正财:'稳定收入',偏财:'外快投资',比肩:'同辈朋友',劫财:'同辈帮手'};
+var LUCK_GOD_AVOID={正官:'管你的规矩',七杀:'压力',正印:'长辈的管束',偏印:'偏门的念头',食神:'贪图安逸',伤官:'爱顶撞的脾气',正财:'钱财琐事',偏财:'外快投机',比肩:'跟你抢的同辈',劫财:'争利的同辈'};
+// Who a ten god restrains (it is the one that gains or loses when that god is held or let loose).
+var LUCK_GOD_TARGET={伤官:'正官',食神:'七杀',正财:'印',偏财:'印',正官:'你',七杀:'你',正印:'食伤',偏印:'食伤',比肩:'财',劫财:'财'};
+var LUCK_SUBJECT={你:['你','更扛得住事'],正官:['职位和名声（正官）','更能稳住'],七杀:['魄力和权威（七杀）','更能发挥'],印:['靠山（印星）','更能稳住'],正印:['靠山（正印）','更能稳住'],偏印:['偏门技艺（偏印）','更能发挥'],食伤:['才华表现（食伤）','更能发挥'],食神:['才艺口才（食神）','更能发挥'],伤官:['才华表现（伤官）','更能发挥'],财:['收入（财星）','更能稳住'],正财:['稳定收入（正财）','更能稳住'],偏财:['外快投资（偏财）','更能发挥'],比肩:['你','更扛得住事'],劫财:['你','更扛得住事']};
+function luckSubjectHead(key,positive){
+  if(key==='格局'){var n=luckRoleInfo().name;return (n||'格局主线')+(positive?'更能发挥':'被拖住')}
+  if(/^(主用|佐用|喜用)/.test(key))return key+(positive?'更能发挥':'被拖住');
+  var s=LUCK_SUBJECT[key]||LUCK_SUBJECT.你;return s[0]+(positive?s[1]:'被拖住');
+}
 function luckActorInfo(actor){
   var info=luckRoleInfo(),stem=actor.stem||((actor.text||'').match(/[甲乙丙丁戊己庚辛壬癸]/)||[])[0],wx=STEM_WX[stem]||'';
   var self=actor.god==='日主',god=self?'日主':actor.god||(info.day&&stem?tenGod(info.day,stem):'');
   var role=self?'':luckRole(wx);
-  return {self:self,god:god,wx:wx,role:role,name:self?'你':LUCK_GOD_SHORT[god]||wx,tag:self?'':god+(role?'，'+role+wx:'')};
+  var name=self?'你':(role==='忌'?LUCK_GOD_AVOID[god]:LUCK_GOD_SHORT[god])||wx;
+  return {self:self,god:god,wx:wx,role:role,name:name,term:self||!god||name===wx?name:name+'（'+god+'）',tag:self?'':god+(role?'，'+role+wx:'')};
 }
 function luckWhen(f){
   var pillars=[f,f.left,f.right].filter(Boolean).map(function(a){return a.pillar});
@@ -1928,15 +1938,63 @@ function luckParen(actors){
 }
 // One plain clause per fact: outcome first, terms in a single parenthesis.
 function luckAction(f){return f.action||(f.key&&(f.key.match(/>([^>]+)>/)||[])[1])||'生'}
-function luckStepCore(f,lost,paren){
+// dropSubject: the clause follows a head that already names the receiving side.
+function luckStepCore(f,lost,dropSubject){
   var l=luckActorInfo(f.left),r=luckActorInfo(f.right),control=luckAction(f)==='制';
-  var core=l.self?(control?(lost?'你不再出力压住'+r.name:'你出力压住'+r.name):(lost?'你少花力气去生'+r.name:'你要花力气去生'+r.name)):r.role==='忌'?(control?(lost?r.name+'不再被'+l.name+'压住':r.name+'被'+l.name+'压住'):(lost?r.name+'少了'+l.name+'的助长':r.name+'被'+l.name+'助长')):
-    (control?(lost?r.name+'摆脱了'+l.name+'的压制':r.name+'受到'+l.name+'的压制'):(lost?r.name+'少了'+l.name+'的帮助':r.name+'得到'+l.name+'的帮助'));
-  return core+(paren===false?'':luckParen([l,r]));
+  if(control&&r.self&&!l.self)l=Object.assign({},l,{term:(LUCK_GOD_AVOID[l.god]||l.name)+(l.god?'（'+l.god+'）':'')});
+  var L=l.term,R=dropSubject?'':r.term;
+  if(l.self)return control?(lost?'你不再出力压住'+r.term:'你要出力压住'+r.term):(lost?'你少花力气在'+r.term+'上':'你要花力气在'+r.term+'上');
+  if(r.role==='忌')return control?(lost?r.term+'不再被'+L+'收住':L+'帮你收住'+r.term):(lost?r.term+'少了'+L+'的助长':r.term+'被'+L+'助长');
+  return control?(lost?R+'摆脱了'+L+'的压制':R+'受到'+L+'的压制'):(lost?R+'少了'+L+'的帮助':R+'得到'+L+'的帮助');
 }
-function luckFactCore(f,lost,paren){
-  if(f.left&&f.right)return luckStepCore(f,lost,paren);
-  var a=luckActorInfo(f);return a.name+(lost?'的力量被牵住':'的力量变强')+(paren===false?'':luckParen([a]));
+function luckFactCore(f,lost,dropSubject){
+  if(f.left&&f.right)return luckStepCore(f,lost,dropSubject);
+  var a=luckActorInfo(f);return dropSubject?'这股力量'+(lost?'被牵住':'变强'):a.term+(lost?'的力量被牵住':'的力量变强');
+}
+// The side that gains (or loses) from the fact, as a LUCK_SUBJECT key.
+function luckBeneficiary(f){
+  var a=luckActorInfo(f.left&&f.right?f.right:f);
+  if(a.self)return '你';
+  return a.role==='忌'?LUCK_GOD_TARGET[a.god]||'你':a.god;
+}
+// Fixed wording for the common pairs the owner approved.
+function luckSpecialLine(f,lost,want){
+  if(!(f.left&&f.right)||lost)return '';
+  var l=luckActorInfo(f.left),r=luckActorInfo(f.right),control=luckAction(f)==='制',lg=standardGodGroup(l.god),rg=standardGodGroup(r.god);
+  if(want>0&&control&&lg==='印星'&&r.god==='伤官'&&r.role==='忌')return '职位和名声（正官）更能稳住：'+l.term+'帮你收住'+r.term+'，少跟上司起冲突';
+  if(want>0&&!control&&lg==='食伤'&&rg==='财星')return '才华更能变成收入（'+r.god+'）：表达和手艺（'+l.god+'）有了出口';
+  if(want>0&&!control&&l.god==='七杀'&&rg==='印星')return '压力（七杀）能转成贵人帮扶和证书学历（'+r.god+'）：有人替你挡事';
+  if(want>0&&!control&&lg==='比劫'&&r.self)return '你更扛得住事：'+l.term+'和你一起分担';
+  if(want<0&&control&&lg==='财星'&&rg==='印星'&&r.role!=='忌')return '靠山（'+r.god+'）被拖住：忙着赚钱（'+l.god+'），顾不上学业和长辈';
+  if(want<0&&control&&l.god==='伤官'&&r.god==='正官'&&r.role!=='忌')return '职位和名声（正官）被拖住：爱顶撞的脾气（伤官）冒头';
+  return '';
+}
+// Task-level line, used when the bare fact cannot show the verdict by itself.
+function luckTaskLine(e,positive,factReason){
+  function pn(p,n){return positive?p:n}
+  var id=e&&e.taskId||'',rule=e&&e.ruleId||'',name=luckRoleInfo().name,key='格局',reason='';
+  if(rule==='Y3-medicine'){var fam={官伤冲战:['正官','伤官见官（个性和规矩相冲）'],承载不足:['你','你自身的底气'],官杀承载不足:['你','杀重身轻（压力大过承受力）'],官杀去留:['你','官杀混杂（多头管束）'],比劫分财:['财','比劫分财（同辈来分你的钱）'],财印相战:['印','财印相战（赚钱和学业互相拉扯）'],枭夺食:['食伤','枭神夺食（偏门念头压住才艺）'],食伤去留:['食伤','食伤混杂（才艺和脾气互相牵扯）']}[id]||['你','原局的毛病'];key=fam[0];reason=fam[1]+(id==='承载不足'?pn('变足','变弱'):pn('缓解','加重'))}
+  else if(rule==='Y3-carry-support'){key='你';reason='你得到的帮扶'+pn('变多','变少')}
+  else if(rule==='Y3-carry-load'){key='你';reason=(id.indexOf('官杀')>=0?'压力负担':'钱财负担')+pn('减轻','加重')}
+  else if(rule==='Y3-earth-metal'){key='你';reason=luckMixedHeading(e,positive,[])}
+  else if(rule==='Y3-required-path'){reason=(name?name+'的':'格局的')+'关键配合'+pn('恢复','受阻')}
+  else if(rule==='Y4-output-load'){key='你';reason='你的消耗'+pn('减轻','增加')}
+  else if(rule==='Y4-output'||rule==='Y4-blade-outlet'){key='食伤';reason='才华发挥的出口'+pn('变畅','受阻')}
+  else if(rule==='Y5-role-root'||rule==='Y5-role-action'){var target=(id.match(/[木火土金水]/g)||['']).pop(),avoid=/忌/.test(id);key=avoid?'你':luckRoleLabel(target);reason=avoid?'忌'+target+pn('被压住','变强'):'这股力量'+pn('得到帮助','受到牵制')}
+  else if(rule==='Y6-natal-climate'){key='你';reason='寒暖燥湿的调节'+pn('到位','失调')}
+  else{
+    var t={'hurt-officer':['正官','伤官见官（个性和规矩相冲）'+pn('减轻','加重')],'officer-kill-mixed':['你','官杀混杂（多头管束）'+pn('减轻','加重')],
+      'carry-wealth':['财','你扛财的底气'+pn('变足','不够')],'carry-officer':['正官','你担职位的底气'+pn('变足','不够')],'carry-output':['食伤','你撑才华发挥的底气'+pn('变足','不够')],'carry-kill':['你','你扛压力的底气'+pn('变足','不够')],
+      'output-wealth':positive?['@才华更能变成收入（财星）','表达和手艺有了出口']:['财','用才艺本事换钱的路子受阻'],
+      'wealth-officer':['正官',pn('收入能换来职位和信任','收入换不来职位和信任')],
+      'handle-kill':['你','化解压力（七杀）的办法'+pn('起效','失灵')],
+      'kill-seal':positive?['@压力（七杀）能转成贵人帮扶和证书学历（印星）','有人替你挡事']:['你','借长辈贵人化解压力的路子受阻'],
+      'officer-blade':['你',pn('规矩管住过旺的自己（官星制刃）','管住过旺自己的规矩（官星制刃）失效')]}[id]||['格局','原有的格局配合'+pn('变强','变弱')];
+    key=t[0];reason=t[1];
+  }
+  var head=key.charAt(0)==='@'?key.slice(1):luckSubjectHead(key,positive);
+  if(rule!=='Y4-output'&&rule!=='Y4-blade-outlet')reason=factReason||reason;
+  return head+'：'+(head.charAt(0)==='你'&&reason.charAt(0)==='你'?reason.slice(1):reason);
 }
 // +1 when the bare fact is good for you, -1 when bad, 0 when only the task can tell (your own output, neutral actors).
 function luckFactSign(f,lost){
@@ -1949,10 +2007,15 @@ function luckFactSign(f,lost){
   return lost?-s:s;
 }
 // The verdict comes from the evidence task; when the bare fact does not show it, say that task outright.
+function luckWhenLead(f){return {这一年:'这一年，',这步大运里:'这步大运，'}[luckWhen(f)]||''}
 function luckFactText(f,lost,direction,e){
-  var want=direction==='positive'?1:direction==='negative'?-1:0;
-  var reason=e&&want&&luckFactSign(f,lost)!==want?luckMixedHeading(e,want>0,[{actor:f,change:lost?'lost':'gained'}]):'';
-  return luckWhen(f)+luckFactCore(f,lost)+(reason?'，'+reason:'')+(want>0?'，对你有利。':want<0?'，对你不利。':'。');
+  var want=direction==='positive'?1:direction==='negative'?-1:0,lead=luckWhenLead(f);
+  if(!want)return lead+luckFactCore(f,lost)+'。';
+  var sign=luckFactSign(f,lost),special=sign===want&&luckSpecialLine(f,lost,want);
+  if(special)return lead+special+'。';
+  if(sign!==want)return lead+luckTaskLine(e,want>0,sign===0&&f.left&&luckActorInfo(f.left).self?luckFactCore(f,lost):'')+'。';
+  var t=luckActorInfo(f.left&&f.right?f.right:f),named=t.self||t.role!=='忌'&&LUCK_SUBJECT[t.god]&&LUCK_SUBJECT[t.god][0]!=='你';
+  return lead+luckSubjectHead(luckBeneficiary(f),want>0)+'：'+luckFactCore(f,lost,named)+'。';
 }
 function luckMixedHeading(e,positive,refs){
   function pn(p,n){return positive?p:n}
@@ -2056,13 +2119,10 @@ function mixedOutlookReadout(result){
     standardHeading=luckMixedHeading(e,positive,refs);
     function words(technical){
       if(!technical){
-        var paren=standardHeading.indexOf('（')<0,tail=positive?'，对你有利。':'，对你不利。',core;
-        if(groups.length&&!refs.some(function(ref){return ref.actor.left})){
-          var names=refs.map(function(ref){return luckActorInfo(ref.actor)}),conflict=/hurt-officer|officer-kill-mixed/.test(e.taskId);
-          core=names.map(function(a){return a.name}).filter(function(n,i,all){return all.indexOf(n)===i}).join('和')+(conflict?(positive?'不再相冲':'相互冲撞'):(positive?'之间的配合起效':'之间的配合被破坏'))+(paren?luckParen(names):'');
-        }else core=refs.map(function(ref){return luckFactCore(ref.actor,ref.change==='lost',paren)}).join('；');
-        var when=refs.map(function(ref){return luckWhen(ref.actor)}).sort().find(function(w){return w!=='这段时间'})||'这段时间';
-        return standardHeading+'：'+when+(core||(positive?'情况好转':'情况变差'))+tail;
+        var ref=refs[0];
+        if(ref&&!(groups.length&&!ref.actor.left)&&(ref.actor.left&&ref.actor.right||ref.actor.stem))return luckFactText(ref.actor,ref.change==='lost',e.direction,e);
+        var lead=refs.map(function(r){return luckWhenLead(r.actor)}).sort().find(Boolean)||'';
+        return lead+luckTaskLine(e,positive)+'。';
       }
       var named=refs.map(function(ref){var f=ref.actor;if(f.left&&f.right)return displayStep({left:f.left,right:f.right,action:(f.key.match(/>([^>]+)>/)||[])[1]||'生'},technical);
         if(f.god)return displayActor(f,technical);
@@ -2117,7 +2177,7 @@ function outlookDisplayView(result){
       if(physical){
         var action=(physical.key.match(/>([^>]+)>/)||[])[1]||'生',step={left:physical.left,right:physical.right,action:action};
         var sl=luckActorInfo(step.left),sr=luckActorInfo(step.right);
-        items.push({standard:luckWhen(step)+(sl.self?'你照旧'+(step.action==='制'?'出力压住':'花力气去生')+sr.name:sr.name+'照旧'+(step.action==='制'?'受'+sl.name+'压制':'得到'+sl.name+'的帮助'))+luckParen([sl,sr])+'，'+(luckRoleInfo().name||'原局')+'的格局主线不变。',professional:displayStep(step,true)+'继续可达；同一任用需求的已核验状态延续。',ruleId:e.ruleId,direction:'neutral'});
+        items.push({standard:luckWhen(step)+(sl.self?'你照旧'+(step.action==='制'?'出力压住':'花力气在')+sr.term+(step.action==='制'?'':'上'):sr.term+'照旧'+(step.action==='制'?'受'+sl.term+'压制':'得到'+sl.term+'的帮助'))+'，'+(luckRoleInfo().name||'原局')+'的格局主线不变。',professional:displayStep(step,true)+'继续可达；同一任用需求的已核验状态延续。',ruleId:e.ruleId,direction:'neutral'});
         return;
       }
     }
@@ -2134,13 +2194,13 @@ function outlookDisplayView(result){
       var stableTask=e.direction==='neutral'&&result.review&&(result.review.afterTasks||[]).find(function(t){return t.state!==null&&t.state!==0});
       var a=e.before||(result.review&&result.review.beforeTasks||[]).find(function(t){return t.id===e.taskId}),b=e.after||(result.review&&result.review.afterTasks||[]).find(function(t){return t.id===e.taskId}),task=a&&a.label||b&&b.label||stableTask&&stableTask.label;
       var plainId=e.taskId||stableTask&&stableTask.id,plain={'carry-wealth':'你扛财的底气','carry-output':'你撑才华发挥的底气','carry-officer':'你担职位的底气','carry-kill':'你扛压力的底气','handle-kill':'化解压力（食神制杀或印化杀）的办法','hurt-officer':'伤官见官（个性和规矩相冲）','officer-kill-mixed':'官杀混杂（多头管束）','kill-seal':'借长辈贵人化解压力的路子','output-wealth':'用才艺本事换钱的路子','verified-continuity':'原有的格局配合'}[plainId]||'原有的格局配合',conflictTask=/hurt-officer|officer-kill-mixed/.test(plainId||'');
-      if(task||e.direction==='neutral')items.push({standard:plain+(e.direction==='positive'?(conflictTask?'减轻，对你有利。':'变强，对你有利。'):e.direction==='negative'?(conflictTask?'加重，对你不利。':'变弱，对你不利。'):e.direction==='mixed'?'有好有坏。':'保持不变。'),professional:outlookTaskMeaning(e.taskId||stableTask&&stableTask.id)+(a&&b&&a.state!==undefined?'：'+({1:'原局有效',0:'原局未补足','-1':'原局受破坏'}[a.state]||'原局已核验')+'，'+({1:'本期有效',0:'本期未补足','-1':'本期受破坏'}[b.state]||'本期已核验')+'。':'延续。'),ruleId:e.ruleId,direction:e.direction});
+      if(task||e.direction==='neutral')items.push({standard:e.direction==='positive'||e.direction==='negative'?luckTaskLine(e,e.direction==='positive')+'。':plain+(e.direction==='mixed'?'有好有坏。':'保持不变。'),professional:outlookTaskMeaning(e.taskId||stableTask&&stableTask.id)+(a&&b&&a.state!==undefined?'：'+({1:'原局有效',0:'原局未补足','-1':'原局受破坏'}[a.state]||'原局已核验')+'，'+({1:'本期有效',0:'本期未补足','-1':'本期受破坏'}[b.state]||'本期已核验')+'。':'延续。'),ruleId:e.ruleId,direction:e.direction});
     }
   });
   if(!items.length&&result.review&&result.review.residualDetails){
     var detail=result.review.residualDetails,old=detail.beforeActors[0],now=detail.afterActors[0];
     function step(f,technical){return displayStep({left:f.left,right:f.right,action:(f.key.match(/>([^>]+)>/)||[])[1]||'生'},technical)}
-    items.push({standard:'这段时间'+luckActorInfo(old.right).name+'的帮助换了来源：'+luckActorInfo(old.left).name+'被牵住，改由'+luckActorInfo(now.left).name+'接上'+luckParen([luckActorInfo(old.left),luckActorInfo(now.left)])+'，整体照旧。',professional:step(old,true)+'原路径受限；'+step(now,true)+'可达，替代路径接续同一承载需求，整体维持。',direction:'neutral'});
+    items.push({standard:old.left&&old.right&&now.left?'这段时间'+luckActorInfo(old.right).term+'的帮助换了来源：'+luckActorInfo(old.left).term+'被牵住，改由'+luckActorInfo(now.left).term+'接上，整体照旧。':'这段时间'+luckActorInfo(old).term+'被牵住，改由'+luckActorInfo(now).term+'接上，整体照旧。',professional:step(old,true)+'原路径受限；'+step(now,true)+'可达，替代路径接续同一承载需求，整体维持。',direction:'neutral'});
   }
   if(!items.length&&result.assessment==='engine-error')items.push({standard:'评估程序尚未加载，请刷新页面后重试。',professional:'岁运评估引擎未加载，请刷新页面后重试。',direction:'neutral'});
   if(!items.length)items.push({standard:direction==='unavailable'?'第一步没有前一阶段可比较。':result.assessment==='input-error'?'出生资料或所选年月与记录不一致，请核对。':'这段时间起作用的力量有进有出，好坏相抵，整体按'+(luckRoleInfo().name||'原局格局')+'的主线走。',professional:direction==='unavailable'?'第一步大运无前运。':result.assessment==='input-error'?'四柱或所选岁运干支校验未通过。':'本期已采用证据无具体作用增减，维持原局已确认任务。',direction:'neutral'});
@@ -3681,8 +3741,7 @@ function renderLuckDetail(data,ctx){
   var outlook=getSelectedLuckOutlook(data,ctx),yearOutlook=outlook.years[ctx.yearIndex],relations=selectedRelationTags(data,ctx);
   return '<section class="luck-detail-panel"><div class="luck-block-title">'+modeCopy('阶段与年度判断','岁运判断')+renderDisplayModeControl()+'</div>'+
     '<p>'+ctx.flowYear.year+' '+ctx.flowYear.gz+' · '+ctx.luckRow.gz+'（'+luckStartYear(data,ctx.luckRow)+'起）</p>'+
-    modeCopy('<p class="outlook-note">下面两项都拿你出生时的八字来比：第一项看'+ctx.flowYear.year+'年（连同这步大运一起），第二项只看这步大运，所以结论可以不同。</p>','')+
-    '<div class="luck-outlook-summary">'+renderOutlookBox(ctx.flowYear.year+'年（连同这步大运）比你出生时',yearOutlook.annual,ctx.flowYear.year+' · 年度综合')+renderOutlookBox('这十年比你出生时',outlook.natal,'本运对原局')+'</div>'+
+    '<div class="luck-outlook-summary">'+renderOutlookBox(ctx.flowYear.year+'年运势',yearOutlook.annual,ctx.flowYear.year+' · 年度综合',{trend:outlookTrend(yearOutlook.annual,previousYearOutlook(data,ctx),'比上一年'),repeat:outlookStandardLines(outlook.natal),steady:outlookYearOwnLine(yearOutlook,outlook.natal)})+renderOutlookBox('这十年运势',outlook.natal,'本运对原局',{trend:outlookTrend(outlook.natal,previousLuckOutlook(data,ctx),'比上一步大运')})+'</div>'+
     '<details class="outlook-details"><summary>前后比较细节</summary>'+modeCopy('<p class="outlook-note">这里比较的对象也不同：第一项拿这十年和上一个十年比，第二项拿'+ctx.flowYear.year+'年和这十年平常比。</p>','')+renderOutlookBox('这十年比上一个十年',outlook.previous,'较上一运')+renderOutlookBox(ctx.flowYear.year+'年比这十年平常',yearOutlook.increment,'该流年对本运的影响')+'</details>'+
     '<details class="outlook-details"><summary>关系与时间口径</summary>'+modeCopy('<p>组合关系只说明力量怎样连接或牵制，不能直接当作现实结果。</p>','<p>生克冲合采用引擎已确认作用，流月不改变大运与年度四项比较。</p>')+
     modeCopy('',relations.length?'<p>关系字面对照（不据此判断升降）：'+esc(relations.join('；'))+'</p>':'<p>未见所选干支的字面关系项；有效作用仍按上述依据。</p>')+
@@ -3691,26 +3750,76 @@ function renderLuckDetail(data,ctx){
 // Plain result word for standard mode; professional keeps the engine labels.
 function outlookPlainResult(view){
   var d=view.direction==='pending'?'':view.direction;
-  return {positive:'变好',negative:'变差',mixed:'有好有坏',neutral:'平稳',unavailable:'无可比较'}[d]||(/助力/.test(view.label)?'偏好':/牵制/.test(view.label)?'偏差':/利弊/.test(view.label)?'有好有坏':view.label);
+  return {positive:'顺利',negative:'阻力多',mixed:'有好有坏',neutral:'平稳',unavailable:'无可比较'}[d]||(/助力/.test(view.label)?'偏顺':/牵制/.test(view.label)?'偏阻':/利弊/.test(view.label)?'有好有坏':view.label);
 }
-function renderOutlookBox(title,result,professionalTitle){
+// Rise/fall against the previous year or decade: both sides read with the same engine call, then ranked by the shown word.
+var OUTLOOK_RANK={顺利:2,偏顺:2,平稳:1,有好有坏:1,偏阻:0,阻力多:0};
+function outlookTrend(current,previous,label){
+  if(!previous)return '';
+  var a=OUTLOOK_RANK[outlookPlainResult(outlookDisplayView(current))],b=OUTLOOK_RANK[outlookPlainResult(outlookDisplayView(previous))];
+  if(a===undefined||b===undefined)return '';
+  return label+'：'+(a>b?'更顺':a<b?'更难':'差不多');
+}
+var outlookNeighborCache={};
+function outlookNeighbor(data,luckIndex,years){
+  var rows=getLuckData(data).rows,row=rows[luckIndex];
+  if(!row||typeof BaziEngine==='undefined'||!BaziEngine.evaluateLuckOutlook)return null;
+  var prev=luckIndex>0?rows[luckIndex-1].gz:null,key=JSON.stringify([data.pillars,data.gender,data.time&&data.time.used,usefulDecisionView(data).version,row.gz,prev,years]);
+  if(!outlookNeighborCache[key])outlookNeighborCache[key]=BaziEngine.evaluateLuckOutlook(data,row.gz,prev,years.map(function(y){return {year:y,gz:BaziEngine.getFlowYearGZ(y)}}));
+  return outlookNeighborCache[key];
+}
+function previousYearOutlook(data,ctx){
+  if(ctx.yearIndex>0)return getSelectedLuckOutlook(data,ctx).years[ctx.yearIndex-1].annual;
+  if(ctx.luckIndex<1)return null;
+  var o=outlookNeighbor(data,ctx.luckIndex-1,[ctx.flowYear.year-1]);return o&&o.years[0]&&o.years[0].annual;
+}
+function previousLuckOutlook(data,ctx){
+  if(ctx.luckIndex<1)return null;
+  var o=outlookNeighbor(data,ctx.luckIndex-1,[]);return o&&o.natal;
+}
+// When the year reads differently from the decade, say what the year itself adds (its own effect on the decade).
+function outlookYearOwnLine(year,natal){
+  var a=year.annual.direction,inc=outlookDisplayView(year.increment);
+  if(a===natal.direction||!(a==='mixed'?inc.direction==='positive'||inc.direction==='negative':inc.direction===a))return '';
+  var line=inc.mixed?(a==='positive'?inc.mixed.benefit:inc.mixed.cost).standard:(inc.items[0]&&inc.items[0].standard)||'';
+  return line.replace(/^另一方面，/,'');
+}
+function outlookStandardLines(result){
   var view=outlookDisplayView(result);
+  return view.mixed?[view.mixed.benefit.standard,view.mixed.cost.standard]:view.items.map(function(x){return x.standard}).filter(Boolean);
+}
+// Standard copy explains a ten god once per card: later mentions drop the bracketed term.
+function outlookGlossOnce(html){
+  var seen={};
+  return html.replace(/（(正官|七杀|正印|偏印|食神|伤官|正财|偏财|比肩|劫财|印星|财星|官星|食伤|比劫)）/g,function(m,g,at){var k=html.slice(Math.max(0,at-2),at)+g;if(seen[k])return '';seen[k]=1;return m});
+}
+function renderOutlookBox(title,result,professionalTitle,extra){
+  var view=outlookDisplayView(result);extra=extra||{};
+  // The year card speaks for the year itself; lines already said by the decade card are not repeated.
+  var repeat=extra.repeat||[],steady=extra.steady&&repeat.indexOf(extra.steady)<0?extra.steady:'这一年沿着这步大运的节奏走。';
   function body(technical){var key=technical?'professional':'standard';
     if(view.mixed){var mixed=view.mixed,main=mixed.focus==='positive'?mixed.benefit:mixed.cost,other=mixed.focus==='positive'?mixed.cost:mixed.benefit;
       var remaining=view.items.filter(function(x){return x.direction==='neutral'&&x[key]});
-      return '<p data-mixed-effect="'+main.direction+'"><b>'+(technical?'说明重点（'+(main.direction==='positive'?'助力':'代价')+'）':'主要变化')+'：</b>'+esc(main[key])+'</p>'+
-        '<p data-mixed-effect="'+other.direction+'"><b>'+(technical?(other.direction==='negative'?'同时的代价':'同时的助力'):(other.direction==='negative'?'同时也有的不利':'同时也有的好处'))+'：</b>'+esc(other[key])+'</p>'+
+      var mainText=!technical&&repeat.indexOf(main[key])>=0?steady:main[key],otherText=!technical&&repeat.indexOf(other[key])>=0?'':other[key];
+      return '<p data-mixed-effect="'+main.direction+'"><b>'+(technical?'说明重点（'+(main.direction==='positive'?'助力':'代价')+'）':'主要变化')+'：</b>'+esc(mainText)+'</p>'+
+        (otherText?'<p data-mixed-effect="'+other.direction+'"><b>'+(technical?(other.direction==='negative'?'同时的代价':'同时的助力'):(other.direction==='negative'?'同时也有的不利':'同时也有的好处'))+'：</b>'+esc(otherText)+'</p>':'')+
         '<p class="outlook-note">'+esc(mixed.provenance[key])+'</p>'+
         (remaining.length?'<details class="outlook-details"><summary>查看保留限制</summary>'+remaining.map(function(x){return '<p>'+esc(x[key])+'</p>'}).join('')+'</details>':'');
     }
-    var rest=view.items.slice(1).filter(function(x){return x[key]}),opposite=[];
+    var items=view.items;
+    if(!technical&&repeat.length){
+      items=items.filter(function(x){return !x.standard||repeat.indexOf(x.standard)<0});
+      var first=items.findIndex(function(x){return x.standard&&(x.direction===view.direction||x.direction==='neutral'||!x.direction)});
+      items=first<0?[{standard:steady,direction:'neutral'}].concat(items):[items[first]].concat(items.filter(function(x,i){return i!==first}));
+    }
+    var rest=items.slice(1).filter(function(x){return x[key]}),opposite=[];
     if(!technical&&(view.direction==='positive'||view.direction==='negative')){
       opposite=rest.filter(function(x){return x.direction&&x.direction!=='neutral'&&x.direction!==view.direction});
       rest=rest.filter(function(x){return opposite.indexOf(x)<0});
     }
     var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利')+'：</b>'+opposite.map(function(x){return esc(x.standard.replace(/^另一方面，/,''))}).join('')+'</p>':'';
-    return '<p>'+esc(view.items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
-  return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(body(false),body(true))+'</div>';
+    return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
+  return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+(extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);
@@ -3866,7 +3975,7 @@ function buildBaziReport(){
   if(!currentBazi)buildBazi();
   var d=refreshPatternAnalysis(currentBazi),v=caseDisplayView(d),technical=(document.body&&document.body.getAttribute('data-display-mode'))==='professional',key=technical?'professional':'standard';
   var ctx=getSelectedLuckContext(d),outlook=getSelectedLuckOutlook(d,ctx),y=outlook.years[ctx.yearIndex],luck=ctx.luck;
-  return ['出生组合分析报告','命主：'+(d.person||'未命名')+'；'+d.gender,'输入时间：'+formatTime(d.time.input),'采用时间：'+formatTime(d.time.used),'时间校对：'+(d.time.enabled?formatSolarCorrection(d.time):'按输入时间')+(d.time.daylightSaving?'；夏令时已减去1小时':''),'出生地点：'+d.time.location.name+' '+locationCoordText(d.time.location),'出生组合：'+Object.values(d.pillars).join(' '),v.headline[key],...v.support.map(function(x){return x[key]}),...v.limits.map(function(x){return x[key]}),usefulSummaryText(d,true,!technical),...['primary','secondary','avoid','other'].flatMap(function(role){var view=usefulDecisionView(d),values={primary:view.primary,secondary:view.secondary,avoid:view.avoid,other:view.routeDependent}[role];return values.map(function(e){return usefulDisplayReason(d,e,role,technical)})}),(technical?'大运起运：':'阶段起点：')+luck.direction+'，约'+luck.startAge+'岁起运',(technical?'大运表：':'阶段表：')+luck.rows.map(function(r){return r.from+'-'+r.to+'岁 '+r.gz}).join('；'),'选中阶段：'+ctx.luckRow.gz+'；选中年度：'+ctx.flowYear.year+' '+ctx.flowYear.gz,outlookContextText(technical?'年度综合':'这一年（连同大运）比你出生时',y.annual,technical),outlookContextText(technical?'本运对原局':'这十年比你出生时',outlook.natal,technical),outlookContextText(technical?'较上一运':'这十年比上一个十年',outlook.previous,technical),outlookContextText(technical?'年度增量':'这一年比这十年平常',y.increment,technical),'这是所选传统框架的结构解释，不承诺现实结果。','AI记录',renderAiHistory()].join('\n');
+  return ['出生组合分析报告','命主：'+(d.person||'未命名')+'；'+d.gender,'输入时间：'+formatTime(d.time.input),'采用时间：'+formatTime(d.time.used),'时间校对：'+(d.time.enabled?formatSolarCorrection(d.time):'按输入时间')+(d.time.daylightSaving?'；夏令时已减去1小时':''),'出生地点：'+d.time.location.name+' '+locationCoordText(d.time.location),'出生组合：'+Object.values(d.pillars).join(' '),v.headline[key],...v.support.map(function(x){return x[key]}),...v.limits.map(function(x){return x[key]}),usefulSummaryText(d,true,!technical),...['primary','secondary','avoid','other'].flatMap(function(role){var view=usefulDecisionView(d),values={primary:view.primary,secondary:view.secondary,avoid:view.avoid,other:view.routeDependent}[role];return values.map(function(e){return usefulDisplayReason(d,e,role,technical)})}),(technical?'大运起运：':'阶段起点：')+luck.direction+'，约'+luck.startAge+'岁起运',(technical?'大运表：':'阶段表：')+luck.rows.map(function(r){return r.from+'-'+r.to+'岁 '+r.gz}).join('；'),'选中阶段：'+ctx.luckRow.gz+'；选中年度：'+ctx.flowYear.year+' '+ctx.flowYear.gz,outlookContextText(technical?'年度综合':ctx.flowYear.year+'年运势',y.annual,technical),outlookContextText(technical?'本运对原局':'这十年运势',outlook.natal,technical),outlookContextText(technical?'较上一运':'这十年比上一个十年',outlook.previous,technical),outlookContextText(technical?'年度增量':'这一年比这十年平常',y.increment,technical),'这是所选传统框架的结构解释，不承诺现实结果。','AI记录',renderAiHistory()].join('\n');
 }
 function exportBaziReport(){
   var text=buildBaziReport();
