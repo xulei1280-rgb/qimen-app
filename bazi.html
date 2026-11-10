@@ -953,6 +953,14 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
   *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
   button:active:not(:focus-visible){transform:none}
 }
+@media(max-width:800px){
+  body:not([data-display-mode="professional"]) .year-grid .fortune-item{flex-basis:92px}
+  body:not([data-display-mode="professional"]) .fortune-pillar small{font-size:11px;line-height:1.25}
+  .fortune-item .fortune-outcome{border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:420px){
+  body:not([data-display-mode="professional"]) .year-grid .fortune-item{flex-basis:88px}
+}
 </style>
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="bazi-premium.css?v=20261101.2">
@@ -3495,7 +3503,7 @@ function fortuneButton(label,meta,gz,stemGod,branchGod,part,index,active,extraCl
   return '<button type="button" class="fortune-item '+(extraClass||'')+(active?' active':'')+'" data-luck-part="'+part+'" data-luck-index="'+index+'" onclick="selectLuckPart(\''+part+'\','+index+')">'+
     '<span class="fortune-label">'+label+'</span>'+(meta?'<span class="fortune-meta">'+meta+'</span>':'<span class="fortune-meta"></span>')+
     '<span class="fortune-pillar"><b class="wx-'+STEM_WX[gz[0]]+'">'+gz[0]+'</b><small>'+modeCopy(displayRole(stemGod),esc(stemGod))+'</small></span>'+
-    '<span class="fortune-pillar"><b class="wx-'+BRANCH_WX[gz[1]]+'">'+gz[1]+'</b><small>'+modeCopy(displayRole(branchGod),esc(branchGod))+'</small></span>'+(outcome?'<span class="fortune-outcome outlook-'+outcome.direction+'">'+modeCopy(esc(outlookDisplayView(outcome).label),esc(outlookDisplayView(outcome).professionalLabel))+'</span>':'')+'</button>';
+    '<span class="fortune-pillar"><b class="wx-'+BRANCH_WX[gz[1]]+'">'+gz[1]+'</b><small>'+modeCopy(displayRole(branchGod),esc(branchGod))+'</small></span>'+(outcome?'<span class="fortune-outcome outlook-'+outcome.direction+'">'+(outcome.direction==='mixed'?'利弊并见':modeCopy(esc(outlookDisplayView(outcome).label),esc(outlookDisplayView(outcome).professionalLabel)))+'</span>':'')+'</button>';
 }
 function renderLuckSelector(data,ctx){
   var outlook=getSelectedLuckOutlook(data,ctx);
