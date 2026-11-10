@@ -2140,7 +2140,7 @@ function outlookDisplayView(result){
   if(!items.length&&result.review&&result.review.residualDetails){
     var detail=result.review.residualDetails,old=detail.beforeActors[0],now=detail.afterActors[0];
     function step(f,technical){return displayStep({left:f.left,right:f.right,action:(f.key.match(/>([^>]+)>/)||[])[1]||'生'},technical)}
-    items.push({standard:'这段时间'+luckActorInfo(old.right).name+'的帮助换了来源：'+luckActorInfo(old.left).name+'被牵住，改由'+luckActorInfo(now.left).name+'接上'+luckParen([luckActorInfo(old.left),luckActorInfo(now.left)])+'，整体照旧。',professional:step(old,true)+'原路径受限；'+step(now,true)+'可达，替代路径接续同一承载需求，整体维持。',direction:'neutral'});
+    items.push({standard:old.left&&old.right&&now.left?'这段时间'+luckActorInfo(old.right).name+'的帮助换了来源：'+luckActorInfo(old.left).name+'被牵住，改由'+luckActorInfo(now.left).name+'接上'+luckParen([luckActorInfo(old.left),luckActorInfo(now.left)])+'，整体照旧。':'这段时间'+luckActorInfo(old).name+'被牵住，改由'+luckActorInfo(now).name+'接上'+luckParen([luckActorInfo(old),luckActorInfo(now)])+'，整体照旧。',professional:step(old,true)+'原路径受限；'+step(now,true)+'可达，替代路径接续同一承载需求，整体维持。',direction:'neutral'});
   }
   if(!items.length&&result.assessment==='engine-error')items.push({standard:'评估程序尚未加载，请刷新页面后重试。',professional:'岁运评估引擎未加载，请刷新页面后重试。',direction:'neutral'});
   if(!items.length)items.push({standard:direction==='unavailable'?'第一步没有前一阶段可比较。':result.assessment==='input-error'?'出生资料或所选年月与记录不一致，请核对。':'这段时间起作用的力量有进有出，好坏相抵，整体按'+(luckRoleInfo().name||'原局格局')+'的主线走。',professional:direction==='unavailable'?'第一步大运无前运。':result.assessment==='input-error'?'四柱或所选岁运干支校验未通过。':'本期已采用证据无具体作用增减，维持原局已确认任务。',direction:'neutral'});
