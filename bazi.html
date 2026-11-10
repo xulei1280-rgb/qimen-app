@@ -1965,8 +1965,6 @@ function luckSpecialLine(f,lost,want){
   if(want>0&&!control&&lg==='食伤'&&rg==='财星')return '才华更能变成收入（'+r.god+'）：表达和手艺（'+l.god+'）有了出口';
   if(want>0&&!control&&l.god==='七杀'&&rg==='印星')return '压力（七杀）能转成贵人帮扶和证书学历（'+r.god+'）：有人替你挡事';
   if(want>0&&!control&&lg==='比劫'&&r.self)return '你更扛得住事：'+l.term+'和你一起分担';
-  if(want<0&&control&&lg==='财星'&&rg==='印星'&&r.role!=='忌')return '靠山（'+r.god+'）被拖住：忙着赚钱（'+l.god+'），顾不上学业和长辈';
-  if(want<0&&control&&l.god==='伤官'&&r.god==='正官'&&r.role!=='忌')return '职位和名声（正官）被拖住：爱顶撞的脾气（伤官）冒头';
   return '';
 }
 // Task-level line, used when the bare fact cannot show the verdict by itself.
@@ -2008,14 +2006,21 @@ function luckFactSign(f,lost){
 }
 // The verdict comes from the evidence task; when the bare fact does not show it, say that task outright.
 function luckWhenLead(f){return {这一年:'这一年，',这步大运里:'这步大运，'}[luckWhen(f)]||''}
+function luckLostBenefit(key){
+  if(key==='你')return '你自己的底气弱了一些';
+  var name=LUCK_GOD_SHORT[key]||{印:'长辈贵人',财:'收入',食伤:'才华表现',官:'职位和名声',比劫:'同辈帮手'}[key]||((LUCK_SUBJECT[key]||[''])[0]).replace(/（.*）/,'');
+  return (name||'这一项')+'这层帮助弱了一些';
+}
 function luckFactText(f,lost,direction,e){
   var want=direction==='positive'?1:direction==='negative'?-1:0,lead=luckWhenLead(f);
   if(!want)return lead+luckFactCore(f,lost)+'。';
   var sign=luckFactSign(f,lost),special=sign===want&&luckSpecialLine(f,lost,want);
   if(special)return lead+special+'。';
   if(sign!==want)return lead+luckTaskLine(e,want>0,sign===0&&f.left&&luckActorInfo(f.left).self?luckFactCore(f,lost):'')+'。';
-  var t=luckActorInfo(f.left&&f.right?f.right:f),named=t.self||t.role!=='忌'&&LUCK_SUBJECT[t.god]&&LUCK_SUBJECT[t.god][0]!=='你';
-  return lead+luckSubjectHead(luckBeneficiary(f),want>0)+'：'+luckFactCore(f,lost,named)+'。';
+  var t=luckActorInfo(f.left&&f.right?f.right:f),named=t.self||t.role!=='忌'&&LUCK_SUBJECT[t.god]&&LUCK_SUBJECT[t.god][0]!=='你',key=luckBeneficiary(f);
+  // 被拖住只说这一项本身的好处少了，不写生克来源。
+  if(want<0)return lead+luckSubjectHead(key,false)+'：'+luckLostBenefit(key)+'。';
+  return lead+luckSubjectHead(key,true)+'：'+luckFactCore(f,lost,named)+'。';
 }
 function luckMixedHeading(e,positive,refs){
   function pn(p,n){return positive?p:n}
@@ -2042,15 +2047,16 @@ function luckMixedHeading(e,positive,refs){
 function luckLayerName(e){
   var target=((e.taskId||'').match(/[木火土金水]/g)||['']).pop();
   if(e.level==='Y5-secondary-avoid'&&!/忌/.test(e.taskId||'')&&luckRoleInfo().promoted.indexOf(target)>=0)return '主用';
-  return {Y2:'格局顺势',Y3:'格局病药',Y4:'格局配合','Y5-primary':'主用','Y5-secondary-avoid':'佐用与忌',Y6:'调候'}[e.level]||'格局配合';
+  return {Y2:'格局顺势',Y3:'格局病药',Y4:'格局配合','Y5-primary':'主用','Y5-secondary-avoid':'佐用与忌',Y6:'调候','T-tone':'五行喜忌','T-year':'岁运关系'}[e.level]||'格局配合';
 }
 function mixedOutlookReadout(result){
-  var levels=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'];
+  var levels=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6','T-tone','T-year'];
   function rank(e){var n=levels.indexOf(e.level);return n<0?levels.length:n}
   function key(e){return (e.ruleId||'')+':'+(e.taskId||'')}
   function choose(sign){return (result.evidence||[]).map(function(e,index){return {e:e,index:index}}).filter(function(x){return x.e.direction===sign}).sort(function(a,b){return rank(a.e)-rank(b.e)||(key(a.e)<key(b.e)?-1:key(a.e)>key(b.e)?1:a.index-b.index)})[0]}
   function effect(selected){
     if(!selected)return null;
+    if(selected.e.plainText)return {direction:selected.e.direction,ruleId:selected.e.ruleId,taskId:selected.e.taskId,level:selected.e.level,evidenceIndex:selected.index,actorReferences:[{actor:selected.e.after,path:['evidence',selected.index,'after'],change:'mainstream'}],standard:selected.e.plainText,professional:selected.e.text,short:{standard:'',professional:selected.e.ruleId}};
     var e=selected.e,positive=e.direction==='positive',refs=[],delta=[],side=positive?'after':'before';
     function reference(actor,path,change){refs.push({actor:actor,path:path,change:change||'task-participant'});return actor}
     if(Array.isArray(e.before)&&Array.isArray(e.after)){
@@ -2142,7 +2148,7 @@ function mixedOutlookReadout(result){
   var benefit=effect(choose('positive')),cost=effect(choose('negative'));
   if(!benefit||!cost)return null;
   var same=rank(result.evidence[benefit.evidenceIndex])===rank(result.evidence[cost.evidenceIndex]),focus=rank(result.evidence[benefit.evidenceIndex])<=rank(result.evidence[cost.evidenceIndex])?'positive':'negative';
-  var layerNames={Y2:['原有集中方向','特殊格顺逆势层'],Y3:['原有问题与化解路径','主病药及必要链层'],Y4:['一般配合','常规结构层'],'Y5-primary':['主要帮助方向','主用层'],'Y5-secondary-avoid':['补充帮助与限制','佐用及忌层'],Y6:['原有冷热偏性','调候辅助层']},main=focus==='positive'?benefit:cost,other=focus==='positive'?cost:benefit;
+  var layerNames={Y2:['原有集中方向','特殊格顺逆势层'],Y3:['原有问题与化解路径','主病药及必要链层'],Y4:['一般配合','常规结构层'],'Y5-primary':['主要帮助方向','主用层'],'Y5-secondary-avoid':['补充帮助与限制','佐用及忌层'],Y6:['原有冷热偏性','调候辅助层'],'T-tone':['五行喜忌底色','喜忌底色层'],'T-year':['岁运关系','岁运战冲和好层']},main=focus==='positive'?benefit:cost,other=focus==='positive'?cost:benefit;
   return {benefit:benefit,cost:cost,focus:focus,sameLayer:same,policy:'mixed-readout-v1',
     provenance:{evidenceSource:'final-adopted-evidence',selection:'highest layer per sign, then rule/task key; actor key identifies the fact only',strengthDominance:false,
       standard:same?'两面分量相当，好处和代价都会出现。':'以'+luckLayerName(result.evidence[main.evidenceIndex])+'方面的变化为主，另一面也会出现。',
@@ -2171,6 +2177,7 @@ function outlookDisplayView(result){
   var items=[],seen={};
   var lower=(result.reservations||[]).find(function(e){return (e.direction==='positive'||e.direction==='negative')&&e.direction!==direction&&e.before&&e.after});
   (result.evidence||[]).concat(lower?[lower]:[]).forEach(function(e){
+    if(e.plainText){items.push({standard:e.plainText,professional:e.text,ruleId:e.ruleId,direction:e.direction});return;}
     var changes=[];
     if(e.direction==='neutral'&&e.ruleId==='Y7-continuity'){
       var physical=e.actors&&e.actors.after&&e.actors.after.flat(Infinity).find(function(f){return f&&f.left&&f.right&&f.key});
@@ -3671,7 +3678,7 @@ function outlookLostCause(f,result,technical){
 }
 function outlookContextText(label,result,technical,compare,word){
   var view=outlookDisplayView(result),key=technical===false?'standard':'professional';
-  return label+'：'+(technical===false?(word||(compare?outlookCompareWord(view):outlookPlainResult(view))):view.professionalLabel)+'；'+(view.mixed?[view.mixed.benefit[key],view.mixed.cost[key],view.mixed.provenance[key]].join('；'):view.items.map(function(x){return x[key]}).filter(Boolean).join('；'));
+  return label+'：'+(technical===false?(word||(compare?outlookCompareWord(view):outlookPlainResult(view))):view.professionalLabel)+'；'+(view.mixed?[view.mixed.benefit[key],view.mixed.cost[key],view.mixed.provenance[key]].join('；'):view.items.map(function(x){return x[key]}).filter(Boolean).join('；'))+(result&&result.tone?'；'+(technical===false?result.tone.plain:result.tone.professional):'')+(result&&result.patternShift?'；'+(technical===false?'这步运会把出生月份里藏着的力量引出来，原来的格局路线'+(result.patternShift.kind==='成格'?'会更清楚':result.patternShift.kind==='变格'?'有被打乱的迹象':'有调整的迹象'):'成格变格提示：'+result.patternShift.text):'');
 }
 function buildAiContextSnapshot(data){
   data=refreshPatternAnalysis(data);
@@ -3874,6 +3881,12 @@ function outlookGlossOnce(html){
   var seen={};
   return html.replace(/（(正官|七杀|正印|偏印|食神|伤官|正财|偏财|比肩|劫财|印星|财星|官星|食伤|比劫)）/g,function(m,g,at){var k=html.slice(Math.max(0,at-2),at)+g;if(seen[k])return '';seen[k]=1;return m});
 }
+// 喜忌底色与成格变格提示：只显示，结论以上面的判断为准。
+function outlookToneRow(result){
+  var t=result&&result.tone,s=result&&result.patternShift,said=(result&&result.evidence||[]).some(function(e){return e.level==='T-tone'});
+  return (t?'<p class="outlook-note" data-luck-tone>'+modeCopy(said?'':esc(t.plain),esc(t.professional))+'</p>':'')+
+    (s?'<p class="outlook-note" data-pattern-shift>'+modeCopy(esc('提示：这步运会把出生月份里藏着的力量引出来，原来的格局路线'+(s.kind==='成格'?'会更清楚。':s.kind==='变格'?'有被打乱的迹象。':'有调整的迹象。')),esc('成格变格提示：'+s.text+'（《子平真诠·论行运成格变格》）。'))+'</p>':'');
+}
 function renderOutlookBox(title,result,professionalTitle,extra){
   var view=outlookDisplayView(result);extra=extra||{};
   function body(technical){var key=technical?'professional':'standard';
@@ -3894,7 +3907,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
     }
     var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利')+'：</b>'+opposite.map(function(x){return esc(x.standard.replace(/^另一方面，/,''))}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
-  return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
+  return '<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+outlookToneRow(result)+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);

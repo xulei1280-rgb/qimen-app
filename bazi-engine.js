@@ -2843,7 +2843,7 @@
     var activationStatus=recheck&&recheck.specialLost.length?'特殊格运中受损':(recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持'))));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261110.1-new-rule-first';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261111.1-cross-mixed';
   function outlookPending(reason){
     return {direction:'pending',assessment:'input-error',summary:reason,evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'资料校验未通过'};
   }
@@ -3341,6 +3341,8 @@
       (climate.use||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局'+climate.condition+'·'+wx,facts(actors(before,wx)),facts(actors(after,wx)),1)});
       (climate.avoid||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局偏性增援·'+wx,facts(actors(before,wx)),facts(actors(after,wx)),-1)});
     }
+    // 特殊格局成立时只按顺势：扶抑、承载、泄身、调候层不参与（《滴天髓·顺局》）。
+    if((useful.decision&&useful.decision.primaryRouteIds||[]).indexOf('strict-special')>=0){layers[1]=[];layers[2]=[];layers[5]=[];}
     var first=layers.findIndex(function(x){return x.length}),selected=first>=0?layers[first]:[],positive=selected.some(function(x){return x.direction==='positive'}),negative=selected.some(function(x){return x.direction==='negative'});
     var direction=positive&&negative?'mixed':(positive?'positive':(negative?'negative':null));
     if(!direction){
@@ -3353,7 +3355,7 @@
     }
     var review=Object.assign({},legacy.review,{policyVersion:LUCK_OUTLOOK_VERSION,checkedLayers:['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'],checked:checked,layerEvidence:layers,legacyDirection:legacy.direction,legacyTendency:legacy.tendency,legacyAssessment:legacy.assessment});
     // Legacy task verdicts stand only when the new role layers are silent or agree; otherwise the new layers decide and the legacy verdict stays as reference evidence.
-    var legacyReference=[];
+    var legacyReference=[],crossEvidence=[];
     if(legacy.assessment==='determined'){
       var priority=function(e){return e.ruleId==='LK-10'?0:(e.ruleId==='LK-03'||e.ruleId==='LK-05'?1:2)};
       var oldPriority=Math.min.apply(null,legacy.evidence.filter(function(e){return e.direction!=='neutral'}).map(priority).concat([2]));
@@ -3365,6 +3367,12 @@
         review.protectedDetermined.decision='higher-priority-override';
         review.protectedDetermined.certificate=selected.map(function(e){return {ruleId:e.ruleId,change:e.causalChange,beforeActors:e.before,afterActors:e.after,
           reason:'旧判仅结算常规格局任务：'+legacy.evidence.map(function(x){return x.text}).join('；')+'；遗漏固定原病 '+e.causalChange.family+' 的对应整链由 rank '+e.causalChange.beforeRank+' 转 '+e.causalChange.afterRank+'：'+e.text+'。Y3 先于旧 Y4。'}});
+      }else if(direction&&direction!==legacy.direction&&['positive','negative','mixed'].indexOf(legacy.direction)>=0&&(direction==='positive'||direction==='negative')){
+        // C1 严格交叉：月令格取运与新规则方向相反时判有好有坏，两层原因都保留。
+        review.protectedDetermined.decision='cross-mixed';
+        review.protectedDetermined.reason='旧判 '+legacy.direction+' 与新规则 '+direction+' 方向相反，交叉判有好有坏。';
+        crossEvidence=legacy.evidence.filter(function(e){return e.direction!=='neutral'}).map(function(e){var ta=legacy.review.beforeTasks.find(function(t){return t.id===e.taskId}),tb=legacy.review.afterTasks.find(function(t){return t.id===e.taskId});return Object.assign({},e,{crossLayer:'月令格取运',level:['Y2','Y3','Y4'][priority(e)],before:ta||null,after:tb||null})});
+        direction='mixed';
       }else if(direction&&direction!==legacy.direction){
         review.protectedDetermined.decision='new-rule-override';
         review.protectedDetermined.reason='旧判 '+legacy.direction+' 与新规则 '+direction+' 不一致，以新规则为准；旧判降为参考证据：'+legacy.evidence.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。';
@@ -3390,7 +3398,7 @@
         missingFields:replacement?['同一承载需求下印生身与比劫扶身替代药路的药力对照']:transforms.length?['已变气日主的承载主体映射','变气后替代药路的可达作用者']:['可核验的必要角色或有效作用链'],
         checkedLayers:review.checkedLayers,knownFacts:[before.rawMainPattern,before.strength].concat(transforms.map(function(x){return x.text})).concat(replacement?replacement.before.map(function(x){return '原有效作用：'+x.text}).concat(replacement.after.map(function(x){return '现有效作用：'+x.text})):[]),review:review});
     }
-    return Object.assign({},legacy,{direction:direction,tendency:null,assessment:'determined',possibleDirections:[direction],summary:'',evidence:selected,
+    return Object.assign({},legacy,{direction:direction,tendency:null,assessment:'determined',possibleDirections:[direction],summary:'',evidence:selected.concat(crossEvidence),
       reservations:layers.slice(first+1).reduce(function(out,x){return out.concat(x)},[]).concat(legacyReference,legacy.reservations),life:[],basis:'固定原局角色；实际作用与病药优先裁决',review:review});
   }
   function compareOutlookContexts(before,after,analysis){
@@ -3522,6 +3530,143 @@
     }
     return Object.assign({},result,{label:label});
   }
+  // ===== 主流判运补充（luck-mainstream-20261111）=====
+  var LUCK_STEM_COMBINE={甲:['己','土'],己:['甲','土'],乙:['庚','金'],庚:['乙','金'],丙:['辛','水'],辛:['丙','水'],丁:['壬','木'],壬:['丁','木'],戊:['癸','火'],癸:['戊','火']};
+  var LUCK_BRANCH_COMBINE={子:['丑','土'],丑:['子','土'],寅:['亥','木'],亥:['寅','木'],卯:['戌','火'],戌:['卯','火'],辰:['酉','金'],酉:['辰','金'],巳:['申','水'],申:['巳','水']};
+  var LUCK_BLADE={甲:'卯',丙:'午',戊:'午',庚:'酉',壬:'子'};
+  function luckToneRoles(useful){
+    var c=useful&&useful.decision&&useful.decision.conclusion,sec=(c?c.secondary:useful&&useful.secondaryUse)||[];
+    var pri=((c?c.primary:useful&&(useful.primaryUse||useful.use))||[]).filter(function(x){return sec.indexOf(x)<0}),avoid=(c?c.avoid:useful&&useful.avoid)||[];
+    return function(wx){return pri.indexOf(wx)>=0?'主用':sec.indexOf(wx)>=0?'佐用':avoid.indexOf(wx)>=0?'忌':'中'};
+  }
+  // 喜忌底色：《子平真诠·论行运》以运配八字喜忌；大运十年合看、地支为重，盖头减半、截脚且支为忌整步偏差（《滴天髓阐微·岁运》任注）；太岁重天干。
+  function luckTone(useful,gz,kind){
+    var role=luckToneRoles(useful),sw=STEM_WX[gz[0]],bw=BRANCH_WX[gz[1]],sr=role(sw),br=role(bw);
+    function v(r){return r==='忌'?-1:r==='中'?0:1}
+    var annual=kind==='annual',ws=annual?2:1,wb=annual?1:2,cover=!annual&&ctrl[sw]===bw,cut=!annual&&ctrl[bw]===sw,note='';
+    if(cover){wb=1;note='盖头（运干'+gz[0]+'克运支'+gz[1]+'），吉凶减半';}
+    if(cut){ws=0;note='截脚（运支'+gz[1]+'克运干'+gz[0]+'），天干力量落空';}
+    var score=v(sr)*ws+v(br)*wb,dir=score>0?'positive':score<0?'negative':null;
+    if(cut&&v(br)<0)dir='negative';
+    var split=v(sr)*v(br)<0,label;
+    if(split)label='喜忌参半';
+    else if(dir==='positive')label=(sr==='主用'||br==='主用')?'主用运':'佐用运';
+    else if(dir==='negative')label='忌运';
+    else label='闲运';
+    var unit=annual?'这一年':'这步运',lean=split&&dir?'（'+(annual?'太岁重天干':'地支为重')+'，偏'+(dir==='positive'?'喜':'忌')+'）':'';
+    var plainLabel={主用运:'主用运',佐用运:'佐用运',忌运:'忌运',喜忌参半:'喜忌参半',闲运:'不涉主用和忌的闲运'}[label];
+    return {direction:dir,label:label,split:split,stemRole:sr,branchRole:br,cover:cover,cut:cut,
+      plain:'五行上'+unit+'是'+plainLabel+lean+'。',
+      professional:(annual?'流年':'大运')+'底色：'+gz[0]+sw+'为'+sr+'，'+gz[1]+bw+'为'+br+(note?'；'+note:'')+'，'+(annual?'太岁重天干':'十年合看、地支为重')+' → '+label+lean+'。'};
+  }
+  // 运或岁对原局的具体动作：冲月令/喜用根、合走用神，以及反向的冲去忌根、合去忌神。
+  function luckActions(useful,natal,gz){
+    var role=luckToneRoles(useful),out={bad:[],good:[]},keys=['year','month','day','hour'],names={year:'年',month:'月',day:'日',hour:'时'};
+    keys.forEach(function(k){
+      var p=natal[k];if(!p)return;
+      if(BRANCH_CLASH[gz[1]]===p[1]){
+        var r=role(BRANCH_WX[p[1]]);
+        if(r==='忌')out.good.push(gz[1]+'冲去'+names[k]+'支'+p[1]+'（忌神之根）');
+        else if(k==='month')out.bad.push(gz[1]+'冲月令'+p[1]);
+        else if(r!=='中')out.bad.push(gz[1]+'冲'+names[k]+'支'+p[1]+'（'+r+'之根）');
+      }
+      if(LUCK_BRANCH_COMBINE[gz[1]]&&LUCK_BRANCH_COMBINE[gz[1]][0]===p[1]){
+        var rb=role(BRANCH_WX[p[1]]);
+        if(rb==='忌')out.good.push(gz[1]+'合住'+names[k]+'支'+p[1]+'（忌神之根）');
+        else if(rb!=='中')out.bad.push(gz[1]+'合住'+names[k]+'支'+p[1]+'（'+rb+'之根）');
+      }
+      if(k!=='day'&&LUCK_STEM_COMBINE[gz[0]][0]===p[0]){
+        var rs=role(STEM_WX[p[0]]);
+        if(rs==='忌')out.good.push(gz[0]+'合去'+names[k]+'干'+p[0]+'（忌神）');
+        else if(rs!=='中')out.bad.push(gz[0]+'合走'+names[k]+'干'+p[0]+'（'+rs+'）');
+      }
+    });
+    return out;
+  }
+  // 运改变格局提示（《子平真诠·论行运成格变格》）：运干透出月令藏干，或冲开月令库。
+  function luckPatternShift(analysis,natal,gz){
+    var month=natal.month[1],day=natal.day[0],shown=[natal.year[0],natal.month[0],natal.hour[0]],regular=analysis.regularPattern&&analysis.regularPattern.name||'',out=null;
+    if((HIDDEN[month]||[]).indexOf(gz[0])>=0&&shown.indexOf(gz[0])<0){
+      var god=tenGod(day,gz[0]),ro=luckToneRoles(analysis.useful)(STEM_WX[gz[0]]);if(god&&god!=='比肩'&&god!=='劫财'){var same=regular.indexOf(god)===0;
+        out={kind:ro==='忌'?'变格':(same||ro!=='中')?'成格':'提示',text:'运干'+gz[0]+'透出月令'+month+'中的'+god+(same?'，'+regular+'更透清':ro==='忌'?'（'+god+'为忌），格局有由'+(regular||'原格')+'转向'+god+'之势':ro!=='中'?'，格局借喜用之神更有力':'，格局路线有调整之势')+'（'+(ro==='忌'?'变格':(same||ro!=='中')?'成格':'提示')+'）'};}
+    }
+    if(!out&&'辰戌丑未'.indexOf(month)>=0&&BRANCH_CLASH[gz[1]]===month)out={kind:'提示',text:gz[1]+'冲开月令'+month+'库，藏干透出，格局有变化之势'};
+    return out;
+  }
+  function luckEvidence(rule,level,direction,plain,professional){return {ruleId:rule,level:level,taskId:rule,direction:direction,kind:'mainstream',plainText:plain,text:professional,before:null,after:{text:professional},source:{title:'主流判运补充',url:''}}}
+  // 第二批：底色参与定结论；结构与底色相反时，有原书认可原因按结构判，说不出原因判有好有坏。
+  function applyLuckTone(result,analysis,natal,gz,kind){
+    if(!result||!analysis.useful||result.assessment==='input-error')return result;
+    var tone=luckTone(analysis.useful,gz,kind),r=Object.assign({},result,{tone:tone,evidence:(result.evidence||[]).slice()}),t=tone.direction,d=r.direction;
+    var strict=(analysis.useful.decision&&analysis.useful.decision.primaryRouteIds||[]).indexOf('strict-special')>=0;
+    var toneEv=t?luckEvidence('T-tone','T-tone',t,tone.split?'五行上喜忌参半，'+(tone.cut?'而且地支克住了天干，':'')+(kind==='annual'?'按太岁重天干，':'按地支为重，')+(t==='positive'?'好处多一些。':'不利多一些。'):(t==='positive'?'五行上帮到了你最需要的那股力量':'五行上送来的是你最怕的那股力量')+'（'+tone.label+'）。',tone.professional):null;
+    function set(dir,basis){r.direction=dir;r.assessment='determined';r.possibleDirections=[dir];r.tendency=null;r.toneBasis=basis;}
+    if(strict){
+      // 特殊格局只顺势：以喜用页顺势五行为准，仅当 Y2 顺逆势核验给出相反方向时并见。
+      var y2=(result.evidence||[]).filter(function(e){return e.ruleId==='Y2-special'});
+      if(!t){if(tone.split){set('mixed','special-split');r.evidence=splitEv();}return r;}
+      r.evidence=[toneEv].concat(y2);
+      set(y2.some(function(e){return e.direction&&e.direction!==t})?'mixed':t,'special-tone');return r;
+    }
+    function splitEv(){var role=luckToneRoles(analysis.useful),good=[],bad=[];[[gz[0],STEM_WX[gz[0]]],[gz[1],BRANCH_WX[gz[1]]]].forEach(function(x){var ro=role(x[1]);if(ro==='忌')bad.push(x);else if(ro!=='中')good.push(x.concat(ro))});
+      return [luckEvidence('T-tone','T-tone','positive','五行上'+good.map(function(x){return x[0]+x[1]}).join('、')+'帮到了你需要的力量。',good.map(function(x){return x[0]+x[1]+'为'+x[2]}).join('、')+'。'),luckEvidence('T-tone','T-tone','negative','五行上'+bad.map(function(x){return x[0]+x[1]}).join('、')+'是你怕的力量。',bad.map(function(x){return x[0]+x[1]+'为忌'}).join('、')+'。')]}
+    if(!t){if(tone.split&&(d==='neutral'||d==='pending')){set('mixed','tone-split');r.evidence=splitEv().concat(r.evidence.filter(function(e){return e.direction==='neutral'}));}return r;}
+    if(d==='neutral'||d==='pending'){
+      if(d==='pending'&&r.tendency&&r.tendency!==t&&r.tendency!=='mixed'){set('mixed','tone-vs-tendency');r.evidence.push(toneEv);return r;}
+      set(t,'tone');r.evidence=[toneEv].concat(r.evidence.filter(function(e){return e.direction===t}));return r;
+    }
+    if(d===t||d==='mixed')return r;
+    var act=luckActions(analysis.useful,natal,gz),shift=kind==='natal'?luckPatternShift(analysis,natal,gz):null,reasons;
+    if(t==='positive'){reasons=act.bad.slice();if(shift&&shift.kind==='变格')reasons.push(shift.text);}
+    else{reasons=act.good.slice();if((r.evidence||[]).some(function(e){return e.ruleId==='Y3-medicine'&&e.direction==='positive'}))reasons.push('病药：对应药路接通');if(shift&&shift.kind==='成格')reasons.push(shift.text);}
+    if(reasons.length){
+      var look=t==='positive'?'看着是喜运，实际不利，因为':'看着是忌运，实际有利，因为';
+      r.evidence.unshift(luckEvidence('T-seeming','T-tone',d,(kind==='annual'?'这一年':'这步运')+look+reasons.join('、')+'。',(t==='positive'?'似喜实忌':'似忌实喜')+'：'+reasons.join('；')+'（《子平真诠·论行运》）。'));
+      r.toneBasis='structure-with-reason';return r;
+    }
+    set('mixed','tone-vs-structure');r.evidence.push(toneEv);return r;
+  }
+  // 第三批：岁运关系（《滴天髓阐微·岁运》战冲和好；《三命通会》岁运并临；《渊海子平》日犯岁君只提示）。
+  function seatScore(stem,branch){var wx=STEM_WX[stem],b=BRANCH_WX[branch];return b===wx||gen[b]===wx?1:ctrl[b]===wx?-1:0}
+  function partyScore(natal,gz,wx){var n=0;['year','month','day','hour'].forEach(function(k){var p=natal[k];if(STEM_WX[p[0]]===wx)n++;if(BRANCH_WX[p[1]]===wx)n++});if(STEM_WX[gz[0]]===wx||gen[STEM_WX[gz[0]]]===wx)n++;return n}
+  function yearLuckRelations(analysis,natal,luckGz,yearGz){
+    var role=luckToneRoles(analysis.useful),day=natal.day[0],items=[],weak=/弱/.test(analysis.strength||'');
+    function sign(r){return r==='忌'?-1:r==='中'?0:1}
+    function hurt(loserWx,label,prof){var s=sign(role(loserWx));if(!s)return;items.push(luckEvidence('T-year-'+label,'T-year',s>0?'negative':'positive',prof[0],prof[1]))}
+    var ls=luckGz[0],ys=yearGz[0],lb=luckGz[1],yb=yearGz[1],stemFight=ctrl[STEM_WX[ls]]===STEM_WX[ys]||ctrl[STEM_WX[ys]]===STEM_WX[ls],branchClash=BRANCH_CLASH[lb]===yb;
+    if(luckGz===yearGz){
+      var bad=tenGod(day,ys)==='七杀'||LUCK_BLADE[day]===yb;
+      items.push(luckEvidence('T-year-same','T-year',bad?'negative':'neutral',bad?'这一年和大运干支完全相同，又是'+(tenGod(day,ys)==='七杀'?'七杀':'羊刃')+'，古书说这种年份要特别小心。':'这一年和大运干支相同，但不是七杀或羊刃，不按凶年看。',
+        '岁运并临'+(bad?'（'+(tenGod(day,ys)==='七杀'?'七杀':'羊刃')+'）':'（非刃杀，不作凶论）')+'（《三命通会》：独羊刃、七煞为凶）。'));
+    }
+    if(stemFight){
+      var att=ctrl[STEM_WX[ls]]===STEM_WX[ys]?'luck':'year',a=att==='luck'?[ls,lb]:[ys,yb],b=att==='luck'?[ys,yb]:[ls,lb];
+      if(seatScore(a[0],a[1])>seatScore(b[0],b[1]))hurt(STEM_WX[b[0]],'fight',[(att==='luck'?'大运的'+a[0]+'压住了流年'+b[0]:'流年'+a[0]+'压住了大运的'+b[0])+'（'+role(STEM_WX[b[0]])+'），'+(sign(role(STEM_WX[b[0]]))>0?'这层帮助打了折扣。':'正好把不利的力量压下去。'),(att==='luck'?'运伐岁':'岁伐运')+'：'+a[0]+'克'+b[0]+'，'+b[0]+'坐'+b[1]+'力弱而降（《滴天髓阐微·岁运·战》）。']);
+    }
+    if(branchClash){
+      var pl=partyScore(natal,luckGz,BRANCH_WX[lb]),py=partyScore(natal,yearGz,BRANCH_WX[yb]);
+      if(pl!==py){var win=pl>py?lb:yb,lose=pl>py?yb:lb;hurt(BRANCH_WX[lose],'clash',[(lose===yb?'大运的'+win+'冲倒了流年'+lose:'流年'+win+'冲动了大运的'+lose)+'（'+role(BRANCH_WX[lose])+'）。',(lose===yb?'运冲岁':'岁冲运')+'：'+win+'党多胜，'+lose+'受冲（《滴天髓阐微·岁运·冲》）。'])}
+    }
+    if(stemFight&&branchClash)items.push(luckEvidence('T-year-tkdc','T-year',weak?'negative':'neutral',weak?'这一年和大运天干相克、地支相冲，你的底气偏弱，这样的年份更要稳着来。':'这一年和大运天干相克、地支相冲，好在你的底气不弱，影响有限。','岁运天克地冲，日主'+(weak?'休囚必凶':'旺相虽凶无碍')+'（《滴天髓阐微·岁运》任注）。'));
+    var sc=LUCK_STEM_COMBINE[ls][0]===ys?LUCK_STEM_COMBINE[ls][1]:null,bc=LUCK_BRANCH_COMBINE[lb]&&LUCK_BRANCH_COMBINE[lb][0]===yb?LUCK_BRANCH_COMBINE[lb][1]:null;
+    [sc,bc].forEach(function(wx,i){if(!wx)return;var s=sign(role(wx));if(s)items.push(luckEvidence('T-year-harmony','T-year',s>0?'positive':'negative','这一年和大运'+(i?'地支':'天干')+'相合，合出来的'+wx+'是'+role(wx)+(s>0?'，对你有利。':'，对你不利。'),'岁运'+(i?lb+yb:ls+ys)+'合化'+wx+'（'+role(wx)+'）（《滴天髓阐微·岁运·和》）。'))});
+    if(ctrl[STEM_WX[day]]===STEM_WX[ys])items.push(luckEvidence('T-year-dayhit','T-year','neutral','提示：日主'+day+'克流年'+ys+'（古书叫“日犯岁君”），做事宜收敛，不单独改判。','日犯岁君（《渊海子平·继善篇》），仅作提示。'));
+    return items;
+  }
+  function applyYearLuck(result,analysis,natal,luckGz,yearGz){
+    if(!result||!analysis.useful||result.assessment==='input-error')return result;
+    var items=yearLuckRelations(analysis,natal,luckGz,yearGz);if(!items.length)return result;
+    var r=Object.assign({},result,{evidence:(result.evidence||[]).slice(),reservations:(result.reservations||[]).concat(items.filter(function(e){return e.direction==='neutral'}))}),strong=items.filter(function(e){return /same|clash|tkdc/.test(e.ruleId)&&e.direction!=='neutral'}),weakItems=items.filter(function(e){return /fight|harmony/.test(e.ruleId)});
+    function dirOf(list){var p=list.some(function(e){return e.direction==='positive'}),n=list.some(function(e){return e.direction==='negative'});return p&&n?'mixed':p?'positive':n?'negative':null}
+    var ds=dirOf(strong),dw=dirOf(weakItems),d=r.direction;
+    function set(dir){r.direction=dir;r.assessment='determined';r.possibleDirections=[dir];r.tendency=null;}
+    if(ds&&ds!=='mixed'){if(d==='neutral'||d==='pending'){set(ds);r.evidence=strong.slice();}else if(d!==ds&&d!=='mixed'){set('mixed');r.evidence=r.evidence.concat(strong);}else r.evidence=r.evidence.concat(strong);}
+    else if(dw&&dw!=='mixed'&&(d==='neutral'||d==='pending')){set(dw);r.evidence=weakItems.filter(function(e){return e.direction===dw});}
+    var dir=r.direction,keep=function(e){return dir==='mixed'||e.direction===dir};
+    r.evidence=r.evidence.concat(strong.concat(weakItems).filter(function(e){return r.evidence.indexOf(e)<0&&keep(e)}));
+    r.reservations=r.reservations.concat(strong.concat(weakItems).filter(function(e){return r.evidence.indexOf(e)<0}));
+    return r;
+  }
   function evaluateLuckOutlook(bazi,luckGz,previousGz,flowYears){
     var valid=function(gz){return getGZ60().indexOf(gz)>=0},years=flowYears||[],out={ruleVersion:LUCK_OUTLOOK_VERSION,luckGz:luckGz,previousGz:previousGz||null,years:[]};
     var complete=bazi&&bazi.pillars&&NATAL_PILLAR_KEYS.every(function(key){return valid(bazi.pillars[key])})&&bazi.dayStem===bazi.pillars.day[0]&&valid(luckGz);
@@ -3534,14 +3679,15 @@
     var natalPillars={year:bazi.pillars.year,month:bazi.pillars.month,day:bazi.pillars.day,hour:bazi.pillars.hour};
     var analysis=analyzePattern(Object.assign({},bazi,{pillars:natalPillars,scores:scoreWuxing(natalPillars)}));
     var base=buildTemporalPatternContext(bazi.dayStem,natalPillars,analysis),luckPillars=Object.assign({},natalPillars,{luck:luckGz}),luck=buildTemporalPatternContext(bazi.dayStem,luckPillars,analysis);
-    out.natal=labelOutlook(compareOutlookContexts(base,luck,analysis),'natal');
+    out.natal=labelOutlook(applyLuckTone(compareOutlookContexts(base,luck,analysis),analysis,natalPillars,luckGz,'natal'),'natal');
+    var shift=luckPatternShift(analysis,natalPillars,luckGz);if(shift)out.natal.patternShift=shift;
     if(previousGz){
       out.previous=valid(previousGz)?labelOutlook(compareOutlookContexts(buildTemporalPatternContext(bazi.dayStem,Object.assign({},natalPillars,{luck:previousGz}),analysis),luck,analysis),'previous'):labelOutlook(outlookPending('上一柱大运干支无效'),'previous');
     }else out.previous={label:'无上一柱可比较',direction:'unavailable',evidence:[],reservations:[],uncertainty:[],life:[]};
     out.years=years.map(function(year){
       if(!Number.isInteger(year.year)||!valid(year.gz)||year.gz!==getFlowYearGZ(year.year))return {year:year.year,gz:year.gz,annual:labelOutlook(outlookPending('流年年份与干支不一致'),'annual'),increment:labelOutlook(outlookPending('流年年份与干支不一致'),'increment')};
       var current=buildTemporalPatternContext(bazi.dayStem,Object.assign({},luckPillars,{flowYear:year.gz}),analysis,{outlookFlowYear:true});
-      var item={year:year.year,gz:year.gz,annual:labelOutlook(compareOutlookContexts(base,current,analysis),'annual'),increment:labelOutlook(compareOutlookContexts(luck,current,analysis),'increment')};
+      var item={year:year.year,gz:year.gz,annual:labelOutlook(applyYearLuck(applyLuckTone(compareOutlookContexts(base,current,analysis),analysis,natalPillars,year.gz,'annual'),analysis,natalPillars,luckGz,year.gz),'annual'),increment:labelOutlook(compareOutlookContexts(luck,current,analysis),'increment')};
       // Optional year-over-year: the previous year read under the decade it belonged to.
       var prev=year.previous;
       if(prev)item.previousYear=Number.isInteger(prev.year)&&valid(prev.gz)&&prev.gz===getFlowYearGZ(prev.year)&&valid(prev.luckGz)?

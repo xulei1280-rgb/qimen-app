@@ -10,7 +10,7 @@ const before=beforePath?JSON.parse(fs.readFileSync(beforePath,'utf8')):null;if(o
 const ctx={console,Date,Math,JSON,BirthTime:require('./birth-time.js'),document:{addEventListener(){},body:{getAttribute(){return 'standard'}},querySelectorAll(){return []},getElementById(){return {value:'detail'}}},localStorage:{getItem(){return null},setItem(){}},confirm(){return true},prompt(){return ''}};vm.createContext(ctx);
 for(const file of ['qimen.js','bazi-engine.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
 for(const m of fs.readFileSync('bazi.html','utf8').matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(m[1],ctx);
-const E=ctx.BaziEngine,gz=vm.runInContext('GZ60',ctx),levels=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'];
+const E=ctx.BaziEngine,gz=vm.runInContext('GZ60',ctx),levels=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6','T-tone','T-year'];
 // Standard copy may name terms (格局、主用、十神); it must not use mechanical role translations or hedges.
 const mechanical=/出生(?:月份|日期|年份|时刻)的|这十年的|这一年的|作用接通或增强|应少增|原已选定|原已确认的帮助方向|主要帮助|补充帮助|不单列|未解瓶颈|以上结论只覆盖|不判断整体升降|尚待|尚缺|还缺|自身的同类支持|学习和支持|资源和机会|表达和产出|稳定产出|规则要求|外部压力（/g;
 const forbidden=/可能|或许|看条件|不明确|分情况|分条件|取决于|尚未确认|暂缺整体结论|未定主用|无明确忌项|一部分|看情况|需结合全盘|未损日主根[01]|变化前：|变化后：|固定比例扶身指数|合会变气反馈|旧路径须按共同需求比较|结构分：|评分维度：|undefined|NaN/g;
