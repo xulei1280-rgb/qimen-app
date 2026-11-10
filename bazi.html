@@ -1734,7 +1734,7 @@ function switchBaziView(name){
   if(openingLuck)mobileLuckTracks(document.querySelector('[data-view-panel="luck"]')).forEach(centerSelectedFortune);
 }
 function displayRole(god){
-  return {日主:'自身',比肩:'自身的同类支持',劫财:'自身的同类支持',正印:'学习和支持',偏印:'学习和支持',食神:'稳定产出',伤官:'表达和产出',正财:'资源和机会',偏财:'资源和机会',正官:'规则要求',七杀:'外部压力'}[god]||'相关力量';
+  return {日主:'自身',比肩:'同辈帮扶',劫财:'同辈帮扶',正印:'学业和贵人',偏印:'学业和贵人',食神:'稳定产出',伤官:'表达和产出',正财:'资源和机会',偏财:'资源和机会',正官:'规则要求',七杀:'外部压力'}[god]||'相关力量';
 }
 function displayActor(actor,technical){
   if(!actor)return '';
@@ -1743,19 +1743,19 @@ function displayActor(actor,technical){
   return ({year:'出生年份',month:'出生月份',day:'出生日期',hour:'出生时刻',luck:'这十年',flowYear:'这一年'}[actor.pillar]||'盘中')+'的'+wx+'（'+displayRole(actor.god)+'）';
 }
 function displayStep(step,technical){
-  var verb=technical?step.action:({生:'支持',制:'约束',扶:'支持'}[step.action]||'影响');
+  var verb=technical?step.action:({生:'帮扶',制:'约束',扶:'帮扶'}[step.action]||'影响');
   return displayActor(step.left,technical)+verb+displayActor(step.right,technical);
 }
 function caseDisplayView(data){
   var a=data.patternAnalysis||{},main=publicPatternMain(data)||a.regularPattern||{},status=main.status||'待成';
   var families={
-    '承载不足':['自身现有支撑不足以承担资源和产出的负担','承载不足'],
+    '承载不足':['自身根基不足以承担资源和产出的负担','承载不足'],
     '官伤冲战':['表达和做事方式与规则要求相互牵制','伤官见官'],
-    '官杀承载不足':['外部要求带来的压力较重，自身支撑不足','杀重身轻'],
+    '官杀承载不足':['外部要求带来的压力较重，自身根基不足','杀重身轻'],
     '官杀去留':['不同的规则和压力同时存在，配合仍受牵制','官杀去留'],
     '食伤去留':['不同产出方式的力量未能顺畅衔接','食伤去留'],
-    '财印相战':['资源安排牵制了原有的学习和支持','财印相战'],
-    '枭夺食':['支持方式反过来压住了原有产出','枭神夺食'],
+    '财印相战':['资源安排牵制了原有的学业和贵人','财印相战'],
+    '枭夺食':['靠山反过来压住了原有产出','枭神夺食'],
     '比劫分财':['同类力量对资源的分配形成牵制','比劫夺财']
   };
   var support=[],limits=[],seen={};
@@ -1775,11 +1775,11 @@ function caseDisplayView(data){
   (a.interactionFlow&&a.interactionFlow.steps||[]).forEach(addStep);
   (a.useful&&a.useful.decision&&a.useful.decision.routes||[]).filter(function(r){return r.active&&r.assessment==='local'}).forEach(function(r){(r.steps||[]).forEach(addStep)});
   (a.elementPhenomena||[]).forEach(function(p){
-    if(p.name==='土厚埋金')limits.push({standard:'土（支持自身的力量）积得过重，金（自身力量）的发挥受压；已有支持并未消失。',professional:'土厚埋金；保留印土既有化杀功能，土重壅身的限制仍在。',family:p.name});
+    if(p.name==='土厚埋金')limits.push({standard:'土（靠山）积得过重，金（自身力量）的发挥受压；靠山本身仍在。',professional:'土厚埋金；保留印土既有化杀功能，土重壅身的限制仍在。',family:p.name});
     else limits.push({standard:(p.target&&p.target.element||data.dayElement)+'（自身力量）受到过量生扶或消耗的牵制。',professional:p.name+'；'+p.severityBasis,family:p.name});
   });
   if(!support.length&&a.specialPatternQualification)support.push({standard:(a.specialPatternQualification.target||data.dayElement)+'（本盘集中的主要力量）的方向已经逐项核验，不套用其他配合方式的理想结果。',professional:a.specialPatternQualification.name+'按原局完整资格清单成立；普通格仅作背景。'});
-  if(!support.length&&(a.regularPattern&&a.regularPattern.checks||[]).some(function(c){return c.type==='成格'&&c.active}))support.push({standard:'出生月份和已有力量支持这条配合路线；具体承接仍按下面的限制核对。',professional:'月令立格的成立条件已有支持，成败仍按本盘最终状态。'});
+  if(!support.length&&(a.regularPattern&&a.regularPattern.checks||[]).some(function(c){return c.type==='成格'&&c.active}))support.push({standard:'出生月份和已有力量是这条配合路线的根基；具体承接仍按下面的限制核对。',professional:'月令立格的成立条件已有支持，成败仍按本盘最终状态。'});
   var head={已成:'主要配合已经接通',成而有瑕:'主要配合已接通，但仍有牵制',已破:'原有配合受到破坏，问题尚未解除',待成:'主要配合尚未完整接通'}[status]||'已有作用与限制分别列明';
   if(a.natalNoblePattern&&a.natalNoblePattern.ruleId==='ZP-NOBLE-01'){
     return {verdict:status,name:publicPatternName(data),headline:{standard:'本盘财旺生官。财星有根、有力，能生扶正官，日主也担得起财官。',professional:'财旺生官：财得令有根，财生正官可达，日主能任财官。'},support:support,limits:limits};
@@ -1805,7 +1805,7 @@ function caseReadingText(data,technical,view,highlightGods){
   var support=view.support.slice(0,3).map(function(item){return item[key]}).join('');
   var limits=view.limits.map(function(item){return item[key]}).join('')||'无';
   var basis=view.formationBasis?'<dt>成格依据：</dt><dd>'+renderText(view.formationBasis)+'</dd>':'';
-  var supportRow=support||!basis?'<dt>'+(technical?'已有救应':'已有支撑')+'：</dt><dd>'+renderText(support||'无')+'</dd>':'';
+  var supportRow=support||!basis?'<dt>'+(technical?'已有救应':'已有根基')+'：</dt><dd>'+renderText(support||'无')+'</dd>':'';
   return '<dl class="pattern-reading">'+basis+supportRow+'<dt>主要受限：</dt><dd>'+renderText(limits)+'</dd></dl>';
 }
 function monthlyBingWeiReference(data,element,technical){
@@ -1851,12 +1851,12 @@ function usefulDisplayReason(data,element,role,technical){
     var risks=entry.riskEntries||[],risk=risks.find(function(r){return r.id==='verified-pattern'&&r.status==='effective'})||risks.find(function(r){return r.status==='effective'})||risks.find(function(r){return r.id==='wealth-seal'})||risks.find(function(r){return r.id==='peer-wealth'});
     if(role==='other'){
       if(risk&&risk.status==='effective')return text+' 另有已落实制约：'+((risk.evidence||[])[0]||risk.text).replace(/[。；]+$/,'')+'，因此不并入默认主佐忌。';
-      if(risk&&risk.id==='wealth-seal')return text+(technical?' 财印牵制只属潜在风险，未判已坏印；局部生财不列为默认增补。':' 资源安排牵制学习支持仍只是风险，未当作已经受损；这条局部用途不列为默认增加方向。');
+      if(risk&&risk.id==='wealth-seal')return text+(technical?' 财印牵制只属潜在风险，未判已坏印；局部生财不列为默认增补。':' 资源安排牵制靠山仍只是风险，未当作已经受损；这条局部用途不列为默认增加方向。');
       return text+(technical?' 此为独立作用，不并入默认主佐忌。':' 这条局部用途不列为默认增加方向。');
     }
     if(view.conditional.indexOf(element)>=0&&risk){
-      if(risk.id==='peer-wealth')return text+(risk.status==='effective'?(technical?' 同时已有比劫夺财作用，不作单面扶身论。':' 同时已有资源分配牵制，不能只按支持自身看。'):(technical?' 争财仅属潜在风险，未判已夺财。':' 同类增加尚未落实为本盘资源争夺，未把这项风险当作已经发生。'));
-      if(risk.id==='wealth-seal')return text+(risk.status==='effective'?(technical?' 财对必要印路已有实际牵制，局部通关不能抹去它。':' 资源安排已牵制必要支持；局部帮助没有消除这项牵制。'):(technical?' 财印相碍只列潜在风险，不作已坏印。':' 资源安排牵制学习支持仍只是风险，未当作已经受损。'));
+      if(risk.id==='peer-wealth')return text+(risk.status==='effective'?(technical?' 同时已有比劫夺财作用，不作单面扶身论。':' 同时已有资源分配牵制，不能只按帮扶自身看。'):(technical?' 争财仅属潜在风险，未判已夺财。':' 同类增加尚未落实为本盘资源争夺，未把这项风险当作已经发生。'));
+      if(risk.id==='wealth-seal')return text+(risk.status==='effective'?(technical?' 财对必要印路已有实际牵制，局部通关不能抹去它。':' 资源安排已牵制必要的靠山；局部帮助没有消除这项牵制。'):(technical?' 财印相碍只列潜在风险，不作已坏印。':' 资源安排牵制靠山仍只是风险，未当作已经受损。'));
     }
     return text;
   }
@@ -1865,7 +1865,7 @@ function usefulDisplayReason(data,element,role,technical){
   if(role==='avoid'){
     var risk=(entry.riskEntries||[]).find(function(r){return r.status==='effective'});
     if(risk&&risk.id==='unresolved-output-officer')return technical?element+'伤官已牵制所保官星，再增'+element+'会加强该牵制。':element+'（表达和产出）已经牵制规则要求，不宜继续加强这股力量。';
-    if((a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'})&&['火','土'].indexOf(element)>=0)return technical?element+'增援印土，会加重土厚埋金；不否认原印化杀功能。':element+'（'+(element==='火'?'推动土积累':'已经过重的支持')+'）会加重土的积压，压住自身发挥。';
+    if((a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'})&&['火','土'].indexOf(element)>=0)return technical?element+'增援印土，会加重土厚埋金；不否认原印化杀功能。':element+'（'+(element==='火'?'推动土积累':'已经过重的靠山')+'）会加重土的积压，压住自身发挥。';
     return technical?element+'按原局已确认的忌项保留；不把潜在风险升级为已致害。':element+'列为忌，再添会加重本盘的失衡。';
   }
   // Match the chosen route; a missing seal route may only borrow its own natal medicine.
@@ -1873,9 +1873,9 @@ function usefulDisplayReason(data,element,role,technical){
   if(steps.length)return withLimit(steps.slice(0,2).map(function(s){return displayStep(s,technical)}).join('；')+(technical?'，只按已接通的局部作用采用。':'；这项帮助只覆盖已接通的这一段。'));
   var gods=Object.keys(a.tenGodProfiles||{}).filter(function(g){return (a.tenGodProfiles[g].stemEntries||[]).concat(a.tenGodProfiles[g].branchEntries||[]).some(function(x){return STEM_WX[x.stem]===element})});
   var blocked=(a.patternDisease&&a.patternDisease.items||[]).flatMap(function(d){return d.medicines||[]}).flatMap(function(m){return m.steps||[]}).find(function(s){return !s.active&&s.left&&gods.indexOf(s.left.god)>=0});
-  if(blocked)return technical?displayStep(blocked,true)+'受阻；只列原裁决的补充方向，不宣称药路已成。':element+'（'+displayRole(blocked.left.god)+'）的现有作用被牵住，尚未接到需要支持的一方；这里只列补充方向。';
-  if(element===data.dayElement)return technical?'比劫补充承载；扶身不自动等于争财。':element+'（自身的同类支持）用于补足支撑；未把同类增加直接认作资源争夺。';
-  if((a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'}))return technical?element+'按金助身、水润泄的原有作用取用。':element+'用于'+(element==='金'?'增强自身支撑':'给积压的力量安排出口')+'。';
+  if(blocked)return technical?displayStep(blocked,true)+'受阻；只列原裁决的补充方向，不宣称药路已成。':element+'（'+displayRole(blocked.left.god)+'）的现有作用被牵住，尚未接到需要帮扶的一方；这里只列补充方向。';
+  if(element===data.dayElement)return technical?'比劫补充承载；扶身不自动等于争财。':element+'（同辈帮扶）用于补足根基；未把同类增加直接认作资源争夺。';
+  if((a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'}))return technical?element+'按金助身、水润泄的原有作用取用。':element+'用于'+(element==='金'?'增强根基':'给积压的力量安排出口')+'。';
   if(route&&route.id==='formed-pattern')return technical?'按原已成主格保留'+element+'的任用角色；具体生克仍核对有效路径。':element+'（约束偏旺力量）用于维持已有配合，不表示增加越多越好。';
   if(role==='other')return technical?'保留该独立取法，不并入默认主佐忌。':element+'另有局部用途；这条用途不列入默认增加方向。';
   return technical?'保留原取用仲裁的'+element+'角色，不据元素出现宣布完整成格。':element+'用于补足本盘已有配合；增加它本身不等于所有问题都已解除。';
@@ -1883,19 +1883,19 @@ function usefulDisplayReason(data,element,role,technical){
 function usefulRowsForMode(data,technical){
   var view=usefulDecisionView(data),groups=[['primary',view.primary],['secondary',view.secondary],['avoid',view.avoid]];
   var labels={primary:'主用',secondary:'佐用',avoid:'忌'};
-  var empty=!view.primary.length&&!view.secondary.length?'<p class="public-use-empty">暂无取用结论</p>':'';
+  var empty=!view.primary.length&&!view.secondary.length?'<p class="public-use-empty">暂无取用结论</p>':'',seen=new Set();
   return empty+'<dl class="public-use-list">'+groups.map(function(g){
     if(!g[1].length)return g[0]==='avoid'?'<div class="public-use-row"><dt>忌：无</dt><dd></dd></div>':'';
     return g[1].map(function(e){
       var role=g[0],stem=Object.keys(STEM_WX).find(function(s){return STEM_WX[s]===e});
       var god=standardGodGroup(tenGod(data.dayStem,stem));
       var effect=publicUsefulEffect(data,view,e,role);
-      var copy=technical?usefulDisplayReason(data,e,role,true):standardUsefulReason(data,e,role);
+      var copy=technical?usefulDisplayReason(data,e,role,true):standardUsefulReason(data,e,role,seen);
       var identity=e+'是'+god;
       var hasIdentity=copy.startsWith(identity+'，');
       if(hasIdentity)copy=copy.slice(identity.length+1);
-      var lead=effect?(role==='avoid'?'再添会':'作用是')+effect:'';
-      var description=lead?identity+'，'+lead+(hasIdentity&&role!=='avoid'?'，':'。')+copy:identity+(hasIdentity?'，':'。')+copy;
+      var lead=effect?(role==='avoid'?'再添会':'作用是')+(technical?effect:effect.replace(/^局部/,'')):'';
+      var description=lead?identity+'，'+lead+(technical?(hasIdentity&&role!=='avoid'?'，':'。'):'：')+copy:identity+(hasIdentity?'，':'。')+copy;
       return '<div class="public-use-row" data-use-role="'+role+'" data-element="'+e+'"><dt>'+labels[role]+'：'+publicUseChoices([e])+'</dt><dd>'+reportGodText(description)+'</dd></div>';
     }).join('');
   }).join('')+'</dl>';
@@ -1960,7 +1960,7 @@ function luckMixedHeading(e,positive,refs){
   if(e.ruleId==='Y3-medicine'){var fam={官伤冲战:['伤官见官（个性和规矩相冲）','缓解','加重'],承载不足:['你自身的底气','变足','变弱'],官杀承载不足:['杀重身轻（压力大过承受力）','缓解','加重'],官杀去留:['官杀混杂（多头管束）','缓解','加重']}[e.taskId]||['原局的毛病','缓解','加重'];return fam[0]+pn(fam[1],fam[2])}
   if(e.ruleId==='Y3-carry-support')return '你得到的帮扶'+pn('变多','变少');
   if(e.ruleId==='Y3-carry-load')return (e.taskId.indexOf('官杀')>=0?'压力负担':'钱财负担')+pn('减轻','加重');
-  if(e.ruleId==='Y3-earth-metal'){var wx=e.taskId.slice(-1);return {金:luckRoleLabel('金')+'对你的支撑'+pn('变强','受阻'),水:luckRoleLabel('水')+'的疏泄出口'+pn('变畅','受阻'),土:'厚土压金'+pn('减轻','加重'),火:'火助厚土'+pn('减弱','加强')}[wx]}
+  if(e.ruleId==='Y3-earth-metal'){var wx=e.taskId.slice(-1);return {金:luckRoleLabel('金')+'给你的根基'+pn('变强','受阻'),水:luckRoleLabel('水')+'的疏泄出口'+pn('变畅','受阻'),土:'厚土压金'+pn('减轻','加重'),火:'火助厚土'+pn('减弱','加强')}[wx]}
   if(e.ruleId==='Y3-required-path')return (name?name+'的':'格局的')+'关键配合'+pn('恢复','受阻');
   if(e.ruleId==='Y4-output-load')return '你的消耗'+pn('减轻','增加');
   if(e.ruleId==='Y4-output'||e.ruleId==='Y4-blade-outlet')return '才华发挥的出口'+pn('变畅','受阻');
@@ -2009,16 +2009,16 @@ function mixedOutlookReadout(result){
       }
       return null;
     }
-    var family={官伤冲战:['表达与规则冲突','官伤冲战'],承载不足:['自身支撑','承载不足'],官杀承载不足:['外部压力的承接','官杀承载不足'],官杀去留:['不同外部要求的配合','官杀去留']}[e.taskId];
+    var family={官伤冲战:['表达与规则冲突','官伤冲战'],承载不足:['自身根基','承载不足'],官杀承载不足:['外部压力的承接','官杀承载不足'],官杀去留:['不同外部要求的配合','官杀去留']}[e.taskId];
     var standardHeading='',professionalHeading='',groups=[];
     if(e.ruleId==='Y3-medicine'){
-      standardHeading=(family?family[0]:'对应问题的支持')+(positive?'改善':'减弱');professionalHeading=e.taskId+'药路'+(positive?'改善':'受损');
+      standardHeading=(family?family[0]:'对应问题的化解')+(positive?'改善':'减弱');professionalHeading=e.taskId+'药路'+(positive?'改善':'受损');
     }else if(e.ruleId==='Y3-carry-support'){
-      standardHeading='自身支持'+(positive?'增加':'减少');professionalHeading='印比承载支持'+(positive?'增加':'受限');
+      standardHeading='自身根基'+(positive?'增加':'减少');professionalHeading='印比承载支持'+(positive?'增加':'受限');
     }else if(e.ruleId==='Y3-carry-load'){
       standardHeading=(e.taskId.indexOf('官杀')>=0?'外部压力':'资源负担')+(positive?'减轻':'加重');professionalHeading=(e.taskId.indexOf('官杀')>=0?'官杀有效负荷':'财星有效负荷')+(positive?'减轻':'加重');
     }else if(e.ruleId==='Y3-earth-metal'){
-      var wx=e.taskId.slice(-1),names={金:['自身支撑','金的可用支撑'],水:['积压力量的出口','金水润泄出口'],土:['支持力量的积压','印土壅滞'],火:['推动积压的力量','火生土增援']};
+      var wx=e.taskId.slice(-1),names={金:['自身根基','金的可用支撑'],水:['积压力量的出口','金水润泄出口'],土:['靠山的积压','印土壅滞'],火:['推动积压的力量','火生土增援']};
       standardHeading=names[wx][0]+(wx==='金'||wx==='水'?(positive?'改善':'受阻'):(positive?'减轻':'加重'));
       professionalHeading=names[wx][1]+(wx==='金'||wx==='水'?(positive?'改善':'受限'):(positive?'减轻':'加重'));
     }else if(e.ruleId==='Y3-required-path'){
@@ -2027,24 +2027,24 @@ function mixedOutlookReadout(result){
       var load=e.ruleId==='Y4-output-load';standardHeading=load?'自身消耗'+(positive?'减轻':'增加'):'产出出口'+(positive?'改善':'受阻');professionalHeading=(load?'未增承接时的泄身':'实际食伤出口')+(positive?'改善':'受限');
     }else if(e.ruleId==='Y5-role-root'){
       var target=e.taskId.match(/[木火土金水]/)[0],avoid=e.taskId.indexOf('忌')===0;
-      standardHeading=target+(avoid?'的额外负担':'的帮助支撑')+(positive?(avoid?'减轻':'增加'):(avoid?'增加':'减少'));
+      standardHeading=target+(avoid?'的额外负担':'的帮扶')+(positive?(avoid?'减轻':'增加'):(avoid?'增加':'减少'));
       professionalHeading=e.taskId+(positive?'利于原取用':'牵制原取用');
     }else if(e.ruleId==='Y5-role-action'){
       var atom=refs[0]&&refs[0].actor,left=atom&&atom.left,right=atom&&atom.right;
-      standardHeading=(right?displayRole(right.god):'所需支持')+(positive?'少受牵制或得到支持':'失去支持或更受牵制');
+      standardHeading=(right?displayRole(right.god):'所需帮扶')+(positive?'少受牵制或得到帮扶':'失去帮扶或更受牵制');
       // The concrete action and gain/loss below disambiguate the short selector heading.
       if(atom){var loss=refs[0].change==='lost',control=atom.key.indexOf('>制>')>=0;
-        var adverse=e.taskId.indexOf('忌')>=0,target=e.taskId.slice(-1);standardHeading=(adverse?'应少增的'+target:'所需的'+target+'支持')+(control?(loss?'少了约束':'受到约束'):(loss?'增援减少':'增援增加'));
+        var adverse=e.taskId.indexOf('忌')>=0,target=e.taskId.slice(-1);standardHeading=(adverse?'应少增的'+target:'所需的'+target+'帮扶')+(control?(loss?'少了约束':'受到约束'):(loss?'增援减少':'增援增加'));
       }
       professionalHeading=e.taskId+'作用'+(refs[0]&&refs[0].change==='lost'?'减弱':'增强');
     }else{
       var tasks={
         'hurt-officer':['表达与规则冲突','伤官克官',['H','O']],
         'officer-kill-mixed':['多重外部要求的牵制','官杀去留牵制',['O','K']],
-        'carry-wealth':['自身对资源负担的支撑','任财承载',['B','W']],
-        'carry-officer':['自身对规则要求的支撑','任官承载',['B','O']],
-        'carry-output':['自身对产出消耗的支撑','承泄能力',['B','U']],
-        'carry-kill':['自身对外部压力的支撑','任杀承载',['B','K']],
+        'carry-wealth':['自身扛资源负担的根基','任财承载',['B','W']],
+        'carry-officer':['自身扛规则要求的根基','任官承载',['B','O']],
+        'carry-output':['自身扛产出消耗的根基','承泄能力',['B','U']],
+        'carry-kill':['自身扛外部压力的根基','任杀承载',['B','K']],
         'output-wealth':['产出与资源的衔接','食伤生财任用',['U','W']],
         'wealth-officer':['资源与规则要求的衔接','财生官任用',['W','O']],
         'handle-kill':['外部压力的承接','七杀压力的制杀化杀承接路径',['K','B']],
@@ -2066,7 +2066,7 @@ function mixedOutlookReadout(result){
       }
       var named=refs.map(function(ref){var f=ref.actor;if(f.left&&f.right)return displayStep({left:f.left,right:f.right,action:(f.key.match(/>([^>]+)>/)||[])[1]||'生'},technical);
         if(f.god)return displayActor(f,technical);
-        var wx=STEM_WX[f.stem]||'',role=e.ruleId==='Y3-earth-metal'?(e.taskId.endsWith('土')||e.taskId.endsWith('火')?'积压来源':'自身支撑'):'原已选定的支持方向';
+        var wx=STEM_WX[f.stem]||'',role=e.ruleId==='Y3-earth-metal'?(e.taskId.endsWith('土')||e.taskId.endsWith('火')?'积压来源':'自身根基'):'原已选定的帮扶方向';
         return technical?(f.kind==='干'?f.stem:f.text)+'（'+wx+'）':({year:'出生年份',month:'出生月份',day:'出生日期',hour:'出生时刻',luck:'这十年',flowYear:'这一年'}[f.pillar]||'盘中')+'的'+wx+'（'+role+'）';
       }).join(technical?'、':'与');
       var action=refs[0]&&refs[0].change,mechanism=action==='gained'?'作用新增或恢复':action==='lost'?'原作用减少或受限':action==='medicine-state'?'对应处理路径的有效状态改变':'相关任用状态改变';
@@ -2082,7 +2082,7 @@ function mixedOutlookReadout(result){
   var benefit=effect(choose('positive')),cost=effect(choose('negative'));
   if(!benefit||!cost)return null;
   var same=rank(result.evidence[benefit.evidenceIndex])===rank(result.evidence[cost.evidenceIndex]),focus=rank(result.evidence[benefit.evidenceIndex])<=rank(result.evidence[cost.evidenceIndex])?'positive':'negative';
-  var layerNames={Y2:['原有集中方向','特殊格顺逆势层'],Y3:['原有问题与支持路径','主病药及必要链层'],Y4:['一般配合','常规结构层'],'Y5-primary':['主要帮助方向','主用层'],'Y5-secondary-avoid':['补充帮助与限制','佐用及忌层'],Y6:['原有冷热偏性','调候辅助层']},main=focus==='positive'?benefit:cost,other=focus==='positive'?cost:benefit;
+  var layerNames={Y2:['原有集中方向','特殊格顺逆势层'],Y3:['原有问题与化解路径','主病药及必要链层'],Y4:['一般配合','常规结构层'],'Y5-primary':['主要帮助方向','主用层'],'Y5-secondary-avoid':['补充帮助与限制','佐用及忌层'],Y6:['原有冷热偏性','调候辅助层']},main=focus==='positive'?benefit:cost,other=focus==='positive'?cost:benefit;
   return {benefit:benefit,cost:cost,focus:focus,sameLayer:same,policy:'mixed-readout-v1',
     provenance:{evidenceSource:'final-adopted-evidence',selection:'highest layer per sign, then rule/task key; actor key identifies the fact only',strengthDominance:false,
       standard:same?'两面分量相当，好处和代价都会出现。':'以'+luckLayerName(result.evidence[main.evidenceIndex])+'方面的变化为主，另一面也会出现。',
@@ -2149,7 +2149,7 @@ function outlookDisplayView(result){
   if(lower&&items.length&&selected.indexOf(items[items.length-1])<0)selected=selected.slice(0,2).concat([items[items.length-1]]);
   var unresolved=(result.review&&result.review.afterTasks||[]).find(function(t){return t.state===null&&t.applicable!==false&&!t.auxiliary});
   if(unresolved){
-    var bottleneck={'carry-wealth':'资源负担与自身支撑的衔接','carry-output':'产出消耗与自身支撑的衔接','carry-officer':'规则要求与自身支撑的衔接','carry-kill':'外部压力与自身支撑的衔接','handle-kill':'处理外部压力的支持路径','food-kill':'产出对外部压力的约束力度','hurt-seal':'学习支持对表达产出的约束力度','kill-seal':'外部压力转接到自身支持的路径'}[unresolved.id]||'这项配合的实际承接力度';
+    var bottleneck={'carry-wealth':'资源负担与自身根基的衔接','carry-output':'产出消耗与自身根基的衔接','carry-officer':'规则要求与自身根基的衔接','carry-kill':'外部压力与自身根基的衔接','handle-kill':'处理外部压力的化解路径','food-kill':'产出对外部压力的约束力度','hurt-seal':'靠山对表达产出的约束力度','kill-seal':'外部压力转成靠山的路径'}[unresolved.id]||'这项配合的实际承接力度';
     selected=selected.slice(0,2).concat([{standard:'',professional:'未计入作用：'+outlookTaskMeaning(unresolved.id)+'本期不参与升降结算，结论按上列已采用证据。',direction:'neutral',taskId:unresolved.id}]);
   }
   selected=selected.map(function(x,i){return x.standard&&selected.slice(0,i).some(function(y){return y.standard===x.standard})?Object.assign({},x,{standard:''}):x});
@@ -2237,16 +2237,16 @@ function standardActorElement(actor){
 function standardSupportText(step,data){
   var left=standardGodGroup(step.left.god),right=standardGodGroup(step.right.god),element=standardActorElement(step.left);
   var effects={
-    '印星-日主':'印星扶身，给你现成的支持',
+    '印星-日主':'印星扶身，给你现成的靠山',
     '印星-食伤':'印星约束伤官，让才华和表达更有分寸',
-    '官杀-印星':'官杀生印，把外部压力转成可用的支持',
+    '官杀-印星':'官杀生印，把外部压力转成靠山',
     '食伤-财星':'食伤生财，让才华和产出有收入来源',
-    '财星-官杀':'财星支持官杀，给履行职责提供资源',
+    '财星-官杀':'财星生官杀，用收入换来职位和信任',
     '比劫-日主':'比劫扶身，同类力量给你帮衬',
     '食伤-官杀':'食伤约束官杀，用才华和做事能力化解压力',
     '财星-印星':'财星约束印星，减少过重的生扶'
   };
-  var text=effects[left+'-'+right]||left+'与'+right+'配合，给本盘提供支持';
+  var text=effects[left+'-'+right]||left+'与'+right+'配合，给本盘添助力';
   return (usefulDecisionView(data).avoid.includes(element)?'原局已有的'+element+'：'+text+'，这项作用保留，但不宜再添'+element:element+'：'+text)+'。';
 }
 function standardPatternPrinciple(name){
@@ -2257,23 +2257,23 @@ function standardPatternPrinciple(name){
     '食神格':'食神代表稳定的产出，成格要自身有力、产出能生财或制杀；偏印压制食神，或身弱却过度消耗，会破坏配合。',
     '正官格':'正官代表规则与责任，成格要自身能担当，财印能配合；伤官损官或官杀相混且无处理，会破坏原有秩序。',
     '七杀格':'七杀代表压力与约束，成格要有印星化解或食神制约，并让自身能承担；杀重身弱而缺少帮助，会让压力压过自身。',
-    '正印格':'印星代表学习和支持，成格要支持能帮助自身、又不过量；财星损坏必要的印星，或印太重压住产出，会破坏配合。',
-    '偏印格':'偏印也是学习和支持，成格要支持有用、产出不受压；偏印夺食，或财星损坏必要的印星，会使配合受损。',
+    '正印格':'印星代表学业和贵人，成格要贵人真能帮到自身、又不过量；财星损坏必要的印星，或印太重压住产出，会破坏配合。',
+    '偏印格':'偏印也代表学业和贵人，成格要靠山有用、产出不受压；偏印夺食，或财星损坏必要的印星，会使配合受损。',
     '建禄格':'自身有根基，成格要财官或食伤把力量用出去；比劫过多争财、或力量没有出口，会使配合受损。',
     '月劫用事':'同类力量强，成格要有官杀约束或食伤生财；比劫争财又无人约束，会破坏资源分配。',
     '月刃格':'月刃表示自身同类力量很强，成格要官杀有力约束；官杀被损坏、压不住过旺的力量，就会破格。',
-    '杀印相生格':'成格要官杀的压力能转为印星的支持，再由印星生扶自身；财星坏印、印星过重或支持不能帮助自身，都会留下缺陷。',
+    '杀印相生格':'成格要官杀的压力能转为印星这层靠山，再由印星生扶自身；财星坏印、印星过重或靠山帮不到自身，都会留下缺陷。',
     '食神制杀格':'成格要食神能约束七杀，让产出化解压力，也要自身有力；偏印夺食或财星反助七杀，会破坏制约。',
     '伤官配印格':'成格要印星既能约束伤官、又能扶身，让才华有分寸；财星损印或印星压得过重，都会使配合失衡。',
-    '官印相生格':'成格要官星生印、印星扶身，让责任带来支持；伤官损官或财星坏印，会破坏这条配合。',
-    '财官印相生格':'成格要财星支持官星、官星支持印星，再由印星扶身；财星坏印或任一环节受损，都会影响整体配合。',
+    '官印相生格':'成格要官星生印、印星扶身，让责任带来靠山；伤官损官或财星坏印，会破坏这条配合。',
+    '财官印相生格':'成格要财星生官星、官星生印星，再由印星扶身；财星坏印或任一环节受损，都会影响整体配合。',
     '伤官生财格':'成格要伤官的才华能生财、自身也能承担财星；身弱财重或比劫争财，会让产出难以转为可用的收入。',
     '食神生财格':'成格要食神的稳定产出能生财、自身也能承担财星；偏印夺食或身弱财重，会破坏这项配合。',
     '财滋弱杀格':'成格要财星补足偏弱的七杀，让约束适度；财杀过重而自身无力承担，就会由帮助转成压力。',
     '羊刃驾杀格':'成格要强旺的自身与七杀互相制衡，让冲劲受约束；一方过强、另一方受损，都会破坏平衡。'
   };
   if(text[name])return text[name];
-  if(/^从格/.test(name))return '成格要自身缺少独立支撑，全盘顺着'+(/财/.test(name)?'财星的资源':/杀/.test(name)?'官杀的压力':'食伤的产出')+'这股主势；逆向的根气或帮扶破坏主势，就会破格。';
+  if(/^从格/.test(name))return '成格要自身缺少独立根基，全盘顺着'+(/财/.test(name)?'财星的资源':/杀/.test(name)?'官杀的压力':'食伤的产出')+'这股主势；逆向的根气或帮扶破坏主势，就会破格。';
   if(/^化气格/.test(name))return '成格要天干相合后真正形成新的五行主势，原日主不再另立；原有根气恢复或新主势被破坏，就不再按化气格成立。';
   return '成格要主要五行形成完整的力量，并有适合的出口；逆向力量破坏主势，或出口受阻，都会损坏配合。';
 }
@@ -2289,8 +2289,8 @@ function standardStructureView(data){
     '官杀承载不足':'官杀压力偏重，外部要求多，自己应付不过来',
     '官杀去留':'官杀并见，既有规则又有强硬压力，不同要求互相拉扯',
     '食伤去留':'食神与伤官并见，产出方式互相牵制',
-    '财印相战':'财星损伤印星，资源安排妨碍了必要支持',
-    '枭夺食':'偏印压住食神，学习和支持反而妨碍了稳定产出',
+    '财印相战':'财星损伤印星，求财妨碍了必要的靠山',
+    '枭夺食':'偏印压住食神，靠山反而妨碍了稳定产出',
     '比劫分财':'比劫争财，同类力量分走了可用资源',
     '土厚埋金':'土厚埋金，印土过重压住金的发挥；原有化解官杀、生扶自身的功能仍然保留'
   };
@@ -2304,7 +2304,7 @@ function standardStructureView(data){
   var primary=useful.primary.map(elementName).join('、'),secondary=useful.secondary.map(elementName).join('、');
   var mainLimit=limits.find(function(x){return (a.elementPhenomena||[]).some(function(p){return p.name===x.family})})||limits.find(function(x){return x.standard});
   var reason=mainLimit?mainLimit.standard.replace(/。$/,''):support.length?support[0].standard.replace(/^[^：]+：|。$/g,''):'已具备格局要求的配合';
-  if(mainLimit&&mainLimit.family==='承载不足'&&/财/.test(view.name))reason='财多身弱，赚钱的机会多但自己接不住，'+(primary?'先用'+primary+'扶身'+(secondary?'，'+secondary+'作辅助':''):secondary?'先用'+secondary+'帮你添底气':'先给自己补足支持')+'，再去求财';
+  if(mainLimit&&mainLimit.family==='承载不足'&&/财/.test(view.name))reason='财多身弱，赚钱的机会多但自己接不住，'+(primary?'先用'+primary+'扶身'+(secondary?'，'+secondary+'作辅助':''):secondary?'先用'+secondary+'帮你添底气':'先给自己补足底气')+'，再去求财';
   if(mainLimit&&mainLimit.family==='官伤冲战')reason='伤官见官，才华和表达容易顶撞规矩和上级，'+(primary?primary+'能让表达收敛，但目前力量不够':'盘中还缺少足够的帮助');
   if(mainLimit&&mainLimit.family==='土厚埋金')reason='印星能化解官杀压力，但土厚埋金让'+data.dayStem+data.dayElement+'难以发挥，'+(secondary?secondary+'作辅助，帮你添底气、找出口':'先给自身添底气')+(useful.avoid.length?'，'+useful.avoid.join('、')+'不宜再添':'');
   if(view.verdict==='已成'&&view.name==='月刃格')reason='自身力量偏旺、冲劲足，'+(primary||secondary||'原有官杀')+'能约束过旺的'+data.dayElement+'，让冲劲有分寸、做事有方向';
@@ -2321,7 +2321,7 @@ function standardStructureView(data){
       '从格：从财格':month+'月'+target+'旺，'+target+'是本盘的财星，原局顺着这股财势取用。',
       '从格：从儿格':target+'是本盘的食伤，已经成势。'+target+'能生'+wealth+'，'+wealth+'是本盘的财星。'
     }[view.name];
-    if(qualification.type==='化气格')explanation=shortName.slice(0,2)+'相合，'+month+'月'+target+'当令，原局的'+target+'势足以支持合化。';
+    if(qualification.type==='化气格')explanation=shortName.slice(0,2)+'相合，'+month+'月'+target+'当令，原局的'+target+'势足以促成合化。';
     if(qualification.type==='专旺格'){
       var group=(a.interactions?.groups||[]).find(function(item){return item.complete&&item.active&&item.element===target});
       var branchBasis=group?'，地支见'+group.members.split('').join('、')+'，'+(group.name.startsWith('三会')?'会成'+target+'方':'合成'+target+'局'):
@@ -2337,35 +2337,55 @@ function standardStructureView(data){
   }
   return Object.assign({},view,{support:support,limits:limits,headline:headline,formationBasis:formationBasis});
 }
-function standardUsefulReason(data,element,role){
+var STANDARD_GOD_GLOSS={印星:'长辈、贵人、学历证书',财星:'钱财、收入',官杀:'管你的人、压力',食伤:'才华、表达',比劫:'同辈、朋友',伤官:'才华、口才',食神:'才艺、享受',正官:'管你的人、规矩',七杀:'压力、对手'};
+// {term} glosses a ten-god term on its first mention in one block; {plain|term} writes plain（term）.
+function glossGodTokens(text,seen){
+  return text.replace(/\{([^{}|]+)(?:\|([^{}]+))?\}/g,function(all,first,term){
+    if(term){seen.add(standardGodGroup(term));seen.add(term);return first+'（'+term+'）'}
+    var key=first==='财'?'财星':first,group=STANDARD_GOD_GLOSS[key]?key:standardGodGroup(key);
+    if(seen.has(key)||seen.has(group))return first;
+    seen.add(key);seen.add(group);return first+'（'+(STANDARD_GOD_GLOSS[key]||STANDARD_GOD_GLOSS[group]||'')+'）';
+  });
+}
+function standardUsefulReason(data,element,role,seen){
   var view=usefulDecisionView(data),a=data.patternAnalysis||{},entry=view.elements.find(function(x){return x.element===element})||{};
   var stem=Object.keys(STEM_WX).find(function(s){return STEM_WX[s]===element}),god=standardGodGroup(tenGod(data.dayStem,stem));
   var risks=entry.riskEntries||[],risk=risks.find(function(r){return r.status==='effective'}),benefits=entry.benefitEntries||[];
   var benefit=benefits.find(function(b){return view.routes.some(function(r){return r.id===b.routeId&&r.status==='selected'})})||benefits.find(function(b){return b.status==='local'})||benefits[0];
   var route=benefit&&view.routes.find(function(r){return r.id===benefit.routeId}),steps=route&&(route.steps||[]).filter(function(s){return s.active})||[];
   var buried=(a.elementPhenomena||[]).some(function(p){return p.name==='土厚埋金'}),job;
+  seen=seen||new Set();
   if(role==='avoid'){
-    if(buried&&element==='土')job='原有印土能化解官杀，但土已过重，再添会压住金的发挥';
-    else if(buried&&element==='火')job='火生土，会让已过重的印土更厚，加重土厚埋金';
-    else if(risk&&risk.id==='unresolved-output-officer')job='伤官已经冲击所需官星，再添会加重与规则的冲突';
-    else if(risk&&risk.id==='unresolved-wealth-load')job='眼下赚钱的事情已让你力不从心，再添财只会增加消耗';
-    else if(risk&&risk.id==='verified-pattern')job='会损伤当前成格所需的力量，不能只看它润土或泄秀的好处';
-    else if(risk&&risk.id==='wealth-seal')job='已妨碍必要的印星支持，不宜再加重这种牵制';
+    risk=risks.find(function(r){return r.status==='effective'&&r.dominant})||risk;
+    if(buried&&element==='土')job='{印星}能帮你化解官杀压力，但土已过重，再添会压住金的发挥';
+    else if(buried&&element==='火')job='火生土，会让已过重的{印星}更厚，加重土厚埋金';
+    else if(risk&&risk.id==='unresolved-output-officer')job='{伤官}已经顶撞管你的规矩，再添冲突更重';
+    else if(risk&&risk.id==='unresolved-wealth-load')job='眼下赚钱的事已让你力不从心，再添只会增加消耗';
+    else if(risk&&risk.id==='verified-pattern')job='成格靠的力量会被它伤到，润土或泄秀的好处抵不过这层损伤';
+    else if(risk&&/climate/.test(risk.id))job='本盘寒暖燥湿已经偏了，再添会更偏';
+    else if(risk&&risk.id==='verified-phenomenon')job='这股力量已经过量，再添失衡更重';
+    else if(!risk&&view.routes.some(function(r){return r.status==='selected'&&r.id==='strict-special'}))job='它和全盘主势对着干，再添会打乱格局';
+    else if(risk&&risk.id==='wealth-seal')job='求财已经牵制你需要的{印星}，再添这层靠山更弱';
     else job='会加重本盘已有的格局损伤，不宜再增加';
   }else if(route&&route.id==='monthly-bing-wei')job=element==='水'?'壬水可缓解夏季暑热，但本盘承担官杀压力的不足仍在，故只作另一取法':'庚金可配合壬水调节暑热，不能替代本盘扶身的需要';
-  else if(buried&&element==='金')job='给'+data.dayStem+data.dayElement+'日主添底气，帮你扛住官杀带来的压力';
-  else if(buried&&element==='水')job='润开厚土，让金的才华有出口'+(risk&&risk.id==='verified-pattern'?'，用水也会牵制原本生印的七杀，要保住这条化杀路径':'，用时也要保住印星化解压力的帮助');
+  else if(buried&&element==='金')job='给'+data.dayStem+data.dayElement+'日主添底气，帮你扛住{官杀}带来的压力';
+  else if(buried&&element==='水')job='润开厚土，让金的才华有出口'+(risk&&risk.id==='verified-pattern'?'，但水也会牵制{七杀}把压力转成靠山的作用，要保住这一点':'，用时也要保住{印星}帮你化解压力');
   else if(god==='印星'){
     var controls=steps.some(function(s){return standardGodGroup(s.left.god)==='印星'&&standardGodGroup(s.right.god)==='食伤'});
     var feeds=caseDisplayView(data).support.some(function(x){return x.step&&standardActorElement(x.step.left)===element&&x.step.right.god==='日主'});
-    job=(controls?'帮你把才华用得更有章法，':'')+(feeds?'给'+data.dayStem+data.dayElement+'日主添后劲，让你更有底气应对赚钱和做事的压力':'可给自身添后劲，但盘中这份支持还没能充分帮到你');
+    job='{印星}'+(controls?'帮你把才华用得更有章法，':'')+(feeds?'给'+data.dayStem+data.dayElement+'日主添后劲，让你更有底气应对赚钱和做事的压力':'能给你添后劲，但这层靠山眼下还没完全帮到你');
   }else if(god==='比劫'){
     var blocked=(a.patternDisease&&a.patternDisease.items||[]).flatMap(function(d){return d.medicines||[]}).flatMap(function(m){return m.steps||[]}).some(function(s){return !s.active&&s.left&&standardGodGroup(s.left.god)==='比劫'&&s.right&&s.right.god==='日主'});
-    job='代表和你同类的力量，能帮你扛住压力'+(blocked?'，盘中这份帮扶仍受牵制'+(role==='secondary'?'，所以只作辅助':''):'');
+    job='{比劫}帮你一起扛压力'+(blocked?'，但这份帮扶眼下受牵制'+(role==='secondary'?'，所以只作辅助':''):'');
   }
-  else if(god==='官杀')job=/强|旺/.test(data.strength)?'给强旺的你立规矩，让冲劲用在做事上':'带来规则和责任，需要先给自己补足应对压力的底气';
-  else if(god==='财星')job='能把才华转成收入'+(steps.some(function(s){return standardGodGroup(s.right.god)==='官杀'})?'，再用资源支持规则和责任':'');
-  else job=/强|旺/.test(data.strength)?'让过旺的自身力量转为表达和产出':'让自身力量转为表达和产出，同时要保留足够的扶身支持';
+  else if(god==='官杀')job=/强|旺/.test(data.strength)?'{官杀}给强旺的你立规矩，让冲劲用在做事上':'{官杀}带来规则和责任，你要先补足底气才扛得住';
+  else if(god==='财星'){
+    var output=steps.find(function(s){return standardGodGroup(s.left.god)==='食伤'&&standardGodGroup(s.right.god)==='财星'});
+    var officer=steps.find(function(s){return standardGodGroup(s.right.god)==='官杀'});
+    if(route&&route.id==='wealth-flow'&&route.transmissionActive&&output&&officer)job='你的{才华|'+output.left.god+'}和{管你的规矩|'+officer.right.god+'}容易顶撞，{财}在中间搭桥，先把才华变成收入，再用收入换来职位和别人的信任';
+    else job='{财}能把才华变成收入'+(officer?'，再用收入换来职位和别人的信任':'');
+  }
+  else job=/强|旺/.test(data.strength)?'{食伤}把你过旺的精力用在做事和产出上':'{食伤}把你的力量用在做事和产出上，用时要留足底气';
   if(role==='other'){
     if(route&&route.id==='monthly-bing-wei')return monthlyBingWeiReference(data,element,false);
     var proof=steps.slice(0,2).map(function(step){return displayStep(step,true)}).join('，');
@@ -2375,16 +2395,17 @@ function standardUsefulReason(data,element,role){
     else if(proof)job='盘里'+proof+'，'+job;
     else if(benefit&&benefit.status==='reference'&&route&&route.id==='climate')job=route.benefit.replace(/[。；]+$/,'');
     var constraint=limitProof?'但盘里还有'+limitProof.split('：')[0]+'的牵制，':
-      limit&&limit.id==='wealth-seal'?'但会牵制本盘所需的印星支持，':'';
-    return job+'。'+constraint+'这项作用单列作参考。';
+      limit&&limit.id==='wealth-seal'?'但会牵制本盘需要的{印星}，':'';
+    return glossGodTokens(job+'。'+constraint+'这项作用单列作参考。',seen);
   }
-  if(role!=='avoid'&&risks.some(function(r){return r.id==='wealth-seal'&&r.status==='effective'}))job+='，但求财不能削弱印星给你的支持';
-  else if(role!=='avoid'&&risks.some(function(r){return r.id==='wealth-seal'&&r.status==='potential'}))job+='，用时也要保住印星给你的支持';
+  var lead=god==='财星'?'求财时':'用时';
+  if(role!=='avoid'&&risks.some(function(r){return r.id==='wealth-seal'&&r.status==='effective'}))job+='。'+lead+'不能削弱{印星}这层靠山';
+  else if(role!=='avoid'&&risks.some(function(r){return r.id==='wealth-seal'&&r.status==='potential'}))job+='。'+lead+'别丢了{印星}这层靠山';
   if(role==='primary'&&(data.useful?.decision?.promotedPrimary||[]).includes(element)&&risks.some(function(r){return r.id==='peer-wealth'}))job+='，用时要兼顾资源分配';
-  return element+'是'+god+'，'+job+'。';
+  return element+'是'+god+'，'+glossGodTokens(job,seen)+'。';
 }
 function standardStructureAudit(data){
-  var meanings={印星:'给自身支持，帮助承担负担',财星:'代表收入和资源，也要自身有力承担',官杀:'带来规则与压力，需要自身有力担当',食伤:'让自身力量转为才华和产出',比劫:'提供同类帮扶，也要注意财星的分配'};
+  var meanings={印星:'给你靠山，帮你扛住负担',财星:'代表收入和资源，也要自身有力承担',官杀:'带来规则与压力，需要自身有力担当',食伤:'让自身力量转为才华和产出',比劫:'提供同类帮扶，也要注意财星的分配'};
   var profiles=(data.patternAnalysis||{}).tenGodProfiles||{},lines=[];
   Object.keys(profiles).forEach(function(god){
     var available=[],limited=[];
@@ -2472,7 +2493,7 @@ function renderStructure(data){
   var bars=WUXING.map(function(w){return '<div class="wx-row"><span class="wx-'+w+'">'+w+'</span><div><i style="width:'+(max?Math.round(data.scores[w]/max*100):0)+'%"></i></div><em>'+data.scores[w].toFixed(1)+'</em></div>'}).join('');
   var missing=WUXING.filter(function(w){return data.scores[w]<0.2});
   var phenomenon=a.elementPhenomena||[],positivePhenomenon=a.positivePhenomena||[],specials=a.specialPatterns||[];
-  var strengthCopy='本盘'+data.dayStem+data.dayElement+'日主'+data.strength+'，'+(/弱/.test(data.strength)?'重点是让扶身的支持真正帮到自身，减轻财星和官杀的负担。':/强|旺/.test(data.strength)?'重点是让过旺的力量有约束、有产出，避免同类力量继续堆积。':'重点是保留现有生扶、产出与约束之间的平衡。');
+  var strengthCopy='本盘'+data.dayStem+data.dayElement+'日主'+data.strength+'，'+(/弱/.test(data.strength)?'重点是补足根基，减轻财星和官杀的负担。':/强|旺/.test(data.strength)?'重点是让过旺的力量有约束、有产出，避免同类力量继续堆积。':'重点是保留现有生扶、产出与约束之间的平衡。');
   var remedyCopy=view.verdict==='已成'?'本盘已成格，喜用用于维持既有配合，不表示越加越好。':'本盘的问题仍在，先保留主用和佐用的用途，避免加重忌项的损伤。';
 
   var usefulLink=caseUsefulLinkText(data);
@@ -2489,15 +2510,15 @@ function renderStructure(data){
     '<section class="report-section"><h3 class="report-heading">五行分布</h3><div class="report-chart">'+bars+'</div>'+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div></section></div></div>'+
     '<details class="structure-deep"><summary>完整作用依据</summary><div class="detail-grid">'+
     detailBox(modeCopy('主用、佐用与忌','格局用神'),modeCopy(esc(usefulSummaryText(data,true,false)),esc(usefulSummaryText(data,true,false))))+
-    detailBox(modeCopy('支撑与季节参考','扶抑与调候'),modeCopy('喜用先按本盘格局取舍；季节调节的独立用途另列，不把两种取法合成一组。',esc(usefulSummaryText(data,true,false))))+
-    detailBox(modeCopy('自身支撑依据','旺衰依据'),modeCopy(esc(strengthCopy),caseAuditText(data,true)),contextHelp('strength'))+
+    detailBox(modeCopy('根基与季节参考','扶抑与调候'),modeCopy('喜用先按本盘格局取舍；季节调节的独立用途另列，不把两种取法合成一组。',esc(usefulSummaryText(data,true,false))))+
+    detailBox(modeCopy('自身根基依据','旺衰依据'),modeCopy(esc(strengthCopy),caseAuditText(data,true)),contextHelp('strength'))+
     detailBox(modeCopy('出生力量核对','根气与透藏'),modeCopy(standardStructureAudit(data),caseAuditText(data,true)))+
     (phenomenon.length?detailBox(modeCopy('力量偏性','气势病象'),modeCopy(view.limits.filter(function(x){return phenomenon.some(function(p){return p.name===x.family})}).map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join('')||'<p>现有配合的限制已在上方列出，不据偏性另判现实结果。</p>',phenomenon.map(function(x){return '<p>'+esc(x.canonicalName||x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('phenomenon')):'')+
     (positivePhenomenon.length?detailBox(modeCopy('优势配合','清秀气象'),modeCopy(view.support.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),positivePhenomenon.map(function(x){return '<p>'+esc(x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('positive-phenomenon')):'')+
-    detailBox(modeCopy('配合与牵制','清浊去留'),modeCopy('本盘按'+esc(view.name)+'判断；盘中代表支持、产出、资源和压力的力量各有用途，只有实际帮助当前格局的力量才列为喜用。',caseReadingText(data,true)))+
-    (view.limits.length?detailBox(modeCopy('已有阻碍','组合冲突'),modeCopy('上面的「主要受限」已逐项列出本盘仍在的阻碍；已有支撑不能抵消仍在的问题。',view.limits.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))):'')+
-    detailBox(modeCopy('问题与支持路径','病药通关'),modeCopy(esc(remedyCopy),caseReadingText(data,true)))+
-    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false,view),esc(specialPatternText(a))+caseAuditText(data,true)),contextHelp('special-pattern')):'')+detailBox(modeCopy('当前阶段参考','当前大运格局'),'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button>',contextHelp('current-luck'))+detailBox(modeCopy('相互作用','干支作用'),modeCopy('本盘有效的生扶、生财和制约已在「已有支撑」说明；合冲只用来解释这些力量怎样配合或受牵制。',caseReadingText(data,true)),contextHelp('interaction'))+'</div></details>'+
+    detailBox(modeCopy('配合与牵制','清浊去留'),modeCopy('本盘按'+esc(view.name)+'判断；盘中代表靠山、产出、资源和压力的力量各有用途，只有实际帮助当前格局的力量才列为喜用。',caseReadingText(data,true)))+
+    (view.limits.length?detailBox(modeCopy('已有阻碍','组合冲突'),modeCopy('上面的「主要受限」已逐项列出本盘仍在的阻碍；已有根基不能抵消仍在的问题。',view.limits.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))):'')+
+    detailBox(modeCopy('问题与化解路径','病药通关'),modeCopy(esc(remedyCopy),caseReadingText(data,true)))+
+    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false,view),esc(specialPatternText(a))+caseAuditText(data,true)),contextHelp('special-pattern')):'')+detailBox(modeCopy('当前阶段参考','当前大运格局'),'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button>',contextHelp('current-luck'))+detailBox(modeCopy('相互作用','干支作用'),modeCopy('本盘有效的生扶、生财和制约已在「已有根基」说明；合冲只用来解释这些力量怎样配合或受牵制。',caseReadingText(data,true)),contextHelp('interaction'))+'</div></details>'+
     '<p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
 }
 function modeCopy(standardBody,professionalBody){
@@ -2609,10 +2630,10 @@ function contextHelp(key){
   };
   var standard={
     missing:{title:'少了一种五行代表什么？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的力量是在帮助本盘、增加负担，还是没有关键作用。</p>'},
-    strength:{title:'自身支撑代表什么？',body:'<p>自身支撑不是命好命坏的评分。它说明自身能否承受资源、责任、产出消耗和压力，以及该增加支持、疏通出口还是加强约束。</p>'},
+    strength:{title:'自身根基代表什么？',body:'<p>自身根基不是命好命坏的评分。它说明自身能否承受资源、责任、产出消耗和压力，以及该补根基、疏通出口还是加强约束。</p>'},
     useful:{title:'帮助与限制怎么看？',body:'<p>这里表示某种五行在当前组合中能够解决什么问题，不等于数量越多越好。帮助过量、位置不对或同时破坏其他配合，也会转成负担。</p>'},
-    'main-pattern':{title:'主要配合代表什么？',body:'<p>名称只说明出生组合的主要作用路线，不代表见到某个名称就一定富贵。还要核对实际支持、连接、阻碍及缓解路径。</p>'},
-    'current-luck':{title:'当前十年会改变出生组合吗？',body:'<p>当前十年能补充支持、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把出生组合永久改成另一个层次。</p>'},
+    'main-pattern':{title:'主要配合代表什么？',body:'<p>名称只说明出生组合的主要作用路线，不代表见到某个名称就一定富贵。还要核对实际帮扶、连接、阻碍及缓解路径。</p>'},
+    'current-luck':{title:'当前十年会改变出生组合吗？',body:'<p>当前十年能补充助力、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把出生组合永久改成另一个层次。</p>'},
     phenomenon:{title:'力量偏性是什么？',body:'<p>这里的偏性是传统结构解释，不是医学诊断，也不等于固定性格。它只说明某种五行力量对应的配合偏差与表现倾向。</p>'},
     'positive-phenomenon':{title:'优势配合代表什么？',body:'<p>这里表示某类优势具备较好的配合条件，不代表才华或成就必然兑现。实际发挥仍受整体配合、当前阶段与现实条件约束。</p>'},
     interaction:{title:'出生组合的相互作用怎么看？',body:'<p>相连、冲突和牵制只说明不同力量之间发生了什么作用，不能单独等同于结婚、破财、疾病或其他具体事件。</p>'},
@@ -3307,26 +3328,26 @@ function publicPatternMeaning(name,technical){
     '建禄格':['自身做事的底子较足，重点是能不能把力量用到产出、经营或承担责任上。','日主得禄，常从财官或食伤寻找出口，忌比劫再旺而无处疏泄。'],
     '月劫用事':['出生月份以同类力量为主，既能得到同伴助力，也容易出现竞争；关键看力量能否用在同一个方向。','月令取比劫用事，向财官食伤取用，须辨同类助力与争财。'],
     '正官格':['重点在规则和责任，长处是守秩序、肯担当；要看做事的能力能否接住要求。','正官主秩序，喜财生、印护，须防伤官直接损官。'],
-    '七杀格':['重点在压力和应对压力的能力；有支持或办法应对时，压力能转成行动力。','七杀当令，以制杀或化杀为要，须看日主能否承杀，不把制化无条件并取。'],
+    '七杀格':['重点在压力和应对压力的能力；有靠山或办法应对时，压力能转成行动力。','七杀当令，以制杀或化杀为要，须看日主能否承杀，不把制化无条件并取。'],
     '食神格':['重在把才艺和能力稳定地做成成果，再看成果有没有转成收益的条件。','食神当令，视身能否任泄，再论生财或制杀，须防枭印夺食。'],
     '伤官格':['重在表达、创意和打破旧办法；长处是敢做不同的事，要留意做法与规则起冲突。','伤官当令，取生财或配印的实际条件；遇官先看是否冲战、是否有救应。'],
     '正财格':['重在靠稳定投入得到回报，关键是自己能不能接住并守住这些资源。','正财当令，先看身能任财，再看财是否得护与有无比劫争财。'],
     '偏财格':['重在发现机会、经营资源，长处是灵活；也要看有没有能力承担机会带来的风险。','偏财当令，先辨承财，再看财的来源、保护和比劫争夺。'],
-    '正印格':['重在学习、积累和获得支持；关键是能不能把得到的帮助变成自己的能力。','正印当令，取生身护身之用，须辨财印是否相碍和印重是否有出口。'],
+    '正印格':['重在学业、积累和贵人相助；关键是能不能把得到的帮助变成自己的能力。','正印当令，取生身护身之用，须辨财印是否相碍和印重是否有出口。'],
     '偏印格':['重在深入钻研和找到自己的学习方法；也要看积累能不能变成实际产出。','偏印当令，先看印能否发挥扶身，再看有无牵制食神。'],
     '杀印相生格':['易得师长、前辈扶持，包括指点、给机会和在关键时出手相助。','七杀生印、印生身，两段都须接通。'],
     '食神制杀格':['用专业能力或实际成果应对压力，而不是只靠硬扛。','食神制七杀，须看食杀根透、距离、日主承载及财星是否转移制杀之力。'],
     '伤官配印格':['表达和创新有学习、方法和约束托底，既保留长处，也能收住冲劲。','印星制伤并扶身，须辨印能否够到伤官以及财是否坏印。'],
-    '官印相生格':['规则与责任带来学习或支持，再由这些支持提升承担责任的能力。','正官生印、印生身，须官印清纯且相生可达。'],
-    '财官印相生格':['资源、责任和支持依次衔接，资源没有停在单独求财这一步。','财生官、官生印、印生身，逐段验其接续。'],
+    '官印相生格':['规则与责任带来学业或贵人，再由这份靠山提升承担责任的能力。','正官生印、印生身，须官印清纯且相生可达。'],
+    '财官印相生格':['资源、责任和靠山依次衔接，资源没有停在单独求财这一步。','财生官、官生印、印生身，逐段验其接续。'],
     '伤官生财格':['表达、创意和技术带来的成果有机会转成收益，关键是财能接住产出。','伤官生财，须验财是否承接、日主能否任泄承财。'],
     '食神生财格':['靠持续产出积累收益，重点是手艺和成果有没有实际的接收渠道。','食神生财，须验食神得令、财星接续和日主承载。'],
     '财滋弱杀格':['资源用来加强原本不足的约束，让责任和压力更有分量。','以财滋弱杀，须杀确弱且身能任杀，杀重时不取。'],
     '羊刃驾杀格':['有冲劲，也有足够的约束把冲劲用在承担责任和攻坚上。','月刃有力，七杀清透且制刃可达；不同于仅有月刃当令。']
   };
   if(meanings[name])return meanings[name][technical?1:0];
-  if(/^从格/.test(name))return technical?'日主不能自立，取全盘主势，须核反向根援是否破从。':'自身缺少能站住的支持，整张盘的力量又集中到同一个方向，因此顺着全盘最强的方向看。';
-  if(/^化气格/.test(name))return technical?'以日干参与的天干合化定主势，须验合位、化神及破化条件。':'两个天干相合，还要有季节和全盘的支持，才能把相合后的五行当作主线。';
+  if(/^从格/.test(name))return technical?'日主不能自立，取全盘主势，须核反向根援是否破从。':'自身缺少能站住的根基，整张盘的力量又集中到同一个方向，因此顺着全盘最强的方向看。';
+  if(/^化气格/.test(name))return technical?'以日干参与的天干合化定主势，须验合位、化神及破化条件。':'两个天干相合，还要有季节和全盘的助力，才能把相合后的五行当作主线。';
   if(/^专旺格/.test(name))return technical?'同类主势成局，须有足够根气并排除有效逆势。':'盘里一股力量强到占主导，解读时先顺着这股力量看，而不是按缺哪样就补哪样。';
   return '这里看的是出生月份带起的主要力量，以及它在全盘能不能发挥作用。';
 }
@@ -3339,7 +3360,7 @@ function publicPatternBasis(data,technical){
   }
   if(!command.primaryStem)return '本盘没有可单列的定格依据。';
   if(technical)return '月令'+command.branch+'取'+command.primaryStem+command.primaryGod+'为定格主线。';
-  if(regular.name==='月刃格')return data.dayStem+data.dayElement+'生在'+command.branch+'月，出生月份给了自身很强的支持，这就是本盘所说的「月刃」。';
+  if(regular.name==='月刃格')return data.dayStem+data.dayElement+'生在'+command.branch+'月，出生月份给了自身很强的根基，这就是本盘所说的「月刃」。';
   return '本盘生在'+command.branch+'月，定格先看这个月中主事的'+command.primaryStem+STEM_WX[command.primaryStem]+'；它与日主的关系叫「'+command.primaryGod+'」，格名由此而来。';
 }
 function publicBladeActor(data){
@@ -3351,8 +3372,8 @@ function publicBladeActor(data){
   return candidates.length===1?candidates[0]:null;
 }
 function publicFlowStep(step){
-  var roles={正官:'规则和责任',七杀:'压力和约束',食神:'稳定产出',伤官:'表达和产出',正财:'稳定所得',偏财:'可经营的资源',正印:'学习和支持',偏印:'学习和支持',比肩:'与自身同类的力量',劫财:'与自身同类的力量',日主:'自身'};
-  var left=step.left,right=step.right,verb=step.action==='制'?'约束':step.action==='生'?'支持':'影响';
+  var roles={正官:'规则和责任',七杀:'压力和约束',食神:'稳定产出',伤官:'表达和产出',正财:'稳定所得',偏财:'可经营的资源',正印:'学业和贵人',偏印:'学业和贵人',比肩:'与自身同类的力量',劫财:'与自身同类的力量',日主:'自身'};
+  var left=step.left,right=step.right,verb=step.action==='制'?'约束':step.action==='生'?'帮扶':'影响';
   function actor(item){return item.stem+(STEM_WX[item.stem]||'')+'（代表'+(roles[item.god]||item.god)+'）'}
   return left&&right&&left.stem&&right.stem?actor(left)+verb+actor(right):step.text.split('：')[0];
 }
@@ -3421,7 +3442,7 @@ function buildPatternContextText(data,technical){
     '命格：'+v.name+(a.natalNoblePattern?'（贵格）':'')+'；'+state,
     '本盘命格结论：'+v.headline[key],
     v.formationBasis?'成格依据：'+v.formationBasis:'',
-    (technical?'已有救应：':'已有支撑：')+(v.support.slice(0,3).map(function(x){return x[key]}).join('')||'无'),
+    (technical?'已有救应：':'已有根基：')+(v.support.slice(0,3).map(function(x){return x[key]}).join('')||'无'),
     '主要受限：'+(v.limits.map(function(x){return x[key]}).join('')||'无'),
     '原局取用：'+usefulSummaryText(data,false),
     promoted.length?'说明：'+promoted.join('、')+'由佐用提升为主用，页面和回答都按主用对待。':''

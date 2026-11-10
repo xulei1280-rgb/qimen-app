@@ -606,8 +606,8 @@ const natalConclusionHeading=conciseStructureHtml.indexOf('<h3 class="report-hea
 assert(conciseStructureHtml.includes('class="structure-report"') && patternHeading>=0 && patternHeading<natalConclusionHeading && natalConclusionHeading<conciseStructureHtml.indexOf('喜用参考'), 'the column grid presents the chart pattern, conclusion, and actual help');
 assert(conciseStructureText.includes('表达和做事方式与规则要求冲突') && conciseStructureText.includes('官杀又带来规则与压力，自己难以同时应付') && !conciseStructureText.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
 assert(scriptContext.standardGodGroup('伤官')==='食伤' && scriptContext.standardGodGroup('劫财')==='比劫', 'standard labels retain the actual ten-god family');
-assert(withoutGodHighlight(conciseStructureHtml).includes('木是印星，作用是制伤护身，帮你把才华用得更有章法') && withoutGodHighlight(conciseStructureHtml).includes('土是食伤，再添会加重官伤冲突。伤官已经冲击所需官星'), 'standard useful copy explains the chart-specific job and damage');
-assert(!/出生月份的木（学习和支持）|应少增|已有缓解，尚未完全解除/.test(conciseStructureHtml), 'standard tab removes mechanical translation and repeated tails');
+assert(withoutGodHighlight(conciseStructureHtml).includes('木是印星，作用是制伤护身：印星（长辈、贵人、学历证书）帮你把才华用得更有章法') && withoutGodHighlight(conciseStructureHtml).includes('土是食伤，再添会加重官伤冲突：伤官已经顶撞管你的规矩') && withoutGodHighlight(conciseStructureHtml).includes('金是财星，作用是通关：你的才华（伤官）和管你的规矩（正官）容易顶撞，财（钱财、收入）在中间搭桥，先把才华变成收入，再用收入换来职位和别人的信任。求财时别丢了印星这层靠山。'), 'standard useful copy explains the chart-specific job and damage');
+assert(!/出生月份的木（学业和贵人）|支撑|应少增|已有缓解，尚未完全解除/.test(conciseStructureHtml), 'standard tab removes mechanical translation and repeated tails');
 {
   const modeCopy=scriptContext.modeCopy;
   scriptContext.modeCopy=standard=>standard;
@@ -698,19 +698,19 @@ const patternSection=conciseStructureHtml.slice(patternHeading,conciseStructureH
 assert(!/查看格局说明|成格与破格只说明|<details/.test(patternSection)&&patternSection.includes('格局喜忌')&&patternSection.includes('is-favorable')&&patternSection.includes('is-unfavorable'),'both modes show pattern guidance without a disclosure');
 assert(patternSection.split('is-traits').length===2&&patternSection.indexOf('is-traits')>patternSection.indexOf('is-unfavorable'),'the shared traits appear once after the mode-specific guidance');
 assert(!conciseStructureHtml.includes('本盘作用说明')&&conciseStructureHtml.includes('本盘取用以木（制伤护身）为主'),'the verdict links to this chart’s use choices without a separate redundant disclosure');
-function assertUsefulRow(html,role,element,group,effect){
+function assertUsefulRow(html,role,element,group,effect,technical){
   const row=html.split('data-use-role="'+role+'" data-element="'+element+'"')[1]?.split('</div>')[0];
   const label=row?.match(/<dt>(.*?)<\/dt>/)?.[1].replace(/<[^>]+>/g,'');
   const description=row?.match(/<dd>(.*?)<\/dd>/)?.[1];
   assert(label===({primary:'主用',secondary:'佐用',avoid:'忌'}[role]+'：'+element),element+' keeps only its role and element in the label');
-  assert(description&&withoutGodHighlight(description).startsWith(element+'是'+group+'，'+(role==='avoid'?'再添会':'作用是')+effect),element+' explains its ten-god group and effect in the description');
+  assert(description&&withoutGodHighlight(description).startsWith(element+'是'+group+'，'+(role==='avoid'?'再添会':'作用是')+(technical?effect:effect.replace(/^局部/,''))+(technical?'':'：')),element+' explains its ten-god group and effect in the description');
 }
 for(const technical of [false,true]){
   const rows=scriptContext.usefulRowsForMode(conciseReferenceBazi,technical);
-  assertUsefulRow(rows,'primary','木','印星','制伤护身');
-  assertUsefulRow(rows,'secondary','金','财星','局部通关');
-  assertUsefulRow(rows,'secondary','火','比劫','扶身');
-  assertUsefulRow(rows,'avoid','土','食伤','加重官伤冲突');
+  assertUsefulRow(rows,'primary','木','印星','制伤护身',technical);
+  assertUsefulRow(rows,'secondary','金','财星','局部通关',technical);
+  assertUsefulRow(rows,'secondary','火','比劫','扶身',technical);
+  assertUsefulRow(rows,'avoid','土','食伤','加重官伤冲突',technical);
   const alternate=usefulNoteHtml.split(technical?'data-professional-copy>':'data-standard-copy>')[1].split('</div><div class="mode-copy')[0];
   assert(alternate.includes('<strong>调候参考 · <b class="public-use-choice wx-水">水</b></strong>'),'the sourced seasonal note identifies water in the heading in both modes');
   assert(alternate.includes('《穷通宝鉴·三夏丙火》')&&alternate.includes('壬透于时干，庚藏在日支申，己透于月干')&&alternate.includes('官杀'),'both modes tie the seasonal reference to actual natal placements and the remaining limit');
@@ -725,8 +725,8 @@ assert(legacyUsefulView.conditionalLabels.火==='喜中带忌' && legacyUsefulVi
 const promotedBazi=scriptContext.refreshPatternAnalysis({...referenceBazi,pillars:{year:'戊寅',month:'戊午',day:'辛丑',hour:'壬辰'},dayStem:'辛',dayElement:'金'});
 for(const technical of [false,true]){
   const rows=scriptContext.usefulRowsForMode(promotedBazi,technical);
-  assertUsefulRow(rows,'primary','金','比劫','扶身');
-  assertUsefulRow(rows,'primary','水','食伤','润泄');
+  assertUsefulRow(rows,'primary','金','比劫','扶身',technical);
+  assertUsefulRow(rows,'primary','水','食伤','润泄',technical);
   const alternateText=scriptContext.usefulDisplayReason(promotedBazi,'木','other',technical);
   assert(alternateText.includes('壬伤官生辰藏乙偏财')&&alternateText.includes('寅藏甲正财制戊正印'),'the alternate wealth path retains its own local benefit and verified conflict');
 }
@@ -742,7 +742,7 @@ const promotedConclusion=withoutGodHighlight(scriptContext.renderStructure({...p
 assert(promotedConclusion&&!promotedConclusion.includes('木可以疏土')&&!promotedConclusion.includes('《穷通宝鉴·三夏辛金》'),'the sourced wood reference belongs to useful elements, without repeating it in the natal conclusion');
 const promotedWoodReview=promotedDecision.routes.find(route=>route.resourceRestraint)?.resourceRestraint;
 assert(promotedWoodReview?.step.active&&promotedWoodReview.capacity==='conditional'&&promotedWoodReview.protectedPattern?.replaceable,'wood review must keep the effective contact, remaining capacity condition and surviving seal path separate');
-assert(promotedCard.includes('core-use-primary')&&!promotedCard.includes('core-use-secondary')&&promotedRows.includes('data-use-role="primary" data-element="水"')&&withoutGodHighlight(promotedRows).includes('原本生印的七杀'),'both page surfaces use the promoted roles and the detailed rows explain the risk');
+assert(promotedCard.includes('core-use-primary')&&!promotedCard.includes('core-use-secondary')&&promotedRows.includes('data-use-role="primary" data-element="水"')&&withoutGodHighlight(promotedRows).includes('七杀（压力、对手）把压力转成靠山'),'both page surfaces use the promoted roles and the detailed rows explain the risk');
 const coreExtras=scriptContext.renderCoreCards(conciseReferenceBazi).split('查看其他取用结论</summary>')[1].split('</details>')[0];
 assert(coreExtras.includes('忌：')&&coreExtras.includes('取法差异：')&&!/主用|佐用/.test(coreExtras),'expanded card shows only complementary conclusions');
 assert(scriptContext.renderCoreCards({...referenceBazi,useful:{primaryUse:[],secondaryUse:[]}}).includes('暂无取用结论'),'a chart without primary or secondary choices shows an empty state');
@@ -1508,7 +1508,7 @@ const trueFollowKillLuckPattern = scriptContext.BaziEngine.analyzePattern(trueFo
 const followKillInput=scriptContext.BaziEngine.createBaziProfile({input:{year:2008,month:12,day:3,hour:0,minute:30},useTrueSolar:false,useDaylightSaving:false});
 const followKillPage=withoutGodHighlight(scriptContext.renderStructure(followKillInput));
 const followKillConclusion=followKillPage.match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
-assert(followKillConclusion.split('<dt>成格依据：</dt><dd>亥月水旺，本盘的七杀成势，原局顺着水势取用。</dd>').length===3&&!/<dt>(?:已有支撑|已有救应)：<\/dt><dd>无/.test(followKillConclusion),'both modes show the actual formation evidence rather than an empty rescue row');
+assert(followKillConclusion.split('<dt>成格依据：</dt><dd>亥月水旺，本盘的七杀成势，原局顺着水势取用。</dd>').length===3&&!/<dt>(?:已有根基|已有救应)：<\/dt><dd>无/.test(followKillConclusion),'both modes show the actual formation evidence rather than an empty rescue row');
 const woodPatternInput=scriptContext.BaziEngine.createBaziProfile({input:{year:2003,month:4,day:1,hour:4,minute:30},useTrueSolar:false,useDaylightSaving:false});
 const woodPatternPage=withoutGodHighlight(scriptContext.renderStructure(woodPatternInput));
 const woodPatternConclusion=woodPatternPage.match(/<section class="report-section" data-verdict[^>]*>[\s\S]*?<\/section>/)?.[0]||'';
