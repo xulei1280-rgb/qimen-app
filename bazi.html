@@ -3605,7 +3605,7 @@ function selectedLuckContextText(data){
   var selectedYear=ctx.flowYear?(ctx.flowYear.year+' '+ctx.flowYear.gz+'（'+ctx.flowYear.stemGod+' / '+ctx.flowYear.branchWx+'）'):'未选择流年';
   // Standard AI context uses the card's own year rows; a hidden row is not sent.
   var yoyText=yearOutlook&&technical===false?outlookYearVsLastText(data,ctx,outlook):'',placeText=yearOutlook&&technical===false?outlookDecadePlaceText(yearOutlook,outlook.natal):'';
-  var yearPlainAi=yearOutlook&&technical===false?(placeText?'；在这步大运的十年中 '+placeText:'')+(yoyText?'；比上一年 '+yoyText:'')+'\n'+outlookContextText('年度综合',yearOutlook.annual,false)+(placeText?'\n'+outlookContextText('在这步大运的十年中',yearOutlook.increment,false,true,placeText):'')+(yoyText?'\n'+outlookContextText('比上一年',yearOutlook.previousYear,false,true,yoyText):''):'';
+  var yearPlainAi=yearOutlook&&technical===false?(placeText?'；今年在这步大运的十年中 '+placeText:'')+(yoyText?'；比上一年 '+yoyText:'')+'\n'+outlookContextText('年度综合',yearOutlook.annual,false)+(placeText?'\n'+outlookContextText('今年在这步大运的十年中',yearOutlook.increment,false,true,placeText):'')+(yoyText?'\n'+outlookContextText('比上一年',yearOutlook.previousYear,false,true,yoyText):''):'';
   var selectedMonth=ctx.flowMonth?(ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel+' '+ctx.flowMonth.gz+'（'+ctx.flowMonth.stemGod+' / '+ctx.flowMonth.branchWx+'）'):'未选择流月';
   var rels=selectedRelationTags(data,ctx);
   return [
@@ -3839,9 +3839,14 @@ OUTLOOK_DECADE_BASE.偏顺=OUTLOOK_DECADE_BASE.顺利;OUTLOOK_DECADE_BASE.偏阻
 function outlookDecadePlaceText(yo,natal){
   var w=outlookRealWord(yo&&yo.increment),b=natal&&OUTLOOK_DECADE_BASE[outlookPlainResult(outlookDisplayView(natal))];
   if(!w||!b)return '';
-  return b[0]+'，'+(w==='有升有降'?'起伏较大的一年':b[{更顺:1,差不多:2,更难:3}[w]]);
+  if(w==='有升有降')return b[0]+'，起伏较大的一年';
+  // Year verdict against the decade's tone (难 vs 顺利/平稳, 顺 vs 阻力多): drop the tone word, follow the year's own side.
+  var d=OUTLOOK_TIER[outlookPlainResult(outlookDisplayView(natal))],y=yo.annual&&OUTLOOK_TIER[outlookPlainResult(outlookDisplayView(yo.annual))];
+  if(d===0&&y>=1)return w==='更难'?'中等的一年':'相对轻松的一年';
+  if(d===2&&y===0)return w==='更顺'?'中等的一年':'相对吃力的一年';
+  return b[0]+'，'+b[{更顺:1,差不多:2,更难:3}[w]];
 }
-function outlookDecadePlaceLine(yo,natal){var t=outlookDecadePlaceText(yo,natal);return t?'在这步大运的十年中：'+t:''}
+function outlookDecadePlaceLine(yo,natal){var t=outlookDecadePlaceText(yo,natal);return t?'今年在这步大运的十年中：'+t:''}
 function outlookNoteRow(t){return t?'<p class="outlook-note" data-outlook-trend>'+esc(t)+'</p>':''}
 // Year-card rows show only a real comparison word; an engine 'no conclusion' hides the row.
 function outlookTrendRow(comparison,label){var t=outlookTrend(comparison,label);if(!/：(更顺|更难|差不多|有升有降|稍顺|稍难)$/.test(t))t='';return outlookNoteRow(t)}
