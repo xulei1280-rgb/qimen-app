@@ -2843,7 +2843,7 @@
     var activationStatus=recheck&&recheck.specialLost.length?'特殊格运中受损':(recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持'))));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261108.3-mixed-copy';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261110.1-new-rule-first';
   function outlookPending(reason){
     return {direction:'pending',assessment:'input-error',summary:reason,evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'资料校验未通过'};
   }
@@ -3323,10 +3323,9 @@
       var outlet=[{from:['比肩','劫财'],to:['食神','伤官'],action:'生'}];
       difference(2,'Y4-blade-outlet','刃禄食伤出口',stepFacts(flow(before,outlet)),stepFacts(flow(after,outlet)),1);
     }
-    // The natal priority fallback does not supply new evidence for a luck-period action.
-    var promotedPrimary=useful.decision&&useful.decision.promotedPrimary||[];
-    usefulLayer((useful.primaryUse||[]).filter(function(wx){return promotedPrimary.indexOf(wx)<0}),3,1);
-    usefulLayer((useful.secondaryUse||[]).concat(promotedPrimary).filter(function(wx){
+    // A secondary element promoted to primary (promotedPrimary) is weighed as primary, like the page shows it.
+    usefulLayer(useful.primaryUse||[],3,1);
+    usefulLayer((useful.secondaryUse||[]).filter(function(wx){
       var item=(useful.decision&&useful.decision.elements||[]).find(function(x){return x.element===wx});
       var ownSupport=wx===STEM_WX[day]&&element(after,wx).usable&&!element(after,wx).uncertain;
       return ownSupport||!item||!(item.requirements||[]).length||(useful.decision.routes||[]).some(function(r){return (r.elements||[]).indexOf(wx)>=0&&r.active&&r.steps&&r.steps.length&&interactionFlowAnalysis('',after.profiles,after.interactions,[],r.steps).steps.every(function(x){return x.active})});
@@ -3353,18 +3352,23 @@
       }
     }
     var review=Object.assign({},legacy.review,{policyVersion:LUCK_OUTLOOK_VERSION,checkedLayers:['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'],checked:checked,layerEvidence:layers,legacyDirection:legacy.direction,legacyTendency:legacy.tendency,legacyAssessment:legacy.assessment});
-    // Y7.4: new coverage rules do not revoke a completed causal verdict by default.
+    // Legacy task verdicts stand only when the new role layers are silent or agree; otherwise the new layers decide and the legacy verdict stays as reference evidence.
+    var legacyReference=[];
     if(legacy.assessment==='determined'){
       var priority=function(e){return e.ruleId==='LK-10'?0:(e.ruleId==='LK-03'||e.ruleId==='LK-05'?1:2)};
       var oldPriority=Math.min.apply(null,legacy.evidence.filter(function(e){return e.direction!=='neutral'}).map(priority).concat([2]));
       review.protectedDetermined={direction:legacy.direction,candidateDirection:direction,candidatePriority:first,oldPriority:oldPriority,
         decision:'preserved',candidateEvidence:selected,oldEvidence:legacy.evidence,
-        reason:'旧判 '+legacy.direction+'：'+legacy.evidence.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。候选第'+first+'层：'+selected.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。'+(first>=oldPriority?'候选不高于旧判第'+oldPriority+'层，不取代原净作用裁决。':'候选未证明同源病药在全失效与整链有效之间切换，不取代原净作用裁决。')};
+        reason:'旧判 '+legacy.direction+'：'+legacy.evidence.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。候选第'+first+'层：'+selected.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。'+(!direction?'新规则无结论，保留旧判。':direction===legacy.direction?'新规则与旧判同向，保留旧判。':'新规则与旧判不一致。')};
       var certificate=first===1&&oldPriority>1&&selected.length&&selected.every(function(e){return e.ruleId==='Y3-medicine'&&e.causalChange&&e.causalChange.verifiedCompleteTransition});
       if(certificate&&direction!==legacy.direction){
         review.protectedDetermined.decision='higher-priority-override';
         review.protectedDetermined.certificate=selected.map(function(e){return {ruleId:e.ruleId,change:e.causalChange,beforeActors:e.before,afterActors:e.after,
           reason:'旧判仅结算常规格局任务：'+legacy.evidence.map(function(x){return x.text}).join('；')+'；遗漏固定原病 '+e.causalChange.family+' 的对应整链由 rank '+e.causalChange.beforeRank+' 转 '+e.causalChange.afterRank+'：'+e.text+'。Y3 先于旧 Y4。'}});
+      }else if(direction&&direction!==legacy.direction){
+        review.protectedDetermined.decision='new-rule-override';
+        review.protectedDetermined.reason='旧判 '+legacy.direction+' 与新规则 '+direction+' 不一致，以新规则为准；旧判降为参考证据：'+legacy.evidence.map(function(e){return e.ruleId+' '+e.text}).join('；')+'。';
+        legacyReference=legacy.evidence.map(function(e){return Object.assign({},e,{legacyReference:true,excludedReason:'旧取运规则结论，与新规则方向不一致，仅作参考'})});
       }else{
       var oldEvidence=legacy.evidence.map(function(e){
         var a=legacy.review.beforeTasks.find(function(t){return t.id===e.taskId}),b=legacy.review.afterTasks.find(function(t){return t.id===e.taskId});
@@ -3387,7 +3391,7 @@
         checkedLayers:review.checkedLayers,knownFacts:[before.rawMainPattern,before.strength].concat(transforms.map(function(x){return x.text})).concat(replacement?replacement.before.map(function(x){return '原有效作用：'+x.text}).concat(replacement.after.map(function(x){return '现有效作用：'+x.text})):[]),review:review});
     }
     return Object.assign({},legacy,{direction:direction,tendency:null,assessment:'determined',possibleDirections:[direction],summary:'',evidence:selected,
-      reservations:layers.slice(first+1).reduce(function(out,x){return out.concat(x)},[]).concat(legacy.reservations),life:[],basis:'固定原局角色；实际作用与病药优先裁决',review:review});
+      reservations:layers.slice(first+1).reduce(function(out,x){return out.concat(x)},[]).concat(legacyReference,legacy.reservations),life:[],basis:'固定原局角色；实际作用与病药优先裁决',review:review});
   }
   function compareOutlookContexts(before,after,analysis){
     var left=outlookCore(before,analysis),right=outlookCore(after,analysis),evidence=[],reservations=[],uncertainty=[],risks=[];

@@ -4,6 +4,8 @@ process.env.TZ='Asia/Shanghai';
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('node:assert/strict'),crypto=require('crypto');
 const defaultBefore=path.resolve(__dirname,'../bazi-yun-rules-20261108/pre-mixed-after.json');
 const beforePath=process.argv[2]||(fs.existsSync(defaultBefore)?defaultBefore:null),output=process.argv[3];
+// Verdict freeze only when a baseline is passed explicitly; the default snapshot predates the 20261110 new-rule-first engine change.
+const freezeDirections=!!process.argv[2];
 const before=beforePath?JSON.parse(fs.readFileSync(beforePath,'utf8')):null;if(output)fs.mkdirSync(output,{recursive:true});
 const ctx={console,Date,Math,JSON,BirthTime:require('./birth-time.js'),document:{addEventListener(){},body:{getAttribute(){return 'standard'}},querySelectorAll(){return []},getElementById(){return {value:'detail'}}},localStorage:{getItem(){return null},setItem(){}},confirm(){return true},prompt(){return ''}};vm.createContext(ctx);
 for(const file of ['qimen.js','bazi-engine.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
@@ -21,7 +23,7 @@ for(const [person,gender,year,month,day,hour,minute] of inputs){
  const b=E.createBaziProfile({person,gender,input:{year,month,day,hour,minute},location:{name:'云南省 曲靖市 师宗县',lng:103.9936,lat:24.8222},useTrueSolar:true,useDaylightSaving:false}),frozen=JSON.stringify(b),start=E.luckStartInfo(b),dir=E.luckDirection(b),mi=gz.indexOf(b.pillars.month),old=before&&before.charts.find(c=>c.person===person);let rowIndex=0,annual=0,all=0;
  if(old){assert.equal(frozen,JSON.stringify(old.frozen),'full natal profile frozen');assert.equal(JSON.stringify(start),JSON.stringify(old.start),'luck clock frozen');}
  function check(kind,cycle,luck,year,result){
-  total++;const o=old&&old.rows[rowIndex++];if(o){assert.equal(JSON.stringify([kind,cycle,year||null]),JSON.stringify([o.kind,o.cycle,o.year]));assert.equal(result.direction,o.direction,'no direction changes for presentation focus');assert.equal(result.assessment,o.assessment);assert.equal(result.tendency||null,o.tendency||null);}
+  total++;const o=old&&old.rows[rowIndex++];if(o){assert.equal(JSON.stringify([kind,cycle,year||null]),JSON.stringify([o.kind,o.cycle,o.year]));if(freezeDirections){assert.equal(result.direction,o.direction,'no direction changes for presentation focus');assert.equal(result.assessment,o.assessment);assert.equal(result.tendency||null,o.tendency||null);}}
   const view=ctx.outlookDisplayView(result);assert.equal(view.direction,result.direction);comparison.push({person,cycle,luck,year:year||null,kind,beforeDirection:o&&o.direction,afterDirection:result.direction,beforeAssessment:o&&o.assessment,afterAssessment:result.assessment});
   if(result.direction!=='mixed')return;
   all++;if(kind==='annual')annual++;

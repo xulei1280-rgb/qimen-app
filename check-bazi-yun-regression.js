@@ -11,7 +11,7 @@ vm.createContext(ctx);
 for(const file of ['qimen.js','bazi-engine.js'])vm.runInContext(fs.readFileSync(path.join(repo,file),'utf8'),ctx,{filename:file});
 const E=ctx.BaziEngine, gz=vm.runInContext('GZ60',ctx);
 const inputs=[['色魔','男',1993,11,24,5,2],['笠夏','男',1993,7,14,8,40],['小蔓','女',1998,6,23,9,30],['香肠','男',1993,12,13,8,5],['陈伟伟','男',2002,6,27,19,45]];
-const report={engineSourceSha256:require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(repo,'bazi-engine.js'))).digest('hex'),engineVersion:'luck-outlook-20261108.3-mixed-copy',baseline:process.env.BASELINE_SHA||'unknown',timezone:'Asia/Shanghai',scope:'10 cycles, 10 assigned calendar flow years per cycle; no-previous unavailable excluded',charts:[]};
+const report={engineSourceSha256:require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(repo,'bazi-engine.js'))).digest('hex'),engineVersion:'luck-outlook-20261110.1-new-rule-first',baseline:process.env.BASELINE_SHA||'unknown',timezone:'Asia/Shanghai',scope:'10 cycles, 10 assigned calendar flow years per cycle; no-previous unavailable excluded',charts:[]};
 for(const [person,gender,year,month,day,hour,minute] of inputs){
  const input={year,month,day,hour,minute};
  const b=E.createBaziProfile({person,gender,input,location:{name:'云南省 曲靖市 师宗县',lng:103.9936,lat:24.8222},useTrueSolar:true,useDaylightSaving:false});
