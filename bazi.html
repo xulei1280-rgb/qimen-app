@@ -200,7 +200,8 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
 .structure-title-row{position:relative;display:flex;align-items:center;justify-content:center;min-height:36px;margin-bottom:8px}
 .structure-title-row .section-title{margin-bottom:0}
 .structure-title-row .display-mode{position:absolute;right:0;top:50%;transform:translateY(-50%)}
-body:not([data-display-mode="professional"]) .professional-only{display:none!important}
+body:not([data-display-mode="professional"]) .professional-only,
+body:not([data-display-mode="professional"]) .luck-outlook-summary > .analysis-box:nth-child(2) > p[data-outlook-trend]{display:none!important}
 body[data-display-mode="professional"] .standard-only{display:none!important}
 .mode-copy{display:block}
 .plain-intro{margin:0 0 8px;color:#6f6252;line-height:1.65}
@@ -1075,7 +1076,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
-<script src="bazi-engine.js?v=luck-copy-20261111.4"></script>
+<script src="bazi-engine.js?v=luck-copy-20261114.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -2021,7 +2022,13 @@ function luckFactSign(f,lost){
 }
 // The verdict comes from the evidence task; when the bare fact does not show it, say that task outright.
 function luckWhenLead(f){return {这一年:'这一年，',这步大运里:'这步大运，'}[luckWhen(f)]||''}
+function outlookEffortLine(s){
+  return String(s||'').replace(/^(这步大运，|这一年，)?([^，。]+?)(这层帮助弱了一些|这路靠山弱了一些)/,function(_,lead,topic){
+    return (lead==='这一年，'?'这一年':'这十年')+'在'+topic.replace(/^从格：/,'')+'上会比平时费力一些';
+  });
+}
 function luckLostBenefit(key){
+  if(key==='偏印')return '偏印这层帮助弱了一些';
   if(key==='你'||key==='比肩'||key==='劫财')return '自身这层根基弱了一些';
   if(key==='格局')return luckRoleInfo().name==='偏印格'?'偏印这路靠山弱了一些':(luckRoleInfo().name||'格局主线')+'这层帮助弱了一些';
   if(/^(主用|佐用|喜用)/.test(key))return key+'这层帮助弱了一些';
@@ -2149,10 +2156,10 @@ function mixedOutlookReadout(result){
         var ref=refs[0];
         if(ref&&!(groups.length&&!ref.actor.left)&&(ref.actor.left&&ref.actor.right||ref.actor.stem)){
           var text=luckFactText(ref.actor,ref.change==='lost',e.direction,e),cause=ref.change==='lost'?outlookLostCause(ref.actor,result,false):'';
-          return cause?text.replace(/。$/,'，因为'+cause+'。'):text;
+          return outlookEffortLine(cause?text.replace(/。$/,'，因为'+cause+'。'):text);
         }
         var lead=refs.map(function(r){return luckWhenLead(r.actor)}).sort().find(Boolean)||'';
-        return lead+luckTaskLine(e,positive)+'。';
+        return outlookEffortLine(lead+luckTaskLine(e,positive)+'。');
       }
       var named=refs.map(function(ref){var f=ref.actor;if(f.left&&f.right)return displayStep({left:f.left,right:f.right,action:(f.key.match(/>([^>]+)>/)||[])[1]||'生'},technical);
         if(f.god)return displayActor(f,technical);
@@ -2245,6 +2252,7 @@ function outlookDisplayView(result){
   }
   if(!items.length&&result.assessment==='engine-error')items.push({standard:'评估程序尚未加载，请刷新页面后重试。',professional:'岁运评估引擎未加载，请刷新页面后重试。',direction:'neutral'});
   if(!items.length)items.push({standard:direction==='unavailable'?'第一步没有前一阶段可比较。':result.assessment==='input-error'?'出生资料或所选年月与记录不一致，请核对。':'这段时间起作用的力量有进有出，好坏相抵，整体按'+(luckRoleInfo().name||'原局格局')+'的主线走。',professional:direction==='unavailable'?'第一步大运无前运。':result.assessment==='input-error'?'四柱或所选岁运干支校验未通过。':'本期已采用证据无具体作用增减，维持原局已确认任务。',direction:'neutral'});
+  items.forEach(function(x){x.standard=outlookEffortLine(x.standard)});
   var positive=items.filter(function(x){return x.direction==='positive'}),negative=items.filter(function(x){return x.direction==='negative'});
   var selected=direction==='mixed'&&positive.length&&negative.length?[positive[0],negative[0]]:items.slice(0,3);
   var lowItem=tiebreak&&items.find(function(x){return x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==direction});
@@ -3849,7 +3857,7 @@ function renderLuckDetail(data,ctx){
   var outlook=getSelectedLuckOutlook(data,ctx),yearOutlook=outlook.years[ctx.yearIndex],relations=selectedRelationTags(data,ctx);
   return '<section class="luck-detail-panel"><div class="luck-block-title">'+modeCopy('阶段与年度判断','岁运判断')+renderDisplayModeControl()+'</div>'+
     '<p>'+ctx.flowYear.year+' '+ctx.flowYear.gz+' · '+ctx.luckRow.gz+'（'+luckStartYear(data,ctx.luckRow)+'起）</p>'+
-    '<div class="luck-outlook-summary">'+renderOutlookBox(ctx.flowYear.year+'年运势',yearOutlook.annual,ctx.flowYear.year+' · 年度综合',{trend:modeCopy(outlookNoteRow(outlookYearVsLastLine(data,ctx,outlook))+outlookNoteRow(outlookDecadePlaceLine(yearOutlook,outlook.natal)),outlookTrendRow(yearOutlook.increment,'比这十年平常')),trendHtml:true,yearCopy:outlookYearCopy(yearOutlook,outlook.natal)})+renderOutlookBox('这十年运势',outlook.natal,'本运对原局',{trend:outlookTrend(outlook.previous,'比上一步大运')})+'</div>'+
+    '<div class="luck-outlook-summary">'+renderOutlookBox(ctx.flowYear.year+'年运势',yearOutlook.annual,ctx.flowYear.year+' · 年度综合',{trend:modeCopy(outlookNoteRow(outlookYearVsLastLine(data,ctx,outlook))+outlookNoteRow(outlookDecadePlaceLine(yearOutlook,outlook.natal)),outlookTrendRow(yearOutlook.increment,'比这十年平常')),trendHtml:true,yearCopy:outlookYearCopy(yearOutlook,outlook.natal)})+renderOutlookBox('这十年运势',outlook.natal,'本运对原局',{trend:outlookTrend(outlook.previous,'比上一步大运'),standardTrend:outlookTrend(outlook.previous,'比上一个十年',{更难:'费力一些',稍难:'稍费力一些'})})+'</div>'+
     '<details class="outlook-details"><summary>前后比较细节</summary>'+modeCopy('<p class="outlook-note">这里拿这十年和上一个十年比；流年卡上的两行分别与上一年、这步大运的十年比较。</p>','')+renderOutlookBox('这十年比上一个十年',outlook.previous,'较上一运',{compare:true})+renderOutlookBox(ctx.flowYear.year+'年在这步大运的十年中',yearOutlook.increment,'该流年对本运的影响',{compare:true,compareWords:OUTLOOK_PLACE_WORD,professionalOnly:true})+'</details>'+
     '<details class="outlook-details"><summary>关系与时间口径</summary>'+modeCopy('<p>组合关系只说明力量怎样连接或牵制，不能直接当作现实结果。</p>','<p>生克冲合采用引擎已确认作用，流月不改变大运与年度四项比较。</p>')+
     modeCopy('',relations.length?'<p>关系字面对照（不据此判断升降）：'+esc(relations.join('；'))+'</p>':'<p>未见所选干支的字面关系项；有效作用仍按上述依据。</p>')+
@@ -3858,7 +3866,7 @@ function renderLuckDetail(data,ctx){
 // Plain result word for standard mode; professional keeps the engine labels.
 function outlookPlainResult(view){
   var d=view.direction==='pending'?'':view.direction;
-  return {positive:'顺利',negative:'阻力多',mixed:'有好有坏',neutral:'平稳',unavailable:'无可比较'}[d]||(/助力/.test(view.label)?'偏顺':/牵制/.test(view.label)?'偏阻':/利弊/.test(view.label)?'有好有坏':view.label);
+  return {positive:'顺利',negative:'多留心',mixed:'有好有坏',neutral:'平稳',unavailable:'无可比较'}[d]||(/助力/.test(view.label)?'偏顺':/牵制/.test(view.label)?'稍需留心':/利弊/.test(view.label)?'有好有坏':view.label);
 }
 // Comparison wording: the engine's own before/after comparison (same source as the cards under 前后比较细节).
 function outlookCompareWord(view){
@@ -3878,7 +3886,7 @@ function outlookRealWord(r){
   var v=outlookDisplayView(r);if(v.direction==='unavailable')return '';
   var w=outlookCompareWord(v);return /^(更顺|更难|差不多|有升有降|稍顺|稍难)$/.test(w)?w.replace(/^稍/,'更'):'';
 }
-var OUTLOOK_TIER={顺利:2,偏顺:2,平稳:1,有好有坏:1,偏阻:0,阻力多:0},previousYearAnnualCache={};
+var OUTLOOK_TIER={顺利:2,偏顺:2,平稳:1,有好有坏:1,稍需留心:0,多留心:0},previousYearAnnualCache={};
 // Last year's own card verdict; the first year of a decade reads last year under the previous decade.
 function previousYearAnnual(data,ctx,outlook){
   if(ctx.yearIndex>0)return outlook.years[ctx.yearIndex-1].annual;
@@ -3890,19 +3898,19 @@ function previousYearAnnual(data,ctx,outlook){
 // 比上一年 in the words of this year's own verdict; hidden when it would contradict the two cards' labels.
 function outlookYearVsLastText(data,ctx,outlook){
   var yo=outlook.years[ctx.yearIndex],w=outlookRealWord(yo&&yo.previousYear);if(!w)return '';
-  var now=outlookPlainResult(outlookDisplayView(yo.annual));if(!/^(顺利|偏顺|平稳|有好有坏|偏阻|阻力多)$/.test(now))return '';
+  var now=outlookPlainResult(outlookDisplayView(yo.annual));if(!/^(顺利|偏顺|平稳|有好有坏|稍需留心|多留心)$/.test(now))return '';
   var prev=previousYearAnnual(data,ctx,outlook),a=OUTLOOK_TIER[now],b=prev?OUTLOOK_TIER[outlookPlainResult(outlookDisplayView(prev))]:undefined;
   if(a!==undefined&&b!==undefined&&(a>b&&w==='更难'||a<b&&w==='更顺'))return '';
   var good=now==='顺利'||now==='偏顺'||now==='平稳';
   if(w==='差不多')return '和去年差不多';
   if(w==='有升有降')return '有升有降';
   if(w==='更顺')return good?'比去年更顺':'比去年轻松一些';
-  return good?'没去年那么顺':now==='有好有坏'?'比去年难一些':'比去年更难';
+  return good?'没去年那么顺':'比去年费力一些';
 }
 function outlookYearVsLastLine(data,ctx,outlook){var t=outlookYearVsLastText(data,ctx,outlook);return t?'比上一年：'+t:''}
 // Where the year sits inside its decade, said in the decade card's own tone.
-var OUTLOOK_DECADE_BASE={顺利:['顺','而且是其中更顺的一年','中等的一年','但偏弱的一年'],平稳:['平稳','其中偏好的一年','中等的一年','其中偏弱的一年'],有好有坏:['有起有落','其中偏好的一年','中等的一年','其中偏弱的一年'],阻力多:['难','但相对轻松的一年','中等的一年','而且更吃力的一年']};
-OUTLOOK_DECADE_BASE.偏顺=OUTLOOK_DECADE_BASE.顺利;OUTLOOK_DECADE_BASE.偏阻=OUTLOOK_DECADE_BASE.阻力多;
+var OUTLOOK_DECADE_BASE={顺利:['顺','而且是其中更顺的一年','中等的一年','但偏弱的一年'],平稳:['平稳','其中偏好的一年','中等的一年','其中偏弱的一年'],有好有坏:['有起有落','其中偏好的一年','中等的一年','其中偏弱的一年'],多留心:['需多留心','但相对轻松的一年','中等的一年','其中更需留心的一年']};
+OUTLOOK_DECADE_BASE.偏顺=OUTLOOK_DECADE_BASE.顺利;OUTLOOK_DECADE_BASE.稍需留心=OUTLOOK_DECADE_BASE.多留心;
 function outlookDecadePlaceText(yo,natal){
   var w=outlookRealWord(yo&&yo.increment),b=natal&&OUTLOOK_DECADE_BASE[outlookPlainResult(outlookDisplayView(natal))];
   if(!w||!b)return '';
@@ -3911,7 +3919,7 @@ function outlookDecadePlaceText(yo,natal){
   // Year verdict against the decade's tone (难 vs 顺利/平稳, 顺 vs 阻力多): drop the tone word, follow the year's own side.
   var d=OUTLOOK_TIER[outlookPlainResult(outlookDisplayView(natal))],y=yo.annual&&OUTLOOK_TIER[outlookPlainResult(outlookDisplayView(yo.annual))];
   if(d===0&&y>=1)return w==='更难'?'中等的一年':'相对轻松的一年';
-  if(d===2&&y===0)return w==='更顺'?'中等的一年':'相对吃力的一年';
+  if(d===2&&y===0)return w==='更顺'?'中等的一年':'相对更需留心的一年';
   return b[0]+'，'+b[{更顺:1,差不多:2,更难:3}[w]];
 }
 function outlookDecadePlaceLine(yo,natal){var t=outlookDecadePlaceText(yo,natal);return t?'今年在这步大运的十年中：'+t:''}
@@ -3922,10 +3930,10 @@ function outlookUnusable(r){return !r||r.assessment==='engine-error'||r.assessme
 // Year card: lead with a reason that matches the annual label; opposite increment/annual sides go under 也有一点不利/好处. Mixed years use the decade mixed layout (no yearCopy).
 function outlookSideCost(main,cost){
   var subject=(outlookBareLine(main).match(/^(.+?)(更能|更扛)/)||[])[1]||'';
-  if(subject&&outlookCopyKey(cost).indexOf(subject.replace(/（[^）]*）/g,''))===0)return cost.replace(/([^，：。]+)这层帮助弱了一些/,'支撑$1的原有配合弱了一些');
+  if(subject&&outlookCopyKey(cost).indexOf(subject.replace(/（[^）]*）/g,''))===0)return cost.replace(/(?:这一年|这十年)?在([^，：。]+)上会比平时费力一些/,'支撑$1的原有配合弱了一些');
   return cost;
 }
-function outlookCopyKey(s){return outlookBareLine(s).replace(/^同一个[冲合]也让/,'').replace(/，因为[^。]+/g,'').replace(/（[^）]*）/g,'').replace(/[。\s]/g,'');}
+function outlookCopyKey(s){return outlookBareLine(s).replace(/^同一个[冲合]也让/,'').replace(/^在(.+?)上会比平时费力一些/,'$1比平时费力一些').replace(/，因为[^。]+/g,'').replace(/（[^）]*）/g,'').replace(/[。\s]/g,'');}
 // Deduplicate each side before joining distinct topics under one heading.
 function outlookMergeSides(lines){
   var unique=[];
@@ -3938,7 +3946,7 @@ function outlookMergeSides(lines){
   unique.forEach(function(x){var side=sides.find(function(y){return y.direction===x.direction});if(side)side.text=side.text.replace(/。$/,'')+'；'+x.text;else sides.push(x)});
   return sides;
 }
-function outlookBareLine(s){return String(s||'').replace(/^另一方面，/,'').replace(/^(这步大运，|这一年，|这一年|这步运)/,'');}
+function outlookBareLine(s){return String(s||'').replace(/^另一方面，/,'').replace(/^(这步大运，|这一年，|这一年|这十年|这步运)/,'');}
 // Opposite-side line: if it cites the same 冲/合 as the main line, don't repeat 因为….
 function outlookShareCause(main,also){
   var c=(String(main||'').match(/，因为([^。]+)/)||[])[1]||'';
@@ -3947,7 +3955,7 @@ function outlookShareCause(main,also){
   if(!c||!o||c!==o)return also;
   kind=/合住了/.test(c)?'合':/冲开了/.test(c)?'冲':'';
   if(!kind)return also;
-  return '同一个'+kind+'也让'+outlookBareLine(also).replace(/，因为[^。]+/,'').replace(/。$/,'')+'。';
+  return '同一个'+kind+'也让'+outlookBareLine(also).replace(/^在(.+?)上会比平时费力一些/,'$1比平时费力一些').replace(/，因为[^。]+/,'').replace(/。$/,'')+'。';
 }
 function outlookSameDirItems(view,dir){
   if(!view||!dir)return [];
@@ -3958,22 +3966,22 @@ function outlookYearCopy(year,natal){
   var annual=outlookDisplayView(year.annual),inc=outlookDisplayView(year.increment),a=year.annual.direction;
   if(annual.mixed)return {kind:'mixed'};
   var mains=outlookSameDirItems(annual,a);
-  mains.sort(function(x,y){function sc(s){return (/更能|更扛|被拖住|弱了一些|缓解|变足|收住/.test(s)?2:0)+((/^这一年/.test(s)||!/^这步大运/.test(s))?1:0)-(/看着是|五行上/.test(s)?3:0);}return sc(y.standard)-sc(x.standard);});
+  mains.sort(function(x,y){function sc(s){return (/更能|更扛|被拖住|费力一些|弱了一些|缓解|变足|收住/.test(s)?2:0)+((/^这一年/.test(s)||!/^这步大运/.test(s))?1:0)-(/看着是|五行上/.test(s)?3:0);}return sc(y.standard)-sc(x.standard);});
   if(a==='positive'||a==='neutral'){
-    var hold=mains.filter(function(x){return !/被拖住|弱了一些/.test(x.standard)});
+    var hold=mains.filter(function(x){return !/被拖住|费力一些|弱了一些/.test(x.standard)});
     if(hold.length)mains=hold.concat(mains.filter(function(x){return /被拖住/.test(x.standard)}));
   }
   var main=outlookBareLine(mains[0]&&mains[0].standard||'');
-  if(main)main='这一年，'+main;
+  if(main)main=(/^在/.test(main)?'这一年':'这一年，')+main;
   if(!main){
-    var incMain=outlookSameDirItems(inc,a).filter(function(x){return a==='negative'||!/被拖住|弱了一些/.test(x.standard||'')})[0];
-    main=incMain?'这一年，'+outlookBareLine(incMain.standard):(a===natal.direction?'这一年沿着这步大运的节奏走。':'');
+    var incMain=outlookSameDirItems(inc,a).filter(function(x){return a==='negative'||!/被拖住|费力一些|弱了一些/.test(x.standard||'')})[0];
+    main=incMain?(/^在/.test(outlookBareLine(incMain.standard))?'这一年':'这一年，')+outlookBareLine(incMain.standard):(a===natal.direction?'这一年沿着这步大运的节奏走。':'');
   }
-  function outlookTopic(s){s=outlookBareLine(s);if(/^担起事业的根基/.test(s))return '事业和规矩';var m=String(s).match(/^(.+?)(被拖住|这层帮助弱了一些|自身这层根基弱了一些|更能|更扛|能转成)/);return m?m[1].replace(/（[^）]*）/g,'').replace(/^你$/,'自身').trim():'';}
+  function outlookTopic(s){s=outlookBareLine(s).replace(/^在(.+?)上会比平时费力一些/,'$1比平时费力一些');if(/^担起事业的根基/.test(s))return '事业和规矩';var m=String(s).match(/^(.+?)(比平时费力一些|被拖住|这层帮助弱了一些|自身这层根基弱了一些|更能|更扛|能转成)/);return m?m[1].replace(/（[^）]*）/g,'').replace(/^你$/,'自身').trim():'';}
   function outlookConflicts(a,b){
     var ta=outlookTopic(a),tb=outlookTopic(b);if(!ta||!tb)return false;
     if(ta!==tb&&ta.indexOf(tb)<0&&tb.indexOf(ta)<0)return false;
-    return /被拖住|弱了一些|受阻|不够/.test(a)!== /被拖住|弱了一些|受阻|不够/.test(b);
+    return /被拖住|费力一些|弱了一些|受阻|不够/.test(a)!== /被拖住|费力一些|弱了一些|受阻|不够/.test(b);
   }
   var also=[],seen={};
   function add(dir,s){
@@ -4005,6 +4013,23 @@ function outlookToneRow(result,mainBody){
   return (t?'<p class="outlook-note" data-luck-tone>'+modeCopy(said&&result.direction!=='mixed'?'':esc(t.plain),esc(t.professional))+'</p>':'')+
     (s?'<p class="outlook-note" data-pattern-shift>'+modeCopy(repeated?'':esc('提示：这步运会把出生月份里藏着的力量引出来，原来的格局路线'+(s.kind==='成格'?'会更清楚。':s.kind==='变格'?'有被打乱的迹象。':'有调整的迹象。')),esc('成格变格提示：'+s.text+'（《子平真诠·论行运成格变格》）。'))+'</p>':'');
 }
+function outlookCareAreas(result){
+  var areas=[],lowers=(result.reservations||[]).filter(function(e){return (e.direction==='positive'||e.direction==='negative')&&e.direction!==result.direction&&e.before&&e.after});
+  function add(god){
+    var area=/^(正财|偏财|财|财星)$/.test(god)?'钱财和收入':/^(正官|七杀|官|官杀|官星)$/.test(god)?'事业和规矩上的压力':/^(正印|偏印|印|印星)$/.test(god)?'学习和贵人':/^(食神|官伤|伤官|食伤)$/.test(god)?'才华和表达':/^(比肩|劫财|比劫|日主|你)$/.test(god)?'自身状态和人际合作':'';
+    if(area&&areas.indexOf(area)<0&&areas.length<2)areas.push(area);
+  }
+  (result.evidence||[]).concat(result.toneBasis==='tone-tiebreak'?lowers:lowers.slice(0,1)).forEach(function(e){
+    if(e.direction!=='negative')return;
+    var before=Array.isArray(e.before)?e.before:[],after=Array.isArray(e.after)?e.after:[];
+    var facts=after.filter(function(f){return f&&f.key&&!before.some(function(b){return b.key===f.key})}).concat(before.filter(function(f){return f&&f.key&&!after.some(function(a){return a.key===f.key})}));
+    if(!facts.length)facts=before.concat(after);
+    facts=facts.filter(function(f){return f&&(f.left&&f.right||f.stem)});
+    if(facts.length)facts.forEach(function(f){add(luckBeneficiary(f))});
+    else add(({'carry-officer':'正官','carry-wealth':'财','carry-output':'食伤','carry-kill':'你','日主':'你','你':'你'})[e.taskId]);
+  });
+  return areas;
+}
 function renderOutlookBox(title,result,professionalTitle,extra){
   var view=outlookDisplayView(result);extra=extra||{};
   function body(technical){var key=technical?'professional':'standard';
@@ -4020,7 +4045,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       var mainText=main[key],otherText=other[key];
       if(!technical&&/^五行上/.test(outlookBareLine(otherText)))otherText='';
       if(!technical&&extra.yearCopy&&extra.yearCopy.kind==='mixed'){
-        if(mainText)mainText='这一年，'+outlookBareLine(mainText);
+        if(mainText)mainText=(/^在/.test(outlookBareLine(mainText))?'这一年':'这一年，')+outlookBareLine(mainText);
         if(otherText)otherText=outlookBareLine(otherText);
       }
       if(!technical&&otherText)otherText=outlookShareCause(mainText,outlookSideCost(mainText,otherText));
@@ -4044,8 +4069,8 @@ function renderOutlookBox(title,result,professionalTitle,extra){
     }
     var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+outlookMergeSides(opposite.map(function(x){return {direction:x.direction,text:outlookShareCause(items[0].standard,outlookSideCost(items[0].standard,x.standard.replace(/^另一方面，/,'')))}})).map(function(x){return esc(x.text)}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
-  var standardBody=body(false);
-  var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(standardBody),body(true))+outlookToneRow(result,standardBody)+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
+  var standardBody=body(false),care=!extra.compare&&/^(多留心|稍需留心)$/.test(outlookPlainResult(view))?outlookCareAreas(result):[];
+  var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{更难:'费力一些',稍难:'稍费力一些'})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+(care.length?'<div class="mode-copy standard-only" data-standard-copy><p class="outlook-note" data-care-areas>多照顾的方面：'+esc(care.join('、'))+'</p></div>':'')+modeCopy(outlookGlossOnce(standardBody),body(true))+outlookToneRow(result,standardBody)+(extra.trendHtml?extra.trend:(extra.standardTrend?'<div class="mode-copy standard-only" data-standard-copy>'+outlookNoteRow(extra.standardTrend)+'</div>':'')+outlookNoteRow(extra.trend))+'</div>';
   return extra.professionalOnly&&(!document.body||document.body.getAttribute('data-display-mode')!=='professional')?modeCopy('',box):box;
 }
 function renderProfessionalLuckPanel(data){

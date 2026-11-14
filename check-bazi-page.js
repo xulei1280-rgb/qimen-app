@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261111.4"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261114.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -2103,13 +2103,13 @@ assert(selectedOutlookHtml.includes('本运对原局') && selectedOutlookHtml.in
 { // Standard year card rows: 比上一年 (hidden when the two years' labels disagree) then 在这步大运的十年中; professional keeps 比这十年平常 only when the engine has a conclusion.
   const std=[...selectedOutlookHtml.matchAll(/data-standard-copy>((?:(?!<\/div>)[\s\S])*)<\/div>/g)].map(m=>m[1]).join('\n');
   assert(selectedOutlook.years[0].previousYear, 'first year of a later decade compares with last year under the previous decade');
-  assert(/今年在这步大运的十年中：((顺|平稳|有起有落|难)，[^<]*的一年|相对轻松的一年|相对吃力的一年|中等的一年|有起有落的一年)</.test(std) && (!std.includes('比上一年：') || std.indexOf('比上一年：') < std.indexOf('今年在这步大运的十年中：')), 'standard rows: 比上一年 above 今年在这步大运的十年中');
+  assert(/今年在这步大运的十年中：((顺|平稳|有起有落|需多留心)，[^<]*的一年|相对轻松的一年|相对更需留心的一年|中等的一年|有起有落的一年)</.test(std) && (!std.includes('比上一年：') || std.indexOf('比上一年：') < std.indexOf('今年在这步大运的十年中：')), 'standard rows: 比上一年 above 今年在这步大运的十年中');
   { const r=(d,a,inc)=>scriptContext.outlookDecadePlaceText({annual:{direction:a,evidence:[],reservations:[]},increment:{direction:inc,evidence:[],reservations:[]}},{direction:d,evidence:[],reservations:[]});
-    for (const [d,a,inc,want] of [['negative','positive','positive','相对轻松的一年'],['negative','neutral','neutral','相对轻松的一年'],['negative','positive','negative','中等的一年'],['positive','negative','negative','相对吃力的一年'],['positive','negative','positive','中等的一年'],['positive','positive','negative','顺，但偏弱的一年'],['negative','negative','positive','难，但相对轻松的一年'],['negative','positive','mixed','难，起伏较大的一年']]) assert(r(d,a,inc)===want,'decade placement '+d+'/'+a+'/'+inc+' → '+r(d,a,inc)); }
+    for (const [d,a,inc,want] of [['negative','positive','positive','相对轻松的一年'],['negative','neutral','neutral','相对轻松的一年'],['negative','positive','negative','中等的一年'],['positive','negative','negative','相对更需留心的一年'],['positive','negative','positive','中等的一年'],['positive','positive','negative','顺，但偏弱的一年'],['negative','negative','positive','需多留心，但相对轻松的一年'],['negative','positive','mixed','需多留心，起伏较大的一年']]) assert(r(d,a,inc)===want,'decade placement '+d+'/'+a+'/'+inc+' → '+r(d,a,inc)); }
   assert(!/比上一年：(更顺|更难|差不多)</.test(selectedOutlookHtml) && !selectedOutlookHtml.includes('比这十年大运的常态') && !/比这十年平常：(当前作用重点|待判|暂缺)/.test(selectedOutlookHtml), 'new wording only; no odd no-conclusion rows');
   assert(!/>[^<]*年比这十年平常</.test(selectedOutlookHtml), 'comparison card renamed');
   const ctxV = { yearIndex: 1, luckIndex: 1, luck: selectedOutlookContext.luck, flowYear: selectedOutlookContext.years[1] };
-  for (const [now, prev, dir, want] of [['positive','positive','negative','没去年那么顺'],['negative','negative','positive','比去年轻松一些'],['positive','negative','negative',''],['negative','negative','negative','比去年更难'],['mixed','mixed','neutral','和去年差不多']]) {
+  for (const [now, prev, dir, want] of [['positive','positive','negative','没去年那么顺'],['negative','negative','positive','比去年轻松一些'],['positive','negative','negative',''],['negative','negative','negative','比去年费力一些'],['mixed','mixed','neutral','和去年差不多']]) {
     const fake = { natal: selectedOutlook.natal, years: [{ annual: { direction: prev, evidence: [], reservations: [] } }, { annual: { direction: now, evidence: [], reservations: [] }, previousYear: { direction: dir, evidence: [], reservations: [] } }] };
     assert(scriptContext.outlookYearVsLastText(wenZhenLuckChart, ctxV, fake) === want, 'year-vs-last wording '+now+'/'+prev+'/'+dir);
   }
@@ -2265,14 +2265,29 @@ assert(scriptContext.outlookTaskMeaning('handle-kill')==='七杀压力的食神�
 
 assert(conditionalHelpSeen.size===3,'real analyzed fixtures must exercise all three conditional help cards');
 
+// Care areas come from affected gods, not tone wording, and are standard-only.
+{
+  const negative=(taskId,before=[],after=[])=>({direction:'negative',taskId,before,after});
+  const result={direction:'negative',evidence:[negative('carry-output'),negative('carry-wealth'),negative('carry-officer')],reservations:[]};
+  assert(JSON.stringify(scriptContext.outlookCareAreas(result))===JSON.stringify(['才华和表达','钱财和收入']),'care areas keep the first two distinct affected domains');
+  assert(scriptContext.outlookCareAreas({direction:'negative',evidence:[{direction:'negative',ruleId:'T-tone',plainText:'五行上是忌运'}]}).length===0,'tone alone cannot invent a care area');
+  const oldRole=scriptContext.luckRole;
+  scriptContext.luckRole=()=> '忌';
+  assert(JSON.stringify(scriptContext.outlookCareAreas({direction:'negative',evidence:[negative('',[],[{key:'care-fact',stem:'甲',god:'偏印'}])]}))===JSON.stringify(['才华和表达']),'an adverse seal affects expression, not the seal itself');
+  scriptContext.luckRole=oldRole;
+  assert(scriptContext.outlookEffortLine('这步大运，才华表现（食伤）这层帮助弱了一些。')==='这十年在才华表现（食伤）上会比平时费力一些。','decade effort sentence names this decade');
+  assert(scriptContext.outlookEffortLine('从格：从儿格这层帮助弱了一些。')==='这十年在从儿格上会比平时费力一些。','special-pattern prefixes cannot leave the old effort predicate');
+  assert(scriptContext.outlookShareCause('这一年在收入上会比平时费力一些，因为亥水合住了寅木。','这一年在才华表现上会比平时费力一些，因为亥水合住了寅木。')==='同一个合也让才华表现比平时费力一些。','shared cause keeps a natural effort predicate');
+}
+
 // Side notes keep distinct information, prefer causes, and retain shared-cause wording.
 const mergedOutlookSides=scriptContext.outlookMergeSides([
-  {direction:'negative',text:'同一个冲也让事业和规矩这层帮助弱了一些。'},
-  {direction:'negative',text:'这一年，事业和规矩（正官）这层帮助弱了一些，因为甲木合住了己土。'},
+  {direction:'negative',text:'同一个冲也让事业和规矩比平时费力一些。'},
+  {direction:'negative',text:'这一年在事业和规矩（正官）上会比平时费力一些，因为甲木合住了己土。'},
   {direction:'negative',text:'自身这层根基弱了一些。'}
 ]);
-assert(mergedOutlookSides.length===1 && mergedOutlookSides[0].text==='这一年，事业和规矩（正官）这层帮助弱了一些，因为甲木合住了己土；自身这层根基弱了一些。','same-side notes deduplicate topics and retain distinct topics under one heading');
-assert(scriptContext.outlookMergeSides([{direction:'negative',text:'同一个合也让才华表现这层帮助弱了一些。'}])[0].text==='同一个合也让才华表现这层帮助弱了一些。','a sole shared-cause opposite must keep its wording');
+assert(mergedOutlookSides.length===1 && mergedOutlookSides[0].text==='这一年在事业和规矩（正官）上会比平时费力一些，因为甲木合住了己土；自身这层根基弱了一些。','same-side notes deduplicate topics and retain distinct topics under one heading');
+assert(scriptContext.outlookMergeSides([{direction:'negative',text:'同一个合也让才华表现比平时费力一些。'}])[0].text==='同一个合也让才华表现比平时费力一些。','a sole shared-cause opposite must keep its wording');
 for(const [kind,ending] of [['成格','会更清楚'],['变格','有被打乱的迹象'],['调整','有调整的迹象']]){
   const result={patternShift:{kind,text:'专业原文'}};
   const main='原来的格局路线'+ending+'。';
