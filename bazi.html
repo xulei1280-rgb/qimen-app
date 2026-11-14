@@ -434,8 +434,8 @@ body.help-popover-open #entryPanel,body.help-popover-open #entryPanel .entry-lay
 .origin-col .origin-meta{color:#6a5a48;font-size:12px;line-height:1.7}
 .fortune-row{border-top:1px solid #f0e3cb;padding:11px 12px}
 .fortune-row h4{margin:0 0 9px;color:#7a2f22;font-size:14px}
-.fortune-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
-.fortune-grid{display:grid;gap:8px;padding-bottom:0}
+.fortune-scroll{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding-top:4px;padding-bottom:8px;overscroll-behavior-x:contain;scroll-snap-type:x proximity}
+.fortune-grid{display:grid;gap:8px;padding-bottom:4px}
 .year-grid{grid-template-columns:repeat(10,minmax(72px,1fr))}
 .month-grid{grid-template-columns:repeat(12,minmax(64px,1fr))}
 .fortune-item{
@@ -592,7 +592,7 @@ body.help-popover-open #entryPanel,body.help-popover-open #entryPanel .entry-lay
   .luck-detail-grid{grid-template-columns:1fr}
   .luck-outlook-summary{grid-template-columns:1fr}
   .bazi-tabs{position:sticky;top:0;z-index:30;margin:0 -2px 14px;padding:6px 2px 8px;background:#fcfdf9;box-shadow:0 5px 12px rgba(67,58,49,.08)}
-  .fortune-scroll.year-grid,.fortune-scroll.month-grid{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
+  .fortune-scroll.year-grid,.fortune-scroll.month-grid{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding-top:4px;padding-bottom:8px}
   .fortune-scroll.luck-scroll,.fortune-scroll.year-grid{scroll-snap-type:none}
   .fortune-scroll .fortune-item{min-width:0;border-radius:10px;padding:8px 7px}
   .luck-scroll .fortune-item{flex-basis:88px}
