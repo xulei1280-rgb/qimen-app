@@ -293,7 +293,7 @@ assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261111.3"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261111.4"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -2103,10 +2103,10 @@ assert(selectedOutlookHtml.includes('本运对原局') && selectedOutlookHtml.in
 { // Standard year card rows: 比上一年 (hidden when the two years' labels disagree) then 在这步大运的十年中; professional keeps 比这十年平常 only when the engine has a conclusion.
   const std=[...selectedOutlookHtml.matchAll(/data-standard-copy>((?:(?!<\/div>)[\s\S])*)<\/div>/g)].map(m=>m[1]).join('\n');
   assert(selectedOutlook.years[0].previousYear, 'first year of a later decade compares with last year under the previous decade');
-  assert(/今年在这步大运的十年中：((顺|平稳|有起有落|难)，[^<]*的一年|相对轻松的一年|相对吃力的一年|中等的一年)</.test(std) && (!std.includes('比上一年：') || std.indexOf('比上一年：') < std.indexOf('今年在这步大运的十年中：')), 'standard rows: 比上一年 above 今年在这步大运的十年中');
+  assert(/今年在这步大运的十年中：((顺|平稳|有起有落|难)，[^<]*的一年|相对轻松的一年|相对吃力的一年|中等的一年|有起有落的一年)</.test(std) && (!std.includes('比上一年：') || std.indexOf('比上一年：') < std.indexOf('今年在这步大运的十年中：')), 'standard rows: 比上一年 above 今年在这步大运的十年中');
   { const r=(d,a,inc)=>scriptContext.outlookDecadePlaceText({annual:{direction:a,evidence:[],reservations:[]},increment:{direction:inc,evidence:[],reservations:[]}},{direction:d,evidence:[],reservations:[]});
     for (const [d,a,inc,want] of [['negative','positive','positive','相对轻松的一年'],['negative','neutral','neutral','相对轻松的一年'],['negative','positive','negative','中等的一年'],['positive','negative','negative','相对吃力的一年'],['positive','negative','positive','中等的一年'],['positive','positive','negative','顺，但偏弱的一年'],['negative','negative','positive','难，但相对轻松的一年'],['negative','positive','mixed','难，起伏较大的一年']]) assert(r(d,a,inc)===want,'decade placement '+d+'/'+a+'/'+inc+' → '+r(d,a,inc)); }
-  assert(!/比上一年：(更顺|更难|差不多|有升有降)</.test(selectedOutlookHtml) && !selectedOutlookHtml.includes('比这十年大运的常态') && !/比这十年平常：(当前作用重点|待判|暂缺)/.test(selectedOutlookHtml), 'new wording only; no odd no-conclusion rows');
+  assert(!/比上一年：(更顺|更难|差不多)</.test(selectedOutlookHtml) && !selectedOutlookHtml.includes('比这十年大运的常态') && !/比这十年平常：(当前作用重点|待判|暂缺)/.test(selectedOutlookHtml), 'new wording only; no odd no-conclusion rows');
   assert(!/>[^<]*年比这十年平常</.test(selectedOutlookHtml), 'comparison card renamed');
   const ctxV = { yearIndex: 1, luckIndex: 1, luck: selectedOutlookContext.luck, flowYear: selectedOutlookContext.years[1] };
   for (const [now, prev, dir, want] of [['positive','positive','negative','没去年那么顺'],['negative','negative','positive','比去年轻松一些'],['positive','negative','negative',''],['negative','negative','negative','比去年更难'],['mixed','mixed','neutral','和去年差不多']]) {

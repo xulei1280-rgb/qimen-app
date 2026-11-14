@@ -3556,7 +3556,7 @@
     var unit=annual?'这一年':'这步运',lean=split&&dir?'（'+(annual?'太岁重天干':'地支为重')+'，偏'+(dir==='positive'?'喜':'忌')+'）':'';
     var plainLabel={主用运:'主用运',佐用运:'佐用运',忌运:'忌运',喜忌参半:'喜忌参半',闲运:'不涉主用和忌的闲运'}[label];
     return {direction:dir,label:label,split:split,score:score,stemRole:sr,branchRole:br,cover:cover,cut:cut,
-      plain:'五行上'+unit+'是'+plainLabel+lean+'。',
+      plain:label==='闲运'?'五行上没有碰到你最需要或最要避开的力量。':split?'五行上有好有坏，'+(annual?'这一年更看天干':'这十年更看地支')+'，略偏'+(dir==='positive'?'有利':'不利')+'。':'五行上'+unit+'是'+plainLabel+'。',
       professional:(annual?'流年':'大运')+'底色：'+gz[0]+sw+'为'+sr+'，'+gz[1]+bw+'为'+br+(note?'；'+note:'')+'，'+(annual?'太岁重天干':'十年合看、地支为重')+' → '+label+lean+'。'};
   }
   // 运或岁对原局的具体动作：冲月令/喜用根、合走用神，以及反向的冲去忌根、合去忌神。
@@ -3599,7 +3599,7 @@
     if(!result||!analysis.useful||result.assessment==='input-error')return result;
     var tone=luckTone(analysis.useful,gz,kind),r=Object.assign({},result,{tone:tone,evidence:(result.evidence||[]).slice()}),t=tone.direction,d=r.direction;
     var strict=(analysis.useful.decision&&analysis.useful.decision.primaryRouteIds||[]).indexOf('strict-special')>=0;
-    var toneEv=t?luckEvidence('T-tone','T-tone',t,tone.split?'五行上喜忌参半，'+(tone.cut?'而且地支克住了天干，':'')+(kind==='annual'?'按太岁重天干，':'按地支为重，')+(t==='positive'?'好处多一些。':'不利多一些。'):(t==='positive'?'五行上帮到了你最需要的那股力量':'五行上送来的是你最怕的那股力量')+'（'+tone.label+'）。',tone.professional):null;
+    var toneEv=t?luckEvidence('T-tone','T-tone',t,tone.split?'五行上有好有坏，'+(kind==='annual'?'这一年更看天干，':'这十年更看地支，')+(t==='positive'?'略偏有利。':'略偏不利。'):(t==='positive'?'五行上帮到了你最需要的那股力量':'五行上送来的是你最怕的那股力量')+'（'+tone.label+'）。',tone.professional):null;
     function set(dir,basis){r.direction=dir;r.assessment='determined';r.possibleDirections=[dir];r.tendency=null;r.toneBasis=basis;}
     if(strict){
       // 特殊格局只顺势：以喜用页顺势五行为准，仅当 Y2 顺逆势核验给出相反方向时并见。
