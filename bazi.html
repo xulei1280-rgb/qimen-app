@@ -2395,7 +2395,7 @@ function standardStructureView(data){
     return Object.assign({},x,{standard:standardSupportText(x.step,data)});
   }).filter(function(x){if(seen.has(x.standard))return false;seen.add(x.standard);return true});
   var words={
-    '承载不足':/财/.test(view.name)?'财多身弱，赚钱的机会虽多，自己却难以接住':'身弱，赚钱和产出需要投入精力，现有底气不够',
+    '承载不足':/财/.test(view.name)?'财多身弱，赚钱的机会虽多，自己却难以接住':'身弱，赚钱和产出需要投入精力，现有根基不够',
     '官伤冲战':'伤官见官，表达和做事方式与规则要求冲突',
     '官杀承载不足':'官杀压力偏重，外部要求多，自己应付不过来',
     '官杀去留':'官杀并见，既有规则又有强硬压力，不同要求互相拉扯',
@@ -2415,9 +2415,9 @@ function standardStructureView(data){
   var primary=useful.primary.map(elementName).join('、'),secondary=useful.secondary.map(elementName).join('、');
   var mainLimit=limits.find(function(x){return (a.elementPhenomena||[]).some(function(p){return p.name===x.family})})||limits.find(function(x){return x.standard});
   var reason=mainLimit?mainLimit.standard.replace(/。$/,''):support.length?support[0].standard.replace(/^[^：]+：|。$/g,''):'已具备格局要求的配合';
-  if(mainLimit&&mainLimit.family==='承载不足'&&/财/.test(view.name))reason='财多身弱，赚钱的机会多但自己接不住，'+(primary?'先用'+primary+'扶身'+(secondary?'，'+secondary+'作辅助':''):secondary?'先用'+secondary+'帮你添底气':'先给自己补足底气')+'，再去求财';
+  if(mainLimit&&mainLimit.family==='承载不足'&&/财/.test(view.name))reason='财多身弱，赚钱的机会多但自己接不住，'+(primary?'先用'+primary+'扶身'+(secondary?'，'+secondary+'作辅助':''):secondary?'先用'+secondary+'帮你添根基':'先给自己补足根基')+'，再去求财';
   if(mainLimit&&mainLimit.family==='官伤冲战')reason='伤官见官，才华和表达容易顶撞规矩和上级，'+(primary?primary+'能让表达收敛，但目前力量不够':'盘中还缺少足够的帮助');
-  if(mainLimit&&mainLimit.family==='土厚埋金')reason='印星能化解官杀压力，但土厚埋金让'+data.dayStem+data.dayElement+'难以发挥，'+(secondary?secondary+'作辅助，帮你添底气、找出口':'先给自身添底气')+(useful.avoid.length?'，'+useful.avoid.join('、')+'不宜再添':'');
+  if(mainLimit&&mainLimit.family==='土厚埋金')reason='印星能化解官杀压力，但土厚埋金让'+data.dayStem+data.dayElement+'难以发挥，'+(secondary?secondary+'作辅助，帮你添根基、找出口':'先给自身添根基')+(useful.avoid.length?'，'+useful.avoid.join('、')+'不宜再添':'');
   if(view.verdict==='已成'&&view.name==='月刃格')reason='自身力量偏旺、冲劲足，'+(primary||secondary||'原有官杀')+'能约束过旺的'+data.dayElement+'，让冲劲有分寸、做事有方向';
   var state={已成:'成格',成而有瑕:'成格但有瑕',已破:'破格',待成:'未成格'}[view.verdict]||view.verdict;
   var headline={professional:view.headline.professional,standard:a.natalNoblePattern&&a.natalNoblePattern.ruleId==='ZP-NOBLE-01'?view.headline.standard:view.name+state+'：'+reason+'。'};
@@ -2479,24 +2479,24 @@ function standardUsefulReason(data,element,role,seen){
     else if(risk&&risk.id==='wealth-seal')job='求财已经牵制你需要的{印星}，再添这层靠山更弱';
     else job='会加重本盘已有的格局损伤，不宜再增加';
   }else if(route&&route.id==='monthly-bing-wei')job=element==='水'?'壬水可缓解夏季暑热，但本盘承担官杀压力的不足仍在，故只作另一取法':'庚金可配合壬水调节暑热，不能替代本盘扶身的需要';
-  else if(buried&&element==='金')job='给'+data.dayStem+data.dayElement+'日主添底气，帮你扛住{官杀}带来的压力';
+  else if(buried&&element==='金')job='给'+data.dayStem+data.dayElement+'日主添根基，帮你扛住{官杀}带来的压力';
   else if(buried&&element==='水')job='润开厚土，让金的才华有出口'+(risk&&risk.id==='verified-pattern'?'，但水也会牵制{七杀}把压力转成靠山的作用，要保住这一点':'，用时也要保住{印星}帮你化解压力');
   else if(god==='印星'){
     var controls=steps.some(function(s){return standardGodGroup(s.left.god)==='印星'&&standardGodGroup(s.right.god)==='食伤'});
     var feeds=caseDisplayView(data).support.some(function(x){return x.step&&standardActorElement(x.step.left)===element&&x.step.right.god==='日主'});
-    job='{印星}'+(controls?'帮你把才华用得更有章法，':'')+(feeds?'给'+data.dayStem+data.dayElement+'日主添后劲，让你更有底气应对赚钱和做事的压力':'能给你添后劲，但这层靠山眼下还没完全帮到你');
+    job='{印星}'+(controls?'帮你把才华用得更有章法，':'')+(feeds?'给'+data.dayStem+data.dayElement+'日主添后劲，让你更有根基应对赚钱和做事的压力':'能给你添后劲，但这层靠山眼下还没完全帮到你');
   }else if(god==='比劫'){
     var blocked=(a.patternDisease&&a.patternDisease.items||[]).flatMap(function(d){return d.medicines||[]}).flatMap(function(m){return m.steps||[]}).some(function(s){return !s.active&&s.left&&standardGodGroup(s.left.god)==='比劫'&&s.right&&s.right.god==='日主'});
     job='{比劫}帮你一起扛压力'+(blocked?'，但这份帮扶眼下受牵制'+(role==='secondary'?'，所以只作辅助':''):'');
   }
-  else if(god==='官杀')job=/强|旺/.test(data.strength)?'{官杀}给强旺的你立规矩，让冲劲用在做事上':'{官杀}带来规则和责任，你要先补足底气才扛得住';
+  else if(god==='官杀')job=/强|旺/.test(data.strength)?'{官杀}给强旺的你立规矩，让冲劲用在做事上':'{官杀}带来规则和责任，你要先补足根基才扛得住';
   else if(god==='财星'){
     var output=steps.find(function(s){return standardGodGroup(s.left.god)==='食伤'&&standardGodGroup(s.right.god)==='财星'});
     var officer=steps.find(function(s){return standardGodGroup(s.right.god)==='官杀'});
     if(route&&route.id==='wealth-flow'&&route.transmissionActive&&output&&officer)job='你的{才华|'+output.left.god+'}和{管你的规矩|'+officer.right.god+'}容易顶撞，{财}在中间搭桥，先把才华变成收入，再用收入换来事业和别人的信任';
     else job='{财}能把才华变成收入'+(officer?'，再用收入换来事业和别人的信任':'');
   }
-  else job=/强|旺/.test(data.strength)?'{食伤}把你过旺的精力用在做事和产出上':'{食伤}把你的力量用在做事和产出上，用时要留足底气';
+  else job=/强|旺/.test(data.strength)?'{食伤}把你过旺的精力用在做事和产出上':'{食伤}把你的力量用在做事和产出上，用时要留足根基';
   if(role==='other'){
     if(route&&route.id==='monthly-bing-wei')return monthlyBingWeiReference(data,element,false);
     var proof=steps.slice(0,2).map(function(step){return displayStep(step,true)}).join('，');
@@ -2924,6 +2924,34 @@ function publicUsefulReferenceRows(data){
       var source=review.source.includes('《穷通宝鉴·三夏辛金》')?'《穷通宝鉴·三夏辛金》论午月辛金：「若水土多见，见甲方妙。」':'取法见'+review.source+'。';
       rows+=referenceRow('疏土参考',review.element,source+(technical?restraintCopy.professional:restraintCopy.standard));
     }
+    var route=view.routes.find(function(item){return item.id==='wealth-flow'});
+    var alternative=caseAlternativeUseReading(data);
+    view.routeDependent.forEach(function(element){
+      var entry=view.elements.find(function(item){return item.element===element});
+      if(!route||!entry||!(entry.benefitEntries||[]).some(function(item){return item.routeId==='wealth-flow'&&item.status==='local'}))return;
+      if(references.some(function(item){return item.elements.includes(element)})||review&&review.element===element)return;
+      if(alternative&&(alternative.includes(element+'在原局')||remedy&&remedy.resourceRestraint.element===element))return;
+      var steps=(route.steps||[]).filter(function(step){return step.active&&step.action==='生'});
+      var birth=steps.find(function(step){return standardGodGroup(step.left.god)==='食伤'&&standardGodGroup(step.right.god)==='财星'});
+      var onward=steps.find(function(step){return standardGodGroup(step.left.god)==='财星'&&standardGodGroup(step.right.god)==='官杀'});
+      if(!birth||route.transmissionActive&&!onward)return;
+      function actorName(actor){return standardActorElement(actor)+'（'+actor.god+'）'}
+      var source='《滴天髓阐微·通关》：「关内有织女，关外有牛郎，此关若通也，相邀入洞户。」';
+      var carrier=(birth.right.text||'').match(/^([子丑寅卯辰巳午未申酉戌亥])藏/);
+      var carrierText=carrier?carrier[1]+element:(birth.right.text||element);
+      var text;
+      if(technical){
+        text=steps.map(function(step){return displayStep(step,true)}).join('；')+'。'+(route.transmissionActive?'食伤生财、财生官杀的路径在原局局部接通。':'原局作用到食伤生财为止，尚未接通财生官杀。');
+      }else if(route.transmissionActive){
+        var from=standardActorElement(birth.left),to=standardActorElement(onward.right);
+        var roles=view.primary.includes(from)&&view.primary.includes(to)?'都是主用，但'+from+'会克'+to+'；':view.primary.includes(from)&&view.secondary.includes(to)?'分别是主用和佐用，但'+from+'会克'+to+'；':'';
+        text='本盘'+actorName(birth.left)+'和'+actorName(onward.right)+(roles?roles:'之间有相克的关系；')+element+'在中间能把'+from+'的力量转给'+to+'，原局的'+carrierText+'已经在起这个作用。';
+      }else{
+        text='本盘'+actorName(birth.left)+'生'+actorName(birth.right)+'，原局的'+carrierText+'已有承接产出、局部生财的作用，但作用到生财为止，还没有形成财生官杀的作用。';
+      }
+      if(!technical&&/弱/.test(data.strength))text+='日主偏弱，'+element+'多了也会耗力，所以';
+      rows+=referenceRow(route.transmissionActive?'通关参考':'生财参考',element,source+text+'只作参考，不改变主用、佐用、忌。');
+    });
     return rows;
   }
   return render;
@@ -4226,7 +4254,7 @@ function buildBaziReport(){
   if(!currentBazi)buildBazi();
   var d=refreshPatternAnalysis(currentBazi),v=caseDisplayView(d),technical=(document.body&&document.body.getAttribute('data-display-mode'))==='professional',key=technical?'professional':'standard';
   var ctx=getSelectedLuckContext(d),outlook=getSelectedLuckOutlook(d,ctx),y=outlook.years[ctx.yearIndex],luck=ctx.luck;
-  return ['出生组合分析报告','命主：'+(d.person||'未命名')+'；'+d.gender,'输入时间：'+formatTime(d.time.input),'采用时间：'+formatTime(d.time.used),'时间校对：'+(d.time.enabled?formatSolarCorrection(d.time):'按输入时间')+(d.time.daylightSaving?'；夏令时已减去1小时':''),'出生地点：'+d.time.location.name+' '+locationCoordText(d.time.location),'出生组合：'+Object.values(d.pillars).join(' '),v.headline[key],...v.support.map(function(x){return x[key]}),...v.limits.map(function(x){return x[key]}),usefulSummaryText(d,true,!technical),...['primary','secondary','avoid','other'].flatMap(function(role){var view=usefulDecisionView(d),values={primary:view.primary,secondary:view.secondary,avoid:view.avoid,other:view.routeDependent}[role];return values.map(function(e){return usefulDisplayReason(d,e,role,technical)})}),(technical?'大运起运：':'阶段起点：')+luck.direction+'，约'+luck.startAge+'岁起运',(technical?'大运表：':'阶段表：')+luck.rows.map(function(r){return r.from+'-'+r.to+'岁 '+r.gz}).join('；'),'选中阶段：'+ctx.luckRow.gz+'；选中年度：'+ctx.flowYear.year+' '+ctx.flowYear.gz,outlookContextText(technical?'年度综合':ctx.flowYear.year+'年运势',y.annual,technical),outlookContextText(technical?'本运对原局':'这十年运势',outlook.natal,technical),outlookContextText(technical?'较上一运':'这十年比上一个十年',outlook.previous,technical),outlookContextText(technical?'年度增量':'这一年比这十年平常',y.increment,technical),'这是所选传统框架的结构解释，不承诺现实结果。','AI记录',renderAiHistory()].join('\n');
+  return ['出生组合分析报告','命主：'+(d.person||'未命名')+'；'+d.gender,'输入时间：'+formatTime(d.time.input),'采用时间：'+formatTime(d.time.used),'时间校对：'+(d.time.enabled?formatSolarCorrection(d.time):'按输入时间')+(d.time.daylightSaving?'；夏令时已减去1小时':''),'出生地点：'+d.time.location.name+' '+locationCoordText(d.time.location),'出生组合：'+Object.values(d.pillars).join(' '),v.headline[key],...v.support.map(function(x){return x[key]}),...v.limits.map(function(x){return x[key]}),usefulSummaryText(d,true,!technical),...['primary','secondary','avoid','other'].flatMap(function(role){var view=usefulDecisionView(d),values={primary:view.primary,secondary:view.secondary,avoid:view.avoid,other:view.routeDependent}[role];return values.map(function(e){return usefulDisplayReason(d,e,role,technical)})}),...aiPlain(publicUsefulReferenceRows(d)(technical),technical).filter(function(line){return /^(通关参考|生财参考) · /.test(line)}),(technical?'大运起运：':'阶段起点：')+luck.direction+'，约'+luck.startAge+'岁起运',(technical?'大运表：':'阶段表：')+luck.rows.map(function(r){return r.from+'-'+r.to+'岁 '+r.gz}).join('；'),'选中阶段：'+ctx.luckRow.gz+'；选中年度：'+ctx.flowYear.year+' '+ctx.flowYear.gz,outlookContextText(technical?'年度综合':ctx.flowYear.year+'年运势',y.annual,technical),outlookContextText(technical?'本运对原局':'这十年运势',outlook.natal,technical),outlookContextText(technical?'较上一运':'这十年比上一个十年',outlook.previous,technical),outlookContextText(technical?'年度增量':'这一年比这十年平常',y.increment,technical),'这是所选传统框架的结构解释，不承诺现实结果。','AI记录',renderAiHistory()].join('\n');
 }
 function exportBaziReport(){
   var text=buildBaziReport();
