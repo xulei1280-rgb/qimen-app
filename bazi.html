@@ -3925,7 +3925,19 @@ function outlookSideCost(main,cost){
   if(subject&&outlookCopyKey(cost).indexOf(subject.replace(/（[^）]*）/g,''))===0)return cost.replace(/([^，：。]+)这层帮助弱了一些/,'支撑$1的原有配合弱了一些');
   return cost;
 }
-function outlookCopyKey(s){return outlookBareLine(s).replace(/，因为[^。]+/g,'').replace(/（[^）]*）/g,'').replace(/[。\s]/g,'');}
+function outlookCopyKey(s){return outlookBareLine(s).replace(/^同一个[冲合]也让/,'').replace(/，因为[^。]+/g,'').replace(/（[^）]*）/g,'').replace(/[。\s]/g,'');}
+// Deduplicate each side before joining distinct topics under one heading.
+function outlookMergeSides(lines){
+  var unique=[];
+  lines.forEach(function(x){
+    var key=outlookCopyKey(x.text),old=unique.find(function(y){var k=outlookCopyKey(y.text);return y.direction===x.direction&&(k.indexOf(key)>=0||key.indexOf(k)>=0)});
+    if(old){if(/因为/.test(x.text)&&!/因为/.test(old.text))old.text=x.text;}
+    else unique.push({direction:x.direction,text:x.text});
+  });
+  var sides=[];
+  unique.forEach(function(x){var side=sides.find(function(y){return y.direction===x.direction});if(side)side.text=side.text.replace(/。$/,'')+'；'+x.text;else sides.push(x)});
+  return sides;
+}
 function outlookBareLine(s){return String(s||'').replace(/^另一方面，/,'').replace(/^(这步大运，|这一年，|这一年|这步运)/,'');}
 // Opposite-side line: if it cites the same 冲/合 as the main line, don't repeat 因为….
 function outlookShareCause(main,also){
@@ -3974,7 +3986,7 @@ function outlookYearCopy(year,natal){
   (annual.items||[]).forEach(function(x){if(x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==a)add(x.direction,x.standard);});
   if(inc.mixed){if(a!=='positive')add('positive',inc.mixed.benefit&&inc.mixed.benefit.standard);if(a!=='negative')add('negative',inc.mixed.cost&&inc.mixed.cost.standard);}
   else if((inc.direction==='positive'||inc.direction==='negative')&&inc.direction!==a)outlookSameDirItems(inc,inc.direction).forEach(function(x){add(x.direction,x.standard);});
-  return {kind:'plain',main:main,also:also,rest:mains.slice(1).map(function(x){return outlookBareLine(x.standard);}).filter(function(s){return s&&s!==outlookBareLine(main);})};
+  return {kind:'plain',main:main,also:outlookMergeSides(also),rest:mains.slice(1).map(function(x){return outlookBareLine(x.standard);}).filter(function(s){return s&&s!==outlookBareLine(main);})};
 }
 function outlookYearOwnLine(year,natal){
   var yc=outlookYearCopy(year,natal);if(!yc||yc.kind==='mixed')return '';
@@ -3986,10 +3998,12 @@ function outlookGlossOnce(html){
   return html.replace(/（(正官|七杀|正印|偏印|食神|伤官|正财|偏财|比肩|劫财|印星|财星|官星|食伤|比劫)）/g,function(m,g){if(seen[g])return '';seen[g]=1;return m});
 }
 // 喜忌底色与成格变格提示：只显示，结论以上面的判断为准。
-function outlookToneRow(result){
+function outlookToneRow(result,mainBody){
   var t=result&&result.tone,s=result&&result.patternShift,said=result&&result.toneBasis!=='tone-tiebreak'&&(result.evidence||[]).some(function(e){return e.level==='T-tone'});
+  var ending=s?'原来的格局路线'+(s.kind==='成格'?'会更清楚':s.kind==='变格'?'有被打乱的迹象':'有调整的迹象'):'';
+  var repeated=ending&&String(mainBody||'').replace(/<details[\s\S]*?<\/details>/g,'').replace(/<[^>]+>/g,'').indexOf(ending)>=0;
   return (t?'<p class="outlook-note" data-luck-tone>'+modeCopy(said&&result.direction!=='mixed'?'':esc(t.plain),esc(t.professional))+'</p>':'')+
-    (s?'<p class="outlook-note" data-pattern-shift>'+modeCopy(esc('提示：这步运会把出生月份里藏着的力量引出来，原来的格局路线'+(s.kind==='成格'?'会更清楚。':s.kind==='变格'?'有被打乱的迹象。':'有调整的迹象。')),esc('成格变格提示：'+s.text+'（《子平真诠·论行运成格变格》）。'))+'</p>':'');
+    (s?'<p class="outlook-note" data-pattern-shift>'+modeCopy(repeated?'':esc('提示：这步运会把出生月份里藏着的力量引出来，原来的格局路线'+(s.kind==='成格'?'会更清楚。':s.kind==='变格'?'有被打乱的迹象。':'有调整的迹象。')),esc('成格变格提示：'+s.text+'（《子平真诠·论行运成格变格》）。'))+'</p>':'');
 }
 function renderOutlookBox(title,result,professionalTitle,extra){
   var view=outlookDisplayView(result);extra=extra||{};
@@ -4026,13 +4040,12 @@ function renderOutlookBox(title,result,professionalTitle,extra){
     var rest=items.slice(1).filter(function(x){return x[key]}),opposite=[];
     if(!technical&&(view.direction==='positive'||view.direction==='negative')){
       opposite=rest.filter(function(x){return x.direction&&x.direction!=='neutral'&&x.direction!==view.direction&&!/^五行上/.test(outlookBareLine(x.standard))});
-      var copySeen={};
-      opposite=opposite.filter(function(x){var k=x.direction+':'+outlookCopyKey(x.standard);if(copySeen[k])return false;copySeen[k]=true;return true;});
       rest=rest.filter(function(x){return !x.direction||x.direction==='neutral'||x.direction===view.direction});
     }
-    var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+opposite.map(function(x){return esc(outlookShareCause(items[0].standard,outlookSideCost(items[0].standard,x.standard.replace(/^另一方面，/,''))))}).join('')+'</p>':'';
+    var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+outlookMergeSides(opposite.map(function(x){return {direction:x.direction,text:outlookShareCause(items[0].standard,outlookSideCost(items[0].standard,x.standard.replace(/^另一方面，/,'')))}})).map(function(x){return esc(x.text)}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
-  var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(body(false)),body(true))+outlookToneRow(result)+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
+  var standardBody=body(false);
+  var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+modeCopy(outlookGlossOnce(standardBody),body(true))+outlookToneRow(result,standardBody)+(extra.trendHtml?extra.trend:extra.trend?'<p class="outlook-note" data-outlook-trend>'+esc(extra.trend)+'</p>':'')+'</div>';
   return extra.professionalOnly&&(!document.body||document.body.getAttribute('data-display-mode')!=='professional')?modeCopy('',box):box;
 }
 function renderProfessionalLuckPanel(data){

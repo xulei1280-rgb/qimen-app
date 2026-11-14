@@ -2264,3 +2264,18 @@ for(const source of [referenceBazi,conciseReferenceBazi,killSealBazi,transformBa
 assert(scriptContext.outlookTaskMeaning('handle-kill')==='七杀压力的食神制杀或印化杀承接路径','structured handle-kill translation must explain the specific domain rather than raw internal task label');
 
 assert(conditionalHelpSeen.size===3,'real analyzed fixtures must exercise all three conditional help cards');
+
+// Side notes keep distinct information, prefer causes, and retain shared-cause wording.
+const mergedOutlookSides=scriptContext.outlookMergeSides([
+  {direction:'negative',text:'同一个冲也让事业和规矩这层帮助弱了一些。'},
+  {direction:'negative',text:'这一年，事业和规矩（正官）这层帮助弱了一些，因为甲木合住了己土。'},
+  {direction:'negative',text:'自身这层根基弱了一些。'}
+]);
+assert(mergedOutlookSides.length===1 && mergedOutlookSides[0].text==='这一年，事业和规矩（正官）这层帮助弱了一些，因为甲木合住了己土；自身这层根基弱了一些。','same-side notes deduplicate topics and retain distinct topics under one heading');
+assert(scriptContext.outlookMergeSides([{direction:'negative',text:'同一个合也让才华表现这层帮助弱了一些。'}])[0].text==='同一个合也让才华表现这层帮助弱了一些。','a sole shared-cause opposite must keep its wording');
+for(const [kind,ending] of [['成格','会更清楚'],['变格','有被打乱的迹象'],['调整','有调整的迹象']]){
+  const result={patternShift:{kind,text:'专业原文'}};
+  const main='原来的格局路线'+ending+'。';
+  assert(!scriptContext.outlookToneRow(result,'<p>'+main+'</p>').includes('提示：这步运'),'visible route conclusion must suppress its repeated standard hint');
+  assert(scriptContext.outlookToneRow(result,'<details>'+main+'</details>').includes('提示：这步运'),'a conclusion only in evidence must not suppress the hint');
+}
