@@ -2448,7 +2448,7 @@ function standardStructureView(data){
   }
   return Object.assign({},view,{support:support,limits:limits,headline:headline,formationBasis:formationBasis});
 }
-var STANDARD_GOD_GLOSS={印星:'长辈、贵人、学历证书',财星:'钱财、收入',官杀:'管你的人、压力',食伤:'才华、表达',比劫:'同辈、朋友',伤官:'才华、口才',食神:'才艺、享受',正官:'管你的人、规矩',七杀:'压力、对手'};
+var STANDARD_GOD_GLOSS={印星:'长辈、贵人、学问资历',财星:'钱财、收入',官杀:'管你的人、压力',食伤:'才华、表达',比劫:'同辈、朋友',伤官:'才华、口才',食神:'才艺、享受',正官:'管你的人、规矩',七杀:'压力、对手'};
 // {term} glosses a ten-god term on its first mention in one block; {plain|term} writes plain（term）.
 function glossGodTokens(text,seen){
   return text.replace(/\{([^{}|]+)(?:\|([^{}]+))?\}/g,function(all,first,term){
