@@ -22,3 +22,4 @@ assert(html.includes('奇门是当前问题、决策与短期应期的主依据'
 assert(/href="index\.html" aria-current="page">奇门<\/a>[\s\S]*href="bazi\.html">八字<\/a>[\s\S]*href="liuyao\.html">六爻<\/a>[\s\S]*href="ziwei\.html">紫微<\/a>[\s\S]*href="daily\.html">日运<\/a>/.test(html), 'Qimen should expose the unified five-module navigation');
 
 console.log('qimen page checks ok');
+require('./check-location-search.js');

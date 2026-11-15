@@ -1248,17 +1248,13 @@
                 <small id="birthLocationCoord">开启真太阳时后必须选择地点</small>
               </button>
               <div class="location-panel" id="locationPanel" hidden>
-                <label class="field"><span>搜索本地城市</span><input id="locationSearch" type="search" autocomplete="off" placeholder="例如：昆明、上海、师宗"></label>
+                <label class="field"><span>搜索出生地</span><input id="locationSearch" type="search" autocomplete="off" placeholder="例如：长汀、温县、师宗"></label>
                 <div class="location-list" id="locationList" role="listbox" aria-label="出生地点"></div>
-                <div class="custom-location">
-                  <input id="customLocationName" autocomplete="off" placeholder="自定义地点名" aria-label="自定义地点名">
-                  <input id="customLongitude" type="number" min="-180" max="180" step="0.0001" inputmode="decimal" placeholder="东经，如 121.4737" aria-label="自定义经度">
-                  <button class="button" id="useCustomLocation" type="button">使用</button>
-                </div>
+                <div class="privacy-note">输入省、市或县区名筛选；查询仅在本机进行。</div>
               </div>
               <input class="chart-input" id="longitude" type="hidden" value="">
               <div class="solar-preview" id="solarPreview" role="status" aria-live="polite">请选择出生地点后预览真太阳时。</div>
-              <p class="privacy-note">城市预设采用中心坐标；需要更精确时可填写实际经度。当前算法使用经度和日期均时差，纬度仅用于地点核对，不参与修正。</p>
+              <p class="privacy-note">地名表采用县区中心附近坐标，不代表具体出生地址。当前算法使用经度和日期均时差，纬度仅用于地点核对，不参与修正。</p>
             </div>
           <div class="button-row">
             <label class="save-choice"><input id="autoSaveBuild" type="checkbox" checked> 排盘后保存 <small>修改已保存命盘会更新原记录</small></label>
@@ -1447,7 +1443,8 @@
   <script src="birth-time.js?v=20261107.1"></script>
   <script src="ziwei-engine.js?v=20261107.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
-  <script src="ziwei-page.js?v=20261107.1"></script>
+  <script src="china-locations.js?v=20261115.1"></script>
+  <script src="ziwei-page.js?v=20261115.1"></script>
   <script src="premium-base.js?v=20261101.2"></script>
   <script src="ziwei-premium.js?v=20261102.5"></script>
   <script src="ziwei-glossary.js?v=20261107.1"></script>

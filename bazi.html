@@ -1026,16 +1026,9 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
       <label>出生地址</label>
       <button id="birthLocationDisplay" class="display-field" type="button" aria-label="编辑出生地址" aria-controls="locationPanel" aria-expanded="false" onclick="toggleLocationPanel()">云南省 曲靖市 麒麟区</button>
       <div id="locationPanel" class="editor-panel" hidden>
-        <input id="locationSearch" type="search" aria-label="搜索出生地址" placeholder="搜索昆明 / 麒麟 / 师宗 / 罗平 / 上海" oninput="renderLocations()">
+        <input id="locationSearch" type="search" aria-label="搜索出生地址" placeholder="搜索省 / 市 / 县区，如长汀、温县" oninput="renderLocations()">
         <div id="locationList" class="location-list"></div>
-        <div class="custom-location">
-          <div class="custom-title">搜不到地点时，手动输入经度也可以校准真太阳时</div>
-          <div class="custom-row">
-            <input id="customLocationName" placeholder="地点名" aria-label="自定义地点名">
-            <input id="customLongitude" type="number" step="0.0001" placeholder="东经，如 121.4737" aria-label="自定义地点经度">
-            <button type="button" onclick="selectCustomLocation()">使用</button>
-          </div>
-        </div>
+        <div class="local-note">输入省、市或县区名筛选，选择对应地点；查询仅在本机进行。</div>
       </div>
     </div>
 
@@ -1076,6 +1069,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
+<script src="china-locations.js?v=20261115.1"></script>
 <script src="bazi-engine.js?v=luck-copy-20261114.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
@@ -1156,25 +1150,9 @@ var BRANCH_WX={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'
 var HIDDEN={子:['癸'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙'],辰:['戊','乙','癸'],巳:['丙','戊','庚'],午:['丁','己'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛'],戌:['戊','辛','丁'],亥:['壬','甲']};
 var NAYIN={甲子:'海中金',乙丑:'海中金',丙寅:'炉中火',丁卯:'炉中火',戊辰:'大林木',己巳:'大林木',庚午:'路旁土',辛未:'路旁土',壬申:'剑锋金',癸酉:'剑锋金',甲戌:'山头火',乙亥:'山头火',丙子:'涧下水',丁丑:'涧下水',戊寅:'城头土',己卯:'城头土',庚辰:'白蜡金',辛巳:'白蜡金',壬午:'杨柳木',癸未:'杨柳木',甲申:'泉中水',乙酉:'泉中水',丙戌:'屋上土',丁亥:'屋上土',戊子:'霹雳火',己丑:'霹雳火',庚寅:'松柏木',辛卯:'松柏木',壬辰:'长流水',癸巳:'长流水',甲午:'砂中金',乙未:'砂中金',丙申:'山下火',丁酉:'山下火',戊戌:'平地木',己亥:'平地木',庚子:'壁上土',辛丑:'壁上土',壬寅:'金箔金',癸卯:'金箔金',甲辰:'覆灯火',乙巳:'覆灯火',丙午:'天河水',丁未:'天河水',戊申:'大驿土',己酉:'大驿土',庚戌:'钗钏金',辛亥:'钗钏金',壬子:'桑柘木',癸丑:'桑柘木',甲寅:'大溪水',乙卯:'大溪水',丙辰:'沙中土',丁巳:'沙中土',戊午:'天上火',己未:'天上火',庚申:'石榴木',辛酉:'石榴木',壬戌:'大海水',癸亥:'大海水'};
 var KONG_BY_XUN={0:'戌亥',1:'申酉',2:'午未',3:'辰巳',4:'寅卯',5:'子丑'};
-var LOCATIONS=[
-  {preset:true,name:'云南省 昆明市',aliases:['昆明','云南昆明','kunming'],lat:25.0389,lng:102.7183},
-  {preset:true,name:'云南省 曲靖市 麒麟区',aliases:['曲靖','麒麟','麒麟区','曲靖麒麟'],lat:25.4951,lng:103.8050},
-  {preset:true,name:'云南省 曲靖市 师宗县',aliases:['师宗','师宗县'],lat:24.8222,lng:103.9936},
-  {preset:true,name:'云南省 曲靖市 罗平县',aliases:['罗平','罗平县'],lat:24.8847,lng:104.3087},
-  {name:'云南省 红河州 泸西县',aliases:['泸西','泸西县'],lat:24.5321,lng:103.7662},
-  {name:'云南省 曲靖市 陆良县',aliases:['陆良','陆良县'],lat:25.0294,lng:103.6668},
-  {name:'上海市',aliases:['上海','shanghai'],lat:31.2304,lng:121.4737},
-  {name:'广东省 广州市',aliases:['广州','guangzhou'],lat:23.1291,lng:113.2644},
-  {name:'广东省 深圳市',aliases:['深圳','shenzhen'],lat:22.5431,lng:114.0579},
-  {name:'四川省 成都市',aliases:['成都','chengdu'],lat:30.5728,lng:104.0668},
-  {name:'重庆市',aliases:['重庆','chongqing'],lat:29.5630,lng:106.5516},
-  {name:'浙江省 杭州市',aliases:['杭州','hangzhou'],lat:30.2741,lng:120.1551},
-  {name:'江苏省 南京市',aliases:['南京','nanjing'],lat:32.0603,lng:118.7969},
-  {name:'湖北省 武汉市',aliases:['武汉','wuhan'],lat:30.5928,lng:114.3055},
-  {name:'陕西省 西安市',aliases:['西安','xian'],lat:34.3416,lng:108.9398},
-  {name:'贵州省 贵阳市',aliases:['贵阳','guiyang'],lat:26.6470,lng:106.6302}
-];
-var selectedLocation=LOCATIONS[1];
+var LOCATIONS=ChinaLocations.locations;
+var defaultLocation=LOCATIONS.find(function(loc){return loc.name==='云南省 曲靖市 麒麟区'});
+var selectedLocation=defaultLocation;
 function cloneLuckSelection(){
   return {luck:luckSelection.luck,year:luckSelection.year,month:luckSelection.month};
 }
@@ -1300,16 +1278,13 @@ function toggleLocationPanel(){
 }
 function renderLocations(){
   var q=(document.getElementById('locationSearch').value||'').trim().toLowerCase();
-  var list=LOCATIONS.map(function(loc,i){return {loc:loc,index:i}}).filter(function(item){
-    if(!q)return !!item.loc.preset;
-    return item.loc.name.toLowerCase().indexOf(q)>=0 || item.loc.aliases.some(function(a){return a.toLowerCase().indexOf(q)>=0});
-  });
+  var list=ChinaLocations.search(q).map(function(loc){return {loc:loc,index:LOCATIONS.indexOf(loc)}});
   document.getElementById('locationList').innerHTML=list.map(function(item){
     return '<button type="button" class="location-option" onclick="selectLocation('+item.index+')"><strong>'+esc(item.loc.name)+'</strong><span>'+locationCoordText(item.loc)+'</span></button>';
   }).join('') || '<div class="empty">没有匹配地点，可换关键词搜索</div>';
 }
 function selectLocation(index){
-  selectedLocation=LOCATIONS[index]||LOCATIONS[1];
+  selectedLocation=LOCATIONS[index]||defaultLocation;
   document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
   document.getElementById('locationPanel').hidden=true;
   document.getElementById('birthLocationDisplay').ariaExpanded='false';
@@ -1317,16 +1292,6 @@ function selectLocation(index){
 }
 function locationCoordText(loc){
   return '东经'+Number(loc.lng).toFixed(4)+(loc.lat==null?'':' 北纬'+Number(loc.lat).toFixed(4));
-}
-function selectCustomLocation(){
-  var name=(document.getElementById('customLocationName').value||'自定义地点').trim();
-  var lng=parseFloat(document.getElementById('customLongitude').value);
-  if(!isFinite(lng)||lng<-180||lng>180){alert('请输入有效经度，例如上海 121.4737');return}
-  selectedLocation={name:name||'自定义地点',aliases:[],lng:lng,lat:null};
-  document.getElementById('birthLocationDisplay').textContent=selectedLocation.name+'（东经'+lng.toFixed(4)+'）';
-  document.getElementById('locationPanel').hidden=true;
-  document.getElementById('birthLocationDisplay').ariaExpanded='false';
-  refreshSolarPreview();
 }
 function dayOfYear(y,m,d){return Math.floor((Date.UTC(y,m-1,d)-Date.UTC(y,0,0))/86400000)}
 function equationOfTimeMinutes(y,m,d,hour,minute){
@@ -1399,7 +1364,7 @@ function resetBaziFormToNow(){
   updateDays(now.getDate());
   document.getElementById('birthHour').value=now.getHours();
   document.getElementById('birthMinute').value=now.getMinutes();
-  selectedLocation=LOCATIONS[1];
+  selectedLocation=defaultLocation;
   document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
   document.getElementById('useTrueSolar').checked=false;
   document.getElementById('useDaylightSaving').checked=false;
@@ -1416,7 +1381,7 @@ function fillBaziFormFromData(data){
   document.getElementById('birthHour').value=t.hour;
   document.getElementById('birthMinute').value=t.minute;
   if(data.time&&data.time.location){
-    selectedLocation={name:data.time.location.name||'自定义地点',lng:Number(data.time.location.lng)||120,lat:data.time.location.lat==null?null:Number(data.time.location.lat)};
+    selectedLocation={name:data.time.location.name||'自定义地点',lng:data.time.location.lng!=null&&Number.isFinite(Number(data.time.location.lng))?Number(data.time.location.lng):120,lat:data.time.location.lat==null?null:Number(data.time.location.lat)};
     document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
   }
   document.getElementById('useTrueSolar').checked=!(data.time&&data.time.enabled===false);

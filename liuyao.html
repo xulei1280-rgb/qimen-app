@@ -556,11 +556,17 @@ function finishCast(source,lines,meta,extra){
   lockForm(false);document.getElementById('btnStep').textContent='逐爻摇卦';renderPlate();updateFlow();if(persistCurrent('questionSummaryStatus'))setStatus('questionSummaryStatus','已自动保存');
   document.getElementById('plateCard').scrollIntoView({behavior:'smooth',block:'start'});
 }
+var recordStorageReadError=false;
+var recordStorageMessage='保存记录无法读取，已停止写入以保护原数据。';
 function readRecords(statusId){
-  try{var value=JSON.parse(localStorage.getItem(RECORDS_STORAGE)||'[]');return Array.isArray(value)?value:[]}
-  catch(error){setStatus(statusId||'castStatus','读取本机记录失败，请先导出可用数据后清理浏览器存储',true);return []}
+  try{var value=JSON.parse(localStorage.getItem(RECORDS_STORAGE)||'[]');if(!Array.isArray(value))throw new Error('记录根节点不是数组');return value}
+  catch(error){recordStorageReadError=true;setStatus(statusId||'castStatus',recordStorageMessage,true);return []}
 }
-function writeRecords(records){localStorage.setItem(RECORDS_STORAGE,JSON.stringify(records))}
+function writeRecords(records){
+  readRecords();
+  if(recordStorageReadError)throw new Error(recordStorageMessage);
+  localStorage.setItem(RECORDS_STORAGE,JSON.stringify(records));
+}
 function normalizeRecord(record){
   if(!record)return record;
   if(!record.judgment||typeof record.judgment!=='object')record.judgment={initial:null,additions:[]};
@@ -1083,7 +1089,9 @@ function openRecord(id){
 }
 function deleteRecord(id){if(!confirm('删除这条卦例？删除后只能通过之前导出的备份恢复。'))return;var records=readRecords('historyStatus').filter(function(item){return item.id!==id});try{writeRecords(records);if(currentRecord&&currentRecord.id===id)resetCastView(false);renderHistory()}catch(error){setStatus('historyStatus','删除失败：'+error.message,true)}}
 function exportRecords(){
-  var payload={schemaVersion:1,exportedAt:new Date().toISOString(),records:readRecords()},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='liuyao-records-'+nowShanghai().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)
+  var records=readRecords('historyStatus');
+  if(recordStorageReadError){setStatus('historyStatus',recordStorageMessage+' 无法导出记录列表，请保留浏览器中的原始数据。',true);return}
+  var payload={schemaVersion:1,exportedAt:new Date().toISOString(),records:records},blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='liuyao-records-'+nowShanghai().slice(0,10)+'.json';link.click();setTimeout(function(){URL.revokeObjectURL(link.href)},1000)
 }
 function validStoredUseGod(record){
   if(!record.useGod)return true;var position=Number(record.useGod.position),line=record.plateSnapshot&&record.plateSnapshot.lines&&record.plateSnapshot.lines.find(function(item){return item.position===position}),item=record.useGod.hidden?line&&line.hidden:line&&line.original;

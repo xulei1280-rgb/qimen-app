@@ -271,6 +271,7 @@ function createPageSandbox(pageSource) {
     crypto: { randomUUID() { return "00000000-0000-4000-8000-000000000000"; } },
     confirm() { return true; },
     fetch() { throw new Error("checker must not call network"); },
+    ChinaLocations: require('./china-locations.js'),
     ZiweiEngine: engine,
     BirthTime: require('./birth-time.js'),
     DeepSeekClient: deepseekClient,
@@ -284,7 +285,7 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261107.1"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261115.1"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
@@ -498,10 +499,7 @@ function runPageContracts() {
   assert(pageTest.brightnessClass("庙") === "miao" && pageTest.brightnessClass("陷") === "xian", "亮度颜色映射错误");
   assert(pageTest.mutagenClass("禄") === "lu" && pageTest.mutagenClass("忌") === "ji", "四化颜色映射错误");
   assert(pageTest.LOCATIONS.some((location) => location.name.includes("昆明")) && pageTest.LOCATIONS.some((location) => location.name.includes("师宗")), "八字同口径本地地点数据缺失");
-  assert(pageTest.customLocationFromValues("测试地", "121.4737").lng === 121.4737, "自定义经度解析错误");
-  let invalidLongitude = null;
-  try { pageTest.customLocationFromValues("错误地", "181"); } catch (error) { invalidLongitude = error; }
-  assert(Boolean(invalidLongitude), "无效自定义经度未拦截");
+  assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261115.1'), "出生地必须使用共享本地搜索");
   const legacyLocation = pageTest.normalizeStoredLocation({ longitude: "102.7183" });
   assert(legacyLocation.name === "自定义地点" && legacyLocation.lng === 102.7183, "旧记录经度兼容失败");
   const storedLocation = pageTest.normalizeStoredLocation({ location: { name: "云南省 昆明市", lng: 102.7183, lat: 25.0389 } });
@@ -551,10 +549,15 @@ function runPageContracts() {
 
 function runBaselineIsolation() {
   const childProcess = require("child_process");
-  const tracked = childProcess.execFileSync("git", ["diff", "--name-only", "main", "--", "qimen.js"], { cwd: ROOT, encoding: "utf8" }).trim();
-  assert(tracked === "", `非本次范围的旧模块计算内核出现改动：${tracked}`);
+  const originalQimen = vm.createContext({});
+  const currentQimen = vm.createContext({});
+  vm.runInContext(childProcess.execFileSync("git", ["show", "main:qimen.js"], { cwd: ROOT, encoding: "utf8" }), originalQimen);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, "qimen.js"), "utf8"), currentQimen);
+  for (const name of ["determineJu", "getJuJieQiIndex", "getCurrentJuJieQi", "getDayGZ", "getHourGZ", "getZhiFu", "getZhiShi"]) {
+    assert(vm.runInContext(`${name}.toString()`, originalQimen) === vm.runInContext(`${name}.toString()`, currentQimen), `奇门定局、日时、值符值使规则出现改动：${name}`);
+  }
+  assert(vm.runInContext("JSON.stringify(JU_JIE_QI_STARTS)", originalQimen) === vm.runInContext("JSON.stringify(JU_JIE_QI_STARTS)", currentQimen), "奇门定局交节表出现改动");
   // 2026-11-01 六爻规则升级后，liuyao-engine.js 允许新增标签与断卦规则，但装卦内核（纳甲、六亲、世应、六神、伏神、变卦）必须与 main 完全一致。
-  const vm = require("vm");
   const loadEngine = (source) => { const sandbox = { module: { exports: {} } }; sandbox.globalThis = sandbox; vm.runInNewContext(source, sandbox); return sandbox.module.exports; };
   const baseEngine = loadEngine(childProcess.execFileSync("git", ["show", "main:liuyao-engine.js"], { cwd: ROOT, encoding: "utf8" }));
   const liveEngine = loadEngine(fs.readFileSync(path.join(ROOT, "liuyao-engine.js"), "utf8"));

@@ -53,4 +53,5 @@ const {chromium,launchOptions,url}=require('./check-playwright-env.cjs');
     assert.deepEqual(errors,[]);
     console.log('PASS input controls: Bazi correction defaults off/address toggle/auto-save; Qimen full-width grouped fields/tappable selects/visible units/unchanged input; desktop and mobile, no AI.');
   }finally{await browser.close()}
+  await require('./check-record-storage.cjs')();
 })().catch(e=>{console.error(e);process.exitCode=1});

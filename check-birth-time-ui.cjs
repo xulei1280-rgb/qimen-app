@@ -61,8 +61,8 @@ async function screenshot(page, name) {
       else {
         await page.locator('input[name="timeBasis"][value="trueSolar"]').check();
         await page.locator('#locationTrigger').click();
-        await page.locator('#customLongitude').fill('103.9936');
-        await page.locator('#useCustomLocation').click();
+        await page.locator('#locationSearch').fill('师宗');
+        await page.locator('#locationList button').filter({hasText:'师宗县'}).first().click();
       }
       await submit(page, kind);
       if (kind === 'ziwei') {

@@ -53,22 +53,7 @@
   // 2026-11-02 白话五段 + 依据：正文给完全不懂紫微的人看，证据编号只集中在最后的“依据”里。
   const REQUIRED_AI_SECTIONS = Object.freeze(["一句话总结", "重点关注", "顺的地方", "要留意的", "建议怎么做", "依据"]);
   const AI_BODY_SECTIONS = Object.freeze(REQUIRED_AI_SECTIONS.slice(0, 5));
-  const LOCATIONS = [
-    { preset: true, name: "云南省 昆明市", aliases: ["昆明", "云南昆明", "kunming"], lat: 25.0389, lng: 102.7183 },
-    { preset: true, name: "云南省 曲靖市 麒麟区", aliases: ["曲靖", "麒麟", "麒麟区", "曲靖麒麟"], lat: 25.4951, lng: 103.8050 },
-    { preset: true, name: "云南省 曲靖市 师宗县", aliases: ["师宗", "师宗县"], lat: 24.8222, lng: 103.9936 },
-    { preset: true, name: "北京市", aliases: ["北京", "beijing"], lat: 39.9042, lng: 116.4074 },
-    { preset: true, name: "上海市", aliases: ["上海", "shanghai"], lat: 31.2304, lng: 121.4737 },
-    { preset: true, name: "广东省 广州市", aliases: ["广州", "guangzhou"], lat: 23.1291, lng: 113.2644 },
-    { name: "广东省 深圳市", aliases: ["深圳", "shenzhen"], lat: 22.5431, lng: 114.0579 },
-    { name: "四川省 成都市", aliases: ["成都", "chengdu"], lat: 30.5728, lng: 104.0668 },
-    { name: "重庆市", aliases: ["重庆", "chongqing"], lat: 29.563, lng: 106.5516 },
-    { name: "湖北省 武汉市", aliases: ["武汉", "wuhan"], lat: 30.5928, lng: 114.3055 },
-    { name: "浙江省 杭州市", aliases: ["杭州", "hangzhou"], lat: 30.2741, lng: 120.1551 },
-    { name: "江苏省 南京市", aliases: ["南京", "nanjing"], lat: 32.0603, lng: 118.7969 },
-    { name: "陕西省 西安市", aliases: ["西安", "xian"], lat: 34.3416, lng: 108.9398 },
-    { name: "贵州省 贵阳市", aliases: ["贵阳", "guiyang"], lat: 26.647, lng: 106.6302 },
-  ];
+  const LOCATIONS = window.ChinaLocations.locations;
   const SYSTEM_PROMPT = [
     "你是紫微斗数盘面解读助手。你只能解释用户提供的冻结盘面，以及用户已经选择时才提供的冻结运限；不能自行安星、修改宫位、推算未提供的字段或补造证据。",
     "本盘固定 iztro default（以《紫微斗数全书》为基础）的四化、亮度与安星规则；不得混入中州派或其他门派表格。",
@@ -93,6 +78,7 @@
     currentRecordId: null,
     records: [],
     storageError: "",
+    storageReadError: "",
     selectedLocation: null,
     theme: "light",
     density: "clear",
@@ -125,9 +111,6 @@
     locationPanel: $("locationPanel"),
     locationSearch: $("locationSearch"),
     locationList: $("locationList"),
-    customLocationName: $("customLocationName"),
-    customLongitude: $("customLongitude"),
-    useCustomLocation: $("useCustomLocation"),
     birthLocationDisplay: $("birthLocationDisplay"),
     birthLocationCoord: $("birthLocationCoord"),
     solarPreview: $("solarPreview"),
@@ -290,6 +273,7 @@
   }
 
   function setStatus(message, kind) {
+    if (state.storageReadError) { message = state.storageReadError; kind = "error"; }
     elements.statusBanner.textContent = message;
     elements.statusBanner.className = `notice${kind ? ` ${kind}` : ""}`;
   }
@@ -328,23 +312,14 @@
 
   function renderLocations() {
     const query = elements.locationSearch.value.trim().toLowerCase();
-    const matches = LOCATIONS.filter((location) => {
-      if (!query) return location.preset;
-      return location.name.toLowerCase().includes(query) || location.aliases.some((alias) => alias.toLowerCase().includes(query));
-    });
+    const matches = window.ChinaLocations.search(query);
     elements.locationList.innerHTML = matches.length ? matches.map((location) => {
       const selected = state.selectedLocation?.name === location.name && Number(state.selectedLocation?.lng) === location.lng;
       return `<button class="location-option" type="button" role="option" aria-current="${selected}" data-location-name="${escapeHtml(location.name)}"><strong>${escapeHtml(location.name)}</strong><span>${escapeHtml(locationCoordText(location))}</span></button>`;
-    }).join("") : '<div class="privacy-note">没有匹配地点，可使用下方自定义经度。</div>';
+    }).join("") : '<div class="privacy-note">没有匹配地点，请输入省、市或县区名重新搜索。</div>';
     elements.locationList.querySelectorAll("[data-location-name]").forEach((button) => {
       button.addEventListener("click", () => selectLocation(LOCATIONS.find((location) => location.name === button.dataset.locationName)));
     });
-  }
-
-  function customLocationFromValues(name, longitude) {
-    const lng = Number(longitude);
-    if (!Number.isFinite(lng) || lng < -180 || lng > 180) throw new Error("请输入 -180 到 180 之间的有效经度。");
-    return { name: String(name || "自定义地点").trim() || "自定义地点", lng, lat: null };
   }
 
   function normalizeStoredLocation(data) {
@@ -775,13 +750,20 @@
     try {
       return readRecordStorage(localStorage);
     } catch (error) {
-      state.storageError = `读取本地记录失败：${error.message}`;
+      state.storageReadError = `读取本地记录失败，已停止写入以保护原数据：${error.message}`;
+      state.storageError = state.storageReadError;
       setStatus(state.storageError, "error");
       return [];
     }
   }
 
   function saveRecords() {
+    loadRecords();
+    if (state.storageReadError) {
+      state.storageError = state.storageReadError;
+      setStatus(state.storageError, "error");
+      return false;
+    }
     try {
       writeRecordStorage(localStorage, state.records);
       state.storageError = "";
@@ -1523,16 +1505,6 @@
     if (!elements.locationPanel.hidden) elements.locationSearch.focus();
   });
   elements.locationSearch.addEventListener("input", renderLocations);
-  elements.useCustomLocation.addEventListener("click", () => {
-    try {
-      selectLocation(customLocationFromValues(elements.customLocationName.value, elements.customLongitude.value));
-      elements.customLocationName.value = "";
-      elements.customLongitude.value = "";
-    } catch (error) {
-      setStatus(error.message, "error");
-      elements.customLongitude.focus();
-    }
-  });
   elements.resetBirth.addEventListener("click", resetPage);
   $("newBirth").addEventListener("click", resetPage);
   $("saveBirth").addEventListener("click", saveCurrentChart);
@@ -1631,7 +1603,6 @@
     withoutTurn,
     createExportBundle,
     mergeImportBundle,
-    customLocationFromValues,
     normalizeStoredLocation,
     palaceRelations,
     starTypeClass,

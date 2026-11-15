@@ -110,7 +110,7 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .qm-group-label:first-child{margin-top:0}
 
 /* 通用输入 */
-.time-bar input,.time-bar select,.solar-bar input[type=number],.solar-bar select,.bazi-link select,.bazi-link input,.tool-row select,.history-search{
+.time-bar input,.time-bar select,.solar-bar input[type=number],.solar-bar input[type=search],.solar-bar select,.bazi-link select,.bazi-link input,.tool-row select,.history-search{
   min-height:42px;width:100%;min-width:0;
   padding:8px 10px;
   background:#fffefb;border:1px solid var(--pm-line-strong);border-radius:10px;
@@ -613,3 +613,13 @@ input[type=checkbox]{accent-color:var(--pm-gold-deep);width:16px;height:16px}
   .board-wrap,.info-panel{break-inside:avoid}
   *{animation:none!important;transition:none!important}
 }
+
+/* Local place search uses the existing correction row and form controls. */
+.qm-location-panel { grid-column:1/-1; min-width:0; padding:8px 0; }
+.qm-location-panel[hidden] { display:none; }
+.qm-location-panel label { display:grid; gap:6px; }
+.qm-location-panel input { width:100%; min-width:0; }
+.qm-location-list { display:grid; gap:4px; max-height:190px; overflow:auto; margin:6px 0; }
+.solar-bar .qm-location-list button { grid-column:auto; text-align:left; white-space:normal; overflow-wrap:anywhere; }
+.qm-location-panel small { color:var(--muted); }
+#eventLocationDisplay { grid-column:1; max-width:100%; white-space:normal; }

@@ -636,8 +636,14 @@ function paiPan(year, month, day, hour, minute) {
   const juInfo = determineJu(year, month, day, dayGZ);
   
   // 2. 干支
-  const yearGZ = getYearGZ(year, month, day);
-  const monthGZ = getMonthGZ(year, month, day);
+  if (typeof BaziEngine === 'undefined') throw new Error('交节计算接口未加载，请刷新页面后重试。');
+  const flowYear = BaziEngine.getFlowYearNumber({year, month, day, hour, minute});
+  const yearGZ = BaziEngine.getFlowYearGZ(flowYear);
+  const months = BaziEngine.getFlowMonths(flowYear, dayGZ[0]);
+  const moment = Date.UTC(year, month - 1, day, hour - 8, minute || 0);
+  let flowMonth = months[0];
+  months.forEach(function(item) { if (Date.parse(item.startAt) <= moment) flowMonth = item; });
+  const monthGZ = flowMonth.gz;
   const hourGZ = getHourGZ(dayGZ, hour);
   
   // 3. 地盘

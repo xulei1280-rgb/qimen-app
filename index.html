@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
 <title>奇门遁甲 - 时家转盘排盘</title>
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
-<link rel="stylesheet" href="qimen-premium.css?v=20261102.3">
+<link rel="stylesheet" href="qimen-premium.css?v=20261115.1">
 </head>
 <body>
 <main class="page qm-page">
@@ -75,14 +75,14 @@
           <span class="qm-group-label">校正与关联（可选）</span>
           <div class="solar-bar">
             <label><input type="checkbox" id="useTrueSolar" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()">按真太阳时起盘</label>
-            <select id="locationPreset" onchange="applyLocationPreset(this.value)" title="选择常用地点经度" aria-label="常用地点">
-              <option value="">自定义经度</option>
-              <option value="103.99505">云南师宗</option>
-              <option value="102.83289">昆明</option>
-              <option value="116.4074">北京</option>
-            </select>
-            <input type="number" id="longitude" step="0.0001" value="103.9951" onchange="saveSolarSettings();refreshSolarPreview();markPlateDirty()" title="经度，东经为正；中国标准时区按东经120度计算" aria-label="经度">
+            <button type="button" id="eventLocationDisplay" aria-expanded="false" aria-controls="eventLocationPanel" onclick="toggleQimenLocationPanel()">选择事情发生地 / 此刻所在地</button>
             <button type="button" onclick="useBrowserLocation()" title="使用浏览器定位读取经度，只保存在本机">定位</button>
+            <input type="hidden" id="longitude" value="103.99505">
+            <div id="eventLocationPanel" class="qm-location-panel" hidden>
+              <label>事情发生地 / 此刻所在地 <input id="eventLocationSearch" type="search" autocomplete="off" placeholder="搜索省 / 市 / 县区" oninput="renderQimenLocations()"></label>
+              <div id="eventLocationList" class="qm-location-list"></div>
+              <small>输入地名筛选；查询仅在本机进行。</small>
+            </div>
             <span class="solar-preview" id="solarPreview">未启用真太阳时</span>
           </div>
           <details class="bazi-link" id="qimenBaziLink">
@@ -98,8 +98,10 @@
               <select id="qimenBaziGender" aria-label="八字性别"><option value="男">男</option><option value="女">女</option></select>
               <label>出生日期 <input type="date" id="qimenBaziDate" required></label>
               <label>出生时间 <input type="time" id="qimenBaziTime" required></label>
-              <input class="wide" type="text" id="qimenBaziLocation" placeholder="出生地点（可选）" value="自定义地点">
-              <label>东经 <input type="number" id="qimenBaziLongitude" step="0.0001" min="-180" max="180" value="103.9951" required></label>
+              <div class="wide"><span id="qimenBaziLocationDisplay">选择出生地</span>
+                <input type="search" id="qimenBaziLocationSearch" placeholder="搜索出生省 / 市 / 县区" oninput="renderQimenLocations('birth')">
+                <div id="qimenBaziLocationList" class="qm-location-list"></div>
+              </div>
               <label><input type="checkbox" id="qimenBaziTrueSolar" checked> 真太阳时</label>
               <button type="submit">保存并关联</button>
             </form>
@@ -210,8 +212,9 @@
   </div>
 </main>
 
-<script src="qimen.js?v=20260703-jieqi1"></script>
+<script src="qimen.js?v=20261115-jieqi2"></script>
 <script src="bazi-engine.js?v=20261109.1-useful-priority"></script>
+<script src="china-locations.js?v=20261115.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="qimen-premium.js?v=20261101.2" defer></script>
@@ -228,12 +231,16 @@ var SAVED_HISTORY_STORAGE='qimen_history';
 var AI_MODE_STORAGE='qimen_ai_mode';
 var TRUE_SOLAR_STORAGE='qimen_true_solar_enabled';
 var LONGITUDE_STORAGE='qimen_longitude';
+var LOCATION_STORAGE='qimen_location';
+var qimenLocation=null,qimenBirthLocation=null;
 var DISPLAY_MODE_STORAGE='analysis_display_mode';
 var BAZI_RECORDS_STORAGE='bazi_records';
 var plateInputFingerprint='';
 var qimenAiRequestSeq=0;
 var qimenAiPendingRequest=0,qimenAiTimer=null;
 var qimenLinkedBazi=null;
+var recordStorageErrors=Object.create(null);
+var recordStorageMessage='保存记录无法读取，已停止写入以保护原数据。';
 
 function autoGrowQimenAiTextarea(el){
   if(!el)return;
@@ -320,16 +327,16 @@ function toggleQimenBaziForm(){
   var form=document.getElementById('qimenBaziForm');
   if(!form)return;
   form.hidden=!form.hidden;
-  if(!form.hidden){document.getElementById('qimenBaziLongitude').value=Number(getLongitude()).toFixed(4);document.getElementById('qimenBaziTrueSolar').checked=document.getElementById('useTrueSolar').checked;}
+  if(!form.hidden)renderQimenLocations('birth');
 }
 function createQimenBaziProfile(event){
   event.preventDefault();
   if(typeof BaziEngine==='undefined'||!BaziEngine.createBaziProfile){alert('八字计算接口未加载，请刷新页面后重试。');return}
-  var date=document.getElementById('qimenBaziDate').value,time=document.getElementById('qimenBaziTime').value,match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(date),clock=/^(\d{2}):(\d{2})$/.exec(time),lng=Number(document.getElementById('qimenBaziLongitude').value);
-  if(!match||!clock||!Number.isFinite(lng)||lng<-180||lng>180){alert('请填写有效的出生日期、时间和经度。');return}
-  var bazi=BaziEngine.createBaziProfile({person:document.getElementById('qimenBaziName').value.trim(),gender:document.getElementById('qimenBaziGender').value,input:{year:Number(match[1]),month:Number(match[2]),day:Number(match[3]),hour:Number(clock[1]),minute:Number(clock[2])},location:{name:document.getElementById('qimenBaziLocation').value.trim()||'自定义地点',lng:lng,lat:null},useTrueSolar:document.getElementById('qimenBaziTrueSolar').checked});
+  var date=document.getElementById('qimenBaziDate').value,time=document.getElementById('qimenBaziTime').value,match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(date),clock=/^(\d{2}):(\d{2})$/.exec(time);
+  if(!match||!clock||(document.getElementById('qimenBaziTrueSolar').checked&&!qimenBirthLocation)){alert('请填写有效的出生日期、时间；真太阳时须选择出生地。');return}
+  var bazi=BaziEngine.createBaziProfile({person:document.getElementById('qimenBaziName').value.trim(),gender:document.getElementById('qimenBaziGender').value,input:{year:Number(match[1]),month:Number(match[2]),day:Number(match[3]),hour:Number(clock[1]),minute:Number(clock[2])},location:qimenBirthLocation,useTrueSolar:document.getElementById('qimenBaziTrueSolar').checked});
   var records=getQimenBaziRecords(),now=Date.now(),record={id:now.toString(36),name:(bazi.person||'未命名')+' '+bazi.pillars.day+'日',createdAt:new Date(now).toLocaleString(),createdTs:now,updatedTs:now,bazi:bazi,aiHistory:[],luckSelection:null};
-  records.unshift(record);setRecords(BAZI_RECORDS_STORAGE,records);
+  records.unshift(record);if(!setRecords(BAZI_RECORDS_STORAGE,records))return;
   qimenLinkedBazi=qimenBaziSnapshot(record);
   document.getElementById('qimenBaziForm').hidden=true;
   renderQimenBaziLink();markPlateDirty();
@@ -413,6 +420,7 @@ function currentPlateInputFingerprint(){
     person:getPersonName(),
     trueSolar:document.getElementById('useTrueSolar').checked,
     longitude:Number(getLongitude()).toFixed(5),
+    location:qimenLocation,
     linkedBazi:qimenLinkedBazi?cloneQimenBazi(qimenLinkedBazi):null
   });
 }
@@ -513,31 +521,48 @@ function refreshSolarPreview(){
   el.textContent='校正 '+formatOffset(pp.correction)+'，起盘用 '+pad(pp.used.hour)+':'+pad(pp.used.minute);
 }
 function loadSolarSettings(){
-  var lon=localStorage.getItem(LONGITUDE_STORAGE)||'103.99505';
+  var savedLon=localStorage.getItem(LONGITUDE_STORAGE),lon=savedLon||'103.99505';
   document.getElementById('useTrueSolar').checked=localStorage.getItem(TRUE_SOLAR_STORAGE)==='1';
   document.getElementById('longitude').value=lon;
+  try{qimenLocation=JSON.parse(localStorage.getItem(LOCATION_STORAGE)||'null')}catch(e){qimenLocation=null}
+  if(!qimenLocation||Number(qimenLocation.lng)!==Number(lon))qimenLocation={name:savedLon?'已保存地点':'云南省 曲靖市 师宗县（默认）',lng:Number(lon),lat:null};
+  document.getElementById('eventLocationDisplay').textContent=qimenLocation.name;
 }
 function saveSolarSettings(){
   localStorage.setItem(TRUE_SOLAR_STORAGE,document.getElementById('useTrueSolar').checked?'1':'0');
   localStorage.setItem(LONGITUDE_STORAGE,String(getLongitude()));
+  if(qimenLocation)localStorage.setItem(LOCATION_STORAGE,JSON.stringify(qimenLocation));
 }
-function applyLocationPreset(v){
-  if(v){
-    document.getElementById('longitude').value=v;
-    saveSolarSettings();
-  }
-  refreshSolarPreview();
-  markPlateDirty();
+function toggleQimenLocationPanel(){
+  var panel=document.getElementById('eventLocationPanel');panel.hidden=!panel.hidden;
+  document.getElementById('eventLocationDisplay').setAttribute('aria-expanded',String(!panel.hidden));
+  if(!panel.hidden){renderQimenLocations();document.getElementById('eventLocationSearch').focus()}
+}
+function renderQimenLocations(kind){
+  var birth=kind==='birth',prefix=birth?'qimenBaziLocation':'eventLocation';
+  var matches=ChinaLocations.search(document.getElementById(prefix+'Search').value);
+  document.getElementById(prefix+'List').innerHTML=matches.map(function(loc){
+    return '<button type="button" onclick="selectQimenLocation('+ChinaLocations.locations.indexOf(loc)+','+birth+')">'+esc(loc.name)+'</button>';
+  }).join('')||'<span>没有匹配地点，请换省、市或县区名搜索。</span>';
+}
+function selectQimenLocation(index,kind){
+  var loc=ChinaLocations.locations[index];if(!loc)return;
+  if(kind===true){qimenBirthLocation=loc;document.getElementById('qimenBaziLocationDisplay').textContent=loc.name;document.getElementById('qimenBaziLocationList').innerHTML='';return}
+  setQimenLocation(loc);
+}
+function setQimenLocation(loc){
+  qimenLocation=loc;document.getElementById('longitude').value=loc.lng;
+  document.getElementById('eventLocationDisplay').textContent=loc.name;
+  document.getElementById('eventLocationPanel').hidden=true;
+  document.getElementById('eventLocationDisplay').setAttribute('aria-expanded','false');
+  saveSolarSettings();refreshSolarPreview();markPlateDirty();
 }
 function useBrowserLocation(){
   if(!navigator.geolocation){alert('当前浏览器不支持定位。');return}
   navigator.geolocation.getCurrentPosition(function(pos){
-    document.getElementById('longitude').value=pos.coords.longitude.toFixed(5);
-    document.getElementById('locationPreset').value='';
-    saveSolarSettings();
-    refreshSolarPreview();
-    markPlateDirty();
-  },function(err){alert('定位失败：'+err.message+'。也可以手动填写经度。')},{enableHighAccuracy:true,timeout:8000,maximumAge:600000});
+    var nearby=ChinaLocations.nearest(pos.coords.longitude,pos.coords.latitude);
+    setQimenLocation({name:nearby?nearby.name+'（当前位置）':'当前位置',lng:pos.coords.longitude,lat:pos.coords.latitude});
+  },function(err){alert('定位失败：'+err.message+'。请搜索并选择事情发生地或此刻所在地。')},{enableHighAccuracy:true,timeout:8000,maximumAge:600000});
 }
 
 function esc(v){
@@ -610,6 +635,7 @@ function renderStatus(data,note){
   if(data.trueSolar&&data.trueSolar.enabled)chips.splice(1,0,'真太阳 <strong>'+formatOffset(data.trueSolar.correction)+'</strong>');
   if(selectedPalace)chips.push('当前 <strong>第'+selectedPalace+'宫</strong>');
   el.innerHTML=chips.map(function(x){return '<span class="status-chip">'+x+'</span>'}).join('')+(note?'<span class="status-chip warn">'+esc(note)+'</span>':'');
+  if(Object.keys(recordStorageErrors).length)el.innerHTML+='<span class="status-chip warn">'+recordStorageMessage+'</span>';
 }
 function getQuestionType(){
   return (document.getElementById('questionType')&&document.getElementById('questionType').value)||'general';
@@ -759,7 +785,7 @@ function doPaiPan(opts){
   var pt=getPaiPanTime(t);
   plateData=paiPan(pt.used.year,pt.used.month,pt.used.day,pt.used.hour,pt.used.minute);
   plateData.inputTime=pt.input;
-  plateData.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction};
+  plateData.trueSolar={enabled:pt.enabled,longitude:pt.longitude,correction:pt.correction,location:qimenLocation};
   plateData.personName=getPersonName();
   plateData.gender=document.getElementById('gender').value;
   plateData.currentCal=currentCal;
@@ -1159,11 +1185,22 @@ function makeRecordName(data,question){
   if(q.length>24)q=q.slice(0,24)+'...';
   return (person?person+' ':'')+'['+tag+'] '+(q||t.year+'-'+pad(t.month)+'-'+pad(t.day)+' '+data.ganzhi.day+'日 '+data.ganzhi.hour+'时');
 }
+function showRecordStorageError(){
+  var el=document.getElementById('statusStrip');
+  if(el)el.textContent=recordStorageMessage;
+}
 function getRecords(key){
-  try{return JSON.parse(localStorage.getItem(key)||'[]')}catch(e){return []}
+  try{
+    var records=JSON.parse(localStorage.getItem(key)||'[]');
+    if(!Array.isArray(records))throw new Error('记录根节点不是数组');
+    return records;
+  }catch(e){recordStorageErrors[key]=true;showRecordStorageError();return []}
 }
 function setRecords(key,items){
+  getRecords(key);
+  if(recordStorageErrors[key]){showRecordStorageError();return false}
   localStorage.setItem(key,JSON.stringify(items));
+  return true;
 }
 function currentQuestionText(){
   var el=document.getElementById('question');
@@ -1190,7 +1227,7 @@ function addAutoHistory(){
     createdAt:new Date().toISOString()
   });
   if(hist.length>60)hist=hist.slice(hist.length-60);
-  setRecords(AUTO_HISTORY_STORAGE,hist);
+  if(!setRecords(AUTO_HISTORY_STORAGE,hist))return;
   currentAutoHistoryId=id;
   currentSavedHistoryId=null;
   renderAutoHistory();
@@ -1241,7 +1278,7 @@ function saveToHistory(){
     aiHistory:JSON.parse(JSON.stringify(aiHistory)),
     createdAt:new Date().toISOString()
   });
-  setRecords(SAVED_HISTORY_STORAGE,hist);
+  if(!setRecords(SAVED_HISTORY_STORAGE,hist))return;
   renderHistory();
   setSideTab('saved');
 }
@@ -1272,7 +1309,9 @@ function loadHistory(id,kind){
   setControlsFromTime(plateData.inputTime||plateData.solarTime);
   var ts=plateData.trueSolar||{enabled:false,longitude:getLongitude()};
   document.getElementById('useTrueSolar').checked=!!ts.enabled;
-  document.getElementById('longitude').value=ts.longitude||getLongitude();
+  document.getElementById('longitude').value=ts.longitude==null?getLongitude():ts.longitude;
+  qimenLocation=ts.location||{name:'已保存地点',lng:getLongitude(),lat:null};
+  document.getElementById('eventLocationDisplay').textContent=qimenLocation.name;
   saveSolarSettings();
   refreshSolarPreview();
   renderQimenBaziLink();
@@ -1316,7 +1355,7 @@ function renderRecordList(kind){
   var hist=getRecords(key);
   if(!list)return;
   if(!hist.length){
-    list.innerHTML='<div style="font-size:11px;color:#999;padding:10px;text-align:center">'+(kind==='auto'?'暂无起盘记录':'暂无保存起盘')+'</div>';
+    list.innerHTML='<div style="font-size:11px;color:#999;padding:10px;text-align:center">'+(recordStorageErrors[key]?recordStorageMessage:(kind==='auto'?'暂无起盘记录':'暂无保存起盘'))+'</div>';
     return;
   }
   var kw=(search&&search.value||'').trim().toLowerCase();

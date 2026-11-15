@@ -284,12 +284,10 @@ assert(html.includes('.core-cards[hidden]{display:none!important}'), 'the struct
   '云南省 曲靖市 麒麟区',
   '云南省 曲靖市 师宗县',
   '云南省 曲靖市 罗平县',
-].forEach((name) => assert(html.includes(name), `missing preset location ${name}`));
+].forEach((name) => assert(require('./china-locations.js').locations.some(location => location.name === name), `missing local location ${name}`));
 
-assert(!html.includes("preset:true,name:'云南省 红河州 泸西县'"), '泸西县 should not be a default preset');
-assert(!html.includes("preset:true,name:'云南省 曲靖市 陆良县'"), '陆良县 should not be a default preset');
-assert(html.includes('上海市'), 'location search should include Shanghai');
-assert(html.includes('id="customLongitude"'), 'missing custom longitude fallback');
+assert(require('./china-locations.js').search('上海').length > 0, 'location search should include Shanghai');
+assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261115.1'), 'birth place must use shared offline search');
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
@@ -369,6 +367,7 @@ const scriptContext = {
 };
 vm.createContext(scriptContext);
 vm.runInContext(qimen, scriptContext, { filename: 'qimen.js' });
+vm.runInContext(fs.readFileSync('china-locations.js', 'utf8'), scriptContext, { filename: 'china-locations.js' });
 vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__patternReview={flow:interactionFlowAnalysis,context:buildTemporalPatternContext,finalize:finalizePatternLevel,rooted:godRooted,qualify:qualifyComboFlows};root.BaziEngine=api;'), scriptContext, { filename: 'bazi-engine.js' });
 inlineScripts.forEach((script, index) => vm.runInContext(script, scriptContext, { filename: `bazi-inline-${index}.js` }));
 for(const [itemLeft,expected] of [[0,0],[360,260],[840,600]]){
