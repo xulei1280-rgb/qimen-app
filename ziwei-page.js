@@ -1511,7 +1511,13 @@
   elements.chartViewport.addEventListener("touchend", endChartPinch, { passive: true });
   elements.chartViewport.addEventListener("touchcancel", endChartPinch, { passive: true });
   if (window.matchMedia) window.matchMedia("(max-width: 760px)").addEventListener("change", scheduleChartReset);
-  window.addEventListener("resize", scheduleChartReset);
+  let lastChartWidth = window.innerWidth;
+  window.addEventListener("resize", () => {
+    if (window.innerWidth !== lastChartWidth) {
+      lastChartWidth = window.innerWidth;
+      scheduleChartReset();
+    }
+  });
   window.addEventListener("orientationchange", scheduleChartReset);
   elements.birthForm.querySelectorAll(".chart-input").forEach((input) => input.addEventListener("input", markBirthDirty));
   elements.birthForm.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener("change", markBirthDirty));
@@ -1626,6 +1632,7 @@
     readDisplayPreference,
     writeDisplayPreference,
     applyDensity,
+    get chartZoom() { return state.chartZoom; },
     chartFitZoom,
     normalizeChartZoom,
     applyChartZoom,

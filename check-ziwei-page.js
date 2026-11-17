@@ -254,6 +254,8 @@ function createPageSandbox(pageSource, initialStorage = []) {
     body: element(),
     documentElement: element(),
   };
+  const windowListeners = new Map();
+  const animationFrames = [];
   const sandbox = {
     window: null,
     document,
@@ -273,7 +275,15 @@ function createPageSandbox(pageSource, initialStorage = []) {
     },
     crypto: { randomUUID() { return "00000000-0000-4000-8000-000000000000"; } },
     confirm() { return true; },
-    addEventListener() {},
+    innerWidth: 390,
+    innerHeight: 844,
+    addEventListener(type, callback) {
+      if (!windowListeners.has(type)) windowListeners.set(type, []);
+      windowListeners.get(type).push(callback);
+    },
+    dispatchEvent(event) { (windowListeners.get(event.type) || []).forEach((callback) => callback(event)); },
+    requestAnimationFrame(callback) { animationFrames.push(callback); return animationFrames.length; },
+    flushAnimationFrames() { animationFrames.splice(0).forEach((callback) => callback()); },
     matchMedia() { return { matches: false, addEventListener() {} }; },
     fetch() { throw new Error("checker must not call network"); },
     ChinaLocations: require('./china-locations.js'),
@@ -289,8 +299,16 @@ function createPageSandbox(pageSource, initialStorage = []) {
 function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
+  const premiumCss = fs.readFileSync(path.join(ROOT, "ziwei-premium.css"), "utf8");
+  const centerRule = html.match(/\.center-content\s*\{([^}]*)\}/)?.[1];
+  assert(centerRule && !/min-height:\s*100%/.test(centerRule), "中心格仍存在循环百分比最小高度");
+  assert(html.includes('ziwei-premium.css?v=20261117.3'), "紫微样式缺少发布缓存版本");
+  const mobileClear = premiumCss.slice(premiumCss.indexOf('@media (max-width:760px)'));
+  assert(/html\[data-density="clear"\] \.zw \.chart-grid\{--palace-row:112px/.test(mobileClear), "手机简洁宫格高度错误");
+  assert(mobileClear.includes('.palace-layer-support .minor-stars-key{display:flex;flex-wrap:wrap;gap:0 .25rem;max-height:2.7em;overflow:hidden}'), "手机简洁关键辅煞显示规则缺失");
+  assert(mobileClear.includes('.palace-layer-major .star-badge[class*="brightness-"]{display:inline;') && mobileClear.includes('font-size:9px;line-height:1;vertical-align:super;'), "手机简洁主星亮度小字缺失");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261117.4"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261117.5"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
@@ -348,6 +366,20 @@ function runPageContracts() {
   assert(pageTest.chartFitZoom() === 0.455 && pageTest.normalizeChartZoom(0.1) === 0.455 && pageTest.normalizeChartZoom(0.455) === 0.455, "手机整盘适屏下限不精确");
   pageTest.applyChartZoom(1.5);
   assert(sandbox.document.getElementById("chartViewport").style.height === "618px", "放大未锁定适屏高度");
+  sandbox.innerHeight = 740;
+  sandbox.dispatchEvent({ type: "resize" });
+  sandbox.flushAnimationFrames();
+  assert(pageTest.chartZoom === 1.5 && sandbox.document.getElementById("chartGrid").style.zoom === "1.5", "仅高度变化不应重置放大");
+  assert(sandbox.document.getElementById("chartViewport").style.height === "618px", "仅高度变化不应清除锁定高度");
+  sandbox.innerWidth = 360;
+  sandbox.document.getElementById("chartViewport").clientWidth = 316;
+  sandbox.dispatchEvent({ type: "resize" });
+  sandbox.flushAnimationFrames();
+  assert(pageTest.chartZoom === pageTest.chartFitZoom() && Number(sandbox.document.getElementById("chartGrid").style.zoom) === pageTest.chartFitZoom(), "宽度变化未恢复适屏");
+  pageTest.applyChartZoom(1.5);
+  sandbox.dispatchEvent({ type: "resize" });
+  sandbox.flushAnimationFrames();
+  assert(pageTest.chartZoom === 1.5, "宽度基准未更新，重复 resize 重置了放大");
   pageTest.applyDensity("clear", false);
   assert(sandbox.document.getElementById("chartGrid").style.zoom === "" && sandbox.document.getElementById("chartViewport").style.height === "", "详细 150% 切简洁未清除缩放或高度");
   assert(pageTest.touchDistance([{ clientX: 0, clientY: 0 }, { clientX: 3, clientY: 4 }]) === 5, "命盘双指距离计算错误");
