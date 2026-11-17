@@ -323,12 +323,23 @@
     doc.body.appendChild(scrim);
     doc.body.appendChild(pop);
     const dlg = doc.createElement('div'); dlg.id = 'bzDict'; dlg.className = 'bz-dict'; dlg.hidden = true;
-    dlg.innerHTML = `<div class="bz-dict-scrim" data-bz-dict-close></div><section class="bz-dict-panel" role="dialog" aria-modal="true" aria-labelledby="bzDictTitle"><header class="bz-dict-head"><div><small>看不懂就查这里</small><h2 id="bzDictTitle">新手词典</h2></div><button type="button" class="bz-pop-x" data-bz-dict-close aria-label="关闭词典">×</button></header><label class="bz-dict-search">搜索术语<input id="bzDictSearch" type="search" placeholder="正官、伤官格、天乙贵人……" autocomplete="off"></label><nav class="bz-dict-groups" aria-label="术语分组">${GROUPS.map(g => `<button type="button" data-bz-group="${g}">${g}</button>`).join('')}</nav><div class="bz-dict-body" id="bzDictBody"></div></section>`;
+    dlg.innerHTML = `<div class="bz-dict-scrim" data-bz-dict-close></div>
+      <section class="bz-dict-panel" role="dialog" aria-modal="true" aria-labelledby="bzDictTitle">
+        <span class="bz-dict-grip" aria-hidden="true"></span>
+        <header class="bz-dict-head"><div><small>看不懂就查这里</small><h2 id="bzDictTitle">新手词典</h2></div>
+          <button type="button" class="bz-pop-x bz-dict-x" data-bz-dict-close aria-label="关闭词典">×</button></header>
+        <div class="bz-dict-tools">
+          <label class="bz-dict-search"><svg class="bz-lens" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.6" cy="8.6" r="5.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="bz-sr sr-only">搜索术语</span><input id="bzDictSearch" type="search" placeholder="正官、伤官格、天乙贵人……" autocomplete="off"><button type="button" class="bz-dict-clear" aria-label="清空搜索" hidden>×</button></label>
+          <p class="bz-dict-count" aria-live="polite"></p>
+        </div>
+        <div class="bz-dict-main"><nav class="bz-dict-groups" aria-label="术语分组"></nav><div class="bz-dict-body" id="bzDictBody"></div></div>
+        <p class="bz-dict-foot">${NOTE}</p>
+      </section>`;
     doc.body.appendChild(dlg);
     const dictSearch = dlg.querySelector('input'), dictBody = dlg.querySelector('#bzDictBody');
     let trigger = null, dictReturn = null;
     const sub = doc.querySelector('.page-intro .sub');
-    if (sub) sub.insertAdjacentHTML('afterend', '<button type="button" id="bzDictBtn" class="bz-dict-btn" data-bz-dict="">新手词典</button>');
+    if (sub) sub.insertAdjacentHTML('afterend', `<button type="button" id="bzDictBtn" class="bz-dict-btn" data-bz-dict=""><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 5.2C8.4 4 6.3 3.6 3.5 3.8v11.4c2.8-.2 4.9.2 6.5 1.4m0-11.4c1.6-1.2 3.7-1.6 6.5-1.4v11.4c-2.8-.2-4.9.2-6.5 1.4m0-11.4v11.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span>新手词典</span><i>${TERMS.length} 条</i></button>`);
     function close(restore = false) {
       pop.hidden = scrim.hidden = true; trigger?.classList.remove('bz-term-on');
       if (restore && trigger?.isConnected) trigger.focus({ preventScroll: true });
@@ -357,19 +368,62 @@
       dlg.hidden = true; doc.documentElement.classList.remove('bz-dict-lock');
       if (restore && dictReturn?.isConnected) dictReturn.focus({ preventScroll: true });
     }
+    const dictGroups = dlg.querySelector('.bz-dict-groups');
+    const dictCount = dlg.querySelector('.bz-dict-count'), dictClear = dlg.querySelector('.bz-dict-clear');
+    let dictGroup = '', dictOpen = null;
+    const highlight = (value, query) => query ? String(value).split(query).map(esc).join(`<mark>${esc(query)}</mark>`) : esc(value);
     function renderDict() {
-      const list = search(dictSearch.value);
-      dictBody.innerHTML = list.length ? GROUPS.map(g => {
-        const terms = list.filter(t => t.group === g);
-        return terms.length ? `<section class="bz-dict-sec" data-group="${g}"><h3>${g}</h3>${terms.map(t => `<article class="bz-dict-item" data-term="${esc(t.key)}"><h4>${esc(t.key)}</h4><p>${esc(t.text)}</p>${mineHtml(chartLine(t.key, view))}<p class="bz-pop-note">${NOTE}</p>${view.snapshot ? `<button type="button" data-bz-ask="${esc(t.key)}">问 AI 详细讲讲</button>` : ''}</article>`).join('')}</section>` : '';
-      }).join('') : '<p class="bz-dict-empty">没有找到，换个词试试。</p>';
+      const query = dictSearch.value.trim(), list = search(query);
+      dictClear.hidden = !dictSearch.value;
+      dictCount.innerHTML = `${query ? '找到' : '共'} <b>${list.length}</b> 条`;
+      const tab = (group, count) => `<button type="button" data-bz-group="${esc(group)}"${dictGroup === group ? ' aria-current="true"' : ''}${count ? '' : ' aria-disabled="true"'}><span>${esc(group || '全部')}</span><i>${count}</i></button>`;
+      dictGroups.innerHTML = tab('', list.length) + GROUPS.map(g => tab(g, list.filter(t => t.group === g).length)).join('');
+      const withAi = !!view.snapshot;
+      if (!list.length) {
+        dictBody.innerHTML = '<div class="bz-dict-empty"><p class="bz-dict-empty-t">没有找到，换个词试试。</p><p class="bz-dict-empty-s">可以试试：<button type="button" class="bz-dict-try" data-bz-try="正官">正官</button><button type="button" class="bz-dict-try" data-bz-try="伤官格">伤官格</button><button type="button" class="bz-dict-try" data-bz-try="天乙贵人">天乙贵人</button></p></div>';
+        return;
+      }
+      dictBody.innerHTML = (dictGroup ? [dictGroup] : GROUPS).map(g => {
+        const items = list.filter(t => t.group === g);
+        if (!items.length) return '';
+        return `<section class="bz-dict-sec" data-group="${esc(g)}"><h3><span>${esc(g)}</span><i>${items.length}</i></h3>${items.map(t => {
+          const expanded = dictOpen === t.key;
+          const line = expanded ? chartLine(t.key, view) : '';
+          return `<article class="bz-dict-item${expanded ? ' is-open' : ''}" data-term="${esc(t.key)}"><button type="button" class="bz-dict-row" aria-expanded="${expanded}"><span class="bz-dict-name">${highlight(t.key, query)}</span><span class="bz-dict-sum">${highlight(t.text, query)}</span><svg class="bz-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${expanded ? `<div class="bz-dict-detail">${line ? mineHtml(line) : ''}${withAi ? `<button type="button" class="bz-dict-ask" data-bz-ask="${esc(t.key)}">问 AI 详细讲讲</button>` : ''}</div>` : ''}</article>`;
+        }).join('')}</section>`;
+      }).join('');
+    }
+    function filterDict() {
+      dictGroup = ''; dictOpen = null; renderDict(); dictBody.scrollTop = 0;
+    }
+    function dictClick(event) {
+      const t = event.target, row = t.closest('.bz-dict-row');
+      if (row) {
+        const key = row.closest('[data-term]').dataset.term, top = dictBody.scrollTop;
+        dictOpen = dictOpen === key ? null : key; renderDict(); dictBody.scrollTop = top;
+        [...dictBody.querySelectorAll('[data-term]')].find(n => n.dataset.term === key)?.querySelector('button').focus({ preventScroll: true });
+        return;
+      }
+      const group = t.closest('[data-bz-group]');
+      if (group) {
+        if (group.hasAttribute('aria-disabled')) return;
+        dictGroup = group.getAttribute('data-bz-group'); dictOpen = null; renderDict(); dictBody.scrollTop = 0;
+        [...dictGroups.querySelectorAll('button')].find(n => n.getAttribute('data-bz-group') === dictGroup)?.focus({ preventScroll: true });
+        return;
+      }
+      const example = t.closest('[data-bz-try]');
+      if (example || t.closest('.bz-dict-clear')) {
+        dictSearch.value = example ? example.getAttribute('data-bz-try') : '';
+        filterDict(); dictSearch.focus({ preventScroll: true });
+      }
     }
     function openDict(key) {
       dictReturn = trigger || doc.activeElement; close(); root.closeAllHelpPopovers?.();
-      if (key) dictSearch.value = '';
+      dictSearch.value = ''; dictGroup = ''; dictOpen = key || null;
       renderDict(); dlg.hidden = false; doc.documentElement.classList.add('bz-dict-lock');
       const target = key && [...dictBody.querySelectorAll('[data-term]')].find(n => n.dataset.term === key);
-      if (target) { target.tabIndex = -1; target.scrollIntoView({ block: 'center' }); target.focus({ preventScroll: true }); }
+      dictBody.scrollTop = 0;
+      if (target) { dictBody.scrollTop = target.offsetTop - dictBody.clientHeight / 4; target.querySelector('button').focus({ preventScroll: true }); }
       else dictSearch.focus({ preventScroll: true });
     }
     function ask(key) {
@@ -417,15 +471,14 @@
     }
     const observer = new root.MutationObserver(schedule);
     ['resultArea', 'entryPanel'].forEach(id => { const el = doc.getElementById(id); if (el) observer.observe(el, { childList: true, subtree: true, characterData: true }); });
-    dictSearch.addEventListener('input', renderDict);
+    dictSearch.addEventListener('input', filterDict);
+    dlg.addEventListener('click', dictClick);
     doc.addEventListener('click', event => {
       const t = event.target;
       const askBtn = t.closest('[data-bz-ask]'); if (askBtn) { event.preventDefault(); ask(askBtn.dataset.bzAsk); return; }
       const dictBtn = t.closest('[data-bz-dict]'); if (dictBtn) { event.preventDefault(); openDict(dictBtn.dataset.bzDict); return; }
       if (t.closest('[data-bz-dict-close]')) { closeDict(); return; }
       if (t.closest('[data-bz-close]')) { close(true); return; }
-      const group = t.closest('[data-bz-group]');
-      if (group) { const sec = [...dictBody.querySelectorAll('[data-group]')].find(n => n.dataset.group === group.dataset.bzGroup); sec?.scrollIntoView({ block: 'start', behavior: motionOK() ? 'smooth' : 'auto' }); return; }
       if (t.closest('.explain-help-button')) { close(); return; }
       const term = t.closest('[data-bz-term]');
       if (term) { event.preventDefault(); event.stopPropagation(); if (!pop.hidden && trigger === term) close(); else open(term.dataset.bzTerm, term); return; }

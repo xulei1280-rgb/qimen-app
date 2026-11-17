@@ -522,40 +522,84 @@
     dlg.hidden = true;
     dlg.innerHTML = `<div class="zw-dict-scrim" data-zw-dict-close></div>
       <section class="zw-dict-panel" role="dialog" aria-modal="true" aria-labelledby="zwDictTitle">
+        <span class="zw-dict-grip" aria-hidden="true"></span>
         <header class="zw-dict-head"><div><small>看不懂就查这里</small><h2 id="zwDictTitle">新手词典</h2></div>
-          <button type="button" class="zw-pop-x" data-zw-dict-close aria-label="关闭词典">×</button></header>
-        <label class="zw-dict-search"><span class="sr-only">搜索术语</span><input id="zwDictSearch" type="search" placeholder="搜索：化忌、命宫、天机……" autocomplete="off"></label>
-        <nav class="zw-dict-groups" aria-label="分组">${GROUPS.map((g) => `<button type="button" data-zw-dict-group="${g}">${g}</button>`).join("")}</nav>
-        <div class="zw-dict-body" id="zwDictBody"></div>
+          <button type="button" class="zw-pop-x zw-dict-x" data-zw-dict-close aria-label="关闭词典">×</button></header>
+        <div class="zw-dict-tools">
+          <label class="zw-dict-search"><svg class="zw-lens" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.6" cy="8.6" r="5.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="sr-only">搜索术语</span><input id="zwDictSearch" type="search" placeholder="搜索：化忌、命宫、天机……" autocomplete="off"><button type="button" class="zw-dict-clear" aria-label="清空搜索" hidden>×</button></label>
+          <p class="zw-dict-count" aria-live="polite"></p>
+        </div>
+        <div class="zw-dict-main"><nav class="zw-dict-groups" aria-label="术语分组"></nav><div class="zw-dict-body" id="zwDictBody"></div></div>
+        <p class="zw-dict-foot">${MEANING_NOTE}</p>
       </section>`;
     doc.body.appendChild(dlg);
     const dictBody = dlg.querySelector("#zwDictBody");
     const dictSearch = dlg.querySelector("#zwDictSearch");
     let dictReturn = null;
+    const dictGroups = dlg.querySelector('.zw-dict-groups');
+    const dictCount = dlg.querySelector('.zw-dict-count'), dictClear = dlg.querySelector('.zw-dict-clear');
+    let dictGroup = '', dictOpen = null;
+    const highlight = (value, query) => query ? String(value).split(query).map(esc).join(`<mark>${esc(query)}</mark>`) : esc(value);
     function renderDict() {
-      const list = search(dictSearch.value);
-      if (!list.length) { dictBody.innerHTML = '<p class="zw-dict-empty">没有找到，换个词试试。</p>'; return; }
-      const withAi = Boolean(view.snapshot && $("aiQuestion"));
-      dictBody.innerHTML = (view.snapshot ? `<p class="zw-pop-note zw-dict-note">“在你的盘上”的白话句：${MEANING_NOTE}。</p>` : "") + GROUPS.map((g) => {
-        const items = list.filter((t) => t.group === g);
-        if (!items.length) return "";
-        return `<section class="zw-dict-sec" data-group="${g}"><h3>${g}</h3>${items.map((t) => {
-          const line = chartLine(t.key, ctx());
-          const alias = t.aliases.filter((a) => a.length > 1 && !a.includes("·")).slice(0, 3);
-          return `<article class="zw-dict-item" id="zwDict-${encodeURIComponent(t.key)}" data-term="${esc(t.key)}"><h4>${esc(t.key)}${alias.length ? `<small>${esc(alias.join(" / "))}</small>` : ""}</h4><p>${esc(t.text)}</p>${line ? mineHtml(line) : ""}${withAi && line ? `<button type="button" class="zw-dict-ask" data-zw-ask="${esc(t.key)}">问 AI</button>` : ""}</article>`;
-        }).join("")}</section>`;
-      }).join("");
+      const query = dictSearch.value.trim(), list = search(query);
+      dictClear.hidden = !dictSearch.value;
+      dictCount.innerHTML = `${query ? '找到' : '共'} <b>${list.length}</b> 条`;
+      const tab = (group, count) => `<button type="button" data-zw-dict-group="${esc(group)}"${dictGroup === group ? ' aria-current="true"' : ''}${count ? '' : ' aria-disabled="true"'}><span>${esc(group || '全部')}</span><i>${count}</i></button>`;
+      dictGroups.innerHTML = tab('', list.length) + GROUPS.map(g => tab(g, list.filter(t => t.group === g).length)).join('');
+      const foot = dlg.querySelector('.zw-dict-foot');
+      foot.classList.toggle('zw-dict-note', !!view.snapshot);
+      foot.textContent = view.snapshot ? `“在你的盘上”的白话句：${MEANING_NOTE}。` : MEANING_NOTE;
+      const withAi = Boolean(view.snapshot && $('aiQuestion'));
+      if (!list.length) {
+        dictBody.innerHTML = '<div class="zw-dict-empty"><p class="zw-dict-empty-t">没有找到，换个词试试。</p><p class="zw-dict-empty-s">可以试试：<button type="button" class="zw-dict-try" data-zw-try="化忌">化忌</button><button type="button" class="zw-dict-try" data-zw-try="命宫">命宫</button><button type="button" class="zw-dict-try" data-zw-try="天机">天机</button></p></div>';
+        return;
+      }
+      dictBody.innerHTML = (dictGroup ? [dictGroup] : GROUPS).map(g => {
+        const items = list.filter(t => t.group === g);
+        if (!items.length) return '';
+        return `<section class="zw-dict-sec" data-group="${esc(g)}"><h3><span>${esc(g)}</span><i>${items.length}</i></h3>${items.map(t => {
+          const expanded = dictOpen === t.key;
+          const line = expanded ? chartLine(t.key, ctx()) : '';
+          const aliases = t.aliases.filter(a => a.length > 1 && !a.includes('·')).slice(0, 3);
+          return `<article class="zw-dict-item${expanded ? ' is-open' : ''}" id="zwDict-${encodeURIComponent(t.key)}" data-term="${esc(t.key)}"><button type="button" class="zw-dict-row" aria-expanded="${expanded}"><span class="zw-dict-name">${highlight(t.key, query)}${aliases.length ? `<small>${highlight(aliases.join(" / "), query)}</small>` : ""}</span><span class="zw-dict-sum">${highlight(t.text, query)}</span><svg class="zw-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>${expanded ? `<div class="zw-dict-detail">${line ? mineHtml(line) : ''}${withAi && line ? `<button type="button" class="zw-dict-ask" data-zw-ask="${esc(t.key)}">问 AI</button>` : ''}</div>` : ''}</article>`;
+        }).join('')}</section>`;
+      }).join('');
+    }
+    function filterDict() {
+      dictGroup = ''; dictOpen = null; renderDict(); dictBody.scrollTop = 0;
+    }
+    function dictClick(event) {
+      const t = event.target, row = t.closest('.zw-dict-row');
+      if (row) {
+        const key = row.closest('[data-term]').dataset.term, top = dictBody.scrollTop;
+        dictOpen = dictOpen === key ? null : key; renderDict(); dictBody.scrollTop = top;
+        [...dictBody.querySelectorAll('[data-term]')].find(n => n.dataset.term === key)?.querySelector('button').focus({ preventScroll: true });
+        return;
+      }
+      const group = t.closest('[data-zw-dict-group]');
+      if (group) {
+        if (group.hasAttribute('aria-disabled')) return;
+        dictGroup = group.getAttribute('data-zw-dict-group'); dictOpen = null; renderDict(); dictBody.scrollTop = 0;
+        [...dictGroups.querySelectorAll('button')].find(n => n.getAttribute('data-zw-dict-group') === dictGroup)?.focus({ preventScroll: true });
+        return;
+      }
+      const example = t.closest('[data-zw-try]');
+      if (example || t.closest('.zw-dict-clear')) {
+        dictSearch.value = example ? example.getAttribute('data-zw-try') : '';
+        filterDict(); dictSearch.focus({ preventScroll: true });
+      }
     }
     function openDict(focusKey) {
+      dictReturn = trigger || doc.activeElement;
       close(false);
-      dictReturn = doc.activeElement;
-      if (focusKey) dictSearch.value = "";
+      dictSearch.value = ""; dictGroup = ""; dictOpen = focusKey || null;
       renderDict();
       dlg.hidden = false;
       html.classList.add("zw-dict-lock");
       if (motionOK()) { dlg.classList.remove("zw-dict-in"); void dlg.offsetWidth; dlg.classList.add("zw-dict-in"); }
       const target = focusKey && dictBody.querySelector(`[data-term="${root.CSS && root.CSS.escape ? root.CSS.escape(focusKey) : focusKey}"]`);
-      if (target) { target.classList.add("zw-dict-hit"); target.scrollIntoView({ block: "center" }); target.setAttribute("tabindex", "-1"); target.focus({ preventScroll: true }); }
+      dictBody.scrollTop = 0;
+      if (target) { if (motionOK()) target.classList.add("zw-dict-hit"); dictBody.scrollTop = target.offsetTop - dictBody.clientHeight / 4; target.querySelector("button").focus({ preventScroll: true }); }
       else dictSearch.focus({ preventScroll: true });
     }
     function closeDict(restore) {
@@ -564,7 +608,7 @@
       html.classList.remove("zw-dict-lock");
       if (restore !== false && dictReturn && dictReturn.isConnected) dictReturn.focus({ preventScroll: true });
     }
-    dictSearch.addEventListener("input", renderDict);
+    dictSearch.addEventListener("input", filterDict);
 
     /* 题头入口 + 图层 ? */
     const sub = doc.querySelector(".zw-top .sub") || doc.querySelector(".page-intro .sub");
@@ -575,9 +619,9 @@
       b.id = "zwDictBtn";
       b.className = "zw-dict-btn";
       b.dataset.zwDict = "";
-      b.textContent = "新手词典";
+      b.innerHTML = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c.5 3.6 2.9 6 6.5 6.5-3.6.5-6 2.9-6.5 6.5-.5-3.6-2.9-6-6.5-6.5 3.6-.5 6-2.9 6.5-6.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span>新手词典</span><i>${TERMS.length}</i>`;
       infoBtn.insertAdjacentElement("afterend", b);
-    } else if (sub && !$("zwDictBtn")) sub.insertAdjacentHTML("beforeend", '<button type="button" id="zwDictBtn" class="zw-dict-btn" data-zw-dict="">新手词典</button>');
+    } else if (sub && !$("zwDictBtn")) sub.insertAdjacentHTML("beforeend", `<button type="button" id="zwDictBtn" class="zw-dict-btn" data-zw-dict=""><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5c.5 3.6 2.9 6 6.5 6.5-3.6.5-6 2.9-6.5 6.5-.5-3.6-2.9-6-6.5-6.5 3.6-.5 6-2.9 6.5-6.5Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg><span>新手词典</span><i>${TERMS.length}</i></button>`);
 
     /* 事件委托 */
     doc.addEventListener("click", (event) => {
@@ -615,12 +659,7 @@
         else if (f.length && !event.shiftKey && doc.activeElement === f[f.length - 1]) { event.preventDefault(); f[0].focus(); }
       }
     }, true);
-    dlg.addEventListener("click", (event) => {
-      const g = event.target.closest("[data-zw-dict-group]");
-      if (!g) return;
-      const sec = dictBody.querySelector(`[data-group="${g.dataset.zwDictGroup}"]`);
-      if (sec) sec.scrollIntoView({ behavior: motionOK() ? "smooth" : "auto", block: "start" });
-    });
+    dlg.addEventListener("click", dictClick);
     root.addEventListener("resize", () => { if (!pop.hidden) place(trigger); });
     root.addEventListener("ziwei:view", (event) => {
       const d = event.detail || {};

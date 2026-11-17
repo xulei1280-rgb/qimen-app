@@ -125,3 +125,9 @@ Backup before adding independent bazi analysis page and qimen-to-bazi navigation
 Backup before rebuilding the independent bazi page with Wenzhen-style entry:
 
 `I:\奇门起盘分析_回滚备份\backup-before-bazi-redesign-20260704-010316`
+
+## 新手词典改版（八字 + 紫微，2026-11-17）
+
+备份路径：`I:\codex-tasks\qimen-bazi-glossary-20261117\backup-dict-20261117-183439`。
+
+整体回滚：将该目录中的 bazi-glossary.js、bazi-premium.css、bazi.html、check-bazi-glossary.js、ziwei-glossary.js、ziwei-premium.css、ziwei.html、ROLLBACK.md 按原文件名拷回 `I:\奇门起盘分析`，覆盖本次改动。回滚前如有后续编辑，请先另行备份。

@@ -346,44 +346,139 @@
 .bz-term:focus-visible,.bz-pop button:focus-visible,.bz-dict button:focus-visible,.bz-dict input:focus-visible,.bz-dict-btn:focus-visible{outline:2px solid var(--pm-cinnabar);outline-offset:3px}
 .bz-pop[hidden],.bz-dict[hidden]{display:none}
 .bz-pop-scrim{display:none;position:fixed;inset:0;z-index:79;background:rgba(35,27,18,.38)}
-.bz-dict-btn,.bz-pop button,.bz-dict button{font:inherit;cursor:pointer;color:var(--pm-gold-deep);background:var(--pm-paper);border:1px solid var(--pm-line-strong);border-radius:8px;padding:8px 12px}
-.bz-dict-btn{margin-top:12px;font-size:13px}
+.bz-pop button{font:inherit;cursor:pointer;color:var(--pm-gold-deep);background:var(--pm-paper);border:1px solid var(--pm-line-strong);border-radius:8px;padding:8px 12px}
 .bz-pop{position:fixed;z-index:80;width:min(420px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:22px;color:var(--pm-text);background:var(--pm-card);border:1px solid var(--pm-line-strong);border-radius:14px;box-shadow:0 16px 60px rgba(45,31,17,.22);font:14px/1.8 var(--pm-sans);letter-spacing:0}
 .bz-pop-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .bz-pop-head strong{font:600 22px/1.4 var(--pm-serif);color:var(--pm-ink);overflow-wrap:anywhere}
 .bz-pop-group{flex-shrink:0;padding:2px 7px;border:1px solid var(--pm-line);color:var(--pm-cinnabar);font-size:11px}
-.bz-pop .bz-pop-x,.bz-dict .bz-pop-x{margin-left:auto;flex-shrink:0;width:40px;height:40px;padding:0;font-size:24px;line-height:1}
-.bz-pop-text,.bz-dict-item>p{margin:0 0 14px}
+.bz-pop .bz-pop-x{margin-left:auto;flex-shrink:0;width:40px;height:40px;padding:0;font-size:24px;line-height:1}
+.bz-pop-text{margin:0 0 14px}
 .bz-pop-mine{margin-top:14px;padding:14px;border-left:2px solid var(--pm-gold);background:var(--pm-paper);overflow-wrap:anywhere}
 .bz-pop-mine small{display:block;margin-bottom:6px;font-size:12px;color:var(--pm-gold-deep)}
 .bz-pop-mine span{display:block;white-space:pre-line}
 .bz-pop-note{font-size:11px;color:var(--pm-muted);margin:12px 0}
 .bz-pop-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-.bz-pop [data-bz-ask],.bz-dict [data-bz-ask]{background:var(--pm-cinnabar);border-color:var(--pm-cinnabar);color:#fffdf8}
+.bz-pop [data-bz-ask]{background:var(--pm-cinnabar);border-color:var(--pm-cinnabar);color:#fffdf8}
 .bz-time-help{font-size:12px;color:var(--pm-muted)}
-.bz-dict-lock{overflow:hidden}
-.bz-dict{position:fixed;inset:0;z-index:90;color:var(--pm-text);font:14px/1.8 var(--pm-sans);letter-spacing:0}
-.bz-dict-scrim{position:absolute;inset:0;background:rgba(35,27,18,.38)}
-.bz-dict-panel{position:relative;display:flex;flex-direction:column;width:min(100%,1000px);height:100%;margin:auto;background:var(--pm-card);box-shadow:0 0 80px rgba(35,27,18,.2)}
-.bz-dict-head{display:flex;align-items:center;gap:12px;padding:24px 32px 12px}
-.bz-dict-head small{color:var(--pm-gold-deep);font-size:12px}
-.bz-dict-head h2{margin:0;color:var(--pm-ink);font:600 28px/1.5 var(--pm-serif)}
-.bz-dict-search{display:flex;align-items:center;gap:12px;padding:0 32px;font-size:12px;color:var(--pm-muted)}
-.bz-dict-search input{min-width:0;flex:1;padding:10px 12px;border:1px solid var(--pm-line-strong);border-radius:8px;background:var(--pm-paper);color:var(--pm-text);font:14px var(--pm-sans)}
-.bz-dict-groups{display:flex;flex-shrink:0;gap:8px;padding:16px 32px;overflow:auto;border-bottom:1px solid var(--pm-line);scrollbar-width:thin}
-.bz-dict-groups button{white-space:nowrap;font-size:12px}
-.bz-dict-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:8px 32px 40px;scrollbar-width:thin}
-.bz-dict-sec{scroll-margin-top:12px}
-.bz-dict-sec h3{font:600 22px var(--pm-serif);color:var(--pm-cinnabar);margin:24px 0 4px}
-.bz-dict-item{padding:22px 0;border-bottom:1px solid var(--pm-line);scroll-margin:20px;overflow-wrap:anywhere}
-.bz-dict-item h4{font:600 19px var(--pm-serif);margin:0 0 10px;color:var(--pm-ink)}
-.bz-dict-empty{padding:32px 0;color:var(--pm-muted)}
 @media(max-width:760px){
   .bz-pop-scrim:not([hidden]){display:block}
   .bz-pop{inset:auto 0 0!important;width:100%;max-height:82dvh;border-radius:18px 18px 0 0;padding:20px 20px max(22px,env(safe-area-inset-bottom));box-shadow:0 -14px 60px rgba(45,31,17,.22)}
   .bz-pop-actions button{min-height:44px}
-  .bz-dict-head{padding:18px 18px 12px}
-  .bz-dict-search{padding:0 18px;gap:8px}
-  .bz-dict-groups{padding:12px 18px}
-  .bz-dict-body{padding:0 18px max(30px,env(safe-area-inset-bottom))}
 }
+
+/* 八字新手词典 · 新结构原型（取值全部来自 premium-base.css / bazi-premium.css 现有 token 与控件） */
+.bz-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* 入口：题头墨底上的金线胶囊（取 .build-btn 的金线与字色） */
+.bz-dict-btn{display:inline-flex;align-items:center;gap:10px;margin-top:16px;min-height:44px;padding:0 18px 0 14px;border:1px solid rgba(220,192,138,.32);border-radius:999px;background:rgba(242,232,212,.04);color:#f3e2b8;font:600 15px/1 var(--pm-serif);letter-spacing:.16em;cursor:pointer;transition:transform .25s var(--pm-ease),border-color .25s var(--pm-ease),background-color .25s var(--pm-ease)}
+.bz-dict-btn svg{width:18px;height:18px;color:var(--pm-gold-light);flex:none}
+.bz-dict-btn i{font:400 12px/1 var(--pm-sans);font-style:normal;letter-spacing:.04em;color:var(--pm-on-ink-muted);padding-left:10px;border-left:1px solid rgba(220,192,138,.26)}
+.bz-dict-btn:hover{border-color:var(--pm-gold-light);background:rgba(242,232,212,.08);transform:translateY(-1px)}
+
+.bz-dict-lock{overflow:hidden}
+.bz-dict{position:fixed;inset:0;z-index:90;display:grid;place-items:center;color:var(--pm-text);font:14px/1.75 var(--pm-sans);letter-spacing:0}
+.bz-dict[hidden]{display:none}
+.bz-dict-scrim{position:absolute;inset:0;background:rgba(35,27,18,.42)}
+.bz-dict-panel{position:relative;display:flex;flex-direction:column;width:min(1040px,calc(100vw - 64px));height:min(780px,calc(100dvh - 64px));margin:0;overflow:hidden;border:1px solid var(--pm-line);border-radius:var(--pm-radius);background:var(--pm-card);box-shadow:var(--pm-shadow),0 40px 90px -40px rgba(35,27,18,.55)}
+.bz-dict-grip{display:none}
+/* 题头：墨色通栏 + 底部渐隐金线（同 .core-cards 墨底） */
+.bz-dict-head{position:relative;flex:none;display:flex;align-items:center;gap:12px;padding:18px 20px 16px 28px;background:radial-gradient(420px 200px at 92% 0%,rgba(201,163,95,.18),transparent 70%),linear-gradient(160deg,#211c16 0%,#15120e 100%)}
+.bz-dict-head::after{content:"";position:absolute;left:28px;right:28px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(220,192,138,.55),transparent)}
+.bz-dict-head small{display:block;color:rgba(220,192,138,.78);font-size:11px;letter-spacing:.24em}
+.bz-dict-head h2{margin:2px 0 0;font:600 24px/1.3 var(--pm-serif);letter-spacing:.14em;background:linear-gradient(180deg,#f6e7c4,#d9b876);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bz-dict .bz-dict-x{margin-left:auto;flex:none;display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid rgba(220,192,138,.26);border-radius:50%;background:rgba(242,232,212,.05);color:#f3e2b8;font:300 22px/1 var(--pm-sans);cursor:pointer;transition:border-color .25s var(--pm-ease),transform .25s var(--pm-ease)}
+.bz-dict .bz-dict-x:hover{border-color:var(--pm-gold-light);transform:translateY(-1px)}
+/* 搜索：同 .field input（#fffefb、圆角10、金色聚焦环） */
+.bz-dict-tools{flex:none;display:flex;align-items:center;gap:16px;padding:16px 28px 12px;border-bottom:1px solid var(--pm-line)}
+.bz-dict-search{position:relative;flex:1;max-width:560px;display:block}
+.bz-dict-search .bz-lens{position:absolute;left:14px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--pm-faint);pointer-events:none}
+.bz-dict-search input{box-sizing:border-box;width:100%;min-height:44px;padding:0 44px 0 42px;border:1px solid var(--pm-line-strong);border-radius:10px;background:#fffefb;color:var(--pm-ink);font:15px var(--pm-sans);outline:0;-webkit-appearance:none;appearance:none}
+.bz-dict-search input::-webkit-search-cancel-button{display:none}
+.bz-dict-search input::placeholder{color:var(--pm-faint)}
+.bz-dict-search input:focus{border-color:var(--pm-gold);box-shadow:0 0 0 4px rgba(176,138,70,.14)}
+.bz-dict-clear{position:absolute;right:0;top:0;width:44px;height:44px;border:0;background:none;color:var(--pm-muted);font:300 20px/1 var(--pm-sans);cursor:pointer}
+.bz-dict-clear[hidden]{display:none}
+.bz-dict-count{margin:0 0 0 auto;flex:none;color:var(--pm-muted);font-size:12px;letter-spacing:.06em}
+.bz-dict-count b{color:var(--pm-gold-deep);font:600 15px var(--pm-serif);margin:0 2px}
+/* 主体：桌面左目录 + 右列表 */
+.bz-dict-main{flex:1;min-height:0;display:grid;grid-template-columns:208px minmax(0,1fr)}
+.bz-dict-groups{display:flex;flex-direction:column;gap:2px;padding:14px 12px 20px 16px;overflow:auto;border-right:1px solid var(--pm-line);background:linear-gradient(180deg,rgba(176,138,70,.05),rgba(176,138,70,.02))}
+.bz-dict-groups button{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px 0 16px;border:0;border-radius:10px;background:transparent;color:var(--pm-muted);font:15px/1.3 var(--pm-serif);letter-spacing:.08em;text-align:left;cursor:pointer;transition:color .25s var(--pm-ease),background-color .25s var(--pm-ease)}
+.bz-dict-groups button i{margin-left:auto;font:12px var(--pm-sans);font-style:normal;color:var(--pm-faint);letter-spacing:0}
+.bz-dict-groups button:hover{color:var(--pm-ink);background:rgba(176,138,70,.07)}
+.bz-dict-groups button[aria-current]{color:#f3e2b8;background:linear-gradient(135deg,#29231b,#17140f);box-shadow:0 8px 18px -12px rgba(20,14,6,.7),inset 0 0 0 1px rgba(220,192,138,.22)}
+.bz-dict-groups button[aria-current] i{color:rgba(243,226,184,.62)}
+.bz-dict-groups button[aria-disabled]{opacity:.38;cursor:default}
+.bz-dict-body{position:relative;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 28px 40px;scrollbar-width:thin}
+/* 组标题：同 .section-title（朱砂菱形 + 宋体） */
+.bz-dict-sec h3{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;margin:0;padding:18px 0 10px;background:var(--pm-card);font:600 16px/1.3 var(--pm-serif);letter-spacing:.12em;color:var(--pm-ink)}
+.bz-dict-sec h3::before{content:"";width:7px;height:7px;background:var(--pm-cinnabar);transform:rotate(45deg);box-shadow:0 0 0 3px rgba(168,53,42,.1)}
+.bz-dict-sec h3 i{font:12px var(--pm-sans);font-style:normal;letter-spacing:0;color:var(--pm-faint)}
+.bz-dict-sec h3::after{content:"";flex:1;height:1px;margin-left:4px;background:linear-gradient(90deg,var(--pm-line-strong),transparent)}
+/* 条目：一行名 + 一行白话摘要，点开展开 */
+.bz-dict-item{border-bottom:1px solid var(--pm-line)}
+.bz-dict-row{display:grid;grid-template-columns:minmax(0,1fr) 16px;grid-template-areas:"n c" "s c";align-items:center;column-gap:12px;width:100%;min-height:64px;padding:11px 8px 11px 12px;margin:0;border:0;border-radius:10px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color .2s var(--pm-ease)}
+.bz-dict-row:hover{background:rgba(176,138,70,.06)}
+.bz-dict-name{grid-area:n;font:600 17px/1.4 var(--pm-serif);color:var(--pm-ink);letter-spacing:.04em}
+.bz-dict-name small{margin-left:8px;font:12px var(--pm-sans);color:var(--pm-faint);letter-spacing:0}
+.bz-dict-sum{grid-area:s;margin-top:2px;color:var(--pm-muted);font-size:13.5px;line-height:1.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bz-chev{grid-area:c;width:16px;height:16px;color:var(--pm-faint);transition:transform .25s var(--pm-ease)}
+.bz-dict-item.is-open .bz-dict-row{background:transparent}
+.bz-dict-item.is-open .bz-dict-sum{white-space:normal;color:var(--pm-text);font-size:14.5px;line-height:1.8;margin-top:6px}
+.bz-dict-item.is-open .bz-chev{transform:rotate(90deg);color:var(--pm-gold-deep)}
+.bz-dict-item.is-open{background:linear-gradient(90deg,rgba(176,138,70,.07),rgba(176,138,70,.015));border-left:2px solid var(--pm-gold);border-radius:0 10px 10px 0;border-bottom-color:transparent;margin-bottom:1px}
+.bz-dict-detail{padding:0 20px 16px 12px}
+.bz-dict-detail .bz-pop-mine{margin:4px 0 0;padding:12px 14px;border-left:0;border-radius:10px;background:#fffefb;box-shadow:inset 0 0 0 1px var(--pm-line);font-size:13.5px;line-height:1.75}
+.bz-dict-detail .bz-pop-mine small{display:block;margin-bottom:4px;font-size:11px;letter-spacing:.16em;color:var(--pm-gold-deep)}
+.bz-dict-detail .bz-pop-mine span{display:block}
+.bz-dict-note{margin:10px 0 12px;font-size:11px;color:var(--pm-faint)}
+.bz-dict-ask{margin-top:12px;display:inline-flex;align-items:center;min-height:40px;padding:0 18px;border:1px solid var(--pm-cinnabar);border-radius:999px;background:var(--pm-cinnabar);color:#fffdf8;font:14px var(--pm-sans);letter-spacing:.06em;cursor:pointer;transition:transform .25s var(--pm-ease)}
+.bz-dict-ask:hover{transform:translateY(-1px)}
+.bz-dict mark{background:rgba(176,138,70,.24);color:var(--pm-ink);border-radius:3px;padding:0 1px}
+.bz-dict-empty{padding:72px 12px;text-align:center}
+.bz-dict-empty-t{margin:0 0 10px;font:600 17px var(--pm-serif);color:var(--pm-ink);letter-spacing:.08em}
+.bz-dict-empty-s{margin:0;color:var(--pm-muted);font-size:13px}
+.bz-dict-try{min-height:36px;margin:6px 4px 0;padding:0 14px;border:1px solid var(--pm-line-strong);border-radius:999px;background:#fffdf8;color:var(--pm-ink);font:13px var(--pm-sans);cursor:pointer}
+@media(max-width:760px){
+  .bz-dict-btn{margin-top:14px}
+  .bz-dict{place-items:end stretch}
+  .bz-dict-panel{width:100%;height:calc(100dvh - 12px);border-radius:18px 18px 0 0;border-bottom:0}
+  .bz-dict-grip{display:block;position:absolute;z-index:3;top:7px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(220,192,138,.35)}
+  .bz-dict-head{padding:20px 12px 14px 20px}
+  .bz-dict-head h2{font-size:22px}
+  .bz-dict-head::after{left:20px;right:20px}
+  .bz-dict-tools{display:block;padding:14px 16px 0;border-bottom:0}
+  .bz-dict-search{max-width:none}
+  .bz-dict-count{margin:8px 2px 0;text-align:left}
+  .bz-dict-main{display:flex;flex-direction:column}
+  /* 手机：横滑分段标签（同 .home-tabs 下划线） */
+  .bz-dict-groups{flex:none;flex-direction:row;gap:0;padding:0 8px;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--pm-line);background:none;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  .bz-dict-groups::-webkit-scrollbar{display:none}
+  .bz-dict-groups button{flex:none;min-height:44px;padding:0 10px;border-radius:0;font-size:15px;letter-spacing:.06em;gap:4px}
+  .bz-dict-groups button i{margin-left:0;font-size:11px}
+  .bz-dict-groups button:hover{background:none}
+  .bz-dict-groups button[aria-current]{color:var(--pm-ink);background:none;box-shadow:none}
+  .bz-dict-groups button[aria-current] i{color:var(--pm-gold-deep)}
+  .bz-dict-groups button[aria-current]::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;background:linear-gradient(90deg,var(--pm-gold),var(--pm-cinnabar))}
+  .bz-dict-body{flex:1;padding:0 16px max(28px,env(safe-area-inset-bottom))}
+  .bz-dict-sec h3{padding:16px 0 8px;font-size:15px}
+  .bz-dict-row{padding:10px 4px 10px 6px;column-gap:10px}
+  .bz-dict-detail{padding:0 14px 14px 6px}
+  .bz-dict-ask{min-height:44px}
+}
+@media(prefers-reduced-motion:no-preference){
+  .bz-dict:not([hidden]) .bz-dict-panel{animation:bz-dict-in .5s var(--pm-ease) both}
+  .bz-dict:not([hidden]) .bz-dict-scrim{animation:bz-dict-fade .3s var(--pm-ease-soft) both}
+  .bz-dict-item.is-open .bz-dict-detail{animation:bz-dict-fade .28s var(--pm-ease-soft) both}
+}
+@keyframes bz-dict-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes bz-dict-fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.bz-dict-btn,.bz-dict-row,.bz-chev,.bz-dict-ask,.bz-dict-x{transition:none}.bz-dict-btn:hover,.bz-dict-ask:hover,.bz-dict .bz-dict-x:hover{transform:none}}
+/* 免责声明：全面板只放一次，固定在底部 */
+.bz-dict-foot{flex:none;margin:0;padding:10px 28px;border-top:1px solid var(--pm-line);background:var(--pm-card-2);color:var(--pm-faint);font-size:11.5px;letter-spacing:.06em;text-align:center}
+@media(max-width:760px){.bz-dict-foot{padding:9px 16px max(9px,env(safe-area-inset-bottom))}.bz-dict-body{padding-bottom:16px}}
+
+/* Keep keyboard focus gold and empty-state targets accessible on phones. */
+.bz-dict button:focus-visible{outline:2px solid var(--pm-gold);outline-offset:2px}
+.bz-dict input:focus-visible{outline:0}
+@media(max-width:760px){.bz-dict-try{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.bz-dict *{animation:none!important;transition:none!important}}

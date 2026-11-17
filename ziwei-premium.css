@@ -575,8 +575,6 @@ html[data-theme="dark"] .zw .ai-header-tools .api-key-button:hover{background:#d
 .zw .zw-layer .zw-help{position:absolute;top:50%;right:6px;transform:translateY(-50%)}
 .zw .zw-layer .zw-help::before{content:"";position:absolute;inset:-8px}
 .zw .zw-help-inline{vertical-align:1px;margin-left:4px}
-.zw .zw-dict-btn{margin-left:8px;padding:.18rem .7rem;min-height:26px;border:1px solid rgba(216,180,108,.45);border-radius:999px;color:#f1dcab;background:rgba(238,241,250,.06);font-size:12.5px;letter-spacing:.06em;vertical-align:middle;cursor:pointer;transition:background .2s,border-color .2s}
-.zw .zw-dict-btn:hover{background:rgba(216,180,108,.14);border-color:#d8b46c}
 
 .zw .zw-pop{position:absolute;z-index:90;width:min(340px,calc(100vw - 24px));padding:14px 16px 12px;border-radius:14px;color:var(--zw-text);background:var(--zw-card);box-shadow:0 0 0 1px var(--zw-indigo-line),0 18px 40px -18px rgba(18,23,51,.55);font-size:14px;line-height:1.65}
 .zw .zw-pop::before{content:"";position:absolute;left:14px;right:14px;top:0;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--zw-gold),transparent);opacity:.65}
@@ -597,44 +595,17 @@ html[data-theme="dark"] .zw .ai-header-tools .api-key-button:hover{background:#d
 @keyframes zw-pop-in{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
 @keyframes zw-pop-up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 
-html.zw-dict-lock{overflow:hidden}
-.zw .zw-dict{position:fixed;inset:0;z-index:100;display:grid;place-items:center}
-.zw .zw-dict[hidden]{display:none}
-.zw .zw-dict-scrim{position:absolute;inset:0;background:rgba(12,15,36,.55);backdrop-filter:blur(2px)}
-.zw .zw-dict-panel{position:relative;display:flex;flex-direction:column;width:min(720px,calc(100vw - 32px));max-height:min(86vh,860px);border-radius:18px;color:var(--zw-text);background:var(--zw-card);box-shadow:0 30px 70px -30px rgba(10,12,30,.7);overflow:hidden}
-.zw .zw-dict-head{flex:none;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 20px 10px;color:#eef1fa;background:radial-gradient(120% 140% at 85% 0%,#343d78,#121733 70%)}
-.zw .zw-dict-head small{color:#d8b46c;font-size:11.5px;letter-spacing:.12em}
-.zw .zw-dict-head h2{margin:2px 0 0;font-family:var(--pm-serif,serif);font-size:24px;letter-spacing:.08em;color:#f4f1e8}
-.zw .zw-dict-head .zw-pop-x{color:#e7ebf7;background:rgba(238,241,250,.1)}
-.zw .zw-dict-search{flex:none;display:block;padding:12px 20px 6px}
-.zw .zw-dict-search input{width:100%;min-height:40px;padding:.4rem .9rem;border:1px solid var(--zw-indigo-line);border-radius:999px;color:var(--zw-text);background:var(--zw-card-2);font-size:15px}
-.zw .zw-dict-groups{flex:none;display:flex;gap:6px;padding:4px 20px 10px;overflow-x:auto;scrollbar-width:none}
-.zw .zw-dict-groups button{flex:none;min-height:30px;padding:.2rem .75rem;border:0;border-radius:999px;color:var(--zw-muted);background:var(--zw-card-2);box-shadow:inset 0 0 0 1px var(--zw-indigo-line);font-size:12.5px;cursor:pointer}
-.zw .zw-dict-body{flex:1;overflow:auto;padding:0 20px 20px;overscroll-behavior:contain}
-.zw .zw-dict-sec h3{position:sticky;top:0;z-index:1;margin:0;padding:10px 0 6px;color:var(--zw-gold);background:var(--zw-card);font-size:13px;letter-spacing:.14em}
-.zw .zw-dict-item{padding:10px 0 12px;border-top:1px solid var(--zw-indigo-line);outline:0}
-.zw .zw-dict-item h4{margin:0 0 2px;font-family:var(--pm-serif,serif);font-size:16px;color:var(--zw-indigo)}
-.zw .zw-dict-item h4 small{margin-left:8px;color:var(--zw-muted);font-family:var(--pm-sans);font-size:11.5px;font-weight:400}
-.zw .zw-dict-item p{margin:0 0 6px;font-size:14px;line-height:1.65}
-.zw .zw-dict-item .zw-pop-mine{margin-bottom:6px}
-.zw .zw-dict-hit{animation:zw-hit 1.6s ease-out}
 @keyframes zw-hit{0%,40%{background:var(--zw-gold-soft)}100%{background:transparent}}
-.zw .zw-dict-empty{padding:24px 0;color:var(--zw-muted);text-align:center}
-.zw .zw-dict.zw-dict-in .zw-dict-panel{animation:zw-pop-up .24s cubic-bezier(.2,.8,.2,1) both}
-.zw .zw-dict.zw-dict-in .zw-dict-scrim{animation:zw-fade .2s ease both}
 @keyframes zw-fade{from{opacity:0}to{opacity:1}}
-html[data-theme="dark"] .zw .zw-pop-head strong,html[data-theme="dark"] .zw .zw-dict-item h4{color:#e3d2a6}
+html[data-theme="dark"] .zw .zw-pop-head strong{color:#e3d2a6}
 html[data-theme="dark"] .zw .zw-pop-dict{color:var(--zw-text)}
 @media (max-width:760px){
-  .zw .zw-dict{place-items:end stretch}
-  .zw .zw-dict-panel{width:100%;max-height:88vh;border-radius:18px 18px 0 0}
   .zw .zw-layer{display:flex;min-width:0}
   .zw .zw-layer>button[data-zw-layer]{flex:1;min-width:0;padding-right:.25rem}
   .zw .zw-layer .zw-help{top:-5px;right:-3px;transform:none;width:16px;height:16px;font-size:10px;box-shadow:0 1px 4px -1px rgba(20,26,70,.35)}
-  .zw .zw-dict-btn{margin-left:6px;padding:.12rem .55rem;font-size:12px}
 }
 @media (prefers-reduced-motion:reduce){
-  .zw .zw-pop.zw-pop-in,.zw .zw-dict.zw-dict-in .zw-dict-panel,.zw .zw-dict.zw-dict-in .zw-dict-scrim,.zw .zw-dict-hit{animation:none}
+  .zw .zw-pop.zw-pop-in{animation:none}
   .zw .zw-term{transition:none}
 }
 .zw .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -643,7 +614,6 @@ html[data-theme="dark"] .zw .zw-pop-dict{color:var(--zw-text)}
 .zw .zw-pop-mine .zw-fact+.zw-fact{margin-top:5px;padding-top:5px;border-top:1px dashed var(--zw-indigo-line)}
 html[data-theme="dark"] .zw .zw-pop-mine .zw-mean{color:#e3d2a6}
 .zw .zw-pop-note{margin:-4px 0 10px;color:var(--zw-muted);font-size:11.5px}
-.zw .zw-dict-note{margin:8px 0 0}
 /* ==========================================================================
    白话读盘（本命页）与 AI 白话回答
    ========================================================================== */
@@ -702,3 +672,112 @@ html[data-theme="dark"] .zw .turn-answer strong{color:#e3d2a6}
 .zw .notice{padding-right:2.2rem;cursor:pointer}
 .zw .notice::after{content:"×";position:absolute;top:50%;right:.7rem;transform:translateY(-50%);color:var(--zw-muted);font-size:17px;line-height:1}
 .zw .ai-format-note{display:inline-block;margin:.1rem 0 .5rem!important;padding:.15rem .6rem;border-radius:999px;color:var(--zw-quan);background:var(--zw-gold-soft);font-family:var(--pm-sans);font-size:12px;line-height:1.6!important}
+
+/* 紫微新手词典 · 新结构原型（取值全部来自 ziwei-premium.css 现有 --zw-* token 与控件：靛青为主、金为辅、银白星光） */
+.zw .zw-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* 入口：沿用题头同行金边胶囊，补图标、条数与 44px 点击区 */
+.zw .zw-dict-btn{position:relative;display:inline-flex;flex:none;align-items:center;gap:6px;margin-left:8px;min-height:32px;padding:0 12px 0 10px;border:1px solid rgba(216,180,108,.45);border-radius:999px;color:#f1dcab;background:rgba(238,241,250,.06);font:500 13px/1 var(--pm-sans);letter-spacing:.08em;white-space:nowrap;cursor:pointer;transition:background-color .2s,border-color .2s,transform .25s var(--pm-ease)}
+.zw .zw-dict-btn::before{content:"";position:absolute;inset:-6px -2px}
+.zw .zw-dict-btn svg{width:14px;height:14px;color:#d8b46c;flex:none}
+.zw .zw-dict-btn i{font-style:normal;font-size:11.5px;color:rgba(238,241,250,.55);letter-spacing:0;padding-left:6px;border-left:1px solid rgba(216,180,108,.3)}
+.zw .zw-dict-btn:hover{background:rgba(216,180,108,.14);border-color:#d8b46c;transform:translateY(-1px)}
+
+html.zw-dict-lock{overflow:hidden}
+.zw .zw-dict{position:fixed;inset:0;z-index:100;display:grid;place-items:center;font-size:14px;line-height:1.65}
+.zw .zw-dict[hidden]{display:none}
+.zw .zw-dict-scrim{position:absolute;inset:0;background:rgba(12,15,36,.55)}
+.zw .zw-dict-panel{position:relative;display:flex;flex-direction:column;width:min(1040px,calc(100vw - 64px));height:min(780px,calc(100dvh - 64px));border-radius:18px;color:var(--zw-text);background:var(--zw-card);box-shadow:0 0 0 1px var(--zw-indigo-line),0 30px 70px -30px rgba(10,12,30,.7);overflow:hidden}
+.zw .zw-dict-grip{display:none}
+.zw .zw-dict-head{position:relative;flex:none;display:flex;align-items:center;gap:12px;padding:18px 18px 16px 28px;color:#eef1fa;background:radial-gradient(120% 140% at 85% 0%,#343d78,#121733 70%)}
+.zw .zw-dict-head::after{content:"";position:absolute;left:28px;right:28px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(216,180,108,.6),transparent)}
+.zw .zw-dict-head small{display:block;color:#d8b46c;font-size:11.5px;letter-spacing:.12em}
+.zw .zw-dict-head h2{margin:2px 0 0;font-family:var(--pm-serif,serif);font-size:24px;letter-spacing:.08em;color:#f4f1e8}
+.zw .zw-dict .zw-dict-x{margin-left:auto;flex:none;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;color:#e7ebf7;background:rgba(238,241,250,.1);font-size:20px;line-height:1;cursor:pointer;transition:background-color .2s,transform .25s var(--pm-ease)}
+.zw .zw-dict .zw-dict-x:hover{background:rgba(238,241,250,.16);transform:translateY(-1px)}
+.zw .zw-dict-tools{flex:none;display:flex;align-items:center;gap:16px;padding:16px 28px 12px;border-bottom:1px solid var(--zw-indigo-line)}
+.zw .zw-dict-search{position:relative;flex:1;max-width:560px;display:block;padding:0}
+.zw .zw-dict-search .zw-lens{position:absolute;left:15px;top:50%;width:17px;height:17px;transform:translateY(-50%);color:var(--zw-muted);pointer-events:none}
+.zw .zw-dict-search input{box-sizing:border-box;width:100%;min-height:44px;padding:0 44px 0 42px;border:1px solid var(--zw-indigo-line);border-radius:999px;color:var(--zw-text);background:var(--zw-card-2);font-size:15px;outline:0;-webkit-appearance:none;appearance:none;box-shadow:none}
+.zw .zw-dict-search input::-webkit-search-cancel-button{display:none}
+.zw .zw-dict-search input:focus{border-color:rgba(169,131,64,.7);box-shadow:0 0 0 4px var(--zw-gold-soft)}
+.zw .zw-dict-clear{position:absolute;right:2px;top:0;width:44px;height:44px;border:0;background:none;color:var(--zw-muted);font-size:18px;cursor:pointer}
+.zw .zw-dict-clear[hidden]{display:none}
+.zw .zw-dict-count{margin:0 0 0 auto;flex:none;color:var(--zw-muted);font-size:12px;letter-spacing:.06em}
+.zw .zw-dict-count b{margin:0 2px;color:var(--zw-indigo);font-family:var(--pm-serif,serif);font-size:15px}
+.zw .zw-dict-main{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(0,1fr)}
+/* 桌面目录：同 .zw-tabs 的靛青墨块选中态 */
+.zw .zw-dict-groups{display:flex;flex-direction:column;gap:4px;padding:14px 12px 20px 16px;overflow:auto;border-right:1px solid var(--zw-indigo-line);background:var(--zw-indigo-wash)}
+.zw .zw-dict-groups button{position:relative;display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:var(--zw-muted);font-family:var(--pm-serif);font-size:15px;letter-spacing:.1em;text-align:left;cursor:pointer;box-shadow:none;transition:color .3s var(--pm-ease),background-color .3s var(--pm-ease)}
+.zw .zw-dict-groups button i{margin-left:auto;font:12px var(--pm-sans);font-style:normal;letter-spacing:0;color:var(--zw-muted);opacity:.75}
+.zw .zw-dict-groups button:hover{color:var(--zw-indigo);background:var(--zw-indigo-wash)}
+.zw .zw-dict-groups button[aria-current]{color:#f4ecd9;background:linear-gradient(180deg,#323b78,#1d2350);box-shadow:0 8px 18px -10px rgba(20,26,70,.8),inset 0 0 0 1px rgba(216,180,108,.3)}
+.zw .zw-dict-groups button[aria-current] i{color:rgba(244,236,217,.7);opacity:1}
+.zw .zw-dict-groups button[aria-disabled]{opacity:.38;cursor:default}
+.zw .zw-dict-body{position:relative;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 28px 32px}
+.zw .zw-dict-sec h3{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;margin:0;padding:16px 0 8px;color:var(--zw-gold);background:var(--zw-card);font-size:13px;letter-spacing:.14em}
+.zw .zw-dict-sec h3 i{font-style:normal;color:var(--zw-muted);letter-spacing:0;font-size:12px}
+.zw .zw-dict-sec h3::after{content:"";flex:1;height:1px;margin-left:4px;background:linear-gradient(90deg,var(--zw-indigo-line),transparent)}
+.zw .zw-dict-item{padding:0;border-top:0;border-bottom:1px solid var(--zw-indigo-line)}
+.zw .zw-dict-row{display:grid;grid-template-columns:minmax(0,1fr) 16px;grid-template-areas:"n c" "s c";align-items:center;column-gap:12px;width:100%;min-height:62px;margin:0;padding:10px 8px 10px 12px;border:0;border-radius:12px;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:background-color .2s}
+.zw .zw-dict-row:hover{background:var(--zw-indigo-wash)}
+.zw .zw-dict-name{grid-area:n;font-family:var(--pm-serif,serif);font-size:16.5px;letter-spacing:.04em;color:var(--zw-indigo)}
+.zw .zw-dict-name small{margin-left:8px;color:var(--zw-muted);font-family:var(--pm-sans);font-size:11.5px;letter-spacing:0}
+.zw .zw-dict-sum{grid-area:s;margin-top:1px;color:var(--zw-muted);font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zw .zw-chev{grid-area:c;width:16px;height:16px;color:var(--zw-muted);opacity:.7;transition:transform .25s var(--pm-ease)}
+.zw .zw-dict-item.is-open{border-radius:12px;border-bottom-color:transparent;background:var(--zw-card-2);box-shadow:inset 2px 0 0 var(--zw-gold),inset 0 0 0 1px var(--zw-indigo-line);margin-bottom:1px}
+.zw .zw-dict-item.is-open .zw-dict-row{background:transparent}
+.zw .zw-dict-item.is-open .zw-dict-sum{white-space:normal;color:var(--zw-text);font-size:14.5px;line-height:1.75;margin-top:6px}
+.zw .zw-dict-item.is-open .zw-chev{transform:rotate(90deg);color:var(--zw-gold);opacity:1}
+.zw .zw-dict-detail{padding:0 20px 14px 12px}
+.zw .zw-dict-detail .zw-pop-mine{margin:2px 0 0;padding:10px 12px;border-radius:10px;background:var(--zw-card);box-shadow:inset 2px 0 0 var(--zw-indigo-2),0 0 0 1px var(--zw-indigo-line);font-size:13.5px}
+.zw .zw-dict-detail .zw-dict-ask{margin-top:12px;min-height:40px;padding:0 18px;border:0;border-radius:999px;color:#f7f3e8;background:linear-gradient(180deg,#323b78,#1d2350);font-size:13.5px;letter-spacing:.06em;cursor:pointer;transition:transform .25s var(--pm-ease)}
+.zw .zw-dict-detail .zw-dict-ask:hover{transform:translateY(-1px)}
+.zw .zw-dict mark{background:rgba(169,131,64,.2);color:inherit;border-radius:3px;padding:0 1px}
+.zw .zw-dict-empty{padding:72px 12px;text-align:center}
+.zw .zw-dict-empty-t{margin:0 0 10px;font-family:var(--pm-serif);font-size:17px;color:var(--zw-indigo);letter-spacing:.06em}
+.zw .zw-dict-empty-s{margin:0;color:var(--zw-muted);font-size:13px}
+.zw .zw-dict-try{min-height:36px;margin:6px 4px 0;padding:0 14px;border:0;border-radius:999px;color:var(--zw-indigo);background:var(--zw-card-2);box-shadow:inset 0 0 0 1px var(--zw-indigo-line);font-size:13px;cursor:pointer}
+.zw .zw-dict-foot{flex:none;margin:0;padding:10px 28px;border-top:1px solid var(--zw-indigo-line);background:var(--zw-card-2);color:var(--zw-muted);font-size:11.5px;letter-spacing:.06em;text-align:center}
+html[data-theme="dark"] .zw .zw-dict-name{color:#e3d2a6}
+html[data-theme="dark"] .zw .zw-dict-groups button[aria-current]{color:#141a3c;background:linear-gradient(180deg,#e6c983,#c9a45d)}
+html[data-theme="dark"] .zw .zw-dict-panel,html[data-theme="dark"] .zw .zw-dict-sec h3{background:linear-gradient(var(--zw-card),var(--zw-card)),var(--zw-indigo-deep)}
+html[data-theme="dark"] .zw .zw-dict-groups button[aria-current] i{color:inherit;opacity:.75}
+@media(max-width:760px){
+  .zw .zw-dict-btn{margin-left:6px;min-height:30px;padding:0 10px 0 8px;font-size:12.5px}
+  .zw .zw-dict-btn::before{inset:-7px -2px}
+  .zw .zw-dict{place-items:end stretch}
+  .zw .zw-dict-panel{width:100%;height:calc(100dvh - 12px);max-height:none;border-radius:18px 18px 0 0}
+  .zw .zw-dict-grip{display:block;position:absolute;z-index:3;top:7px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(238,241,250,.3)}
+  .zw .zw-dict-head{padding:20px 12px 14px 20px}
+  .zw .zw-dict-head h2{font-size:22px}
+  .zw .zw-dict-head::after{left:20px;right:20px}
+  .zw .zw-dict-tools{display:block;padding:14px 16px 0;border-bottom:0}
+  .zw .zw-dict-search{max-width:none}
+  .zw .zw-dict-count{margin:8px 4px 0}
+  .zw .zw-dict-main{display:flex;flex-direction:column}
+  /* 手机：横滑胶囊分段（同 .zw-tabs 选中墨块），按钮 44px 高、胶囊 32px */
+  .zw .zw-dict-groups{flex:none;flex-direction:row;gap:6px;padding:4px 16px;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--zw-indigo-line);background:none;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  .zw .zw-dict-groups::-webkit-scrollbar{display:none}
+  .zw .zw-dict-groups button{flex:none;min-height:44px;padding:0 13px;gap:4px;border-radius:999px;background:none!important;box-shadow:none!important;font-size:14px;letter-spacing:.06em;isolation:isolate}
+  .zw .zw-dict-groups button::before{content:"";position:absolute;z-index:-1;left:0;right:0;top:6px;bottom:6px;border-radius:999px;background:var(--zw-card-2);box-shadow:inset 0 0 0 1px var(--zw-indigo-line)}
+  .zw .zw-dict-groups button[aria-current]::before{background:linear-gradient(180deg,#323b78,#1d2350);box-shadow:inset 0 0 0 1px rgba(216,180,108,.3)}
+  html[data-theme="dark"] .zw .zw-dict-groups button[aria-current]::before{background:linear-gradient(180deg,#e6c983,#c9a45d)}
+  .zw .zw-dict-groups button i{margin-left:0;font-size:11px}
+  .zw .zw-dict-body{flex:1;padding:0 16px 16px}
+  .zw .zw-dict-row{padding:10px 4px 10px 6px;column-gap:10px}
+  .zw .zw-dict-detail{padding:0 14px 14px 6px}
+  .zw .zw-dict-detail .zw-dict-ask{min-height:44px}
+  .zw .zw-dict-foot{padding:9px 16px max(9px,env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:no-preference){
+  .zw .zw-dict:not([hidden]) .zw-dict-panel{animation:zw-pop-up .32s var(--pm-ease) both}
+  .zw .zw-dict:not([hidden]) .zw-dict-scrim{animation:zw-fade .2s ease both}
+  .zw .zw-dict-item.is-open .zw-dict-detail{animation:zw-fade .24s ease both}
+}
+@media(prefers-reduced-motion:reduce){.zw .zw-dict-btn,.zw .zw-dict-row,.zw .zw-chev,.zw .zw-dict-x,.zw .zw-dict-ask{transition:none}.zw .zw-dict-btn:hover,.zw .zw-dict-detail .zw-dict-ask:hover,.zw .zw-dict .zw-dict-x:hover{transform:none}}
+
+@media(prefers-reduced-motion:no-preference){.zw .zw-dict-hit{animation:zw-hit 1.6s ease-out}}
+.zw .zw-dict button:focus-visible{outline:2px solid var(--zw-gold);outline-offset:2px}
+@media(max-width:760px){.zw .zw-dict-try{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.zw .zw-dict *{animation:none!important;transition:none!important}}
+@media(max-width:420px){.zw .page-intro .sub:has(>.zw-dict-btn){gap:2px}}
