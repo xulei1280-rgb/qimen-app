@@ -835,9 +835,6 @@
     .chart-toolbar p { font-size: 12px; }
     .chart-toolbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; }
     .density-control button { min-width: 54px; }
-    .chart-zoom-control { display: none; }
-    .chart-zoom-control button { min-width: 34px; padding-inline: .55rem; font-weight: 700; }
-    .chart-zoom-control .chart-zoom-value { min-width: 58px; font-weight: 500; }
     html[data-density="clear"] .density-detailed { display: none !important; }
     .minor-stars-extra { display: contents; }
 
@@ -1095,17 +1092,15 @@
       .chart-toolbar { align-items: flex-start; flex-direction: column; }
       .chart-toolbar-actions { width: 100%; flex-wrap: wrap; justify-content: flex-start; gap: .5rem; }
       #chartVersion { flex: 1 1 100%; }
-      .chart-zoom-control { display: inline-flex; }
-      .chart-zoom-control button { min-height: 44px; }
       .chart-viewport { touch-action: pan-x pan-y; }
       .chart-grid {
         --palace-row: 214px;
         width: 100%;
-        min-width: 1000px;
-        grid-template-columns: repeat(4, minmax(250px, 1fr));
         grid-template-rows: repeat(4, minmax(var(--palace-row), auto));
       }
-      html[data-density="pro"] .chart-grid { --palace-row: 254px; }
+      html[data-density="pro"] .chart-grid { width: 760px; min-width: 760px; grid-template-columns: repeat(4, minmax(0, 1fr)); --palace-row: 254px; }
+      html[data-density="pro"] .chart-viewport { overflow: hidden; }
+      html[data-density="pro"] .chart-viewport.is-zoomed { overflow: auto; }
       .palace { min-height: var(--palace-row); }
       .ai-mode-row { grid-template-columns: 1fr; }
       .chart-center { min-height: calc(var(--palace-row) * 2 + 1px); }
@@ -1140,7 +1135,7 @@
     }
   </style>
   <link rel="stylesheet" href="premium-base.css?v=20261101.2">
-  <link rel="stylesheet" href="ziwei-premium.css?v=20261117.1">
+  <link rel="stylesheet" href="ziwei-premium.css?v=20261117.2">
 </head>
 <body class="zw">
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -1293,11 +1288,6 @@
                 <button id="densityClear" type="button" data-density-choice="clear" aria-pressed="true">简洁</button>
                 <button id="densityPro" type="button" data-density-choice="pro" aria-pressed="false">详细</button>
               </div>
-              <div class="segmented-control chart-zoom-control" role="group" aria-label="命盘缩放">
-                <button id="chartZoomOut" type="button" aria-label="缩小命盘">−</button>
-                <button id="chartZoomReset" class="chart-zoom-value" type="button" aria-label="还原命盘缩放">100%</button>
-                <button id="chartZoomIn" type="button" aria-label="放大命盘">＋</button>
-              </div>
             </div>
           </div>
           <div class="zw-layers" id="zwLayers" role="group" aria-label="命盘连线图层（可叠加）">
@@ -1311,6 +1301,7 @@
               <div class="chart-center" id="chartCenter"></div>
             </div>
           </div>
+          <p class="zw-pinch-hint" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 4H4v5m0-5 6 6m5 10h5v-5m0 5-6-6"/></svg>双指张开可放大细看</p>
           <div class="zw-legend" id="zwLegend" aria-live="polite"></div>
         </section>
 
@@ -1440,7 +1431,7 @@
   <script src="ziwei-engine.js?v=20261107.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
   <script src="china-locations.js?v=20261115.1"></script>
-  <script src="ziwei-page.js?v=20261117.3"></script>
+  <script src="ziwei-page.js?v=20261117.4"></script>
   <script src="premium-base.js?v=20261101.2"></script>
   <script src="ziwei-premium.js?v=20261102.5"></script>
   <script src="ziwei-glossary.js?v=20261117.1"></script>

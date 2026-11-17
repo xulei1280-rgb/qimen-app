@@ -230,6 +230,9 @@ function createPageSandbox(pageSource, initialStorage = []) {
     innerHTML: "",
     files: [],
     dataset: {},
+    style: {},
+    clientWidth: 346,
+    getBoundingClientRect() { return { height: 618 }; },
     elements: { gender: { value: "male" }, calendarType: { value: "solar" }, timeBasis: { value: "beijing" } },
     addEventListener() {},
     querySelectorAll() { return []; },
@@ -237,7 +240,7 @@ function createPageSandbox(pageSource, initialStorage = []) {
     appendChild() {},
     remove() {},
     setAttribute() {},
-    classList: { add() {}, remove() {}, toggle() {} },
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
     reset() {},
     scrollIntoView() {},
   });
@@ -270,6 +273,8 @@ function createPageSandbox(pageSource, initialStorage = []) {
     },
     crypto: { randomUUID() { return "00000000-0000-4000-8000-000000000000"; } },
     confirm() { return true; },
+    addEventListener() {},
+    matchMedia() { return { matches: false, addEventListener() {} }; },
     fetch() { throw new Error("checker must not call network"); },
     ChinaLocations: require('./china-locations.js'),
     ZiweiEngine: engine,
@@ -285,7 +290,7 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261117.3"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261117.4"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
@@ -320,8 +325,9 @@ function runPageContracts() {
   assert(pageSource.includes('palace-layer palace-layer-major') && pageSource.includes('palace-layer palace-layer-support') && pageSource.includes('cycle-primary') && pageSource.includes('cycle-small-limit'), "单宫主曜、辅曜和运限层级结构缺失");
   assert(html.includes(".palace-layer-major") && html.includes(".palace-layer-support") && html.includes(".cycle-primary") && html.includes(".cycle-label"), "单宫层级视觉样式缺失");
   assert(html.includes('.palace .star-badge[class*="mutagen-"]') && html.includes(".star-badge.mutagen-lu") && html.includes(".star-badge.mutagen-quan") && html.includes(".star-badge.mutagen-ke") && html.includes(".star-badge.mutagen-ji") && html.includes("border-radius: 6px 6px 6px 2px"), "宫内四化独立方印样式缺失");
-  assert(html.includes("grid-template-columns: repeat(4, minmax(250px, 1fr))") && html.includes(".chart-viewport") && html.includes("overflow: auto") && !html.includes("grid-row: auto !important"), "手机命盘未保持完整四列或不能独立横向滑动");
-  assert(html.includes('id="chartZoomOut"') && html.includes('id="chartZoomReset"') && html.includes('id="chartZoomIn"') && html.includes(".chart-zoom-control { display: none; }") && html.includes(".chart-zoom-control { display: inline-flex; }") && pageSource.includes("function normalizeChartZoom") && pageSource.includes("elements.chartGrid.style.zoom"), "手机命盘独立缩放控制缺失或错误显示在桌面");
+  assert(html.includes('html[data-density="pro"] .chart-grid { width: 760px; min-width: 760px;') && !html.includes("min-width: 1000px") && html.includes(".chart-viewport") && html.includes("overflow: auto") && !html.includes("grid-row: auto !important"), "手机命盘未保持完整四列或不能独立横向滑动");
+  assert(!/id="chartZoom(?:Out|Reset|In)"|chart-zoom-control/.test(html) && pageSource.includes("function chartFitZoom") && pageSource.includes("CHART_PRO_MOBILE_WIDTH = 760") && pageSource.includes("elements.chartGrid.style.zoom"), "手机适屏缩放缺失或旧按钮未删除");
+  assert(html.includes('class="zw-pinch-hint"') && html.includes('双指张开可放大细看'), "手机详细盘手势提示缺失");
   assert(pageSource.includes("function beginChartPinch") && pageSource.includes("function moveChartPinch") && pageSource.includes('addEventListener("touchmove", moveChartPinch, { passive: false })') && html.includes("touch-action: pan-x pan-y"), "手机命盘双指缩放缺失");
 
   const sandbox = createPageSandbox(pageSource, [["ziwei_theme_v1", "dark"]]);
@@ -336,7 +342,14 @@ function runPageContracts() {
   assert(pageTest.DENSITY_STORAGE_KEY === "ziwei_density_v1", "密度偏好存储键错误");
   assert(pageTest.writeDisplayPreference({ setItem() { throw new Error("denied"); } }, pageTest.DENSITY_STORAGE_KEY, "pro") === false, "密度存储异常未安全处理");
   assert(pageTest.applyDensity("pro", false) === "pro" && sandbox.document.documentElement.dataset.density === "pro", "专业密度应用失败");
-  assert(pageTest.normalizeChartZoom(0.1) === 0.75 && pageTest.normalizeChartZoom(1.26) === 1.3 && pageTest.normalizeChartZoom(9) === 1.5 && pageTest.normalizeChartZoom("bad") === 1, "命盘缩放边界或步进错误");
+  assert(pageTest.normalizeChartZoom(0.1) === 1 && pageTest.normalizeChartZoom(1.26) === 1.26 && pageTest.normalizeChartZoom(9) === 1.5 && pageTest.normalizeChartZoom("bad") === 1, "桌面缩放边界错误");
+  sandbox.matchMedia = () => ({ matches: true, addEventListener() {} });
+  pageTest.applyDensity("pro", false);
+  assert(pageTest.chartFitZoom() === 0.455 && pageTest.normalizeChartZoom(0.1) === 0.455 && pageTest.normalizeChartZoom(0.455) === 0.455, "手机整盘适屏下限不精确");
+  pageTest.applyChartZoom(1.5);
+  assert(sandbox.document.getElementById("chartViewport").style.height === "618px", "放大未锁定适屏高度");
+  pageTest.applyDensity("clear", false);
+  assert(sandbox.document.getElementById("chartGrid").style.zoom === "" && sandbox.document.getElementById("chartViewport").style.height === "", "详细 150% 切简洁未清除缩放或高度");
   assert(pageTest.touchDistance([{ clientX: 0, clientY: 0 }, { clientX: 3, clientY: 4 }]) === 5, "命盘双指距离计算错误");
   const snapshot = engine.buildNatal({ calendarType: "solar", date: "2000-08-16", time: "00:30", gender: "male", timeBasis: "trueSolar", longitude: 87.6168, confirmedTimeShift: true });
   const anonymous = pageTest.anonymousNatal(snapshot);

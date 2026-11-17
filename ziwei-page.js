@@ -19,9 +19,8 @@
     ["R14", "财福轴", "财帛", "福德"],
     ["R15", "父疾轴", "父母", "疾厄"],
   ];
-  const CHART_ZOOM_MIN = 0.75;
+  const CHART_PRO_MOBILE_WIDTH = 760;
   const CHART_ZOOM_MAX = 1.5;
-  const CHART_ZOOM_STEP = 0.1;
   const KEY_MINOR_STARS = new Set(["左辅", "右弼", "文昌", "文曲", "天魁", "天钺", "禄存", "擎羊", "陀罗", "火星", "铃星", "地空", "地劫", "天马"]);
   const AI_MODE_GUIDES = Object.freeze({
     comprehensive: "综合总览：从整张命盘提炼最重要的结构，并兼顾事业、财富、关系、身心倾向与当前运限；不要把回答限制为一个主题。",
@@ -89,9 +88,6 @@
     birthForm: $("birthForm"),
     densityClear: $("densityClear"),
     densityPro: $("densityPro"),
-    chartZoomOut: $("chartZoomOut"),
-    chartZoomReset: $("chartZoomReset"),
-    chartZoomIn: $("chartZoomIn"),
     personLabel: $("personLabel"),
     solarFields: $("solarFields"),
     lunarFields: $("lunarFields"),
@@ -188,25 +184,61 @@
     elements.densityClear.setAttribute("aria-pressed", String(density === "clear"));
     elements.densityPro.setAttribute("aria-pressed", String(density === "pro"));
     if (persist) writeDisplayPreference(localStorage, DENSITY_STORAGE_KEY, density);
+    resetChartView();
     return density;
   }
 
+  function isMobileChart() {
+    return !!window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
+  }
+
+  function chartFitZoom() {
+    return isMobileChart() && state.density === "pro"
+      ? Math.round(elements.chartViewport.clientWidth / CHART_PRO_MOBILE_WIDTH * 1000) / 1000 : 1;
+  }
+
   function normalizeChartZoom(value) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return 1;
-    return Math.min(CHART_ZOOM_MAX, Math.max(CHART_ZOOM_MIN, Math.round(numeric * 10) / 10));
+    const fit = chartFitZoom(), numeric = Number(value);
+    if (!Number.isFinite(numeric)) return fit;
+    // Keep the exact fit at the lower bound; rounding 0.455 up would overflow.
+    if (numeric <= fit) return fit;
+    return Math.min(CHART_ZOOM_MAX, Math.max(fit, Math.round(numeric * 100) / 100));
   }
 
   function applyChartZoom(value) {
-    const zoom = normalizeChartZoom(value);
-    const percent = Math.round(zoom * 100);
-    state.chartZoom = zoom;
+    const fit = chartFitZoom(), zoom = normalizeChartZoom(value);
+    const viewport = elements.chartViewport;
+    const zoomed = zoom > fit + 0.001;
+    if (zoomed && !viewport.classList.contains("is-zoomed")) {
+      viewport.style.height = viewport.getBoundingClientRect().height + "px";
+    }
     elements.chartGrid.style.zoom = String(zoom);
-    elements.chartZoomReset.textContent = `${percent}%`;
-    elements.chartZoomReset.setAttribute("aria-label", `命盘当前缩放 ${percent}%，点击还原`);
-    elements.chartZoomOut.disabled = zoom <= CHART_ZOOM_MIN;
-    elements.chartZoomIn.disabled = zoom >= CHART_ZOOM_MAX;
+    state.chartZoom = zoom;
+    viewport.classList.toggle("is-zoomed", zoomed);
+    if (!zoomed) {
+      viewport.style.height = "";
+      viewport.scrollLeft = viewport.scrollTop = 0;
+    }
     return zoom;
+  }
+
+  function resetChartView() {
+    chartPinch = null;
+    elements.chartGrid.style.zoom = "";
+    elements.chartViewport.classList.remove("is-zoomed");
+    elements.chartViewport.style.height = "";
+    elements.chartViewport.scrollLeft = elements.chartViewport.scrollTop = 0;
+    state.chartZoom = 1;
+    if (isMobileChart() && state.density === "pro") applyChartZoom(chartFitZoom());
+  }
+
+  let chartResizeFrame = 0;
+  function scheduleChartReset() {
+    if (chartResizeFrame) return;
+    chartResizeFrame = window.requestAnimationFrame(() => {
+      chartResizeFrame = 0;
+      resetChartView();
+    });
   }
 
   function touchDistance(touches) {
@@ -216,7 +248,7 @@
   let chartPinch = null;
 
   function beginChartPinch(event) {
-    if (event.touches.length !== 2 || (window.matchMedia && !window.matchMedia("(max-width: 760px)").matches)) return;
+    if (state.density !== "pro" || event.touches.length !== 2 || !isMobileChart()) return;
     const rect = elements.chartViewport.getBoundingClientRect();
     const centerX = (event.touches[0].clientX + event.touches[1].clientX) / 2 - rect.left;
     const centerY = (event.touches[0].clientY + event.touches[1].clientY) / 2 - rect.top;
@@ -627,6 +659,7 @@
     renderRecords();
     syncRecordControls();
     notifyView("snapshot");
+    if (isMobileChart() && state.density === "pro") resetChartView();
   }
 
   function selectPalace(index) {
@@ -1473,14 +1506,13 @@
   });
   elements.densityClear.addEventListener("click", () => applyDensity("clear", true));
   elements.densityPro.addEventListener("click", () => applyDensity("pro", true));
-  elements.chartZoomOut.addEventListener("click", () => applyChartZoom(state.chartZoom - CHART_ZOOM_STEP));
-  elements.chartZoomReset.addEventListener("click", () => applyChartZoom(1));
-  elements.chartZoomIn.addEventListener("click", () => applyChartZoom(state.chartZoom + CHART_ZOOM_STEP));
   elements.chartViewport.addEventListener("touchstart", beginChartPinch, { passive: true });
   elements.chartViewport.addEventListener("touchmove", moveChartPinch, { passive: false });
   elements.chartViewport.addEventListener("touchend", endChartPinch, { passive: true });
   elements.chartViewport.addEventListener("touchcancel", endChartPinch, { passive: true });
-  if (window.matchMedia) window.matchMedia("(max-width: 760px)").addEventListener("change", (event) => { if (!event.matches) applyChartZoom(1); });
+  if (window.matchMedia) window.matchMedia("(max-width: 760px)").addEventListener("change", scheduleChartReset);
+  window.addEventListener("resize", scheduleChartReset);
+  window.addEventListener("orientationchange", scheduleChartReset);
   elements.birthForm.querySelectorAll(".chart-input").forEach((input) => input.addEventListener("input", markBirthDirty));
   elements.birthForm.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener("change", markBirthDirty));
   elements.locationTrigger.addEventListener("click", () => {
@@ -1594,6 +1626,7 @@
     readDisplayPreference,
     writeDisplayPreference,
     applyDensity,
+    chartFitZoom,
     normalizeChartZoom,
     applyChartZoom,
     touchDistance,

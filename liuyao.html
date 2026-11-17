@@ -119,7 +119,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
   body{background:#fff}.shell{width:100%;padding:0}.masthead,.home-tabs,#historyHome,.plate-tools,.summary-actions,.research-actions,.ai-actions,.review-actions{display:none!important}.grid,.grid.has-plate{display:block}.card{box-shadow:none;border:0;background:#fff;padding:0}#questionCard{margin-bottom:18px}.question-details{display:none}.plate{overflow:visible}.plate-head,.line-row,.standard .plate-head,.standard .line-row{min-width:0;grid-template-columns:50px minmax(150px,1.5fr) 82px 46px minmax(135px,1.2fr)}.pro-only{display:none!important}.result-card{animation:none}.ai-turn{break-inside:avoid}.research-box,.ai-box,.review-box{break-inside:avoid}
 }
 </style>
-<link rel="stylesheet" href="liuyao-premium.css?v=20261117.2">
+<link rel="stylesheet" href="liuyao-premium.css?v=20261117.3">
 </head>
 <body class="professional">
 <a class="skip" href="#main">跳到主要内容</a>
@@ -887,7 +887,16 @@ function sharePlateText(){
   var useGod=currentRecord.useGod,judgment=currentRecord.judgment&&currentRecord.judgment.initial;
   return '【六爻卦案】\n占事：'+currentRecord.question+'\n时间：'+currentRecord.castTime.input.replace('T',' ')+' 北京时间\n类型：'+(TOPIC_LABELS[currentRecord.questionType]||currentRecord.questionType)+'\n'+plateText(currentPlate)+(useGod?'\n用神：'+useGod.label+' '+useGod.relative+useGod.stemBranch+'\n理由：'+useGod.reason:'')+(judgment?'\n初判：'+judgment.tendency+'\n应期条件：'+judgment.expectedTiming:'')+'\n（已隐藏姓名、性别及本地记录编号）'
 }
-async function copySharePlate(){try{await navigator.clipboard.writeText(sharePlateText());setStatus('plateActionStatus','分享版已复制')}catch(error){setStatus('plateActionStatus','复制失败：'+error.message,true)}}
+function copyFallback(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;document.body.appendChild(ta);ta.select();
+  try{return document.execCommand('copy')}finally{document.body.removeChild(ta)}
+}
+async function copyText(text){
+  if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return}
+  if(!copyFallback(text))throw new Error('浏览器不允许复制');
+}
+async function copySharePlate(){try{await copyText(sharePlateText());setStatus('plateActionStatus','分享版已复制')}catch(error){setStatus('plateActionStatus','复制失败：'+error.message,true)}}
 function printCurrentPlate(){window.print()}
 /* ---------- 本卦结论：规则初断（liuyao-verdict.js，不调用 AI） ---------- */
 var currentVerdict=null;
@@ -941,19 +950,19 @@ function renderPlate(){
     '<div class="card-title"><div><div class="eyebrow">02 / 盘面</div><h2>'+esc(currentRecord.question)+'</h2></div></div>'+
     '<div class="summary"><div><div class="gua-symbol">'+esc(plate.primary.symbol)+'</div><div class="gua-name">'+esc(plate.primary.fullName)+'</div><div class="hint">'+esc(plate.palace.name+'宫'+plate.palace.element+' · '+plate.palace.type)+'</div></div><div class="arrow">→</div><div><div class="gua-symbol">'+esc(plate.changed.symbol)+'</div><div class="gua-name">'+esc(moving.length?plate.changed.fullName:'无变卦')+'</div><div class="hint">'+(moving.length?esc('动'+moving.length+'爻'):'六爻皆静')+'</div></div></div>'+
     '<div class="meta-strip" id="calendarFacts"><span class="tag">'+esc(currentRecord.castTime.input.replace('T',' '))+' 北京时间</span><span class="tag">'+esc(plate.calendar.monthGZ)+'月</span><span class="tag">'+esc(plate.calendar.dayGZ)+'日</span><button class="tag term-button" type="button" data-term="旬空" onclick="showTerm(this.dataset.term,0,\'tag\')">旬空 '+esc(plate.calendar.voidBranches.join(''))+'</button>'+plate.tags.map(renderTermTag).join('')+'<span class="tag accent">'+(moving.length?esc('动爻：'+moving.join('、')):'无动爻')+'</span></div>'+renderVerdict()+renderUseGodWhy()+
-    '<div class="plate-tools"><div class="focus-switch" aria-label="盘面聚焦"><button type="button" data-focus="all" onclick="setPlateFocus(\'all\')">全部</button><button type="button" data-focus="moving" onclick="setPlateFocus(\'moving\')">动爻</button><button type="button" data-focus="shiYing" onclick="setPlateFocus(\'shiYing\')">世应</button><button type="button" data-focus="useGod" onclick="setPlateFocus(\'useGod\')" '+(useGod?'':'disabled')+'>用神</button><button type="button" data-focus="hidden" onclick="setPlateFocus(\'hidden\')" '+(hasHidden?'':'disabled')+'>伏神</button></div><div class="plate-actions"><button type="button" onclick="copySharePlate()">复制分享版</button><button type="button" onclick="printCurrentPlate()">打印 / PDF</button><span id="plateActionStatus" class="action-status" role="status" aria-live="polite"></span></div></div>'+
+    '<div class="plate-tools"><div class="focus-switch" aria-label="盘面聚焦"><button type="button" data-focus="all" onclick="setPlateFocus(\'all\')">全部</button><button type="button" data-focus="moving" onclick="setPlateFocus(\'moving\')">动爻</button><button type="button" data-focus="shiYing" onclick="setPlateFocus(\'shiYing\')">世应</button><button type="button" data-focus="useGod" onclick="setPlateFocus(\'useGod\')" '+(useGod?'':'disabled')+'>用神</button><button type="button" data-focus="hidden" onclick="setPlateFocus(\'hidden\')" '+(hasHidden?'':'disabled')+'>伏神</button></div><div class="plate-actions"><button type="button" class="ly-save-image" onclick="saveLiuyaoImage(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 15.5l-5-5-8.5 9"/></svg><span class="ly-spin" aria-hidden="true"></span><span class="ly-save-text">保存为图片</span></button><button type="button" onclick="copySharePlate()">复制分享版</button><button type="button" onclick="printCurrentPlate()">打印 / PDF</button><span id="plateActionStatus" class="action-status" role="status" aria-live="polite"></span></div></div>'+
     '<div class="plate" id="plateRows"><div class="plate-head"><div>六神</div><div class="pro-only">伏神</div><div>本卦六亲 / 纳甲</div><div>爻象</div><div>世应</div><div class="changed-head">变卦</div></div>'+plate.lines.slice().reverse().map(renderLine).join('')+'</div>'+
     '<div class="research-box relation-box">'+relationHtml+'</div>'+
     '<details class="why-details" id="whyDetails"><summary><span class="eyebrow">依据明细</span><b>为什么这么断</b><small>生扶 / 制约证据、条件与应期、五步读卦</small></summary><div class="why-body">'+renderVerdictDetails()+renderUseGodAssessment()+renderReadingGuide()+renderLegacyJudgment()+'</div></details>'+
     '<div class="ai-box" id="aiBox"><div class="card-title"><div><div class="eyebrow">可选 · AI</div><h3>深入解读</h3></div></div><p class="hint ai-premise">AI 会把上面的规则初断（'+esc(currentVerdict?currentVerdict.label:'待定用神')+'）和已定用神当作前提往下讲，不用再问一遍；有追问直接写在下面。</p><div id="aiHistory">'+renderAiHistory()+'</div><textarea id="aiQuestion" aria-label="围绕本卦继续追问" rows="2" maxlength="500" placeholder="围绕本卦原问题继续问，不要换成另一件事"></textarea><div id="aiQuickQuestions" class="ai-quick" aria-label="AI 快捷追问">'+renderAiQuickQuestions()+'</div><div class="ai-actions"><button id="btnAI" class="action" type="button" onclick="analyzeWithAI()">AI 深入解读</button><span id="aiStatus" class="ai-status" role="status"></span></div></div>'+
-    '<details class="review-box" id="reviewBox"'+(currentRecord.review&&currentRecord.review.status==='verified'?' open':'')+'><summary><span class="eyebrow">验证</span><b>事后复盘</b><small>事情有结果后回来记一笔</small></summary><div class="review-grid"><label>状态<select id="reviewStatus"><option value="pending">待验证</option><option value="verified">已验证</option></select></label><label>实际发生时间<input id="reviewObserved" type="date"></label><label class="full">实际结果<textarea id="reviewResult" rows="2" maxlength="1000" placeholder="事情后来实际怎样发展？"></textarea></label><label class="full">复盘结论<textarea id="reviewConclusion" rows="2" maxlength="1000" placeholder="哪些判断吻合，哪些没有，可能原因是什么？"></textarea></label></div><div class="review-actions"><button class="action" type="button" onclick="saveReview()">保存复盘</button><button class="secondary" type="button" onclick="copyCurrentPlate()">复制完整盘面</button><span id="reviewActionStatus" class="action-status" role="status" aria-live="polite"></span></div></details></div>';
+    '<details class="review-box" id="reviewBox"'+(currentRecord.review&&currentRecord.review.status==='verified'?' open':'')+'><summary><span class="eyebrow">验证</span><b>事后复盘</b><small>事情有结果后回来记一笔</small></summary><div class="review-grid"><label>状态<select id="reviewStatus"><option value="pending">待验证</option><option value="verified">已验证</option></select></label><label>实际发生时间<input id="reviewObserved" type="date"></label><label class="full">实际结果<textarea id="reviewResult" rows="2" maxlength="1000" placeholder="事情后来实际怎样发展？"></textarea></label><label class="full">复盘结论<textarea id="reviewConclusion" rows="2" maxlength="1000" placeholder="哪些判断吻合，哪些没有，可能原因是什么？"></textarea></label></div><div class="review-actions"><button class="action" type="button" onclick="saveReview()">保存复盘</button><button class="secondary ly-copy-full" type="button" onclick="copyCurrentPlate()">复制完整盘面</button><span id="reviewActionStatus" class="action-status" role="status" aria-live="polite"></span></div></details></div>';
   var review=currentRecord.review||{};document.getElementById('reviewStatus').value=review.status||'pending';document.getElementById('reviewObserved').value=review.observedAt||'';document.getElementById('reviewResult').value=review.result||'';document.getElementById('reviewConclusion').value=review.conclusion||'';
   setPlateFocus(currentPlateFocus);centerRelationOrbit();renderQuestionSummary();
 }
 function saveReview(){
   if(!currentRecord)return;currentRecord.review={status:document.getElementById('reviewStatus').value,observedAt:document.getElementById('reviewObserved').value,result:document.getElementById('reviewResult').value.trim(),conclusion:document.getElementById('reviewConclusion').value.trim()};if(persistCurrent('reviewActionStatus'))setStatus('reviewActionStatus','复盘已保存')
 }
-async function copyCurrentPlate(){try{await navigator.clipboard.writeText(plateText(currentPlate));setStatus('reviewActionStatus','盘面已复制')}catch(error){setStatus('reviewActionStatus','复制失败：'+error.message,true)}}
+async function copyCurrentPlate(){try{await copyText(plateText(currentPlate));setStatus('reviewActionStatus','盘面已复制')}catch(error){setStatus('reviewActionStatus','复制失败：'+error.message,true)}}
 function renderAiHistory(){
   var history=currentRecord&&Array.isArray(currentRecord.aiHistory)?currentRecord.aiHistory:[];
   if(!history.length)return '<div class="hint">成卦后由 AI 按用神、世应、日月与动变给出可核查的证据链。传统术数仅供参考。</div>';
@@ -1088,5 +1097,6 @@ window.addEventListener('resize',centerRelationOrbit);
 </script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="liuyao-premium.js?v=20261101.1" defer></script>
+<script src="liuyao-share-image.js?v=20261117.1" defer></script>
 </body>
 </html>

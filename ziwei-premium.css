@@ -781,3 +781,9 @@ html[data-theme="dark"] .zw .zw-dict-groups button[aria-current] i{color:inherit
 @media(max-width:760px){.zw .zw-dict-try{min-height:44px}}
 @media(prefers-reduced-motion:reduce){.zw .zw-dict *{animation:none!important;transition:none!important}}
 @media(max-width:420px){.zw .page-intro .sub:has(>.zw-dict-btn){gap:2px}}
+
+/* Mobile detailed chart gesture hint; preserve the existing Ziwei palette. */
+.zw-pinch-hint{display:none}
+@media(max-width:760px){
+  html[data-density="pro"] .zw-pinch-hint{display:flex;align-items:center;justify-content:center;gap:6px;margin:.45rem 0 0;color:var(--zw-muted,#7a7f99);font-size:12px;letter-spacing:.08em}
+}

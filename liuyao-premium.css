@@ -386,3 +386,32 @@ h1,h2,h3,.card-title h2,.card-title h3,.gua-name,.question-clamp,.blank strong,.
 /* 用神条：对照库按钮（浏览模式） */
 .us-btn.us-lib{color:var(--pm-ink);background:#fffdf8}
 @media(max-width:620px){.us-actions{flex-wrap:nowrap;gap:6px}.us-btn{min-width:0;padding:0 8px;white-space:nowrap}}
+
+/* 原型：六爻手机端「保存为图片」 —— 只在 ≤620px 生效，桌面不变 */
+.plate-actions .ly-save-image{display:none}
+@media(max-width:620px){
+  /* 次要样式：继承 .plate-actions button 的纸色胶囊（var(--line) 描边、var(--paper-light) 底、999px 圆角、44px 高、12px 字），靠右、按内容宽 */
+  .plate-actions>button:not(.ly-save-image),.review-actions .ly-copy-full{display:none}
+  .plate-tools .plate-actions{justify-content:flex-end}
+  .plate-actions .ly-save-image{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;min-width:118px;padding:0 14px;color:#7a6f62;font-weight:600;letter-spacing:.06em;
+    transition:color .25s cubic-bezier(.22,1,.36,1),border-color .25s cubic-bezier(.22,1,.36,1)}
+  .plate-actions .ly-save-image:active{border-color:var(--line-strong);color:#5e4329}
+  .plate-actions .ly-save-image svg{width:15px;height:15px;flex:none}
+  .plate-actions .ly-save-image[aria-busy="true"]{cursor:progress;color:#a2978a;border-color:rgba(110,84,44,.15)}
+  .plate-actions .ly-save-image .ly-spin{display:none;width:13px;height:13px;border-radius:50%;border:1.5px solid rgba(138,106,47,.22);border-top-color:#8a6a2f;animation:lySpin .8s linear infinite}
+  .plate-actions .ly-save-image[aria-busy="true"] .ly-spin{display:inline-block}
+  .plate-actions .ly-save-image[aria-busy="true"] svg{display:none}
+}
+@keyframes lySpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.plate-actions .ly-save-image{transition:none}.plate-actions .ly-save-image .ly-spin{animation:none;border-top-color:rgba(138,106,47,.25);border-right-color:#8a6a2f}}
+
+/* 兜底层：微信 / 不支持带文件分享时 */
+.ly-shot-layer{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;background:rgba(20,17,13,.88);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:lyFade .3s cubic-bezier(.22,1,.36,1)}
+.ly-shot-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px}
+.ly-shot-hint{display:inline-flex;align-items:center;gap:8px;color:#f1dcab;font:500 14px/1.2 var(--pm-sans);letter-spacing:.12em}
+.ly-shot-hint::before{content:"";width:6px;height:6px;border-radius:50%;background:#dcc08a}
+.ly-shot-close{min-height:44px;min-width:44px;padding:0 16px;border-radius:999px;border:1px solid rgba(220,192,138,.4);background:transparent;color:#f2e8d4;font:500 14px var(--pm-sans);letter-spacing:.06em}
+.ly-shot-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 16px calc(24px + env(safe-area-inset-bottom))}
+.ly-shot-scroll img{display:block;width:100%;height:auto;border-radius:12px;box-shadow:0 22px 48px -24px rgba(0,0,0,.7);-webkit-touch-callout:default;user-select:auto}
+@keyframes lyFade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.ly-shot-layer{animation:none}}
