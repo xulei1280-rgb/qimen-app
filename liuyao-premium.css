@@ -33,8 +33,6 @@ h1,h2,h3,.card-title h2,.card-title h3,.gua-name,.question-clamp,.blank strong,.
 .top .home-tabs button:hover{color:var(--pm-on-ink)}
 .top .home-tabs button.active{background:linear-gradient(180deg,#f1dcab,#d2b277);color:#1b1814;box-shadow:0 6px 16px -8px rgba(220,192,138,.8)}
 .top .accessibility-tools{margin:0;justify-content:flex-end;color:var(--pm-on-ink-muted)}
-.top .accessibility-tools button{background:transparent;border:1px solid rgba(220,192,138,.3);color:var(--pm-on-ink);font-weight:500;min-height:40px}
-.top .accessibility-tools button[aria-pressed="true"]{background:rgba(220,192,138,.18);border-color:rgba(220,192,138,.6);color:#f1dcab}
 
 /* ---------- 三步流程 ---------- */
 .ly-steps{list-style:none;margin:0 auto 22px;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:760px;counter-reset:none;position:relative}

@@ -196,7 +196,6 @@ assert(!html.includes('slice(0,50)'), 'saved Bazi records must not be silently t
 
 const qimenHtml = fs.readFileSync('index.html', 'utf8');
 [
-  'analysis_display_mode',
   'id="plateFreshness"',
   'function currentPlateInputFingerprint',
   'function markPlateDirty',
@@ -204,11 +203,22 @@ const qimenHtml = fs.readFileSync('index.html', 'utf8');
   'var qimenAiRequestSeq',
   'plateData.gender',
   'plateData.currentCal',
+].forEach((needle) => assert(qimenHtml.includes(needle), `missing Qimen UX safeguard ${needle}`));
+[
+  'analysis_display_mode',
+  'DISPLAY_MODE_STORAGE',
+  'setDisplayMode',
+  'initDisplayMode',
+  'data-display-mode',
   'professional-only',
   'standard-only',
   'data-reading-guide="qimen"',
   '用普通话看这个盘',
-].forEach((needle) => assert(qimenHtml.includes(needle), `missing Qimen UX safeguard ${needle}`));
+  'class="display-mode"',
+  'qm-intro-side',
+  'qm-intro-hint',
+].forEach((needle) => assert(!qimenHtml.includes(needle), `obsolete Qimen display toggle should be removed: ${needle}`));
+assert(qimenHtml.includes('<div class="reading-guide"><h4>专业判读顺序</h4><div class="reasoning-chain"><span>局式旬首</span>→<span>值符值使</span>→<span>用神落宫</span>→<span>门星神仪</span>→<span>旺衰格局</span>→<span>空马刑墓</span></div></div>'), 'Qimen professional reading guide should remain visible without mode classes');
 [
   'class="gz-table"',
   '<span class="info-label">旬首</span>',

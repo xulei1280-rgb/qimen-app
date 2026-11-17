@@ -37,7 +37,7 @@ button{cursor:pointer}
 .home-tabs{display:flex;justify-content:center;gap:8px;margin-bottom:18px}
 .home-tabs button,.mode-switch button{border:1px solid var(--line);background:var(--paper-light);color:#5e4329;border-radius:999px;padding:8px 16px;min-height:44px;font-weight:700}
 .home-tabs button.active,.mode-switch button.active{background:var(--cinnabar);color:#fff;border-color:var(--cinnabar)}
-.accessibility-tools{display:flex;justify-content:center;align-items:center;gap:9px;margin:-9px 0 18px;color:var(--muted);font-size:12px}.accessibility-tools button{min-height:44px;padding:7px 14px;border:1px solid var(--line);background:rgba(255,250,240,.82);color:#5e4329;border-radius:999px;font-weight:800}.accessibility-tools button[aria-pressed="true"]{background:var(--jade);border-color:var(--jade);color:#fff}
+.accessibility-tools{display:flex;justify-content:center;align-items:center;gap:9px;margin:-9px 0 18px;color:var(--muted);font-size:12px}
 .grid{display:grid;grid-template-columns:minmax(300px,.82fr) minmax(460px,1.18fr);gap:18px;align-items:start}
 .grid.has-plate{grid-template-columns:minmax(250px,320px) minmax(0,1fr)}
 .grid>*{min-width:0}
@@ -104,7 +104,6 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 .history-panel{max-width:950px;margin:0 auto}.history-tools{display:grid;grid-template-columns:1fr 140px auto auto;gap:8px;margin-bottom:10px}.history-tools button{min-height:44px;padding:8px 12px}.history-advanced{border:1px solid #dfd0b7;border-radius:10px;background:#fbf4e8;margin-bottom:14px}.history-advanced summary{cursor:pointer;min-height:44px;padding:9px 12px;font-weight:800;color:#65462b;display:flex;align-items:center}.history-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 12px 12px}.history-filter-grid label{display:grid;gap:4px;font-size:11px;color:var(--muted)}.history-filter-grid input,.history-filter-grid select{width:100%;min-width:0;min-height:44px;border:1px solid var(--line);background:#fffdf8;border-radius:8px;padding:7px 9px}.history-filter-actions{display:flex;align-items:end}.history-filter-actions button{width:100%;min-height:44px}.history-list{display:grid;gap:10px}.history-item{border:1px solid var(--line);background:rgba(255,250,240,.94);border-radius:12px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:12px}.history-item h3{font-size:16px;margin:0 0 5px}.history-meta{font-size:12px;color:var(--muted);line-height:1.6}.history-actions{display:flex;gap:6px;align-items:center}.history-actions button{min-height:44px;padding:7px 10px}.empty-list{text-align:center;padding:35px;color:var(--muted)}
 .local-note{font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0 14px}
 .term-dialog{width:min(520px,calc(100% - 28px));border:1px solid var(--line-strong);border-radius:14px;background:var(--paper-light);color:var(--ink);box-shadow:0 20px 60px rgba(40,28,17,.3);padding:0}.term-dialog::backdrop{background:rgba(35,27,20,.45)}.term-dialog-inner{padding:20px}.term-dialog h3{margin:0 0 9px}.term-dialog p{line-height:1.75;margin:8px 0;color:#5f5549}.term-dialog form{text-align:right;margin-top:14px}.term-dialog button{min-height:44px;padding:8px 16px}
-.large-text{font-size:18px}.large-text .hint,.large-text .spirit,.large-text .hidden-spirit,.large-text .element,.large-text .facts button,.large-text .changed-cell,.large-text .history-meta,.large-text .ai-status,.large-text .action-status{font-size:14px}.large-text .line-row{min-height:88px}.large-text .stem-branch{font-size:17px}.large-text .reading-path small{font-size:13px}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @media(max-width:900px){.grid,.grid.has-plate{grid-template-columns:1fr}.blank{min-height:260px}.history-panel{max-width:none}}
 @media(max-width:620px){
@@ -114,7 +113,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
   .history-tools{grid-template-columns:1fr 1fr}.history-tools input{grid-column:1/-1}.history-filter-grid{grid-template-columns:1fr 1fr}.history-item{grid-template-columns:1fr}.history-actions{justify-content:flex-end}.module-nav a{flex:1;justify-content:center}
 }
 @media(max-width:900px) and (orientation:portrait){
-  .plate{overflow-x:hidden}.plate-head,.line-row,.standard .plate-head,.standard .line-row,.professional .plate-head,.professional .line-row{min-width:0;grid-template-columns:34px minmax(82px,1fr) 60px 28px;gap:3px;padding:8px 6px}.professional .pro-only{display:none!important}.changed-head,.changed-cell{display:none!important}.spirit{font-size:11px}.stem-branch{font-size:13px}.relative{display:block;margin-right:0}.large-text .plate-head,.large-text .line-row{grid-template-columns:38px minmax(90px,1fr) 62px 30px}.large-text .stem-branch{font-size:15px}
+  .plate{overflow-x:hidden}.plate-head,.line-row,.standard .plate-head,.standard .line-row,.professional .plate-head,.professional .line-row{min-width:0;grid-template-columns:34px minmax(82px,1fr) 60px 28px;gap:3px;padding:8px 6px}.professional .pro-only{display:none!important}.changed-head,.changed-cell{display:none!important}.spirit{font-size:11px}.stem-branch{font-size:13px}.relative{display:block;margin-right:0}
 }
 @media(max-width:900px) and (orientation:landscape){.plate-head,.line-row{min-width:690px}.standard .pro-only{display:block!important}.standard .plate-head,.standard .line-row{grid-template-columns:58px minmax(62px,.7fr) minmax(185px,1.55fr) 92px 55px minmax(150px,1.3fr)}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
@@ -122,7 +121,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
   body{background:#fff}.shell{width:100%;padding:0}.masthead,.home-tabs,#historyHome,.mode-switch,.plate-tools,.summary-actions,.research-actions,.ai-actions,.review-actions{display:none!important}.grid,.grid.has-plate{display:block}.card{box-shadow:none;border:0;background:#fff;padding:0}#questionCard{margin-bottom:18px}.question-details{display:none}.plate{overflow:visible}.plate-head,.line-row,.standard .plate-head,.standard .line-row{min-width:0;grid-template-columns:50px minmax(150px,1.5fr) 82px 46px minmax(135px,1.2fr)}.pro-only{display:none!important}.result-card{animation:none}.ai-turn{break-inside:avoid}.research-box,.ai-box,.review-box{break-inside:avoid}
 }
 </style>
-<link rel="stylesheet" href="liuyao-premium.css?v=20261101.1">
+<link rel="stylesheet" href="liuyao-premium.css?v=20261117.2">
 </head>
 <body class="standard">
 <a class="skip" href="#main">跳到主要内容</a>
@@ -147,7 +146,7 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
         <button type="button" id="tabCast" class="active" role="tab" aria-selected="true" onclick="showHome('cast')">起卦</button>
         <button type="button" id="tabHistory" role="tab" aria-selected="false" onclick="showHome('history')">复盘记录</button>
       </div>
-      <div class="accessibility-tools"><button type="button" id="largeTextToggle" aria-pressed="false" onclick="toggleLargeText()">大字模式 · 关</button><span id="viewHint">桌面按所选模式显示</span></div>
+      <div class="accessibility-tools"><span id="viewHint">桌面按所选模式显示</span></div>
     </div></div>
   </header>
 
@@ -311,7 +310,6 @@ textarea{resize:vertical;line-height:1.65}.hint{font-size:12px;color:var(--muted
 var API_KEY_STORAGE='qimen_deepseek_api_key';
 var RECORDS_STORAGE='liuyao_records_v1';
 var DISPLAY_STORAGE='liuyao_display_mode';
-var TEXT_SIZE_STORAGE='liuyao_large_text';
 var currentRecord=null,currentPlate=null,currentUseGodRelations=null,currentUseGodAssessment=null,stepLines=[],stepTosses=[],stepMeta=null,tossBusy=false,castTimeEdited=false,aiRequestSeq=0,openedFromHistory=false,currentPlateFocus='all',preferredDisplayMode='standard';
 var LINE_NAMES=['初爻','二爻','三爻','四爻','五爻','上爻'];
 var LINE_VALUE_LABELS={6:'老阴 · 动',7:'少阳 · 静',8:'少阴 · 静',9:'老阳 · 动'};
@@ -593,10 +591,6 @@ function setDisplayMode(mode,save){
   document.querySelectorAll('[data-display]').forEach(function(button){button.classList.toggle('active',button.dataset.display===effective);button.setAttribute('aria-pressed',String(button.dataset.display===effective))});
   var hint=document.getElementById('viewHint');if(hint)hint.textContent=window.matchMedia&&window.matchMedia('(max-width: 900px)').matches?(effective==='professional'?'手机横屏 · 自动完整专业盘':'手机竖屏 · 自动简盘'):'桌面按所选模式显示'
 }
-function setLargeText(enabled){
-  document.body.classList.toggle('large-text',!!enabled);var button=document.getElementById('largeTextToggle');button.setAttribute('aria-pressed',String(!!enabled));button.textContent='大字模式 · '+(enabled?'开':'关');try{localStorage.setItem(TEXT_SIZE_STORAGE,enabled?'1':'0')}catch(error){}
-}
-function toggleLargeText(){setLargeText(!document.body.classList.contains('large-text'))}
 function syncResponsiveDisplay(){setDisplayMode(preferredDisplayMode,false);centerRelationOrbit()}
 function lineGraphic(line){return '<div class="yao '+(line.yinYang==='阳'?'yang':'yin')+'"><span></span><span></span></div><b class="move-mark">'+(line.moving?(line.value===9?'○':'×'):'')+'</b>'}
 function resolveUseGodTarget(target,meta){
@@ -1106,7 +1100,6 @@ try{preferredDisplayMode=localStorage.getItem(DISPLAY_STORAGE)||'standard'}catch
 useCurrentTime();renderManualInputs();renderQuestionTemplates();setDisplayMode(preferredDisplayMode,false);
 resetCoinStage();syncMoreFields();updateFlow();
 setInterval(function(){if(!castTimeEdited&&!stepMeta&&!document.getElementById('castFields').disabled&&!document.getElementById('questionEditor').hidden)useCurrentTime()},20000);
-try{setLargeText(localStorage.getItem(TEXT_SIZE_STORAGE)==='1')}catch(error){setLargeText(false)}
 window.addEventListener('resize',syncResponsiveDisplay);
 </script>
 <script src="premium-base.js?v=20261101.2" defer></script>

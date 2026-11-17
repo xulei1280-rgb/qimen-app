@@ -36,8 +36,6 @@ body{font-size:14px;line-height:1.65;min-height:100vh}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 [hidden]{display:none!important}
-body:not([data-display-mode="professional"]) .professional-only{display:none!important}
-body[data-display-mode="professional"] .standard-only{display:none!important}
 
 /* ---------- 页面骨架与题头（与八字页一致） ---------- */
 .page{max-width:1360px;margin:0 auto;padding:0 32px 64px}
@@ -49,20 +47,6 @@ body[data-display-mode="professional"] .standard-only{display:none!important}
 .top-row{display:flex;flex-wrap:wrap;gap:8px}
 .back{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;font-size:14px;font-weight:500;text-decoration:none;transition:background-color .2s,color .2s,border-color .2s}
 .page-intro{padding-top:36px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
-.qm-intro-side{display:flex;flex-direction:column;align-items:flex-end;gap:10px;padding-bottom:4px}
-.qm-intro-hint{color:rgba(220,192,138,.78);font-size:12px;letter-spacing:.08em}
-.top .display-mode{
-  display:inline-grid;grid-template-columns:1fr 1fr;padding:3px;
-  border:1px solid rgba(220,192,138,.32);border-radius:999px;
-  background:rgba(242,232,212,.05);
-}
-.top .display-mode button{
-  min-width:72px;min-height:36px;border:0;border-radius:999px;background:transparent;
-  color:var(--pm-on-ink-muted);font-family:var(--pm-serif);font-size:14px;letter-spacing:.2em;
-  transition:color .3s var(--pm-ease),background-color .3s var(--pm-ease),box-shadow .3s;
-}
-.top .display-mode button:hover{color:var(--pm-on-ink)}
-.top .display-mode button.active{background:linear-gradient(180deg,#f1dcab,#d2b277);color:#1b1814;box-shadow:0 6px 16px -8px rgba(220,192,138,.8)}
 
 /* ---------- 三栏布局：起盘 | 九宫盘 | 盘面信息 ---------- */
 .qm-layout{
@@ -551,7 +535,6 @@ input[type=checkbox]{accent-color:var(--pm-gold-deep);width:16px;height:16px}
   .qm-setup .qm-setup-body{display:block}
   .qm-setup .qm-advanced{margin-top:16px;padding-top:14px;border-top:1px dashed var(--pm-line-strong)}
   .page-intro{display:block}
-  .qm-intro-side{align-items:flex-start;margin-top:18px}
 }
 @media (max-width:520px){
   .page{padding:0 12px 32px}
@@ -561,8 +544,6 @@ input[type=checkbox]{accent-color:var(--pm-gold-deep);width:16px;height:16px}
   .top-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
   .back{padding:0 4px;font-size:13px}
   .page-intro{padding-top:22px}
-  .top .display-mode{width:100%}
-  .qm-intro-hint{font-size:11px}
   .qm-card{padding:16px 14px 18px;border-radius:14px}
   .info-panel{padding:16px 14px;border-radius:14px}
   .side-panel{padding:16px 14px;border-radius:14px}

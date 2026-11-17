@@ -366,8 +366,7 @@ assert.match(html,/function guideReading\(step\)/);
 assert.match(html,/AI_QUICK_QUESTIONS/);
 assert.match(html,/id="aiQuickQuestions"/);
 assert.match(html,/function fillAiQuestion\(index\)/);
-assert.match(html,/id="largeTextToggle"/);
-assert.match(html,/function toggleLargeText\(\)/);
+assert.doesNotMatch(html,/largeTextToggle|toggleLargeText|setLargeText|TEXT_SIZE_STORAGE|liuyao_large_text|large-text/);
 assert.match(html,/@media\(max-width:900px\) and \(orientation:portrait\)/);
 assert.match(html,/@media\(max-width:900px\) and \(orientation:landscape\)/);
 assert.doesNotMatch(html,/document\.body\.className=mode/);
@@ -401,7 +400,7 @@ const bazi=fs.readFileSync('./bazi.html','utf8');
 assert.match(html,/<nav class="top-row module-nav" aria-label="术数模块">\s*<a class="back page-switch" href="index\.html">奇门<\/a>\s*<a class="back page-switch" href="bazi\.html">八字<\/a>\s*<a class="back page-switch" href="liuyao\.html" aria-current="page">六爻<\/a>\s*<a class="back page-switch" href="ziwei\.html">紫微<\/a>\s*<a class="back page-switch" href="daily\.html">日运<\/a>/);
 // 2026-11-01 墨金视觉与三步起卦流程：共用题头、铜钱摇卦、其他方式、换日开关、手机底部操作条
 assert.match(html,/<link rel="stylesheet" href="premium-base\.css\?v=20261101\.2">/);
-assert.match(html,/<link rel="stylesheet" href="liuyao-premium\.css\?v=20261101\.1">/);
+assert.match(html,/<link rel="stylesheet" href="liuyao-premium\.css\?v=20261117\.2">/);
 assert.match(html,/<script src="premium-base\.js\?v=20261101\.2" defer><\/script>/);
 assert.match(html,/<script src="liuyao-premium\.js\?v=20261101\.1" defer><\/script>/);
 assert.match(html,/<header class="top">[\s\S]*class="appbar"[\s\S]*class="page-intro"/);

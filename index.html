@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=3.0">
 <title>奇门遁甲 - 时家转盘排盘</title>
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
-<link rel="stylesheet" href="qimen-premium.css?v=20261115.1">
+<link rel="stylesheet" href="qimen-premium.css?v=20261117.2">
 </head>
 <body>
 <main class="page qm-page">
@@ -24,13 +24,7 @@
       <h1>奇门遁甲</h1>
       <div class="sub subtitle">时家转盘 · 拆补法　选好时间起盘，点宫位看详情</div>
     </div>
-    <div class="qm-intro-side">
-      <div class="display-mode" aria-label="显示模式">
-        <button type="button" data-display-mode="standard" onclick="setDisplayMode('standard')" title="保留专业词，并用大白话解释">标准</button>
-        <button type="button" data-display-mode="professional" onclick="setDisplayMode('professional')" title="显示专业术语、判定依据和推理顺序">专业</button>
-      </div>
-      <span class="qm-intro-hint">标准：白话解释　·　专业：术语与推理</span>
-    </div></div>
+    </div>
   </header>
 
   <div class="qm-layout">
@@ -233,7 +227,6 @@ var TRUE_SOLAR_STORAGE='qimen_true_solar_enabled';
 var LONGITUDE_STORAGE='qimen_longitude';
 var LOCATION_STORAGE='qimen_location';
 var qimenLocation=null,qimenBirthLocation=null;
-var DISPLAY_MODE_STORAGE='analysis_display_mode';
 var BAZI_RECORDS_STORAGE='bazi_records';
 var plateInputFingerprint='';
 var qimenAiRequestSeq=0;
@@ -362,24 +355,12 @@ function buildQimenBaziContext(link){
   ['day','hour','minute'].forEach(function(id){document.getElementById(id).addEventListener('change',function(){refreshSolarPreview();markPlateDirty()})});
   ['gender','personName'].forEach(function(id){document.getElementById(id).addEventListener('change',markPlateDirty)});
   setControlTitles();
-  initDisplayMode();
   loadAiMode();
   loadSolarSettings();
   renderQimenBaziLink();
   useCurrentTime();
   buildBoard();
 })();
-
-function initDisplayMode(){
-  var saved=localStorage.getItem(DISPLAY_MODE_STORAGE);
-  setDisplayMode(saved==='professional'?'professional':'standard',false);
-}
-function setDisplayMode(mode,persist){
-  mode=mode==='professional'?'professional':'standard';
-  document.body.setAttribute('data-display-mode',mode);
-  document.querySelectorAll('[data-display-mode]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-display-mode')===mode)});
-  if(persist!==false)localStorage.setItem(DISPLAY_MODE_STORAGE,mode);
-}
 
 function setControlTitles(){
   var titles={year:'公历年份',month:'公历月份',day:'公历日期',hour:'时辰小时',minute:'分钟',gender:'求测人性别'};
@@ -920,12 +901,7 @@ function renderSidePanel(data,focusNum){
     '<div class="info-row"><span class="info-label">局式</span><span class="info-value">'+ji.juShi+'</span></div>'+
     '<div class="info-row"><span class="info-label">旬空</span><span class="info-value">'+data.kongWang.join(' ')+'</span></div>'+
     '<div class="info-row"><span class="info-label">马星</span><span class="info-value">'+data.maXing+'</span></div>'+
-    '<div class="reading-guide standard-only" data-reading-guide="qimen"><h4>用普通话看这个盘</h4>'+
-      '<p><strong>值符</strong>是整盘最主要的气势和关注点；<strong>值使门</strong>表示事情更可能通过哪种行动方式落地。</p>'+
-      '<p><strong>旬空</strong>表示相关信息暂时不实、难落实或力量打折，不等于一定没有；<strong>马星</strong>提示走动、变化、出行或事情加速。</p>'+
-      '<p><strong>看单宫</strong>时，门看事情怎么发生，星看性质和状态，神看外在氛围与助力，天盘干看当前变化，地盘干看原有基础。门迫、击刑、入墓是受限方式的专业名称，要和整宫及用神一起判断。</p>'+
-    '</div>'+
-    '<div class="reading-guide professional-only"><h4>专业判读顺序</h4><div class="reasoning-chain"><span>局式旬首</span>→<span>值符值使</span>→<span>用神落宫</span>→<span>门星神仪</span>→<span>旺衰格局</span>→<span>空马刑墓</span></div></div>'+
+    '<div class="reading-guide"><h4>专业判读顺序</h4><div class="reasoning-chain"><span>局式旬首</span>→<span>值符值使</span>→<span>用神落宫</span>→<span>门星神仪</span>→<span>旺衰格局</span>→<span>空马刑墓</span></div></div>'+
     '<div class="legend"><h4>颜色图例</h4>'+
       '<div class="legend-item"><span class="legend-dot" style="background:#e0614f"></span> 门迫 — 八门受制</div>'+
       '<div class="legend-item"><span class="legend-dot" style="background:#5b8fd9"></span> 击刑 — 地支相刑</div>'+
