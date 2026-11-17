@@ -964,7 +964,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 }
 </style>
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
-<link rel="stylesheet" href="bazi-premium.css?v=20261101.2">
+<link rel="stylesheet" href="bazi-premium.css?v=20261117.2">
 </head>
 <body>
 <a class="skip-link" href="#homeTabs">跳到排盘与记录</a>
@@ -1074,6 +1074,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
+<script src="bazi-glossary.js?v=20261117.2" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1186,6 +1187,7 @@ function setDisplayMode(mode,persist){
   document.body.setAttribute('data-display-mode',mode);
   document.querySelectorAll('[data-display-mode]').forEach(function(btn){btn.classList.toggle('active',btn.getAttribute('data-display-mode')===mode)});
   if(persist!==false)localStorage.setItem(DISPLAY_MODE_STORAGE,mode);
+  dispatchBaziView('mode');
 }
 function renderDisplayModeControl(){
   var mode=(document.body&&document.body.getAttribute('data-display-mode'))==='professional'?'professional':'standard';
@@ -1643,6 +1645,7 @@ function newBaziChart(){
   resetBaziFormToNow();
   showBaziHome('form');
   document.getElementById('homeTabs').scrollIntoView({block:'start'});
+  dispatchBaziView('reset');
 }
 function updateBaziSaveButton(){
   var button=document.getElementById('btnSaveChart');
@@ -1685,6 +1688,7 @@ function renderBazi(data){
     '<div class="bazi-view" data-view-panel="ai"><section class="result-card">'+renderAiPanel()+'</section></div>';
   updateBaziSaveButton();
   setBaziAiPendingControls(!!baziAiPendingRequest);
+  dispatchBaziView('render');
 }
 function switchBaziView(name){
   var openingLuck=name==='luck'&&currentBaziView!=='luck';
@@ -1698,6 +1702,24 @@ function switchBaziView(name){
   var chart=document.querySelector('.basic-dashboard .result-card');
   if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,name==='luck');
   if(openingLuck)mobileLuckTracks(document.querySelector('[data-view-panel="luck"]')).forEach(centerSelectedFortune);
+  dispatchBaziView('view');
+}
+// Glossary context is a read-only view of the rendered chart and cached selected-year evidence.
+function dispatchBaziView(reason){
+  if(typeof window==='undefined'||typeof window.dispatchEvent!=='function'||typeof CustomEvent!=='function')return;
+  var luckContext=currentBazi?getSelectedLuckContext(currentBazi):null;
+  if(luckContext){
+    var cached=selectedLuckOutlookCache&&selectedLuckOutlookCache.value;
+    var year=cached&&cached.years&&cached.years[luckContext.yearIndex];
+    var evidence=[];
+    [year&&year.annual,year&&year.increment].forEach(function(result){
+      if(!result)return;
+      (result.evidence||[]).forEach(function(e){if(typeof e==='string')evidence.push(e);else if(e&&e.text)evidence.push(e.text)});
+    });
+    luckContext.patternShift=year&&year.annual&&year.annual.patternShift||year&&year.increment&&year.increment.patternShift||cached&&cached.natal&&cached.natal.patternShift||null;
+    luckContext.evidence=Array.from(new Set(evidence));
+  }
+  window.dispatchEvent(new CustomEvent('bazi:view',{detail:{snapshot:currentBazi,luckContext:luckContext,reason:reason}}));
 }
 function displayRole(god){
   return {日主:'自身',比肩:'同辈帮扶',劫财:'同辈帮扶',正印:'学业和贵人',偏印:'学业和贵人',食神:'稳定产出',伤官:'表达和产出',正财:'资源和机会',偏财:'资源和机会',正官:'规则要求',七杀:'外部压力'}[god]||'相关力量';
@@ -3769,6 +3791,7 @@ function selectLuckPart(part,index){
   if(aiPanel&&currentBazi)aiPanel.innerHTML=renderAiPanel();
   if(part==='month')keepSelectedMonthVisible();
   syncActiveBaziRecord();
+  dispatchBaziView('luck-'+part);
 }
 function isMobileLuckViewport(){
   return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width: 800px)').matches;

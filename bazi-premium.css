@@ -339,3 +339,51 @@
 @media (hover:none){
   .fortune-item:hover,.history-item:hover,.result-actions button:hover,.build-btn:hover,.primary-small:hover{transform:none}
 }
+
+/* 八字新手词典：浅纸、朱金，与既有板块说明并存。 */
+.bz-term{cursor:pointer;text-decoration:underline dotted var(--pm-gold-deep);text-underline-offset:4px;text-decoration-thickness:1px}
+.bz-term:hover,.bz-term-on{color:var(--pm-cinnabar);text-decoration-style:solid}
+.bz-term:focus-visible,.bz-pop button:focus-visible,.bz-dict button:focus-visible,.bz-dict input:focus-visible,.bz-dict-btn:focus-visible{outline:2px solid var(--pm-cinnabar);outline-offset:3px}
+.bz-pop[hidden],.bz-dict[hidden]{display:none}
+.bz-pop-scrim{display:none;position:fixed;inset:0;z-index:79;background:rgba(35,27,18,.38)}
+.bz-dict-btn,.bz-pop button,.bz-dict button{font:inherit;cursor:pointer;color:var(--pm-gold-deep);background:var(--pm-paper);border:1px solid var(--pm-line-strong);border-radius:8px;padding:8px 12px}
+.bz-dict-btn{margin-top:12px;font-size:13px}
+.bz-pop{position:fixed;z-index:80;width:min(420px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;box-sizing:border-box;padding:22px;color:var(--pm-text);background:var(--pm-card);border:1px solid var(--pm-line-strong);border-radius:14px;box-shadow:0 16px 60px rgba(45,31,17,.22);font:14px/1.8 var(--pm-sans);letter-spacing:0}
+.bz-pop-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.bz-pop-head strong{font:600 22px/1.4 var(--pm-serif);color:var(--pm-ink);overflow-wrap:anywhere}
+.bz-pop-group{flex-shrink:0;padding:2px 7px;border:1px solid var(--pm-line);color:var(--pm-cinnabar);font-size:11px}
+.bz-pop .bz-pop-x,.bz-dict .bz-pop-x{margin-left:auto;flex-shrink:0;width:40px;height:40px;padding:0;font-size:24px;line-height:1}
+.bz-pop-text,.bz-dict-item>p{margin:0 0 14px}
+.bz-pop-mine{margin-top:14px;padding:14px;border-left:2px solid var(--pm-gold);background:var(--pm-paper);overflow-wrap:anywhere}
+.bz-pop-mine small{display:block;margin-bottom:6px;font-size:12px;color:var(--pm-gold-deep)}
+.bz-pop-mine span{display:block;white-space:pre-line}
+.bz-pop-note{font-size:11px;color:var(--pm-muted);margin:12px 0}
+.bz-pop-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.bz-pop [data-bz-ask],.bz-dict [data-bz-ask]{background:var(--pm-cinnabar);border-color:var(--pm-cinnabar);color:#fffdf8}
+.bz-time-help{font-size:12px;color:var(--pm-muted)}
+.bz-dict-lock{overflow:hidden}
+.bz-dict{position:fixed;inset:0;z-index:90;color:var(--pm-text);font:14px/1.8 var(--pm-sans);letter-spacing:0}
+.bz-dict-scrim{position:absolute;inset:0;background:rgba(35,27,18,.38)}
+.bz-dict-panel{position:relative;display:flex;flex-direction:column;width:min(100%,1000px);height:100%;margin:auto;background:var(--pm-card);box-shadow:0 0 80px rgba(35,27,18,.2)}
+.bz-dict-head{display:flex;align-items:center;gap:12px;padding:24px 32px 12px}
+.bz-dict-head small{color:var(--pm-gold-deep);font-size:12px}
+.bz-dict-head h2{margin:0;color:var(--pm-ink);font:600 28px/1.5 var(--pm-serif)}
+.bz-dict-search{display:flex;align-items:center;gap:12px;padding:0 32px;font-size:12px;color:var(--pm-muted)}
+.bz-dict-search input{min-width:0;flex:1;padding:10px 12px;border:1px solid var(--pm-line-strong);border-radius:8px;background:var(--pm-paper);color:var(--pm-text);font:14px var(--pm-sans)}
+.bz-dict-groups{display:flex;flex-shrink:0;gap:8px;padding:16px 32px;overflow:auto;border-bottom:1px solid var(--pm-line);scrollbar-width:thin}
+.bz-dict-groups button{white-space:nowrap;font-size:12px}
+.bz-dict-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:8px 32px 40px;scrollbar-width:thin}
+.bz-dict-sec{scroll-margin-top:12px}
+.bz-dict-sec h3{font:600 22px var(--pm-serif);color:var(--pm-cinnabar);margin:24px 0 4px}
+.bz-dict-item{padding:22px 0;border-bottom:1px solid var(--pm-line);scroll-margin:20px;overflow-wrap:anywhere}
+.bz-dict-item h4{font:600 19px var(--pm-serif);margin:0 0 10px;color:var(--pm-ink)}
+.bz-dict-empty{padding:32px 0;color:var(--pm-muted)}
+@media(max-width:760px){
+  .bz-pop-scrim:not([hidden]){display:block}
+  .bz-pop{inset:auto 0 0!important;width:100%;max-height:82dvh;border-radius:18px 18px 0 0;padding:20px 20px max(22px,env(safe-area-inset-bottom));box-shadow:0 -14px 60px rgba(45,31,17,.22)}
+  .bz-pop-actions button{min-height:44px}
+  .bz-dict-head{padding:18px 18px 12px}
+  .bz-dict-search{padding:0 18px;gap:8px}
+  .bz-dict-groups{padding:12px 18px}
+  .bz-dict-body{padding:0 18px max(30px,env(safe-area-inset-bottom))}
+}
