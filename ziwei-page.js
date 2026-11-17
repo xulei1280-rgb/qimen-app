@@ -5,7 +5,6 @@
   const pad = (value) => String(value).padStart(2, '0');
   const STORAGE_KEY = "ziwei_records_v1";
   const API_KEY_STORAGE = "qimen_deepseek_api_key";
-  const THEME_STORAGE_KEY = "ziwei_theme_v1";
   const DENSITY_STORAGE_KEY = "ziwei_density_v1";
   const AI_MODEL = window.DeepSeekClient.MODEL;
   const BRANCH_ORDER = ["巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑", "寅", "卯", "辰"];
@@ -80,7 +79,6 @@
     storageError: "",
     storageReadError: "",
     selectedLocation: null,
-    theme: "light",
     density: "clear",
     chartZoom: 1,
     collapsedTurns: new Set(),
@@ -89,8 +87,6 @@
   const $ = (id) => document.getElementById(id);
   const elements = {
     birthForm: $("birthForm"),
-    themeLight: $("themeLight"),
-    themeDark: $("themeDark"),
     densityClear: $("densityClear"),
     densityPro: $("densityPro"),
     chartZoomOut: $("chartZoomOut"),
@@ -183,16 +179,6 @@
     } catch (_) {
       return false;
     }
-  }
-
-  function applyTheme(value, persist) {
-    const theme = normalizeDisplayPreference(value, ["light", "dark"], "light");
-    state.theme = theme;
-    document.documentElement.dataset.theme = theme;
-    elements.themeLight.setAttribute("aria-pressed", String(theme === "light"));
-    elements.themeDark.setAttribute("aria-pressed", String(theme === "dark"));
-    if (persist) writeDisplayPreference(localStorage, THEME_STORAGE_KEY, theme);
-    return theme;
   }
 
   function applyDensity(value, persist) {
@@ -1485,8 +1471,6 @@
     event.preventDefault();
     buildFromForm(false);
   });
-  elements.themeLight.addEventListener("click", () => applyTheme("light", true));
-  elements.themeDark.addEventListener("click", () => applyTheme("dark", true));
   elements.densityClear.addEventListener("click", () => applyDensity("clear", true));
   elements.densityPro.addEventListener("click", () => applyDensity("pro", true));
   elements.chartZoomOut.addEventListener("click", () => applyChartZoom(state.chartZoom - CHART_ZOOM_STEP));
@@ -1560,9 +1544,8 @@
   });
   elements.recordSearch.addEventListener("input", renderRecords);
 
-  state.theme = readDisplayPreference(localStorage, THEME_STORAGE_KEY, ["light", "dark"], "light");
+  document.documentElement.dataset.theme = "light";
   state.density = readDisplayPreference(localStorage, DENSITY_STORAGE_KEY, ["clear", "pro"], "clear");
-  applyTheme(state.theme, false);
   applyDensity(state.density, false);
   state.records = loadRecords();
   elements.solarDate.value = "1990-01-01";
@@ -1579,7 +1562,6 @@
   window.ZiweiPageTest = Object.freeze({
     STORAGE_KEY,
     API_KEY_STORAGE,
-    THEME_STORAGE_KEY,
     DENSITY_STORAGE_KEY,
     AI_MODEL,
     LOCATIONS,
@@ -1611,7 +1593,6 @@
     normalizeDisplayPreference,
     readDisplayPreference,
     writeDisplayPreference,
-    applyTheme,
     applyDensity,
     normalizeChartZoom,
     applyChartZoom,

@@ -1192,7 +1192,7 @@ function setDisplayMode(mode,persist){
 function renderDisplayModeControl(){
   var mode=(document.body&&document.body.getAttribute('data-display-mode'))==='professional'?'professional':'standard';
   return '<div class="display-mode" data-structure-mode-switch aria-label="显示模式">'+
-    '<button type="button" class="'+(mode==='standard'?'active':'')+'" data-display-mode="standard" onclick="setDisplayMode(\'standard\')" title="用日常中文说明具体作用">标准</button>'+
+    '<button type="button" class="'+(mode==='standard'?'active':'')+'" data-display-mode="standard" onclick="setDisplayMode(\'standard\')" title="用日常中文说明具体作用">通俗</button>'+
     '<button type="button" class="'+(mode==='professional'?'active':'')+'" data-display-mode="professional" onclick="setDisplayMode(\'professional\')" title="显示专业术语、判定依据和推理链">专业</button>'+
     '</div>';
 }

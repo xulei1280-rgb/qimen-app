@@ -218,8 +218,8 @@ function runEngineContracts() {
   }
 }
 
-function createPageSandbox(pageSource) {
-  const storage = new Map();
+function createPageSandbox(pageSource, initialStorage = []) {
+  const storage = new Map(initialStorage);
   const element = () => ({
     value: "",
     checked: false,
@@ -285,7 +285,7 @@ function runPageContracts() {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   const pageSource = fs.readFileSync(PAGE_PATH, "utf8");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261115.1"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261117.3"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");
@@ -312,7 +312,9 @@ function runPageContracts() {
   assert(pageSource.includes("data-evidence-palace") && pageSource.includes("selectPalace(palaceIndex)"), "AI 证据不能定位回命盘宫位");
   assert(html.includes(".relation-svg") && pageSource.includes("relationSvg(relations)"), "三方四正线缺失");
   assert(html.includes("--jade: #18765f") && html.includes("--blue: #2f67a5") && html.includes("--red: #b74340"), "明亮主题语义色缺失");
-  assert(html.includes('html[data-theme="dark"]') && html.includes('data-theme-choice="light"') && html.includes('data-theme-choice="dark"'), "明暗主题切换缺失");
+  assert(!/id="theme(?:Light|Dark)"|data-theme-choice=|class="segmented-control theme-control"/.test(html) && !/themeLight|themeDark|applyTheme/.test(pageSource), "主题切换控件或事件路径仍存在");
+  assert(!html.includes("ziwei_theme_v1") && !pageSource.includes("ziwei_theme_v1") && !pageSource.includes("THEME_STORAGE_KEY"), "页面仍在使用主题存储偏好");
+  assert(html.includes('html[data-theme="dark"]') && fs.readFileSync(path.join(ROOT, "ziwei-premium.css"), "utf8").includes('html[data-theme="dark"]'), "夜色 CSS 规则应保留");
   assert(html.includes('data-density-choice="clear"') && html.includes('data-density-choice="pro"') && html.includes('html[data-density="clear"] .density-detailed'), "清晰与专业密度切换缺失");
   assert(html.includes(".star { gap: .25rem; color: var(--ivory); font-size: 18px") && html.includes(".minor-star { font-size: 14px") && html.includes(".star { font-size: 16px; }") && html.includes(".minor-star { font-size: 13px; }"), "单宫桌面或手机字号层级缺失");
   assert(pageSource.includes('palace-layer palace-layer-major') && pageSource.includes('palace-layer palace-layer-support') && pageSource.includes('cycle-primary') && pageSource.includes('cycle-small-limit'), "单宫主曜、辅曜和运限层级结构缺失");
@@ -322,19 +324,17 @@ function runPageContracts() {
   assert(html.includes('id="chartZoomOut"') && html.includes('id="chartZoomReset"') && html.includes('id="chartZoomIn"') && html.includes(".chart-zoom-control { display: none; }") && html.includes(".chart-zoom-control { display: inline-flex; }") && pageSource.includes("function normalizeChartZoom") && pageSource.includes("elements.chartGrid.style.zoom"), "手机命盘独立缩放控制缺失或错误显示在桌面");
   assert(pageSource.includes("function beginChartPinch") && pageSource.includes("function moveChartPinch") && pageSource.includes('addEventListener("touchmove", moveChartPinch, { passive: false })') && html.includes("touch-action: pan-x pan-y"), "手机命盘双指缩放缺失");
 
-  const sandbox = createPageSandbox(pageSource);
+  const sandbox = createPageSandbox(pageSource, [["ziwei_theme_v1", "dark"]]);
+  assert(sandbox.document.documentElement.dataset.theme === "light", "已有夜色存储时页面启动未固定明亮");
+  assert(sandbox.localStorage.getItem("ziwei_theme_v1") === "dark", "启动不应覆盖已有夜色存储");
+  const headScript = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const headDocument = { documentElement: { dataset: {} } };
+  vm.runInNewContext(headScript, { document: headDocument, localStorage: sandbox.localStorage });
+  assert(headDocument.documentElement.dataset.theme === "light", "头部同步脚本未忽略已有夜色存储");
   const pageTest = sandbox.ZiweiPageTest;
   assert(pageTest.STORAGE_KEY === "ziwei_records_v1", "页面测试接口存储键错误");
-  assert(pageTest.THEME_STORAGE_KEY === "ziwei_theme_v1" && pageTest.DENSITY_STORAGE_KEY === "ziwei_density_v1", "显示偏好存储键错误");
-  assert(pageTest.normalizeDisplayPreference("dark", ["light", "dark"], "light") === "dark", "合法主题偏好被错误回退");
-  assert(pageTest.normalizeDisplayPreference("unknown", ["light", "dark"], "light") === "light", "非法主题偏好没有回退");
-  const preferenceMemory = new Map();
-  const preferenceStorage = { getItem: (key) => preferenceMemory.get(key) ?? null, setItem: (key, value) => preferenceMemory.set(key, value) };
-  assert(pageTest.writeDisplayPreference(preferenceStorage, pageTest.THEME_STORAGE_KEY, "dark") === true, "主题偏好保存失败");
-  assert(pageTest.readDisplayPreference(preferenceStorage, pageTest.THEME_STORAGE_KEY, ["light", "dark"], "light") === "dark", "主题偏好恢复失败");
-  assert(pageTest.readDisplayPreference({ getItem() { throw new Error("denied"); } }, pageTest.THEME_STORAGE_KEY, ["light", "dark"], "light") === "light", "主题存储异常未安全回退");
+  assert(pageTest.DENSITY_STORAGE_KEY === "ziwei_density_v1", "密度偏好存储键错误");
   assert(pageTest.writeDisplayPreference({ setItem() { throw new Error("denied"); } }, pageTest.DENSITY_STORAGE_KEY, "pro") === false, "密度存储异常未安全处理");
-  assert(pageTest.applyTheme("dark", false) === "dark" && sandbox.document.documentElement.dataset.theme === "dark", "夜色主题应用失败");
   assert(pageTest.applyDensity("pro", false) === "pro" && sandbox.document.documentElement.dataset.density === "pro", "专业密度应用失败");
   assert(pageTest.normalizeChartZoom(0.1) === 0.75 && pageTest.normalizeChartZoom(1.26) === 1.3 && pageTest.normalizeChartZoom(9) === 1.5 && pageTest.normalizeChartZoom("bad") === 1, "命盘缩放边界或步进错误");
   assert(pageTest.touchDistance([{ clientX: 0, clientY: 0 }, { clientX: 3, clientY: 4 }]) === 5, "命盘双指距离计算错误");

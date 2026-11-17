@@ -15,7 +15,7 @@
           return fallback;
         }
       };
-      document.documentElement.dataset.theme = read("ziwei_theme_v1", ["light", "dark"], "light");
+      document.documentElement.dataset.theme = "light";
       document.documentElement.dataset.density = read("ziwei_density_v1", ["clear", "pro"], "clear");
     })();
   </script>
@@ -1156,10 +1156,6 @@
             <a class="back" href="ziwei.html" aria-current="page">紫微</a>
             <a class="back" href="daily.html">日运</a>
           </nav>
-          <div class="segmented-control theme-control" role="group" aria-label="页面主题">
-            <button id="themeLight" type="button" data-theme-choice="light" aria-pressed="true">明亮</button>
-            <button id="themeDark" type="button" data-theme-choice="dark" aria-pressed="false">夜色</button>
-          </div>
         </div>
       </div>
       <div class="page-intro">
@@ -1444,7 +1440,7 @@
   <script src="ziwei-engine.js?v=20261107.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
   <script src="china-locations.js?v=20261115.1"></script>
-  <script src="ziwei-page.js?v=20261115.1"></script>
+  <script src="ziwei-page.js?v=20261117.3"></script>
   <script src="premium-base.js?v=20261101.2"></script>
   <script src="ziwei-premium.js?v=20261102.5"></script>
   <script src="ziwei-glossary.js?v=20261117.1"></script>
