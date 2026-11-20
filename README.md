@@ -28,3 +28,5 @@ node check-baselines.js
 ```text
 18 baselines ok
 ```
+
+在仓库根目录运行 `node check-bazi-shensha.cjs` 可校验八字神煞。
