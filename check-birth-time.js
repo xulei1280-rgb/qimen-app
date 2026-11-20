@@ -10,7 +10,7 @@ global.self = global;
 const iztro = require('./vendor/iztro/2.5.8/iztro.min.js');
 const ziwei = require('./ziwei-engine.js');
 const context = vm.createContext({ console });
-for (const file of ['qimen.js', 'birth-time.js', 'bazi-engine.js']) {
+for (const file of ['qimen.js', 'birth-time.js', 'bazi-shensha.js', 'bazi-engine.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, file), 'utf8'), context, { filename: file });
 }
 const bazi = context.BaziEngine;

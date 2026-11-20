@@ -8,7 +8,7 @@ const beforePath=process.argv[2]||(fs.existsSync(defaultBefore)?defaultBefore:nu
 const freezeDirections=!!process.argv[2];
 const before=beforePath?JSON.parse(fs.readFileSync(beforePath,'utf8')):null;if(output)fs.mkdirSync(output,{recursive:true});
 const ctx={console,Date,Math,JSON,BirthTime:require('./birth-time.js'),document:{addEventListener(){},body:{getAttribute(){return 'standard'}},querySelectorAll(){return []},getElementById(){return {value:'detail'}}},localStorage:{getItem(){return null},setItem(){}},confirm(){return true},prompt(){return ''}};vm.createContext(ctx);
-for(const file of ['qimen.js','bazi-engine.js','china-locations.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
+for(const file of ['qimen.js','bazi-shensha.js', 'bazi-engine.js','china-locations.js'])vm.runInContext(fs.readFileSync(file,'utf8'),ctx);
 for(const m of fs.readFileSync('bazi.html','utf8').matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(m[1],ctx);
 const E=ctx.BaziEngine,gz=vm.runInContext('GZ60',ctx),levels=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6','T-tone','T-year'];
 // Standard copy may name terms (格局、主用、十神); it must not use mechanical role translations or hedges.

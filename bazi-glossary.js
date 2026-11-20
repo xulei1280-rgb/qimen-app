@@ -138,7 +138,8 @@
     ['病', '气受阻、收敛。'], ['死', '这股气阶段性收尽。'],
     ['墓', '气收藏、入库。'], ['绝', '旧气已尽、等待新生。'],
     ['胎', '新气开始孕育。'], ['养', '气蓄势待发。'],
-    ['空亡', '日柱所属旬中空掉的地支，传统上看作该支力量虚而不实。', ['日空']],
+    ['本旬空亡', '排盘独立行按每列干支所属的旬，列出该旬所空的两个地支。'],
+    ['空亡', '神煞行以原局日柱所属旬为基准。某柱或岁运的地支落入日旬所空的两支时才标记。', ['日空']],
     ['纳音', '一组干支合起来的传统五行别名。']
   ]);
   add('神煞', [
@@ -146,28 +147,29 @@
     ['太极贵人', '传统上看作悟性、钻研和喜欢追根问底的标记'],
     ['文昌贵人', '传统上看作文才、学习和考试文书上的帮助标记'],
     ['天厨贵人', '传统上看作衣食来源和受供养的标记'], ['福星贵人', '传统上看作福气、照应和生活上有人衬托的标记'],
-    ['国印贵人', '传统上看作权柄、公信和职任印章一类的标记'],
+    ['国印贵人', '以年干或日干查地支，丙见丑。传统上看作权柄、公信和职任印章一类的标记'],
     ['金舆', '传统上看作车马、配得上的待遇与安稳出行的标记'],
     ['流霞', '传统上看作血光、手术或面部损伤一类的提醒标记'],
     ['红艳', '传统上看作情感魅力与桃花性质的标记'], ['禄神', '传统上看作俸禄、本业收入的标记'],
     ['羊刃', '日主旺盛时的冲劲与锋芒的传统标记，看果断与约束'],
-    ['桃花', '传统上看作魅力、人际吸引和感情机会的标记'], ['华盖', '传统上看作孤高、才华和宗教礼法兴趣的标记'],
-    ['驿马', '传统上看作奔走、出行、搬迁和变动的标记'], ['将星', '传统上看作主持、决断和带头的标记'],
-    ['劫煞', '传统上看作争夺、破耗和突发变故的提醒标记'], ['亡神', '传统上看作耗散、迷失和计划落空的提醒标记'],
-    ['灾煞', '传统上看作意外、冲撞类的提醒标记'], ['元辰', '传统上看作意见不合、合作不顺的提醒标记'],
+    ['桃花', '传统上看作魅力、人际吸引和感情机会的标记'], ['华盖', '年支和日支各查余柱，岁运也可命中。传统上看作孤高、才华和宗教礼法兴趣的标记'],
+    ['驿马', '传统上看作奔走、出行、搬迁和变动的标记'], ['将星', '年支和日支各查余柱，岁运也可命中。传统上看作主持、决断和带头的标记'],
+    ['劫煞', '传统上看作争夺、破耗和突发变故的提醒标记'], ['亡神', '年支和日支各查余柱，岁运也可命中。传统上看作耗散、迷失和计划落空的提醒标记'],
+    ['灾煞', '传统上看作意外、冲撞类的提醒标记'], ['元辰', '依年干阴阳和性别选表，以年支查余柱及岁运。传统上看作意见不合、合作不顺的提醒标记'],
     ['红鸾', '传统上看作喜庆、感情和热闹事件的标记'], ['天喜', '传统上看作喜庆、感情和热闹事件的标记'],
     ['披麻', '传统上看作丧吊、孝服类的提醒标记'], ['吊客', '传统上看作丧吊、孝服类的提醒标记'],
-    ['寡宿', '传统上看作孤独、孝服类的提醒标记'], ['天医', '传统上看作医药、治疗和照料的标记'],
+    ['寡宿', '传统上看作孤独、孝服类的提醒标记'], ['孤辰', '与寡宿成对，以年支查余柱和岁运。传统上看作独处、少依靠的提醒标记'], ['天医', '传统上看作医药、治疗和照料的标记'],
     ['天德贵人', '按出生月份取的德星，传统上看作化解是非、减轻过错'],
-    ['天德合', '与天德贵人相合的干支，传统上作用同天德而稍轻'],
+    ['天德合', '依月令取天德，天干查五合，四仲月地支查六合。传统上作用同天德而稍轻'],
     ['月德贵人', '按出生月份三合局取的德星，传统上看作遇事多得宽待、平和化解'],
     ['月德合', '与月德贵人相合的天干，传统上作用同月德而稍轻'],
-    ['德秀贵人', '德与秀并见的标记，传统上看作品性端正、学业文采有成'],
-    ['童子煞', '传统上看作心性年轻、与小孩缘深的标记'],
+    ['德秀贵人', '以月令取德干和秀干，一柱见其中任一干即可标记，传统上看作品性端正、学业文采有成'],
+    ['童子煞', '仅查原局日支和时支，符合月令季节口诀或年纳音口诀即可标记。传统上看作心性年轻、与小孩缘深的标记'],
     ['十恶大败', '某些日柱组合的传统凶忌名，多指钱财难聚的标记'],
     ['魁罡', '传统上看作刚强、果决、不容污的标记'], ['阴差阳错', '传统上看作阴阳搭配错位、事情容易别扭的标记'],
-    ['孤鸾', '传统上看作婚姻感情上孤独或不合的提醒标记'], ['天赦日', '传统上看作宽宥、解困的日期标记'],
-    ['词馆', '传统上看作文才、学业的标记'], ['学堂', '传统上看作文才、学业的标记'], ['血刃', '传统上看作血光、刀针类的提醒标记']
+    ['孤鸾', '传统上看作婚姻感情上孤独或不合的提醒标记'], ['天赦日', '仅在原局日柱按季节标记，春戊寅、夏甲午、秋戊申、冬甲子。传统上看作宽宥、解困的日期标记'],
+    ['词馆', '按年柱纳音五行查月、日、时及岁运地支。金申、木寅、水亥、土亥、火巳。传统上看作文才、学业的标记'],
+    ['学堂', '按年柱纳音五行查月、日、时及岁运地支。金巳、木亥、水申、土申、火寅。传统上看作文才、学业的标记'], ['血刃', '以原局月支查四柱及岁运地支。传统上看作血光、刀针类的提醒标记']
   ].map(([key, text]) => [key, `${text}。`]));
 
   const NAYIN = '海中金 炉中火 大林木 路旁土 剑锋金 山头火 涧下水 城头土 白蜡金 杨柳木 泉中水 屋上土 霹雳火 松柏木 长流水 砂中金 山下火 平地木 壁上土 金箔金 覆灯火 天河水 大驿土 钗钏金 桑柘木 大溪水 沙中土 天上火 石榴木 大海水'.split(' ');
@@ -204,9 +206,30 @@
   }
   function chartLine(value, ctx = {}) {
     const key = resolve(value), term = get(key), data = ctx.snapshot;
-    if (!term || !data?.pillars || !engine) return '';
-    const a = data.patternAnalysis || {}, p = data.pillars, u = a.useful || data.useful || {};
-    const conclusion = u.decision?.conclusion || {}, lc = ctx.luckContext;
+    if (!term || !data?.pillars) return '';
+    const p = data.pillars, lc = ctx.luckContext;
+    if (term.group === '神煞' || ['贵格', '本旬空亡', '空亡'].includes(key)) {
+      const markers = root.BaziShenSha || (typeof module === 'object' && module.exports ? require('./bazi-shensha.js') : null);
+      if (!markers) return '';
+      const natal = PILLARS.map(([id, name]) => [id, name + '柱', p[id]]);
+      const transit = [
+        ['flowMonth', '所选流月', lc?.flowMonth?.gz],
+        ['flowYear', '所选流年', lc?.flowYear?.gz],
+        ['luck', '所选大运', lc?.luckRow?.gz]
+      ].filter(([, , gz]) => gz);
+      const columns = key === '贵格' ? natal : [...natal, ...transit];
+      if (key === '本旬空亡') return columns.map(([, name, gz]) => `${name}${gz}空${markers.kongWang(gz)}`).join('、') + '。';
+      const marked = columns.map(([id, name, gz]) => [name, gz, markers.forPillar(data, gz, id)]);
+      if (key === '空亡') {
+        const hits = marked.filter(([, , names]) => names.includes(key)).map(([name, gz]) => name.replace(/柱$/, '') + '支' + gz[1]);
+        return `日柱${p.day}，旬空${markers.kongWang(p.day)}。${hits.length ? hits.join('、') + '落空亡' : '各列地支未落入日柱旬空'}。`;
+      }
+      const hits = marked.flatMap(([name, , names]) => names.filter(s => key === '贵格' ? /贵人/.test(s) : s === key).map(s => `${name}有${s}`));
+      return hits.length ? hits.join('；') + '。' : `${transit.length && key !== '贵格' ? '四柱与所选岁运' : '四柱'}未见${key === '贵格' ? '贵人神煞标记' : key}。`;
+    }
+    if (!engine) return '';
+    const a = data.patternAnalysis || {}, u = a.useful || data.useful || {};
+    const conclusion = u.decision?.conclusion || {};
     const primary = a.primary || data.pattern || '', structures = a.patternStructures || [];
     const status = structures.find(s => s.name === primary)?.status || a.regularPattern?.status || a.patternVerdict || '未提供状态';
     const identity = `你的日主是${data.dayStem}${data.dayElement || element(data.dayStem)}，日主${data.strength || a.strength || '档位未提供'}。`;
@@ -220,10 +243,6 @@
         (engine.constants.HIDDEN[gz[1]] || []).forEach(s => { if (gods.includes(engine.tenGod(data.dayStem, s))) hits.push(`${name}支藏${s}${element(s)}（${engine.tenGod(data.dayStem, s)}）`); });
       });
       return `${identity}${hits.length ? `${key}出现在${hits.join('、')}。` : `四柱天干和藏干里没有${key}。`}`;
-    }
-    if (term.group === '神煞' || key === '贵格') {
-      const hits = PILLARS.flatMap(([id, name]) => engine.shenShaForPillar(data, p[id]).filter(s => key === '贵格' ? /贵人/.test(s) : s === key).map(s => `${name}柱有${s}`));
-      return hits.length ? `${hits.join('；')}。` : `四柱未见${key === '贵格' ? '贵人神煞标记' : key}。`;
     }
     if (term.group === '格局') {
       if (['格局', '已成', '成而有瑕', '待成', '已破', '成格', '破格'].includes(key)) return summary;
@@ -273,10 +292,6 @@
       return hits.length ? `${hits.map(r => `${r.name}支${r.stage}`).join('，')}。` : `四柱未见${key}。`;
     }
     if (key === '纳音') return PILLARS.map(([id, name]) => `${name}柱${nayin(p[id])}`).join('，') + '。';
-    if (key === '空亡') {
-      const empty = engine.kongWang(p.day), hits = PILLARS.filter(([id]) => empty.includes(p[id][1])).map(([id, name]) => `${name}支${p[id][1]}`);
-      return `日柱${p.day}，旬空${empty}；${hits.length ? hits.join('、') + '落空亡' : '四柱地支未落入日柱旬空'}。`;
-    }
     if (key === '真太阳时') return data.time?.enabled ? `本盘启用真太阳时，采用${formatTime(data.time.used)}。` : '本盘未启用真太阳时，按输入时间口径排盘。';
     if (key === '夏令时') return data.time?.daylightSaving ? '本盘已按夏令时减去一小时，再按所选时间口径排盘。' : '本盘未启用夏令时校正。';
     if (term.group === '大运流年') {

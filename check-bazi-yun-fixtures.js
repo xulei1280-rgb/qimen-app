@@ -3,6 +3,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const ctx={console};vm.createContext(ctx);
 vm.runInContext(fs.readFileSync('qimen.js','utf8'),ctx);
+vm.runInContext(fs.readFileSync('bazi-shensha.js','utf8'),ctx);
 vm.runInContext(fs.readFileSync('bazi-engine.js','utf8').replace('root.BaziEngine=api;','root.__yun={flow:interactionFlowAnalysis,context:buildTemporalPatternContext,core:outlookCore,compare:compareOutlookContexts,god:outlookGod,restricted:outlookRootRestricted};root.BaziEngine=api;'),ctx);
 const E=ctx.BaziEngine,R=ctx.__yun,gz=vm.runInContext('GZ60',ctx),stems='甲乙丙丁戊己庚辛壬癸',branches='子丑寅卯辰巳午未申酉戌亥',months='寅卯辰巳午未申酉戌亥子丑';
 function legal(p){for(const g of Object.values(p))assert.ok(gz.includes(g),'illegal sexagenary pair '+g+' in '+JSON.stringify(p));assert.equal(stems.indexOf(p.month[0]),(2*(stems.indexOf(p.year[0])%5)+2+months.indexOf(p.month[1]))%10);assert.equal(stems.indexOf(p.hour[0]),(2*(stems.indexOf(p.day[0])%5)+branches.indexOf(p.hour[1]))%10);}

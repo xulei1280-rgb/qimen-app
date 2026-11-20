@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const q = vm.createContext({ console });
-for (const file of ['qimen.js', 'bazi-engine.js']) {
+for (const file of ['qimen.js', 'bazi-shensha.js', 'bazi-engine.js']) {
   vm.runInContext(fs.readFileSync(require('node:path').join(__dirname, file), 'utf8'), q, { filename: file });
 }
 

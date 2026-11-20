@@ -190,7 +190,7 @@ assert(/function analyzeBazi\(sourceId\)[\s\S]*?showBaziAiPending\(requestId\)[\
   assert(!html.includes(needle), `obsolete duplicate explanation should be removed: ${needle}`);
 });
 assert(!html.includes('slice(0,50)'), 'saved Bazi records must not be silently truncated');
-['副星','星运','空亡','纳音','神煞'].forEach((label) => {
+['副星','星运','本旬空亡','纳音','神煞'].forEach((label) => {
   assert(!html.includes(`<tr class="professional-only"><th class="row-label">${label}</th>`), `${label} should remain visible in standard mode`);
 });
 
@@ -300,15 +300,17 @@ assert(require('./china-locations.js').search('上海').length > 0, 'location se
 assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261115.1'), 'birth place must use shared offline search');
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
+const shensha = fs.readFileSync('bazi-shensha.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
-assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>') && html.includes('<script src="bazi-engine.js?v=luck-copy-20261114.1"></script>'), 'bazi page should load the current bazi-engine.js asset revision');
+assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>'), 'bazi page should load the birth-time helper');
+assert(/src="bazi-shensha\.js\?v=20261120\.1"><\/script>\s*<script src="bazi-engine\.js\?v=shensha-20261120\.1"/.test(html), 'bazi page should load shared rules before the engine');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
 [
   'window.BaziEngine',
   'function analyzePattern',
-  'function shenShaForPillar',
+  'shenShaForPillar=shenSha.forPillar',
   'function luckStartInfo',
   'function getFlowMonths',
   'SHENSHA_RULES',
@@ -378,6 +380,7 @@ const scriptContext = {
 vm.createContext(scriptContext);
 vm.runInContext(qimen, scriptContext, { filename: 'qimen.js' });
 vm.runInContext(fs.readFileSync('china-locations.js', 'utf8'), scriptContext, { filename: 'china-locations.js' });
+vm.runInContext(shensha, scriptContext, { filename: 'bazi-shensha.js' });
 vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__patternReview={flow:interactionFlowAnalysis,context:buildTemporalPatternContext,finalize:finalizePatternLevel,rooted:godRooted,qualify:qualifyComboFlows};root.BaziEngine=api;'), scriptContext, { filename: 'bazi-engine.js' });
 inlineScripts.forEach((script, index) => vm.runInContext(script, scriptContext, { filename: `bazi-inline-${index}.js` }));
 for(const [itemLeft,expected] of [[0,0],[360,260],[840,600]]){
@@ -1877,7 +1880,7 @@ const firstOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '�
 assert(firstOutlook.previous.label === '无上一柱可比较', 'the first luck must not default to neutral');
 
 // Isolated theoretical ten-god conditions test branches without using personal event labels.
-const coreContext = { GZ60: vm.runInContext('GZ60', scriptContext) };
+const coreContext = { GZ60: vm.runInContext('GZ60', scriptContext), BaziShenSha: scriptContext.BaziShenSha };
 vm.createContext(coreContext);
 vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__outlookRules={core:outlookCore,compare:compareOutlookContexts,label:labelOutlook};root.BaziEngine=api;'), coreContext);
 const rules = coreContext.__outlookRules;

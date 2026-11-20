@@ -1070,11 +1070,12 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
 <script src="china-locations.js?v=20261115.1"></script>
-<script src="bazi-engine.js?v=luck-copy-20261114.1"></script>
+<script src="bazi-shensha.js?v=20261120.1"></script>
+<script src="bazi-engine.js?v=shensha-20261120.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
-<script src="bazi-glossary.js?v=20261117.5" defer></script>
+<script src="bazi-glossary.js?v=shensha-20261120.1" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1150,7 +1151,6 @@ var STEM_WX={甲:'木',乙:'木',丙:'火',丁:'火',戊:'土',己:'土',庚:'�
 var BRANCH_WX={寅:'木',卯:'木',巳:'火',午:'火',辰:'土',戌:'土',丑:'土',未:'土',申:'金',酉:'金',亥:'水',子:'水'};
 var HIDDEN={子:['癸'],丑:['己','癸','辛'],寅:['甲','丙','戊'],卯:['乙'],辰:['戊','乙','癸'],巳:['丙','戊','庚'],午:['丁','己'],未:['己','丁','乙'],申:['庚','壬','戊'],酉:['辛'],戌:['戊','辛','丁'],亥:['壬','甲']};
 var NAYIN={甲子:'海中金',乙丑:'海中金',丙寅:'炉中火',丁卯:'炉中火',戊辰:'大林木',己巳:'大林木',庚午:'路旁土',辛未:'路旁土',壬申:'剑锋金',癸酉:'剑锋金',甲戌:'山头火',乙亥:'山头火',丙子:'涧下水',丁丑:'涧下水',戊寅:'城头土',己卯:'城头土',庚辰:'白蜡金',辛巳:'白蜡金',壬午:'杨柳木',癸未:'杨柳木',甲申:'泉中水',乙酉:'泉中水',丙戌:'屋上土',丁亥:'屋上土',戊子:'霹雳火',己丑:'霹雳火',庚寅:'松柏木',辛卯:'松柏木',壬辰:'长流水',癸巳:'长流水',甲午:'砂中金',乙未:'砂中金',丙申:'山下火',丁酉:'山下火',戊戌:'平地木',己亥:'平地木',庚子:'壁上土',辛丑:'壁上土',壬寅:'金箔金',癸卯:'金箔金',甲辰:'覆灯火',乙巳:'覆灯火',丙午:'天河水',丁未:'天河水',戊申:'大驿土',己酉:'大驿土',庚戌:'钗钏金',辛亥:'钗钏金',壬子:'桑柘木',癸丑:'桑柘木',甲寅:'大溪水',乙卯:'大溪水',丙辰:'沙中土',丁巳:'沙中土',戊午:'天上火',己未:'天上火',庚申:'石榴木',辛酉:'石榴木',壬戌:'大海水',癸亥:'大海水'};
-var KONG_BY_XUN={0:'戌亥',1:'申酉',2:'午未',3:'辰巳',4:'寅卯',5:'子丑'};
 var LOCATIONS=ChinaLocations.locations;
 var defaultLocation=LOCATIONS.find(function(loc){return loc.name==='云南省 曲靖市 麒麟区'});
 var selectedLocation=defaultLocation;
@@ -1419,11 +1419,7 @@ function changsheng(stem,branch){
   var diff=forward?(idx-start+12)%12:(start-idx+12)%12;
   return CHANG_SHENG[diff];
 }
-function kongWang(gz){
-  var idx=GZ60.indexOf(gz);
-  if(idx<0)return '';
-  return KONG_BY_XUN[Math.floor(idx/10)]||'';
-}
+function kongWang(gz){return BaziShenSha.kongWang(gz)}
 function buildPillars(t){
   if(typeof BaziEngine!=='undefined'&&BaziEngine.buildPillars)return BaziEngine.buildPillars(t);
   var dayDate=new Date(t.year,t.month-1,t.day);
@@ -1508,76 +1504,10 @@ function patternName(dayStem,monthBranch){
   var main=(HIDDEN[monthBranch]||[])[0];
   return main?tenGod(dayStem,main)+'格参考':'格局参考';
 }
-function relations(pillars){
-  var arr=[],branches=[pillars.year[1],pillars.month[1],pillars.day[1],pillars.hour[1]];
-  var rel={'子丑':'六合','寅亥':'六合','卯戌':'六合','辰酉':'六合','巳申':'六合','午未':'六合','子午':'冲','丑未':'冲','寅申':'冲','卯酉':'冲','辰戌':'冲','巳亥':'冲'};
-  for(var i=0;i<branches.length;i++)for(var j=i+1;j<branches.length;j++){
-    var a=branches[i],b=branches[j],key=[a,b].sort(function(x,y){return DI_ZHI.indexOf(x)-DI_ZHI.indexOf(y)}).join('');
-    if(rel[key])arr.push(a+b+rel[key]);
-  }
-  var db=pillars.day[1],peach={申:'酉',子:'酉',辰:'酉',寅:'卯',午:'卯',戌:'卯',巳:'午',酉:'午',丑:'午',亥:'子',卯:'子',未:'子'};
-  var hua={申:'辰',子:'辰',辰:'辰',寅:'戌',午:'戌',戌:'戌',巳:'丑',酉:'丑',丑:'丑',亥:'未',卯:'未',未:'未'};
-  branches.forEach(function(b){if(b===peach[db])arr.push('桃花在'+b);if(typeof MA_XING_MAP!=='undefined'&&b===MA_XING_MAP[db])arr.push('驿马在'+b);if(b===hua[db])arr.push('华盖在'+b)});
-  kongWang(pillars.day).split('').forEach(function(k){if(branches.indexOf(k)>=0)arr.push('日空 '+k)});
-  return arr.length?arr:['暂无明显合冲空亡提示'];
-}
-function shenShaForPillar(data,gz){
-  if(typeof BaziEngine!=='undefined'&&BaziEngine.shenShaForPillar){
-    return BaziEngine.shenShaForPillar(data,gz).join('<br>');
-  }
-  var stem=data.dayStem,yearStem=data.pillars.year[0],branch=gz[1],dayBranch=data.pillars.day[1],yearBranch=data.pillars.year[1],monthBranch=data.pillars.month[1],out=[];
-  function add(v){if(v&&out.indexOf(v)<0)out.push(v)}
-  function has(map,s,b){return (map[s]||'').indexOf(b)>=0}
-  function combine(s){return {甲:'己',己:'甲',乙:'庚',庚:'乙',丙:'辛',辛:'丙',丁:'壬',壬:'丁',戊:'癸',癸:'戊'}[s]}
-  var tianyi={甲:'丑未',戊:'丑未',庚:'丑未',乙:'子申',己:'子申',丙:'亥酉',丁:'亥酉',壬:'卯巳',癸:'卯巳',辛:'寅午'};
-  var taiji={甲:'子午',乙:'子午',丙:'卯酉',丁:'卯酉',戊:'辰戌丑未',己:'辰戌丑未',庚:'寅亥',辛:'寅亥',壬:'巳申',癸:'巳申'};
-  var wenchang={甲:'巳',乙:'午',丙:'申',丁:'酉',戊:'申',己:'酉',庚:'亥',辛:'子',壬:'寅',癸:'卯'};
-  var yangren={甲:'卯',乙:'寅',丙:'午',丁:'巳',戊:'午',己:'巳',庚:'酉',辛:'申',壬:'子',癸:'亥'};
-  var peach={申:'酉',子:'酉',辰:'酉',寅:'卯',午:'卯',戌:'卯',巳:'午',酉:'午',丑:'午',亥:'子',卯:'子',未:'子'};
-  var huagai={申:'辰',子:'辰',辰:'辰',寅:'戌',午:'戌',戌:'戌',巳:'丑',酉:'丑',丑:'丑',亥:'未',卯:'未',未:'未'};
-  var tianchu={甲:'巳',乙:'午',丙:'巳',丁:'午',戊:'申',己:'酉',庚:'亥',辛:'子',壬:'寅',癸:'卯'};
-  var fuxing={甲:'寅子',乙:'丑卯',丙:'寅子',丁:'亥',戊:'申',己:'未',庚:'午',辛:'巳',壬:'辰',癸:'丑卯'};
-  var jinyu={甲:'辰',乙:'巳',丙:'未',丁:'申',戊:'未',己:'申',庚:'戌',辛:'亥',壬:'丑',癸:'寅'};
-  var liuxia={甲:'酉',乙:'戌',丙:'未',丁:'申',戊:'巳',己:'午',庚:'辰',辛:'卯',壬:'亥',癸:'寅'};
-  var guoyin={甲:'戌',乙:'亥',丙:'申',丁:'寅',戊:'丑',己:'寅',庚:'辰',辛:'巳',壬:'未',癸:'申'};
-  var hongluan={子:'卯',丑:'寅',寅:'丑',卯:'子',辰:'亥',巳:'戌',午:'酉',未:'申',申:'未',酉:'午',戌:'巳',亥:'辰'};
-  var pima={子:'酉',丑:'戌',寅:'亥',卯:'子',辰:'丑',巳:'寅',午:'卯',未:'辰',申:'巳',酉:'午',戌:'未',亥:'申'};
-  var diaoke={子:'戌',丑:'亥',寅:'子',卯:'丑',辰:'寅',巳:'卯',午:'辰',未:'巳',申:'午',酉:'未',戌:'申',亥:'酉'};
-  var guasu={亥:'戌',子:'戌',丑:'戌',寅:'丑',卯:'丑',辰:'丑',巳:'辰',午:'辰',未:'辰',申:'未',酉:'未',戌:'未'};
-  var wangshen={寅:'巳',午:'巳',戌:'巳',申:'亥',子:'亥',辰:'亥',亥:'寅',卯:'寅',未:'寅',巳:'申',酉:'申',丑:'申'};
-  var zaisha={寅:'子',午:'子',戌:'子',申:'午',子:'午',辰:'午',亥:'酉',卯:'酉',未:'酉',巳:'卯',酉:'卯',丑:'卯'};
-  var tianDe={寅:'丁',卯:'申',辰:'壬',巳:'辛',午:'亥',未:'甲',申:'癸',酉:'寅',戌:'丙',亥:'乙',子:'巳',丑:'庚'};
-  var monthDeStem={寅:'丙',午:'丙',戌:'丙',申:'壬',子:'壬',辰:'壬',亥:'甲',卯:'甲',未:'甲',巳:'庚',酉:'庚',丑:'庚'};
-  var dexiuStem={寅:'丙丁戊癸',午:'丙丁戊癸',戌:'丙丁戊癸',申:'壬癸戊己丙辛甲己',子:'壬癸戊己丙辛甲己',辰:'壬癸戊己丙辛甲己',亥:'甲乙丁壬',卯:'甲乙丁壬',未:'甲乙丁壬',巳:'庚辛乙庚',酉:'庚辛乙庚',丑:'庚辛乙庚'};
-  var tongzi={寅:'寅子',卯:'寅子',辰:'寅子',巳:'卯未辰',午:'卯未辰',未:'卯未辰',申:'寅子',酉:'寅子',戌:'寅子',亥:'卯未辰',子:'卯未辰',丑:'卯未辰'};
-  if(has(tianyi,stem,branch)||has(tianyi,yearStem,branch))add('天乙贵人');
-  if(has(taiji,stem,branch)||has(taiji,yearStem,branch))add('太极贵人');
-  if(wenchang[stem]===branch||wenchang[yearStem]===branch)add('文昌贵人');
-  if(tianchu[stem]===branch||tianchu[yearStem]===branch)add('天厨贵人');
-  if(has(fuxing,stem,branch)||has(fuxing,yearStem,branch))add('福星贵人');
-  if(yangren[stem]===branch)add('羊刃');
-  if(peach[dayBranch]===branch||peach[yearBranch]===branch)add('桃花');
-  if(hongluan[yearBranch]===branch)add('红鸾');
-  if(pima[yearBranch]===branch)add('披麻');
-  if(DI_ZHI[(DI_ZHI.indexOf(monthBranch)+11)%12]===branch)add('天医');
-  if(jinyu[stem]===branch)add('金舆');
-  if(liuxia[stem]===branch)add('流霞');
-  if(guasu[yearBranch]===branch)add('寡宿');
-  if(diaoke[yearBranch]===branch)add('吊客');
-  if(wangshen[yearBranch]===branch)add('亡神');
-  if(zaisha[yearBranch]===branch)add('灾煞');
-  if(tianDe[monthBranch]&&combine(tianDe[monthBranch])===gz[0])add('天德合');
-  if(monthDeStem[monthBranch]&&combine(monthDeStem[monthBranch])===gz[0])add('月德合');
-  if((dexiuStem[monthBranch]||'').indexOf(gz[0])>=0)add('德秀贵人');
-  if((tongzi[monthBranch]||'').indexOf(branch)>=0)add('童子煞');
-  if(data.pillars.day===gz&&['甲辰','乙巳','丙申','丁亥','戊戌','己丑','庚辰','辛巳','壬申','癸亥'].indexOf(gz)>=0)add('十恶大败');
-  if(guoyin[stem]===branch)add('国印贵人');
-  if(wenchang[stem]===branch)add('词馆');
-  if(yearStem==='癸'&&(branch==='卯'||branch==='酉'))add('血刃');
-  if(typeof MA_XING_MAP!=='undefined'&&MA_XING_MAP[dayBranch]===branch)add('驿马');
-  if(huagai[dayBranch]===branch||huagai[yearBranch]===branch)add('华盖');
-  if(kongWang(data.pillars.day).indexOf(branch)>=0)add('空亡');
-  return out.length?out.join('<br>'):'';
+function shenShaForPillar(data,gz,column){
+  var shenSha=typeof BaziEngine!=='undefined'&&BaziEngine.shenShaForPillar||
+    (typeof BaziShenSha!=='undefined'&&BaziShenSha.forPillar);
+  return shenSha?shenSha(data,gz,column).join('<br>'):'';
 }
 function calculateBazi(){
   var time=getUsedTime();
@@ -1593,9 +1523,9 @@ function calculateBazi(){
     scores:scores,
     strength:strength,
     useful:usefulElements(dayStem,strength),
-    pattern:patternName(dayStem,pillars.month[1]),
-    relations:relations(pillars)
+    pattern:patternName(dayStem,pillars.month[1])
   };
+  data.relations=BaziShenSha.birthRelations(data);
   return refreshPatternAnalysis(data);
 }
 function refreshPatternAnalysis(data){
@@ -2308,9 +2238,9 @@ function renderPillarTable(data,includeTransit){
     '<tr><th class="row-label">藏干</th>'+cells(function(gz){return '<div class="hidden-stems">'+hiddenText(data.dayStem,gz[1])+'</div>'})+'</tr>'+
     '<tr><th class="row-label">副星</th>'+cells(function(gz){return (HIDDEN[gz[1]]||[]).map(function(s){return tenGod(data.dayStem,s)}).join('<br>')})+'</tr>'+
     '<tr><th class="row-label">星运</th>'+cells(function(gz){return changsheng(data.dayStem,gz[1])})+'</tr>'+
-    '<tr><th class="row-label">空亡</th>'+cells(function(gz){return kongWang(gz)})+'</tr>'+
+    '<tr><th class="row-label">本旬空亡</th>'+cells(function(gz){return kongWang(gz)})+'</tr>'+
     '<tr><th class="row-label">纳音</th>'+cells(function(gz){return NAYIN[gz]||''})+'</tr>'+
-    '<tr><th class="row-label">神煞</th>'+cells(function(gz){return shenShaForPillar(data,gz)})+'</tr>'+
+    '<tr><th class="row-label">神煞</th>'+cells(function(gz,k){return shenShaForPillar(data,gz,k)})+'</tr>'+
     '</table></div>';
   return includeTransit?'<details class="outlook-details"><summary>四柱：'+esc([data.pillars.year,data.pillars.month,data.pillars.day,data.pillars.hour].join(' '))+' · 展开排盘对照</summary>'+table+'</details>':table;
 }

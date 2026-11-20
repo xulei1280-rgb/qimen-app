@@ -8,7 +8,7 @@ class AuditDate extends Date{constructor(...args){super(...(args.length?args:[fi
 let mode='standard';const nodes={};
 const context={console,Date:AuditDate,Math,JSON,BirthTime:require('./birth-time.js'),localStorage:{getItem(){return null},setItem(){}},prompt(){return ''},confirm(){return true},document:{body:{getAttribute(){return mode},setAttribute(k,v){mode=v},classList:{add(){},remove(){}}},addEventListener(){},querySelector(){return null},querySelectorAll(){return []},getElementById(id){return nodes[id]||(nodes[id]={value:id==='aiMode'?'detail':'',checked:false,innerHTML:'',hidden:false,style:{},classList:{toggle(){},add(){},remove(){}}})}}};
 vm.createContext(context);
-for(const file of ['qimen.js','bazi-engine.js','china-locations.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
+for(const file of ['qimen.js','bazi-shensha.js', 'bazi-shensha.js', 'bazi-engine.js','china-locations.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context,{filename:file});
 const html=fs.readFileSync('bazi.html','utf8');for(const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(m[1],context);
 function visible(markup,selected){
  const stack=[],out=[];
@@ -84,7 +84,7 @@ if(output){
  const originalDir=path.dirname(path.resolve(output)),oldPage=path.join(originalDir,'original-bazi.html'),oldEngine=path.join(originalDir,'original-bazi-engine.js');
  if(fs.existsSync(oldPage)&&fs.existsSync(oldEngine)){
   const old={console,Date:AuditDate,Math,JSON,BirthTime:require('./birth-time.js'),localStorage:context.localStorage,document:context.document,prompt:context.prompt,confirm:context.confirm};vm.createContext(old);
-  vm.runInContext(fs.readFileSync('qimen.js','utf8'),old);vm.runInContext(fs.readFileSync('china-locations.js','utf8'),old);vm.runInContext(fs.readFileSync(oldEngine,'utf8'),old);
+  vm.runInContext(fs.readFileSync('qimen.js','utf8'),old);vm.runInContext(fs.readFileSync('china-locations.js','utf8'),old);vm.runInContext(fs.readFileSync('bazi-shensha.js','utf8'),old);vm.runInContext(fs.readFileSync(oldEngine,'utf8'),old);
   for(const m of fs.readFileSync(oldPage,'utf8').matchAll(/<script>([\s\S]*?)<\/script>/g))vm.runInContext(m[1],old);
   for(const [person,gender,year,month,day,hour,minute] of inputs){
    const d=old.BaziEngine.createBaziProfile({person,gender,input:{year,month,day,hour,minute},location:{name:'云南省 曲靖市 师宗县',lng:103.9936,lat:24.8222},useTrueSolar:true,useDaylightSaving:false});old.currentBazi=d;old.luckSelection={luck:null,year:null,month:null};

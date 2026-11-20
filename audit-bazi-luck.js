@@ -15,6 +15,7 @@ function replay(source) {
   const context = {};
   vm.createContext(context);
   vm.runInContext(qimenSource, context);
+  vm.runInContext(fs.readFileSync('bazi-shensha.js', 'utf8'), context);
   vm.runInContext(source, context);
   const engine = context.BaziEngine;
   const stats = { total: 0, determined: 0, pending: 0, tendency: 0, assessments: {}, families: {}, causes: {} };

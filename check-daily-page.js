@@ -13,6 +13,7 @@ const dailyHtml = fs.readFileSync('daily.html', 'utf8');
 const context = { console, Date, Math, JSON };
 vm.createContext(context);
 vm.runInContext(qimenSource, context, { filename: 'qimen.js' });
+vm.runInContext(fs.readFileSync('bazi-shensha.js', 'utf8'), context, { filename: 'bazi-shensha.js' });
 vm.runInContext(baziSource, context, { filename: 'bazi-engine.js' });
 vm.runInContext(dailySource, context, { filename: 'daily-engine.js' });
 
@@ -132,7 +133,7 @@ assert(dailyHtml.includes('id="profileCreateForm"') && dailyHtml.includes('onsub
 assert(dailyHtml.includes("DailyFortuneEngine.profileFromBaziRecord(record)") && dailyHtml.includes("BaziEngine.analyzePattern(bazi)"), 'direct profile creation should reuse the canonical Bazi and daily profile engines');
 assert(!dailyHtml.includes('href="bazi.html">去八字页新增') && !dailyHtml.includes('href="bazi.html">建立第一位命主'), 'profile creation controls must not redirect to the Bazi page');
 assert(dailyHtml.includes('不会写入或改动八字页的保存记录') && dailyHtml.includes('没有写入八字页'), 'direct profile creation should state its storage boundary');
-assert(dailyHtml.includes('src="daily-engine.js?v=20260817.4"') && dailyHtml.includes('src="bazi-engine.js?v=20261109.1-useful-priority"') && dailyHtml.includes('src="deepseek-client.js?v=20260817.1"'), 'daily page should load the V3.1 fact engine and shared AI client');
+assert(dailyHtml.includes('src="daily-engine.js?v=20260817.4"') && dailyHtml.includes('src="bazi-engine.js?v=shensha-20261120.1"') && dailyHtml.includes('src="deepseek-client.js?v=20260817.1"'), 'daily page should load the V3.1 fact engine and shared AI client');
 assert(dailyHtml.includes('var DAILY_DB_VERSION=2') && dailyHtml.includes("db.createObjectStore('profiles'") && dailyHtml.includes("db.createObjectStore('days'") && dailyHtml.includes("db.createObjectStore('timelineAi'") && dailyHtml.includes("timelineAi.createIndex('profileId'"), 'daily page should keep profiles, days, and period AI in the version-two IndexedDB schema');
 assert(dailyHtml.includes('DailyFortuneEngine.buildSnapshot(activeProfile,date,isoNow())') && dailyHtml.includes("if(!day){"), 'daily page should freeze a snapshot only when a day is first opened');
 assert(dailyHtml.includes('entryRevision') && dailyHtml.includes('item.engineStale') && dailyHtml.includes('解释核心已升级'), 'daily page should version diary feedback, mark old engine results stale, and collapse them by default');

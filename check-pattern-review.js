@@ -13,6 +13,7 @@ function load(code) {
   const context = { console };
   vm.createContext(context);
   vm.runInContext(calendar, context, { filename: 'qimen.js' });
+  vm.runInContext(fs.readFileSync('bazi-shensha.js', 'utf8'), context, { filename: 'bazi-shensha.js' });
   vm.runInContext(code, context, { filename: 'bazi-engine.js' });
   return context.BaziEngine;
 }

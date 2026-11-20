@@ -8,7 +8,7 @@ const output=process.argv[3];
 const beforeFile=process.argv[4];
 const ctx={console,Date,Math,JSON,BirthTime:require(path.join(repo,'birth-time.js'))};
 vm.createContext(ctx);
-for(const file of ['qimen.js','bazi-engine.js'])vm.runInContext(fs.readFileSync(path.join(repo,file),'utf8'),ctx,{filename:file});
+for(const file of ['qimen.js','bazi-shensha.js','bazi-engine.js'])vm.runInContext(fs.readFileSync(path.join(repo,file),'utf8'),ctx,{filename:file});
 const E=ctx.BaziEngine, gz=vm.runInContext('GZ60',ctx);
 const inputs=[['色魔','男',1993,11,24,5,2],['笠夏','男',1993,7,14,8,40],['小蔓','女',1998,6,23,9,30],['香肠','男',1993,12,13,8,5],['陈伟伟','男',2002,6,27,19,45]];
 const report={engineSourceSha256:require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(repo,'bazi-engine.js'))).digest('hex'),engineVersion:'luck-outlook-20261111.1-cross-mixed',baseline:process.env.BASELINE_SHA||'unknown',timezone:'Asia/Shanghai',scope:'10 cycles, 10 assigned calendar flow years per cycle; no-previous unavailable excluded',charts:[]};
