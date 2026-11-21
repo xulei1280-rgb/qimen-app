@@ -40,6 +40,8 @@ const expectedNames = [
   '桃花 华盖 驿马 将星 劫煞 亡神 灾煞 元辰 红鸾 天喜 披麻 吊客 寡宿 孤辰',
   '天医 天德贵人 天德合 月德贵人 月德合 德秀贵人 童子煞 十恶大败 魁罡 阴差阳错 孤鸾 天赦日 词馆 学堂 血刃 空亡',
 ].join(' ').split(' ');
+const newNames = ['天罗地网', '天罗', '地网', '十灵日', '正学堂'];
+const allNames = [...expectedNames, ...newNames];
 assert.equal(new Set(expectedNames).size, 41);
 const positive = new Set(), negative = new Set();
 let assertions = 0;
@@ -54,13 +56,15 @@ function expect(data, column, gz, yes, no) {
     }
   }
   assert.equal(new Set(actual).size, actual.length, 'duplicate markers');
-  assert.ok(actual.every(name => expectedNames.includes(name)), 'only the 41 specified names');
+  assert.ok(actual.every(name => allNames.includes(name)), 'only the specified names');
   return actual;
 }
 function exact(data, column, gz, wanted) {
   const yes = wanted.split(' ');
   const no = expectedNames.filter(name => !yes.includes(name));
-  return expect(data, column, gz, yes, no);
+  const actual = expect(data, column, gz, yes, no);
+  assert.deepEqual(actual.slice().sort(), yes.sort(), column + ' ' + (gz || data.pillars[column]) + ' full label set');
+  return actual;
 }
 // A1 日柱的将星、学堂、血刃按批准口径移除。
 const a1Expected = {
@@ -173,13 +177,13 @@ for (const [month, he, de] of ['卯巳申', '午寅亥', '酉亥寅', '子申巳
   expect(natal, 'flowYear', '戊辰', [], ['天德合']);
 }
 for (const [year, school, hall] of [
-  ['辛巳','巳','申'], ['己亥','亥','寅'], ['甲申','申','亥'], ['戊申','申','亥'], ['丙寅','寅','巳'],
+  ['辛巳','己巳','申'], ['己亥','乙亥','寅'], ['甲申','壬申','亥'], ['戊申','壬申','亥'], ['丙寅','戊寅','巳'],
 ]) {
-  const natal = chart([year, branchPillars[hall], '甲子', branchPillars[school]].join(' '));
+  const natal = chart([year, branchPillars[hall], '甲子', school].join(' '));
   expect(natal, 'year', undefined, [], ['学堂', '词馆']);
   expect(natal, 'hour', undefined, ['学堂'], ['词馆']);
   expect(natal, 'month', undefined, ['词馆'], ['学堂']);
-  expect(natal, 'flowYear', branchPillars[school], ['学堂'], ['词馆']);
+  expect(natal, 'flowYear', school, ['学堂'], ['词馆']);
   expect(natal, 'luck', branchPillars[hall], ['词馆'], ['学堂']);
   expect(natal, 'flowMonth', '甲子', [], ['学堂', '词馆']);
 }
@@ -212,6 +216,84 @@ assert.equal(assertions, 904, 'all 904 label assertions executed');
 assert.deepEqual([...positive].sort(), [...expectedNames].sort(), 'all 41 positive fixtures executed');
 assert.deepEqual([...negative].sort(), [...expectedNames].sort(), 'all 41 negative fixtures executed');
 
+const b1 = chart('甲戌 丙寅 乙亥 戊寅', '女');
+const b2 = chart('癸酉 己未 丙申 壬辰');
+const b1Expected = [
+  '国印贵人 流霞 天罗地网',
+  '福星贵人 羊刃 亡神 月德贵人 德秀贵人 正学堂',
+  '国印贵人 劫煞 天喜 孤辰 天罗地网 十灵日 天罗',
+  '福星贵人 羊刃 亡神 德秀贵人 童子煞 学堂',
+];
+const b2Expected = [
+  '天乙贵人 太极贵人 桃花 血刃',
+  '金舆 流霞 吊客 寡宿 天德合 月德合',
+  '太极贵人 文昌贵人 国印贵人 亡神 十恶大败 词馆',
+  '华盖 德秀贵人 童子煞 空亡',
+];
+for (const [id, data, expected] of [['B1', b1, b1Expected], ['B2', b2, b2Expected]]) {
+  results[id] = Object.fromEntries(originalColumns.map((column, index) => [column, exact(data, column, undefined, expected[index])]));
+}
+
+const luowang = ['天罗地网', '天罗', '地网'];
+for (const gender of ['男', '女']) {
+  for (const [year, first, second, detail] of [
+    ['丙寅', '壬戌', '癸亥', '天罗'], // 火
+    ['丙子', '戊辰', '己巳', '地网'], // 水
+    ['庚子', '戊辰', '己巳', '地网'], // 土
+    ['甲子', '戊辰', '己巳', null], // 金
+    ['戊辰', '壬戌', '癸亥', null], // 木
+  ]) {
+    for (const day of [first, second]) {
+      const natal = chart([year, day, day, day].join(' '), gender);
+      expect(natal, 'day', undefined, detail ? [detail] : [], luowang.filter(name => name !== detail));
+      for (const column of [...originalColumns.filter(column => column !== 'day'), ...transitColumns]) {
+        expect(natal, column, natal.pillars[column] || day, [], luowang);
+      }
+    }
+    expect(chart([year, '甲子', '甲子', '甲子'].join(' '), gender), 'day', undefined, [], luowang);
+  }
+}
+for (const [first, second] of [['壬戌', '癸亥'], ['癸亥', '壬戌'], ['戊辰', '己巳'], ['己巳', '戊辰']]) {
+  const paired = chart([first, second, second, first].join(' '));
+  const monthHourOnly = chart(['甲子', first, '甲子', second].join(' '));
+  for (const column of originalColumns) {
+    expect(paired, column, undefined, ['天罗地网'], column === 'day' ? [] : ['天罗', '地网']);
+    expect(monthHourOnly, column, undefined, [], luowang);
+  }
+  for (const column of transitColumns) {
+    for (const gz of [first, second]) expect(paired, column, gz, ['天罗地网'], ['天罗', '地网']);
+    expect(paired, column, '甲子', [], luowang);
+    expect(monthHourOnly, column, first, [], luowang);
+  }
+}
+const bothNetLabels = chart('丙子 甲子 戊辰 己巳');
+expect(bothNetLabels, 'day', undefined, ['地网'], ['天罗地网']);
+expect(bothNetLabels, 'hour', undefined, ['天罗地网'], ['地网']);
+expect(chart('壬辰 甲子 己巳 己巳'), 'day', undefined, ['天罗地网', '地网'], ['天罗']);
+
+const tenSpiritDays = '甲辰 乙亥 丙辰 丁酉 戊午 庚戌 庚寅 辛亥 壬寅 癸未'.split(' ');
+for (const gz of vm.runInContext('GZ60', ctx)) {
+  const natal = chart(Array(4).fill(gz).join(' '));
+  const isSpiritDay = tenSpiritDays.includes(gz);
+  expect(natal, 'day', undefined, isSpiritDay ? ['十灵日'] : [], isSpiritDay ? [] : ['十灵日']);
+  if (isSpiritDay) {
+    for (const column of ['year', 'month', 'hour', ...transitColumns]) expect(natal, column, gz, [], ['十灵日']);
+  }
+}
+
+for (const [proper, ordinary] of [['辛巳', '己巳'], ['己亥', '乙亥'], ['甲申', '壬申'], ['戊申', '壬申'], ['丙寅', '戊寅']]) {
+  const natal = chart([proper, proper, proper, ordinary].join(' '));
+  expect(natal, 'year', undefined, [], ['正学堂', '学堂']);
+  for (const column of ['month', 'day']) expect(natal, column, undefined, ['正学堂'], ['学堂']);
+  expect(natal, 'hour', undefined, ['学堂'], ['正学堂']);
+  for (const column of transitColumns) {
+    expect(natal, column, proper, ['正学堂'], ['学堂']);
+    expect(natal, column, ordinary, ['学堂'], ['正学堂']);
+    expect(natal, column, '甲子', [], ['正学堂', '学堂']);
+  }
+}
+for (const set of [positive, negative]) assert.deepEqual([...set].sort(), allNames.slice().sort(), 'all 46 names checked');
+
 const luckContext = { ...selected, flowMonth: { gz: '庚午' } };
 const glossaryCtx = { snapshot: a1, luckContext };
 assert.match(glossary.chartLine('空亡', glossaryCtx), /日柱辛卯，旬空午未.*月支未.*时支午.*所选流月支午/);
@@ -221,6 +303,20 @@ assert.match(glossary.chartLine('将星', glossaryCtx), /^所选流年有将星�
 assert.match(glossary.chartLine('血刃', glossaryCtx), /^年柱有血刃。$/);
 assert.match(glossary.chartLine('学堂', glossaryCtx), /^所选大运有学堂。$/);
 assert.match(glossary.chartLine('词馆', glossaryCtx), /未见词馆/);
+const b1GlossaryCtx = { snapshot: b1, luckContext: { luckRow: { gz: '丙寅' }, flowYear: { gz: '乙亥' }, flowMonth: { gz: '戊寅' } } };
+for (const [name, definition, summary] of [
+  ['天罗地网', /总名.*大运、流年、流月.*细名/, '年柱有天罗地网；日柱有天罗地网；所选流年有天罗地网。'],
+  ['天罗', /仅在原局日柱.*火.*男忌天罗.*性别无关/, '日柱有天罗。'],
+  ['十灵日', /仅查原局日柱的完整干支/, '日柱有十灵日。'],
+  ['正学堂', /完整干支.*火丙寅.*替换该柱的学堂/, '月柱有正学堂；所选大运有正学堂。'],
+  ['学堂', /岁运地支.*完整干支命中对应正位时改标正学堂/, '时柱有学堂；所选流月有学堂。'],
+]) {
+  assert.match(glossary.get(name).text, definition);
+  assert.equal(glossary.tokenize(name)[0].key, name, 'longest term ' + name);
+  assert.equal(glossary.chartLine(name, b1GlossaryCtx), summary);
+}
+assert.match(glossary.get('地网').text, /仅在原局日柱.*水或土.*女忌地网.*性别无关/);
+assert.equal(glossary.chartLine('地网', { ...b1GlossaryCtx, snapshot: bothNetLabels }), '日柱有地网。');
 assert.ok(a1.patternAnalysis.classifiedClues.misc.includes('阴差阳错'));
 assert.ok(a1.relations.includes('桃花在午') && a1.relations.includes('华盖在未') && a1.relations.includes('日空 午'));
 assert.ok(a2Female.relations.includes('驿马在巳'));
@@ -232,8 +328,12 @@ for (const data of [a0, a1, a2Male, a2Female]) {
   const columns = [...originalColumns.map(column => [column, data.pillars[column]]), ['luck', '丁巳'], ['flowYear', '辛卯'], ['flowMonth', '庚午']];
   for (const [column, gz] of columns) assert.equal(ctx.shenShaForPillar(data, gz, column), saved.shenShaForPillar(data, gz, column).join('<br>'), 'fallback ' + column);
 }
+for (const data of [b1, b2, bothNetLabels]) {
+  const columns = [...originalColumns.map(column => [column, data.pillars[column]]), ['luck', '丙寅'], ['flowYear', '乙亥'], ['flowMonth', '戊寅']];
+  for (const [column, gz] of columns) assert.equal(ctx.shenShaForPillar(data, gz, column), saved.shenShaForPillar(data, gz, column).join('<br>'), 'fallback ' + column + ' ' + gz);
+}
 ctx.BaziEngine = { ...saved, shenShaForPillar: undefined };
 assert.equal(ctx.renderPillarTable(a1, true), mainTable, 'fallback markers in the complete table with fixed luck data');
 assert.deepEqual(ctx.BaziShenSha.birthRelations(a1), a1.relations, 'fallback relation and AI facts');
 console.log(JSON.stringify(results, null, 2));
-console.log('PASS: 41 labels with positive and negative fixtures, ' + assertions + ' label assertions, A0/A1/A2, both void rules, glossary, context-aware summary and fallback parity.');
+console.log('PASS: 46 labels with positive and negative fixtures, ' + assertions + ' label assertions (including the previous 904), A0/A1/A2/B1/B2, both void rules, glossary, context-aware summary and fallback parity.');

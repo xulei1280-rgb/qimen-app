@@ -42,8 +42,12 @@
     tongzi:{寅:'寅子',卯:'寅子',辰:'寅子',巳:'卯未辰',午:'卯未辰',未:'卯未辰',申:'寅子',酉:'寅子',戌:'寅子',亥:'卯未辰',子:'卯未辰',丑:'卯未辰'},
     tongziNayin:{金:'午卯',木:'午卯',水:'酉戌',火:'酉戌',土:'辰巳'},
     xuetang:{金:'巳',木:'亥',水:'申',土:'申',火:'寅'},
+    zhengXuetang:{金:'辛巳',木:'己亥',水:'甲申',土:'戊申',火:'丙寅'},
     ciguan:{金:'申',木:'寅',水:'亥',土:'亥',火:'巳'},
     xueren:{寅:'丑',卯:'未',辰:'寅',巳:'申',午:'卯',未:'酉',申:'辰',酉:'戌',戌:'巳',亥:'亥',子:'午',丑:'子'},
+    luowang:{戌:'亥',亥:'戌',辰:'巳',巳:'辰'},
+    luowangNayin:{火:'戌亥',水:'辰巳',土:'辰巳'},
+    shiling:['甲辰','乙亥','丙辰','丁酉','戊午','庚戌','庚寅','辛亥','壬寅','癸未'],
     tenBad:['甲辰','乙巳','丙申','丁亥','戊戌','己丑','庚辰','辛巳','壬申','癸亥'],
     kuigang:['庚辰','庚戌','壬辰','戊戌'],
     yinYangError:['丙子','丁丑','戊寅','辛卯','壬辰','癸巳','丙午','丁未','戊申','辛酉','壬戌','癸亥'],
@@ -95,6 +99,7 @@
     if(fromYear(rules.diaoke))add(out,'吊客');
     if(fromYear(rules.guasu))add(out,'寡宿');
     if(fromYear(rules.guchen))add(out,'孤辰');
+    if(fromYearOrDay(rules.luowang))add(out,'天罗地网');
     if(BRANCHES[(BRANCHES.indexOf(monthBranch)+11)%12]===branch)add(out,'天医');
     if(tianDe===targetStem||tianDe===branch)add(out,'天德贵人');
     if(combineStem[tianDe]===targetStem||rules.tianDeBranchCombine[monthBranch]===branch)add(out,'天德合');
@@ -103,6 +108,11 @@
     if(has(rules.dexiuStem,monthBranch,targetStem))add(out,'德秀贵人');
     if((column==='day'||column==='hour')&&(has(rules.tongzi,monthBranch,branch)||has(rules.tongziNayin,yearNayin,branch)))add(out,'童子煞');
     if(column==='day'){
+      if(has(rules.luowangNayin,yearNayin,branch)){
+        if(yearNayin==='火')add(out,'天罗');
+        else add(out,'地网');
+      }
+      if(rules.shiling.indexOf(gz)>=0)add(out,'十灵日');
       if(rules.tenBad.indexOf(gz)>=0)add(out,'十恶大败');
       if(rules.kuigang.indexOf(gz)>=0)add(out,'魁罡');
       if(rules.yinYangError.indexOf(gz)>=0)add(out,'阴差阳错');
@@ -110,7 +120,10 @@
       if(rules.tianShe[monthBranch]===gz)add(out,'天赦日');
     }
     if(yearSource&&rules.ciguan[yearNayin]===branch)add(out,'词馆');
-    if(yearSource&&rules.xuetang[yearNayin]===branch)add(out,'学堂');
+    if(yearSource&&rules.xuetang[yearNayin]===branch){
+      if(gz===rules.zhengXuetang[yearNayin])add(out,'正学堂');
+      else add(out,'学堂');
+    }
     if(rules.xueren[monthBranch]===branch)add(out,'血刃');
     if(kongWang(p.day).indexOf(branch)>=0)add(out,'空亡');
     return out;
