@@ -74,7 +74,10 @@ assert.ok(!g.renderCard(g.get('正官'), '', false).includes('在你的盘上'))
 assert.ok(g.renderCard(g.get('正官'), g.chartLine('正官', ctx), true).includes('问 AI 详细讲讲'));
 assert.ok(!g.renderCard(g.get('日主'), '<img src=x onerror=alert(1)>', true).includes('<img'), 'escape snapshot text');
 const html = fs.readFileSync(path.join(__dirname, 'bazi.html'), 'utf8');
-assert.ok(html.indexOf('src="bazi-glossary.js?v=shensha-20261122.2"') > html.indexOf('src="bazi-premium.js?'));
+assert.ok(html.indexOf('src="bazi-glossary.js?v=20261122.3"') > html.indexOf('src="bazi-premium.js?'));
+for (const label of ['命格', '成格', '主用', '佐用', '忌', '五行', '喜用']) {
+  assert.ok(g.search(label).includes(g.get(label)), label + ' remains searchable');
+}
 assert.ok(html.includes('bazi-premium.css?v=20261117.3'));
 for (const reason of ['render', 'view', 'mode', 'reset']) assert.ok(html.includes(`dispatchBaziView('${reason}')`), reason + ' event');
 assert.ok(html.includes("dispatchBaziView('luck-'+part)"));

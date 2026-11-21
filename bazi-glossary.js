@@ -181,6 +181,11 @@
   const NAYIN = '海中金 炉中火 大林木 路旁土 剑锋金 山头火 涧下水 城头土 白蜡金 杨柳木 泉中水 屋上土 霹雳火 松柏木 长流水 砂中金 山下火 平地木 壁上土 金箔金 覆灯火 天河水 大驿土 钗钏金 桑柘木 大溪水 沙中土 天上火 石榴木 大海水'.split(' ');
   RAW.find(t => t.key === '纳音').aliases = NAYIN;
   const TERMS = Object.freeze(RAW.map(t => Object.freeze({ ...t, aliases: Object.freeze(t.aliases) })));
+  const DICTIONARY_ONLY = new Set([
+    '日主', '四柱', '年柱', '月柱', '日柱', '时柱', '天干', '地支', '藏干', '主星', '副星', '五行', '月令', '旺衰',
+    '格局', '已成', '成而有瑕', '待成', '已破', '成格', '破格',
+    '主用', '佐用', '忌', '喜用', '用神', '大运', '流年', '流月', '起运'
+  ]);
   const BY_KEY = new Map(TERMS.map(t => [t.key, t]));
   const ALIAS = new Map();
   TERMS.forEach(t => [t.key, ...t.aliases].forEach(a => ALIAS.set(a, t.key)));
@@ -455,37 +460,40 @@
       q.scrollIntoView({ block: 'center', behavior: motionOK() ? 'smooth' : 'auto' }); q.focus({ preventScroll: true });
     }
     const SKIP = 'button,a,input,textarea,select,option,script,style,svg,.explain-help,#aiResult,.bz-term,[data-bz-term],'
-      + 'h1,h2,h3,h4,h5,h6,summary,.section-title,.detail-box-heading,.detail-box>strong,.luck-block-title,.analysis-box>strong';
+      + 'h1,h2,h3,h4,h5,h6,summary,.section-title,.detail-box-heading,.detail-box>strong,.luck-block-title,.analysis-box>strong,'
+      + '#structureSummary,.pattern-name,.pattern-alias,[data-bz-plain]';
+    const canAnnotate = key => key && !DICTIONARY_ONLY.has(key);
     function mark(el, key) {
+      if (!canAnnotate(key) || el.closest(SKIP)) return;
       el.dataset.bzTerm = key; el.classList.add('bz-term'); el.setAttribute('role', 'button'); el.tabIndex = 0;
       el.setAttribute('aria-haspopup', 'dialog');
     }
     function annotate(container) {
       // Explicit cells allow single-character terms without marking ordinary prose.
-      container.querySelectorAll('.report-god').forEach(el => { const key = resolve(el.textContent); if (key && !el.closest(SKIP)) mark(el, key); });
+      container.querySelectorAll('.report-god').forEach(el => mark(el, resolve(el.textContent)));
       container.querySelectorAll('.pillar-table tr').forEach(row => {
         const label = row.querySelector('.row-label')?.textContent;
-        if (label === '星运') row.querySelectorAll('td').forEach(el => { const key = resolve(el.textContent); if (key && !el.dataset.bzTerm) mark(el, key); });
-        if (label === '纳音') row.querySelectorAll('td').forEach(el => { if (!el.dataset.bzTerm) mark(el, '纳音'); });
+        if (label === '星运') row.querySelectorAll('td').forEach(el => mark(el, resolve(el.textContent)));
+        if (label === '纳音') row.querySelectorAll('td').forEach(el => mark(el, '纳音'));
       });
       const walker = doc.createTreeWalker(container, root.NodeFilter.SHOW_TEXT), nodes = [];
       while (walker.nextNode()) nodes.push(walker.currentNode);
       nodes.forEach(node => {
         const parent = node.parentElement;
         if (!parent || !node.nodeValue.trim() || parent.closest(SKIP)) return;
-        const token = !!parent.closest('.relation-list .tag,.public-use-row dt,.core-use-label,.core-card>strong:not(.core-use-value)');
+        const token = !!parent.closest('.relation-list .tag,.public-use-row dt');
         let parts = tokenize(node.nodeValue, { token });
         if (parent.closest('.relation-list .tag') && !parts.some(p => p.key)) {
           const relation = node.nodeValue.match(/^[子丑寅卯辰巳午未申酉戌亥]{2}([合冲刑害破])/);
           if (relation) parts = [{ text: node.nodeValue, key: resolve(relation[1]) }];
         }
-        if (!parts.some(p => p.key)) return;
+        if (!parts.some(p => canAnnotate(p.key))) return;
         const fragment = doc.createDocumentFragment();
-        parts.forEach(p => { if (!p.key) fragment.appendChild(doc.createTextNode(p.text)); else { const span = doc.createElement('span'); span.textContent = p.text; mark(span, p.key); fragment.appendChild(span); } });
+        parts.forEach(p => { if (!canAnnotate(p.key)) fragment.appendChild(doc.createTextNode(p.text)); else { const span = doc.createElement('span'); span.textContent = p.text; mark(span, p.key); fragment.appendChild(span); } });
         node.replaceWith(fragment);
       });
     }
-    const ROOTS = '#structureSummary,.basic-dashboard .pillar-table-wrap,[data-view-panel="basic"],[data-view-panel="structure"],[data-view-panel="luck"],.options>label,.time-option>label,#solarPreview';
+    const ROOTS = '.basic-dashboard .pillar-table-wrap,[data-view-panel="basic"],[data-view-panel="structure"],[data-view-panel="luck"],.options>label,.time-option>label,#solarPreview';
     let pending = false;
     function schedule() {
       if (pending) return; pending = true;

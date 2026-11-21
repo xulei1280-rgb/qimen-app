@@ -1075,7 +1075,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
-<script src="bazi-glossary.js?v=shensha-20261122.2" defer></script>
+<script src="bazi-glossary.js?v=20261122.3" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -1719,7 +1719,7 @@ function caseAuditText(data,technical){
 }
 function caseReadingText(data,technical,view,highlightGods){
   var view=view||caseDisplayView(data),key=technical?'professional':'standard';
-  var renderText=highlightGods?reportGodText:esc;
+  var renderText=highlightGods?function(text){return reportGodText(text,view.name)}:esc;
   var support=view.support.slice(0,3).map(function(item){return item[key]}).join('');
   var limits=view.limits.map(function(item){return item[key]}).join('')||'无';
   var basis=view.formationBasis?'<dt>成格依据：</dt><dd>'+renderText(view.formationBasis)+'</dd>':'';
@@ -2254,8 +2254,15 @@ function renderBasicInfo(data){
 function standardGodGroup(god){
   return /印/.test(god)?'印星':/财/.test(god)&&!/劫/.test(god)?'财星':/食|伤/.test(god)?'食伤':/官|杀/.test(god)?'官杀':/比|劫/.test(god)?'比劫':'日主';
 }
-function reportGodText(value){
-  return esc(value).replace(/官杀|官星|正官|七杀|偏官|食伤|食神|伤官|印星|正印|偏印|财星|正财|偏财|比劫|比肩|劫财/g,function(god){
+function reportGodText(value,patternName){
+  var words=/官杀|官星|正官|七杀|偏官|食伤|食神|伤官|印星|正印|偏印|财星|正财|偏财|比劫|比肩|劫财/g;
+  if(patternName){
+    var names=new Set([patternName,patternName.split('：').pop()]);
+    var alternatives=Array.from(names,function(name){return esc(name).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')});
+    words=new RegExp('('+alternatives.join('|')+')|'+words.source,'g');
+  }
+  return esc(value).replace(words,function(god,name){
+    if(patternName&&name)return '<span data-bz-plain>'+name+'</span>';
     return '<span class="report-god" data-god-group="'+standardGodGroup(god)+'">'+god+'</span>';
   });
 }
@@ -2496,7 +2503,8 @@ function caseAlternativeUseReading(data){
     var review=remedy.resourceRestraint;
     if(earthRestraintIsReference(view,review))return '';
     var copy=resourceRestraintCopy(view,review),source='取法见'+review.source+'。';
-    return modeCopy('<p class="report-fact">'+reportGodText(copy.standard+source)+'</p>','<p class="report-fact">'+reportGodText(copy.professional+source)+'</p>');
+    var protectedName=review.protectedPattern?.name;
+    return modeCopy('<p class="report-fact">'+reportGodText(copy.standard+source,protectedName)+'</p>','<p class="report-fact">'+reportGodText(copy.professional+source,protectedName)+'</p>');
   }
   var route=view.routes.find(function(item){return item.id==='wealth-flow'&&item.active&&!item.transmissionActive});
   if(!route)return '';
@@ -2513,7 +2521,7 @@ function caseAlternativeUseReading(data){
   var constraint=/制.*[正偏]印/.test(damage)?'财星也会牵制格局所需的印星':'财星也会牵制本盘成格所需的配合';
   var standard=element+'在原局有局部生财的作用，但'+constraint+'，所以没有列入喜用。';
   var professional=element+'在原局可局部生财，'+displayStep(step,true)+'。同时'+damage.split('：')[0]+'，因此未列入喜用。';
-  return modeCopy('<p class="report-fact">'+reportGodText(standard)+'</p>','<p class="report-fact">'+reportGodText(professional)+'</p>');
+  return modeCopy('<p class="report-fact">'+reportGodText(standard)+'</p>','<p class="report-fact">'+reportGodText(professional,publicPatternName(data))+'</p>');
 }
 function renderStructure(data){
   data=refreshPatternAnalysis(data);var view=standardStructureView(data),a=data.patternAnalysis||{};
@@ -3411,7 +3419,7 @@ function publicFlowStep(step){
   return left&&right&&left.stem&&right.stem?actor(left)+verb+actor(right):step.text.split('：')[0];
 }
 function patternConclusionText(data,technical,view){
-  var v=view||caseDisplayView(data);return '<p class="pattern-result" data-verdict="'+esc(v.verdict)+'">'+reportGodText(v.headline[technical?'professional':'standard'])+'</p>';
+  var v=view||caseDisplayView(data);return '<p class="pattern-result" data-verdict="'+esc(v.verdict)+'">'+reportGodText(v.headline[technical?'professional':'standard'],v.name)+'</p>';
 }
 function patternFactorText(data,technical){
   data=refreshPatternAnalysis(data);

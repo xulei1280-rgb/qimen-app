@@ -609,7 +609,7 @@ const referenceLuck = scriptContext.getLuckData(referenceBazi);
 const referencePattern = scriptContext.BaziEngine.analyzePattern(referenceBazi);
 const conciseReferenceBazi = { ...referenceBazi, scores: scriptContext.BaziEngine.scoreWuxing(referenceBazi.pillars), relations: [] };
 const conciseStructureHtml = scriptContext.renderStructure(conciseReferenceBazi);
-function withoutGodHighlight(markup){return markup.replace(/<span class="report-god" data-god-group="[^"]+">([^<]+)<\/span>/g,'$1');}
+function withoutGodHighlight(markup){return markup.replace(/<span (?:class="report-god" data-god-group="[^"]+"|data-bz-plain)>([^<]+)<\/span>/g,'$1');}
 const conciseStructureText=withoutGodHighlight(conciseStructureHtml);
 assert(conciseStructureHtml.includes('data-verdict="已破"') && conciseStructureText.includes('伤官格破格：伤官见官') && conciseStructureText.includes('伤官格：已破'), 'both display modes share the frozen broken verdict');
 assert(!/结构分|评分维度|格局层次：|未损日主根[01]|变化前：|变化后：/.test(conciseStructureHtml), 'all expanded public structure excludes score tiers and internal logs');
@@ -637,7 +637,8 @@ assert(!/出生月份的木（学业和贵人）|支撑|应少增|已有缓解�
 }
 const bladeBazi={...conciseReferenceBazi,pillars:{year:'壬午',month:'丙午',day:'丙寅',hour:'丁酉'},dayStem:'丙',dayElement:'火',time:{...conciseReferenceBazi.time,used:{year:2002,month:6,day:27,hour:18,minute:35}}};
 const bladeStructure=scriptContext.renderStructure(bladeBazi);
-assert(bladeStructure.includes('月刃格：已成') && bladeStructure.includes('月刃格成格：') && bladeStructure.includes('data-use-role="primary" data-element="水"'), 'formed blade keeps its actual verdict and water role');
+const bladeText=withoutGodHighlight(bladeStructure);
+assert(bladeText.includes('月刃格：已成') && bladeText.includes('月刃格成格：') && bladeStructure.includes('data-use-role="primary" data-element="水"'), 'formed blade keeps its actual verdict and water role');
 const highlightedOfficer='<span class="report-god" data-god-group="官杀">官杀</span>';
 assert(bladeStructure.includes('成格要'+highlightedOfficer+'有力约束')&&bladeStructure.includes('水是'+highlightedOfficer+'，作用是制刃'),'the same term has matching inline emphasis in the principle and this chart’s useful explanation');
 assert(bladeStructure.includes('水（'+highlightedOfficer+'）能约束')&&bladeStructure.includes('土：<span class="report-god" data-god-group="食伤">食伤</span>生财'),'the chart verdict and its supporting evidence use the same inline emphasis');
@@ -649,6 +650,10 @@ const reviewedPatternNames = [
   '专旺格：曲直格','专旺格：炎上格','专旺格：稼穑格','专旺格：从革格','专旺格：润下格',
 ];
 for (const name of reviewedPatternNames) {
+  for(const form of new Set([name,name.split('：').pop()])) {
+    const conclusion=scriptContext.patternConclusionText({},false,{name,verdict:'已成',headline:{standard:form+'已成，印星有力。'}});
+    assert(conclusion.includes('<span data-bz-plain>'+form+'</span>已成，') && conclusion.includes('data-god-group="印星">印星</span>'), form+' stays whole while adjacent professional terms remain annotated');
+  }
   const standard = scriptContext.publicPatternReading(name, false);
   const professional = scriptContext.publicPatternReading(name, true);
   assert(['正面特质','负面特质','一句话'].every(label => standard.includes('<dt>'+label+'：</dt>')), name+' should have its own complete plain-language traits');
@@ -1024,7 +1029,7 @@ assert(killSealPattern.elementPhenomena[0].scope.includes('不作为正式命格
 assert(scriptContext.BaziEngine.normalizePhenomenonName('土多埋金') === '土厚埋金' && scriptContext.BaziEngine.normalizePhenomenonName('金多土虚') === '金多土变', 'phenomenon aliases should normalize to one canonical term');
 assert(killSealPattern.patternStructures.some((x) => x.name === '杀印相生格' && x.role === '主格' && x.status === '成而有瑕' && x.issues.includes('土厚埋金')), `buried-metal disease should retain kill-seal as main pattern while lowering its finish, got ${JSON.stringify(killSealPattern.patternStructures)}`);
 const killSealStructure = scriptContext.renderStructure({ ...killSealBazi, scores: scriptContext.BaziEngine.scoreWuxing(killSealBazi.pillars), relations: [] });
-assert(killSealStructure.includes('杀印相生格：成而有瑕')&&killSealStructure.includes('印土既有化杀功能')&&killSealStructure.includes('印土过重压住金的发挥'),'chart-specific copy retains seal function and earth obstruction in the same frozen verdict');
+assert(withoutGodHighlight(killSealStructure).includes('杀印相生格：成而有瑕')&&killSealStructure.includes('印土既有化杀功能')&&killSealStructure.includes('印土过重压住金的发挥'),'chart-specific copy retains seal function and earth obstruction in the same frozen verdict');
 const killSealTraits=killSealStructure.match(/<dl class="pattern-reading is-traits">[\s\S]*?<\/dl>/)?.[0]||'';
 assert(killSealTraits.includes('容易遇到贵人')&&killSealTraits.includes('遇事有贵人指点，也能把压力练成本事。')&&!killSealStructure.replace(killSealTraits,'').includes('容易遇到贵人'),'plain-language traits are shared without making them current-chart support');
 const killSealPotentialDimension = killSealPattern.patternRawScoreBreakdown.dimensions.find((item) => item.key === 'potential');
@@ -1369,7 +1374,7 @@ positivePhenomenonCases.forEach((item) => {
 const strictKillSealPattern = scriptContext.BaziEngine.analyzePattern({ pillars: { year: '戊申', month: '丁午', day: '辛酉', hour: '壬辰' }, dayStem: '辛' });
 assert(strictKillSealPattern.mainPattern === '杀印相生格' && strictKillSealPattern.patternLevelTieBreak.tier === 2 && strictKillSealPattern.patternLevelTieBreak.label === '严格成格组合', `a clean kill-seal structure should share the strict-combination tie tier instead of relying on a hard-coded name rank, got ${JSON.stringify(strictKillSealPattern.patternLevelTieBreak)}`);
 for (const technical of [false, true]) {
-  const cleanVerdict = scriptContext.patternConclusionText({ patternAnalysis: strictKillSealPattern }, technical);
+  const cleanVerdict = withoutGodHighlight(scriptContext.patternConclusionText({ patternAnalysis: strictKillSealPattern }, technical));
   assert(cleanVerdict.includes(technical?'杀印相生格：已成':'主要配合已经接通') && !cleanVerdict.includes('土厚埋金'), 'a clean kill-seal chart must not inherit the buried-metal caveat');
 }
 assert(strictKillSealPattern.patternLevelQualityFloor === '' && strictKillSealPattern.patternLevelHardGate.floorGrade === '偏低' && strictKillSealPattern.patternLevelHardGate.topEligible && strictKillSealPattern.patternLevelGrade === '顶级' && strictKillSealPattern.patternLevelCriteria.some((x) => x.name === '严格成格组合' && x.met) && strictKillSealPattern.patternLevelCriteria.some((x) => x.name === '同分优先级' && x.result.includes('严格成格组合')), `strict kill-seal should reach top grade only after its direct score and strict top gates pass, without a second noble-pattern floor, got ${JSON.stringify({ floor: strictKillSealPattern.patternLevelQualityFloor, grade: strictKillSealPattern.patternLevelGrade, gate: strictKillSealPattern.patternLevelHardGate, criteria: strictKillSealPattern.patternLevelCriteria })}`);
