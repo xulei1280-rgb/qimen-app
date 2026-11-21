@@ -454,7 +454,8 @@
       q.value = aiQuestion(key, line); q.dispatchEvent(new root.Event('input', { bubbles: true }));
       q.scrollIntoView({ block: 'center', behavior: motionOK() ? 'smooth' : 'auto' }); q.focus({ preventScroll: true });
     }
-    const SKIP = 'button,a,input,textarea,select,option,script,style,svg,.explain-help,#aiResult,.bz-term,[data-bz-term]';
+    const SKIP = 'button,a,input,textarea,select,option,script,style,svg,.explain-help,#aiResult,.bz-term,[data-bz-term],'
+      + 'h1,h2,h3,h4,h5,h6,summary,.section-title,.detail-box-heading,.detail-box>strong,.luck-block-title,.analysis-box>strong';
     function mark(el, key) {
       el.dataset.bzTerm = key; el.classList.add('bz-term'); el.setAttribute('role', 'button'); el.tabIndex = 0;
       el.setAttribute('aria-haspopup', 'dialog');

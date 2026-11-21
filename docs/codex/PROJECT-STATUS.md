@@ -27,6 +27,11 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Structural Headings — 2026-11-22
+
+- 八字结构性标题退出术语自动注释，移除格局喜用报告标题旁的问号。正文术语和五行分布说明仍可打开。
+- 八字页面、显示和术语检查通过。390px 手机视口验证标题为连续文本、正文术语可点开，并核对切换专业和大运流年后的标题。
+
 ### Bazi Useful References and Pattern Labels — 2026-11-10
 
 - 标准和专业共用「格局喜用」「大运流年」「本盘命格结论」标题。命格特质上方提示成格前提，八处说明标签加全角冒号，移除五行分布末尾的说明。

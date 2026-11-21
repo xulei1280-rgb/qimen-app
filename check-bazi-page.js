@@ -614,7 +614,7 @@ const conciseStructureText=withoutGodHighlight(conciseStructureHtml);
 assert(conciseStructureHtml.includes('data-verdict="已破"') && conciseStructureText.includes('伤官格破格：伤官见官') && conciseStructureText.includes('伤官格：已破'), 'both display modes share the frozen broken verdict');
 assert(!/结构分|评分维度|格局层次：|未损日主根[01]|变化前：|变化后：/.test(conciseStructureHtml), 'all expanded public structure excludes score tiers and internal logs');
 const patternHeading=conciseStructureHtml.indexOf('<h3 class="report-heading">命格</h3>');
-const natalConclusionHeading=conciseStructureHtml.indexOf('<h3 class="report-heading">本盘命格结论');
+const natalConclusionHeading=conciseStructureHtml.indexOf('<h3 class="report-heading">本盘命格结论</h3>');
 assert(conciseStructureHtml.includes('class="structure-report"') && patternHeading>=0 && patternHeading<natalConclusionHeading && natalConclusionHeading<conciseStructureHtml.indexOf('喜用参考'), 'the column grid presents the chart pattern, conclusion, and actual help');
 assert(conciseStructureText.includes('表达和做事方式与规则要求冲突') && conciseStructureText.includes('官杀又带来规则与压力，自己难以同时应付') && !conciseStructureText.includes('已有缓解，尚未完全解除'), 'current-chart explanation must show actual conflict and residual instead of ideal personality');
 assert(scriptContext.standardGodGroup('伤官')==='食伤' && scriptContext.standardGodGroup('劫财')==='比劫', 'standard labels retain the actual ten-god family');
@@ -658,28 +658,13 @@ for (const technical of [false, true]) {
   assert(new Set(reviewedPatternNames.map(name => scriptContext.publicPatternReading(name, technical))).size === 33, 'all reviewed names should have distinct readings in both modes');
 }
 
-const contextHelpContracts = {
-  missing: '五行缺失不等于命里一定不好',
-  strength: '旺衰不是命好命坏的评分',
-  useful: '不等于数量越多越好',
-  'main-pattern': '格局名称只说明命盘的主要作用路线',
-  'current-luck': '不会把原局永久改成另一个层次',
-  phenomenon: '不是医学诊断，也不等于固定性格',
-  'positive-phenomenon': '不代表才华或成就必然兑现',
-  interaction: '不能单独等同于结婚、破财、疾病',
-  'special-pattern': '条件不足只能作为特殊结构线索',
-  formation: '成而有瑕',
-};
-Object.entries(contextHelpContracts).forEach(([key, expected]) => {
-  const tip = scriptContext.contextHelp(key);
-  assert(tip.includes(`data-help="${key}"`) && tip.includes('class="explain-help-button"') && tip.includes(`aria-controls="explain-help-${key}"`) && tip.includes(`id="explain-help-${key}"`) && tip.includes('role="dialog"') && tip.includes('aria-label="关闭说明"') && tip.includes(expected), `${key} should expose its agreed question-mark explanation, got ${tip}`);
-});
+const distributionHelp = scriptContext.missingElementHelp();
+['data-help="missing"','class="explain-help-button"','aria-controls="explain-help-missing"','id="explain-help-missing"','role="dialog"','aria-label="关闭说明"','五行缺失不等于命里一定不好'].forEach(needle => assert(distributionHelp.includes(needle)));
 ['function setHelpPopoverState','function closeAllHelpPopovers','function toggleHelpPopover','function closeHelpPopover','help-popover-open','explain-help-backdrop','max-height:calc(100dvh - 32px)','.explain-help:not(.is-open) .explain-help-popover'].forEach((needle) => assert(html.includes(needle), `mobile help dialog safeguard missing ${needle}`));
-assert((html.match(/contextHelp\(/g)||[]).length===10,'all nine semantic context-help render calls plus declaration must survive');
-assert(['missing','useful','formation','strength','current-luck','interaction'].every(key=>conciseStructureHtml.includes(`data-help="${key}"`)), 'current equivalent structure sections render all six unconditional explanations');
-assert(conciseStructureHtml.includes('class="report-chart-note">五行齐全') && conciseStructureHtml.includes('data-help="missing"'), 'the distribution note retains contextual help');
-const helpUsefulSection=conciseStructureHtml.split('data-help="useful"')[1].split('</section>')[0];
-assert(helpUsefulSection.includes('主用：') && helpUsefulSection.includes('佐用：'), 'help remains beside the actual useful roles in both modes');
+assert(conciseStructureHtml.includes('class="report-chart-note">五行齐全'+distributionHelp), 'the distribution note retains contextual help');
+assert((conciseStructureHtml.match(/class="explain-help-button"/g)||[]).length===1, 'the distribution note is the only contextual help in the structure report');
+const usefulSection=conciseStructureHtml.split('<h3 class="report-heading">喜用参考</h3>')[1].split('</section>')[0];
+assert(usefulSection.includes('主用：') && usefulSection.includes('佐用：'), 'the useful roles remain in both modes');
 // Exercise the original common click/touch and keyboard dialog handling, not just helper markup.
 {
   const doc=scriptContext.document,saved={querySelector:doc.querySelector,querySelectorAll:doc.querySelectorAll,body:doc.body};
@@ -2262,20 +2247,24 @@ async function checkBaziRecordActions() {
 }
 checkBaziRecordActions().then(()=>console.log('bazi page checks ok (including luck outlooks and record/AI actions)')).catch(error=>{console.error(error);process.exitCode=1});
 
-// Conditional help cards must follow actual analyzed facts, and disappear without those facts.
-const conditionalHelpSeen=new Set();
+// Conditional cards must follow actual analyzed facts and stay inside the full-basis disclosure.
+const conditionalCardsSeen=new Set();
 for(const source of [referenceBazi,conciseReferenceBazi,killSealBazi,transformBazi,...positivePhenomenonCases]){
   const d=scriptContext.refreshPatternAnalysis({...conciseReferenceBazi,pillars:source.pillars,dayStem:source.pillars.day[0]});
   const rendered=scriptContext.renderStructure(d),a=d.patternAnalysis;
-  for(const [field,key] of [['elementPhenomena','phenomenon'],['positivePhenomena','positive-phenomenon'],['specialPatterns','special-pattern']]){
-    assert(rendered.includes(`data-help="${key}"`)===!!(a[field]||[]).length,`${key} card and explanation follow actual conditional facts`);
-    if((a[field]||[]).length)conditionalHelpSeen.add(key);
-    if((a[field]||[]).length)assert(rendered.indexOf(`data-help="${key}"`)>rendered.indexOf('完整作用依据'), 'conditional help is in the reachable full-basis disclosure');
+  for(const [field,standard,professional] of [['elementPhenomena','力量偏性','气势病象'],['positivePhenomena','优势配合','清秀气象'],['specialPatterns','特殊配合','特殊格局']]){
+    const heading='<div class="detail-box-heading"><strong>'+scriptContext.modeCopy(standard,professional)+'</strong></div>';
+    const headingIndex=rendered.indexOf(heading),hasFacts=!!(a[field]||[]).length;
+    assert((headingIndex>=0)===hasFacts,`${field} card follows actual conditional facts`);
+    if(hasFacts){
+      conditionalCardsSeen.add(field);
+      assert(headingIndex>rendered.indexOf('完整作用依据'), 'conditional card is in the reachable full-basis disclosure');
+    }
   }
 }
 assert(scriptContext.outlookTaskMeaning('handle-kill')==='七杀压力的食神制杀或印化杀承接路径','structured handle-kill translation must explain the specific domain rather than raw internal task label');
 
-assert(conditionalHelpSeen.size===3,'real analyzed fixtures must exercise all three conditional help cards');
+assert(conditionalCardsSeen.size===3,'real analyzed fixtures must exercise all three conditional cards');
 
 // Care areas come from affected gods, not tone wording, and are standard-only.
 {

@@ -1075,7 +1075,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
-<script src="bazi-glossary.js?v=shensha-20261122.1" defer></script>
+<script src="bazi-glossary.js?v=shensha-20261122.2" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -2533,20 +2533,20 @@ function renderStructure(data){
     '<h4 class="pattern-rules-heading">格局喜忌：</h4>'+
     modeCopy('<p class="pattern-rules-copy">'+reportGodText(standardPatternPrinciple(view.name))+'</p>',publicPatternReading(view.name,true))+
     publicPatternReading(view.name,false)+'</section>'+
-    '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">本盘命格结论'+contextHelp('formation')+'</h3>'+modeCopy(patternConclusionText(data,false,view),patternConclusionText(data,true,view))+modeCopy(caseReadingText(data,false,view,true),caseReadingText(data,true,view,true))+caseAlternativeUseReading(data)+(usefulLink?'<p class="report-fact">本盘取用'+reportGodText(usefulLink)+'。</p>':'')+'</section>'+
-    '</div><div class="report-column"><section class="report-section"><h3 class="report-heading">'+modeCopy('喜用参考','喜用参考')+contextHelp('useful')+'</h3>'+publicUsefulRows(data)+'</section>'+
-    '<section class="report-section"><h3 class="report-heading">五行分布</h3><div class="report-chart">'+bars+'</div>'+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+contextHelp('missing')+'</div></section></div></div>'+
+    '<section class="report-section" data-verdict="'+esc(view.verdict)+'"><h3 class="report-heading">本盘命格结论</h3>'+modeCopy(patternConclusionText(data,false,view),patternConclusionText(data,true,view))+modeCopy(caseReadingText(data,false,view,true),caseReadingText(data,true,view,true))+caseAlternativeUseReading(data)+(usefulLink?'<p class="report-fact">本盘取用'+reportGodText(usefulLink)+'。</p>':'')+'</section>'+
+    '</div><div class="report-column"><section class="report-section"><h3 class="report-heading">喜用参考</h3>'+publicUsefulRows(data)+'</section>'+
+    '<section class="report-section"><h3 class="report-heading">五行分布</h3><div class="report-chart">'+bars+'</div>'+'<div class="report-chart-note">'+(missing.length?'未明显出现：'+esc(missing.join('、')):'五行齐全')+missingElementHelp()+'</div></section></div></div>'+
     '<details class="structure-deep"><summary>完整作用依据</summary><div class="detail-grid">'+
     detailBox(modeCopy('主用、佐用与忌','格局用神'),modeCopy(esc(usefulSummaryText(data,true,false)),esc(usefulSummaryText(data,true,false))))+
     detailBox(modeCopy('根基与季节参考','扶抑与调候'),modeCopy('喜用先按本盘格局取舍；季节调节的独立用途另列，不把两种取法合成一组。',esc(usefulSummaryText(data,true,false))))+
-    detailBox(modeCopy('自身根基依据','旺衰依据'),modeCopy(esc(strengthCopy),caseAuditText(data,true)),contextHelp('strength'))+
+    detailBox(modeCopy('自身根基依据','旺衰依据'),modeCopy(esc(strengthCopy),caseAuditText(data,true)),true)+
     detailBox(modeCopy('出生力量核对','根气与透藏'),modeCopy(standardStructureAudit(data),caseAuditText(data,true)))+
-    (phenomenon.length?detailBox(modeCopy('力量偏性','气势病象'),modeCopy(view.limits.filter(function(x){return phenomenon.some(function(p){return p.name===x.family})}).map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join('')||'<p>现有配合的限制已在上方列出，不据偏性另判现实结果。</p>',phenomenon.map(function(x){return '<p>'+esc(x.canonicalName||x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('phenomenon')):'')+
-    (positivePhenomenon.length?detailBox(modeCopy('优势配合','清秀气象'),modeCopy(view.support.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),positivePhenomenon.map(function(x){return '<p>'+esc(x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),contextHelp('positive-phenomenon')):'')+
+    (phenomenon.length?detailBox(modeCopy('力量偏性','气势病象'),modeCopy(view.limits.filter(function(x){return phenomenon.some(function(p){return p.name===x.family})}).map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join('')||'<p>现有配合的限制已在上方列出，不据偏性另判现实结果。</p>',phenomenon.map(function(x){return '<p>'+esc(x.canonicalName||x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),true):'')+
+    (positivePhenomenon.length?detailBox(modeCopy('优势配合','清秀气象'),modeCopy(view.support.map(function(x){return '<p>'+esc(x.standard)+'</p>'}).join(''),positivePhenomenon.map(function(x){return '<p>'+esc(x.name)+'：'+esc(x.status)+'</p>'}).join('')+caseReadingText(data,true)),true):'')+
     detailBox(modeCopy('配合与牵制','清浊去留'),modeCopy('本盘按'+esc(view.name)+'判断；盘中代表靠山、产出、资源和压力的力量各有用途，只有实际帮助当前格局的力量才列为喜用。',caseReadingText(data,true))+classicalClarityNote())+
     (view.limits.length?detailBox(modeCopy('已有阻碍','组合冲突'),modeCopy('上面的「主要受限」已逐项列出本盘仍在的阻碍；已有根基不能抵消仍在的问题。',view.limits.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))):'')+
     detailBox(modeCopy('问题与化解路径','病药通关'),modeCopy(esc(remedyCopy),caseReadingText(data,true))+classicalDiseaseNote())+
-    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false,view),esc(specialPatternText(a))+caseAuditText(data,true))+classicalTransformNote(a),contextHelp('special-pattern')):'')+detailBox(modeCopy('当前阶段参考','当前大运格局'),'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button>',contextHelp('current-luck'))+detailBox(modeCopy('相互作用','干支作用'),modeCopy('本盘有效的生扶、生财和制约已在「已有根基」说明；合冲只用来解释这些力量怎样配合或受牵制。',caseReadingText(data,true)),contextHelp('interaction'))+'</div></details>'+
+    (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false,view),esc(specialPatternText(a))+caseAuditText(data,true))+classicalTransformNote(a),true):'')+detailBox(modeCopy('当前阶段参考','当前大运格局'),'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button>',true)+detailBox(modeCopy('相互作用','干支作用'),modeCopy('本盘有效的生扶、生财和制约已在「已有根基」说明；合冲只用来解释这些力量怎样配合或受牵制。',caseReadingText(data,true)),true)+'</div></details>'+
     '<p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
 }
 function modeCopy(standardBody,professionalBody){
@@ -2572,9 +2572,9 @@ function standardStructureText(title,data,professionalBody){
   };
   return (Object.prototype.hasOwnProperty.call(lead,title)?lead[title]:'这个盘的结论是：')+professionalBody;
 }
-function structureDetailBox(title,publicBody,data,help,professionalBody,suffix){
+function structureDetailBox(title,publicBody,data,professionalBody,suffix){
   var technical=professionalBody==null?publicBody:professionalBody;
-  return detailBox(title,modeCopy(standardStructureText(title,data,publicBody),technical)+(suffix||''),help);
+  return detailBox(title,modeCopy(standardStructureText(title,data,publicBody),technical)+(suffix||''));
 }
 function renderReasoningBasis(data){
   data=refreshPatternAnalysis(data);var view=caseDisplayView(data),ctx=getSelectedLuckContext(data);
@@ -2582,7 +2582,7 @@ function renderReasoningBasis(data){
     modeCopy('<p>'+esc(usefulSummaryText(data,true,true))+'</p>','<p>'+esc(usefulSummaryText(data,true,false))+'</p>')+
     '<p>当前选择：'+ctx.luckRow.gz+' · '+ctx.flowYear.year+' '+ctx.flowYear.gz+(ctx.flowMonth?' · '+ctx.flowMonth.term+' '+ctx.flowMonth.dateLabel+' '+ctx.flowMonth.gz:'')+'</p></details>';
 }
-function detailBox(title,body,help){return '<div class="detail-box">'+(help?'<div class="detail-box-heading"><strong>'+title+'</strong>'+help+'</div>':'<strong>'+title+'</strong>')+'<div class="detail-body">'+body+'</div></div>'}
+function detailBox(title,body,withHeading){return '<div class="detail-box">'+(withHeading?'<div class="detail-box-heading"><strong>'+title+'</strong></div>':'<strong>'+title+'</strong>')+'<div class="detail-body">'+body+'</div></div>'}
 function classicalPatternNote(text,source){
   return '<small class="classical-pattern-note">古诀参考：“'+text+'”——'+source+'</small>';
 }
@@ -2643,33 +2643,10 @@ document.addEventListener('keydown',function(event){
   var open=document.querySelector('.explain-help.is-open');
   if(open)closeHelpPopover(event,open.querySelector('.explain-help-close'));
 });
-function contextHelp(key){
-  var items={
-    missing:{label:'查看五行缺失说明',title:'五行缺失怎么看？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的是喜神、忌神，还是对格局没有关键作用。</p>'},
-    strength:{label:'查看旺衰说明',title:'旺衰代表什么？',body:'<p>旺衰不是命好命坏的评分。它主要说明日主能否承受财官、泄秀和压力，以及应该扶助、疏泄还是制衡。</p>'},
-    useful:{label:'查看喜用说明',title:'喜用怎么看？',body:'<p>喜用表示某种五行或十神在当前结构中能够解决什么问题，不等于数量越多越好。用神过量、位置不对或同时破坏其他结构，也有由喜转忌的边界。</p>'},
-    'main-pattern':{label:'查看主要格局说明',title:'主要格局代表什么？',body:'<p>格局名称只说明命盘的主要作用路线，不代表见到某个格名就一定富贵。是否真正成格，还要看根透、清纯、作用可达、破格和救应。</p>'},
-    'current-luck':{label:'查看当前大运格局说明',title:'当前大运会改变原局吗？',body:'<p>大运可以补格、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把原局永久改成另一个层次。</p>'},
-    phenomenon:{label:'查看气势病象说明',title:'气势病象是什么？',body:'<p>这里的“病象”是命理结构术语，不是医学诊断，也不等于固定性格。它只说明某种五行气势对应的结构偏差与表现倾向。</p>'},
-    'positive-phenomenon':{label:'查看清秀气象说明',title:'清秀气象代表什么？',body:'<p>清秀气象表示某类优势具备较好的结构条件，不代表才华或成就必然兑现。是否发挥仍要看整体格局、行运与现实条件。</p>'},
-    interaction:{label:'查看干支作用说明',title:'干支作用怎么看？',body:'<p>合、冲、刑、害、破只说明干支之间发生了什么作用，不能单独等同于结婚、破财、疾病或其他具体事件。</p>'},
-    'special-pattern':{label:'查看特殊格局说明',title:'特殊格局为什么要严判？',body:'<p>从格、化气格和专旺格必须满足严格条件；条件不足只能作为特殊结构线索，不能直接定为特殊格局。</p>'},
-    formation:{label:'查看成格结论说明',title:'成格状态怎么看？',body:'<ul><li><strong>已成：</strong>主要条件成立。</li><li><strong>成而有瑕：</strong>结构成立，但仍有损伤或限制。</li><li><strong>待成：</strong>关键条件不足，只能保留成格方向。</li><li><strong>已破：</strong>关键作用链受损，且救应不足。</li></ul>'}
-  };
-  var standard={
-    missing:{title:'少了一种五行代表什么？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的力量是在帮助本盘、增加负担，还是没有关键作用。</p>'},
-    strength:{title:'自身根基代表什么？',body:'<p>自身根基不是命好命坏的评分。它说明自身能否承受资源、责任、产出消耗和压力，以及该补根基、疏通出口还是加强约束。</p>'},
-    useful:{title:'帮助与限制怎么看？',body:'<p>这里表示某种五行在当前组合中能够解决什么问题，不等于数量越多越好。帮助过量、位置不对或同时破坏其他配合，也会转成负担。</p>'},
-    'main-pattern':{title:'主要配合代表什么？',body:'<p>名称只说明出生组合的主要作用路线，不代表见到某个名称就一定富贵。还要核对实际帮扶、连接、阻碍及缓解路径。</p>'},
-    'current-luck':{title:'当前十年会改变出生组合吗？',body:'<p>当前十年能补充助力、引动优势或加重问题，但只表示当前阶段的发挥情况，不会把出生组合永久改成另一个层次。</p>'},
-    phenomenon:{title:'力量偏性是什么？',body:'<p>这里的偏性是传统结构解释，不是医学诊断，也不等于固定性格。它只说明某种五行力量对应的配合偏差与表现倾向。</p>'},
-    'positive-phenomenon':{title:'优势配合代表什么？',body:'<p>这里表示某类优势具备较好的配合条件，不代表才华或成就必然兑现。实际发挥仍受整体配合、当前阶段与现实条件约束。</p>'},
-    interaction:{title:'出生组合的相互作用怎么看？',body:'<p>相连、冲突和牵制只说明不同力量之间发生了什么作用，不能单独等同于结婚、破财、疾病或其他具体事件。</p>'},
-    'special-pattern':{title:'特殊配合为什么要严格核验？',body:'<p>顺着全盘集中方向看或按组合变化后的力量看，都必须满足严格条件；条件不足只能作为线索，不能直接采用特殊判断。</p>'},
-    formation:{title:'配合状态怎么看？',body:'<ul><li><strong>已成：</strong>主要条件成立。</li><li><strong>成而有瑕：</strong>配合成立，但仍有损伤或限制。</li><li><strong>待成：</strong>关键条件不足，只保留原有方向。</li><li><strong>已破：</strong>关键连接受损，且缓解不足。</li></ul>'}
-  };
-  var item=items[key],plain=standard[key];
-  return item?helpPopover(key,item.label,modeCopy(plain.title,item.title),modeCopy(plain.body,item.body),'context-help'):'';
+function missingElementHelp(){
+  var item={label:'查看五行缺失说明',title:'五行缺失怎么看？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的是喜神、忌神，还是对格局没有关键作用。</p>'};
+  var plain={title:'少了一种五行代表什么？',body:'<p>五行缺失不等于命里一定不好，也不代表现实中必须直接补这个五行。仍要看缺少的力量是在帮助本盘、增加负担，还是没有关键作用。</p>'};
+  return helpPopover('missing',item.label,modeCopy(plain.title,item.title),modeCopy(plain.body,item.body),'context-help');
 }
 function renderTenGodSummary(data){
   var counts={};
