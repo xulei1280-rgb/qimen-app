@@ -89,14 +89,6 @@
     densityClear: $("densityClear"),
     densityPro: $("densityPro"),
     personLabel: $("personLabel"),
-    solarFields: $("solarFields"),
-    lunarFields: $("lunarFields"),
-    solarDate: $("solarDate"),
-    lunarYear: $("lunarYear"),
-    lunarMonth: $("lunarMonth"),
-    lunarDay: $("lunarDay"),
-    isLeapMonth: $("isLeapMonth"),
-    birthTime: $("birthTime"),
     longitudeField: $("longitudeField"),
     longitude: $("longitude"),
     locationTrigger: $("locationTrigger"),
@@ -402,10 +394,11 @@
   }
 
   function syncConditionalFields() {
-    const lunar = formValue("calendarType") === "lunar";
-    elements.solarFields.hidden = lunar;
-    elements.lunarFields.hidden = !lunar;
     elements.longitudeField.hidden = formValue("timeBasis") !== "trueSolar";
+    if (elements.longitudeField.hidden) {
+      elements.locationPanel.hidden = true;
+      elements.locationTrigger.setAttribute("aria-expanded", "false");
+    }
     refreshSolarPreview();
   }
 
@@ -414,21 +407,14 @@
     const input = {
       calendarType,
       gender: formValue("gender"),
-      time: elements.birthTime.value,
+      time: `${pad(birthDateInput.clock().hour)}:${pad(birthDateInput.clock().minute)}`,
       timeBasis: formValue("timeBasis"),
       useDaylightSaving: $("useDaylightSaving").checked,
       longitude: elements.longitude.value === "" ? null : Number(elements.longitude.value),
       confirmedTimeShift: Boolean(confirmedTimeShift),
     };
-    if (calendarType === "solar") input.date = elements.solarDate.value;
-    else {
-      input.lunarDate = {
-        year: Number(elements.lunarYear.value),
-        month: Number(elements.lunarMonth.value),
-        day: Number(elements.lunarDay.value),
-        isLeap: elements.isLeapMonth.checked,
-      };
-    }
+    if (calendarType === "solar") input.date = BirthDateInput.dateText(birthDateInput.solarDate());
+    else input.lunarDate = birthDateInput.sourceDate();
     return input;
   }
 
@@ -874,16 +860,18 @@
   }
 
   function localBirthData() {
+    const solar = birthDateInput.solarDate();
+    const lunar = birthDateInput.calendarType === "lunar" ? birthDateInput.sourceDate() : { year: "", month: "", day: "", isLeap: false };
     return {
       personLabel: elements.personLabel.value.trim(),
       calendarType: formValue("calendarType"),
       gender: formValue("gender"),
-      solarDate: elements.solarDate.value,
-      lunarYear: elements.lunarYear.value,
-      lunarMonth: elements.lunarMonth.value,
-      lunarDay: elements.lunarDay.value,
-      isLeapMonth: elements.isLeapMonth.checked,
-      birthTime: elements.birthTime.value,
+      solarDate: BirthDateInput.dateText(solar),
+      lunarYear: String(lunar.year),
+      lunarMonth: String(lunar.month),
+      lunarDay: String(lunar.day),
+      isLeapMonth: lunar.isLeap,
+      birthTime: `${pad(birthDateInput.clock().hour)}:${pad(birthDateInput.clock().minute)}`,
       timeBasis: formValue("timeBasis"),
       useDaylightSaving: $("useDaylightSaving").checked,
       longitude: elements.longitude.value,
@@ -1415,13 +1403,11 @@
   function populateBirthForm(data) {
     elements.personLabel.value = data.personLabel || "";
     elements.birthForm.elements.gender.value = data.gender || "male";
-    elements.birthForm.elements.calendarType.value = data.calendarType || "solar";
-    elements.solarDate.value = data.solarDate || "";
-    elements.lunarYear.value = data.lunarYear || "";
-    elements.lunarMonth.value = data.lunarMonth || "";
-    elements.lunarDay.value = data.lunarDay || "";
-    elements.isLeapMonth.checked = Boolean(data.isLeapMonth);
-    elements.birthTime.value = data.birthTime || "";
+    const type = data.calendarType === "lunar" ? "lunar" : "solar";
+    const parts = (data.solarDate || "1990-01-01").split("-").map(Number);
+    const clock = (data.birthTime || "12:00").split(":").map(Number);
+    const date = type === "lunar" ? { year: Number(data.lunarYear), month: Number(data.lunarMonth), day: Number(data.lunarDay), isLeap: Boolean(data.isLeapMonth) } : { year: parts[0], month: parts[1], day: parts[2] };
+    birthDateInput.setDate(type, date, { hour: clock[0], minute: clock[1] });
     elements.birthForm.elements.timeBasis.value = data.timeBasis || "beijing";
     $("useDaylightSaving").checked = Boolean(data.useDaylightSaving);
     selectLocation(normalizeStoredLocation(data), false);
@@ -1466,11 +1452,7 @@
     if (aiBusy()) return;
     if (state.snapshot && (!currentRecord() || state.dirtyBirth) && !window.confirm("当前有未保存的命盘或出生资料修改。确定放弃这些未保存内容并新建命盘？已保存记录不会删除。")) return;
     elements.birthForm.reset();
-    elements.solarDate.value = "1990-01-01";
-    elements.birthTime.value = "12:00";
-    elements.lunarYear.value = "1990";
-    elements.lunarMonth.value = "1";
-    elements.lunarDay.value = "1";
+    birthDateInput.setDate("solar", { year: 1990, month: 1, day: 1 }, { hour: 12, minute: 0 });
     elements.targetDate.value = todayText();
     state.snapshot = null;
     state.horoscope = null;
@@ -1519,8 +1501,9 @@
     }
   });
   window.addEventListener("orientationchange", scheduleChartReset);
-  elements.birthForm.querySelectorAll(".chart-input").forEach((input) => input.addEventListener("input", markBirthDirty));
-  elements.birthForm.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener("change", markBirthDirty));
+  const birthDateInput = BirthDateInput.create(markBirthDirty);
+  elements.birthForm.querySelectorAll(".chart-input").forEach((input) => input.addEventListener("input", () => { if (!input.closest(".birth-date-entry")) markBirthDirty(); }));
+  elements.birthForm.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener("change", () => { if (input.name !== "calendarType") markBirthDirty(); }));
   elements.locationTrigger.addEventListener("click", () => {
     elements.locationPanel.hidden = !elements.locationPanel.hidden;
     elements.locationTrigger.setAttribute("aria-expanded", String(!elements.locationPanel.hidden));
@@ -1586,11 +1569,7 @@
   state.density = readDisplayPreference(localStorage, DENSITY_STORAGE_KEY, ["clear", "pro"], "clear");
   applyDensity(state.density, false);
   state.records = loadRecords();
-  elements.solarDate.value = "1990-01-01";
-  elements.birthTime.value = "12:00";
-  elements.lunarYear.value = "1990";
-  elements.lunarMonth.value = "1";
-  elements.lunarDay.value = "1";
+  birthDateInput.setDate("solar", { year: 1990, month: 1, day: 1 }, { hour: 12, minute: 0 });
   elements.targetDate.value = todayText();
   try { elements.apiKey.value = localStorage.getItem(API_KEY_STORAGE) || ""; } catch (_) { /* shown on save */ }
   renderLocations();

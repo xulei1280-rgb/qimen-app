@@ -8,16 +8,11 @@ const artifactDir = process.env.UI_ARTIFACT_DIR;
 if (artifactDir) fs.mkdirSync(artifactDir, { recursive: true });
 
 async function setClock(page, kind, date, time) {
-  if (kind === 'ziwei') {
-    await page.locator('#solarDate').fill(date);
-    await page.locator('#birthTime').fill(time);
-  } else {
-    assert.equal(await page.locator('#birthYear').isVisible(), true);
-    const [year, month, day] = date.split('-').map(Number), [hour, minute] = time.split(':').map(Number);
-    await page.locator('#birthYear').fill(String(year));
-    for (const [id, value] of [['birthMonth', month], ['birthDay', day], ['birthHour', hour], ['birthMinute', minute]]) {
-      await page.locator('#' + id).selectOption(String(value));
-    }
+  assert.equal(await page.locator('#birthYear').isVisible(), true);
+  const [year, month, day] = date.split('-').map(Number), [hour, minute] = time.split(':').map(Number);
+  await page.locator('#birthYear').fill(String(year));
+  for (const [id, value] of [['birthMonth', month], ['birthDay', day], ['birthHour', hour], ['birthMinute', minute]]) {
+    await page.locator('#' + id).selectOption(String(value));
   }
 }
 const records = (page, kind) => page.evaluate(key => JSON.parse(localStorage.getItem(key) || '[]'), kind === 'bazi' ? 'bazi_records' : 'ziwei_records_v1');

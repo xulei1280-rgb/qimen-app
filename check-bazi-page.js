@@ -74,10 +74,9 @@ assert(sourceManifest.includes('《周易》') && sourceManifest.includes('不�
 
 [
   'id="personName"',
-  'class="editor-panel time-grid"',
-  'id="birthYearPicker"',
-  'aria-label="滚动选择出生年份"',
-  'oninput="refreshBirthTimeInput()"',
+  'class="birth-date-controls"',
+  'id="birthLeap"',
+  'BirthDateInput.create(refreshSolarPreview)',
   'id="birthLocationDisplay"',
   'id="locationSearch"',
   'id="solarPreview"',
@@ -121,10 +120,6 @@ assert(sourceManifest.includes('《周易》') && sourceManifest.includes('不�
   'function renderTenGodSummary',
   'function renderRelationPanel',
   'function getInquiryTimeInfo',
-  'function syncBirthYearPicker',
-  'function selectBirthYear',
-  'centerYear+50',
-  'centerYear-50',
   'function getLuckData',
   'function selectedLuckContextText',
   'function buildAiContextSnapshot',
@@ -384,6 +379,8 @@ vm.runInContext(fs.readFileSync('china-locations.js', 'utf8'), scriptContext, { 
 vm.runInContext(shensha, scriptContext, { filename: 'bazi-shensha.js' });
 vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__patternReview={flow:interactionFlowAnalysis,context:buildTemporalPatternContext,finalize:finalizePatternLevel,rooted:godRooted,qualify:qualifyComboFlows};root.BaziEngine=api;'), scriptContext, { filename: 'bazi-engine.js' });
 inlineScripts.forEach((script, index) => vm.runInContext(script, scriptContext, { filename: `bazi-inline-${index}.js` }));
+// Record-action tests use a DOM stub; real form restoration runs in the browser check.
+scriptContext.birthDateInput={setDate(){}};
 for(const [itemLeft,expected] of [[0,0],[360,260],[840,600]]){
   const track={scrollLeft:40,scrollWidth:880,clientWidth:280,clientLeft:2,getBoundingClientRect:()=>({left:25})};
   track.querySelector=()=>({getBoundingClientRect:()=>({left:27+itemLeft-track.scrollLeft,width:80})});

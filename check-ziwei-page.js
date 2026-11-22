@@ -289,6 +289,8 @@ function createPageSandbox(pageSource, initialStorage = []) {
     ChinaLocations: require('./china-locations.js'),
     ZiweiEngine: engine,
     BirthTime: require('./birth-time.js'),
+    // Form interaction is checked in the isolated real-browser birth-input test.
+    BirthDateInput: { create() { return { setDate() {}, clock() { return { hour: 12, minute: 0 }; } }; } },
     DeepSeekClient: deepseekClient,
   };
   sandbox.window = sandbox;
@@ -308,7 +310,7 @@ function runPageContracts() {
   assert(mobileClear.includes('.palace-layer-support .minor-stars-key{display:flex;flex-wrap:wrap;gap:0 .25rem;max-height:2.7em;overflow:hidden}'), "手机简洁关键辅煞显示规则缺失");
   assert(mobileClear.includes('.palace-layer-major .star-badge[class*="brightness-"]{display:inline;') && mobileClear.includes('font-size:9px;line-height:1;vertical-align:super;'), "手机简洁主星亮度小字缺失");
   assert(html.includes('src="vendor/iztro/2.5.8/iztro.min.js"'), "页面未使用本地 iztro");
-  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261117.5"'), "紫微改动脚本缺少发布缓存版本");
+  assert(html.includes('src="birth-time.js?v=20261107.1"') && html.includes('src="ziwei-engine.js?v=20261107.1"') && html.includes('src="ziwei-page.js?v=20261122.1"'), "紫微改动脚本缺少发布缓存版本");
   assert(pageSource.includes("成立依据—制约条件—运限触发") && pageSource.includes("四化是星曜的属性"), "AI 缺少条件式结构解读约束");
   assert(html.includes("大限宫干沿用本命原宫干") && html.includes("01:00 起丑") && html.includes("03:00 起寅") && html.includes("23:00 起晚子"), "页面没有公开大限宫干与时辰整点规则");
   assert(!/https?:\/\/[^"']+\.(?:js|css)/i.test(html), "页面含远程脚本或样式");

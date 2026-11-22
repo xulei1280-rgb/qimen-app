@@ -1136,6 +1136,7 @@
   </style>
   <link rel="stylesheet" href="premium-base.css?v=20261101.2">
   <link rel="stylesheet" href="ziwei-premium.css?v=20261117.3">
+  <link rel="stylesheet" href="birth-date-input.css?v=20261122.1">
 </head>
 <body class="zw">
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -1190,44 +1191,28 @@
             </div>
           </fieldset>
 
-          <fieldset>
-            <legend>日期类型</legend>
-            <div class="radio-row">
+          <div class="birth-date-entry">
+            <div class="birth-calendar" role="radiogroup" aria-label="出生日期历法">
               <label><input class="chart-input" type="radio" name="calendarType" value="solar" checked> 公历</label>
               <label><input class="chart-input" type="radio" name="calendarType" value="lunar"> 农历</label>
+              <span class="birth-leap" id="birthLeapLabel" hidden><input class="chart-input" id="birthLeap" type="checkbox"><label for="birthLeap">闰月</label></span>
             </div>
-          </fieldset>
-
-          <div id="solarFields">
-            <label class="field">
-              <span>公历出生日期</span>
-              <input class="chart-input" id="solarDate" type="date" min="1900-01-01" max="2099-12-31" required>
-            </label>
+            <div class="birth-date-controls">
+              <input class="chart-input" id="birthYear" type="number" min="1" max="9999" inputmode="numeric" aria-label="出生年份" required>
+              <select class="chart-input" id="birthMonth" aria-label="出生月份"></select>
+              <select class="chart-input" id="birthDay" aria-label="出生日期"></select>
+              <select class="chart-input" id="birthHour" aria-label="出生小时"></select>
+              <select class="chart-input" id="birthMinute" aria-label="出生分钟"></select>
+            </div>
+            <div class="birth-date-error" id="birthDateError" role="alert"></div>
           </div>
-
-          <div id="lunarFields" hidden>
-            <div class="field-row">
-              <label class="field"><span>农历年</span><input class="chart-input" id="lunarYear" type="number" min="1900" max="2099" inputmode="numeric"></label>
-              <label class="field"><span>农历月</span><input class="chart-input" id="lunarMonth" type="number" min="1" max="12" inputmode="numeric"></label>
-            </div>
-            <div class="field-row">
-              <label class="field"><span>农历日</span><input class="chart-input" id="lunarDay" type="number" min="1" max="30" inputmode="numeric"></label>
-              <label class="field"><span>闰月</span><span><input class="chart-input" id="isLeapMonth" type="checkbox"> 是闰月</span></label>
-            </div>
-          </div>
-
-          <label class="field">
-            <span>出生时间</span>
-            <input class="chart-input" id="birthTime" type="time" required>
-          </label>
-
 
             <fieldset class="time-basis-field">
-              <legend>时间口径 <button type="button" class="zw-help zw-help-inline" data-zw-term="真太阳时" aria-label="真太阳时是什么意思">?</button></legend>
+              <legend>时间校对 <button type="button" class="zw-help zw-help-inline" data-zw-term="真太阳时" aria-label="真太阳时是什么意思">?</button></legend>
               <div class="radio-row">
-                <label><input class="chart-input" type="radio" name="timeBasis" value="beijing" checked> 北京时间</label>
-                <label><input class="chart-input" type="radio" name="timeBasis" value="trueSolar"> 真太阳时</label>
-                <label><input class="chart-input" id="useDaylightSaving" type="checkbox"> 夏令时</label><button type="button" class="zw-help zw-help-inline" data-zw-term="夏令时" aria-label="夏令时适用时间说明">?</button>
+                <div class="birth-basis"><label><input class="chart-input" type="radio" name="timeBasis" value="beijing" checked> 北京时间</label>
+                <label><input class="chart-input" type="radio" name="timeBasis" value="trueSolar"> 真太阳时</label></div>
+                <span class="birth-dst"><label><input class="chart-input" id="useDaylightSaving" type="checkbox"> 夏令时</label><button type="button" class="zw-help zw-help-inline" data-zw-term="夏令时" aria-label="夏令时适用时间说明">?</button></span>
               </div>
             </fieldset>
             <div class="solar-preview" id="daylightSavingPreview" role="status" aria-live="polite" hidden></div>
@@ -1427,11 +1412,12 @@
   </dialog>
 
   <script src="vendor/iztro/2.5.8/iztro.min.js"></script>
+  <script src="birth-date-input.js?v=20261122.1"></script>
   <script src="birth-time.js?v=20261107.1"></script>
   <script src="ziwei-engine.js?v=20261107.1"></script>
   <script src="deepseek-client.js?v=20260817.1"></script>
   <script src="china-locations.js?v=20261122.1"></script>
-  <script src="ziwei-page.js?v=20261117.5"></script>
+  <script src="ziwei-page.js?v=20261122.1"></script>
   <script src="premium-base.js?v=20261101.2"></script>
   <script src="ziwei-premium.js?v=20261102.5"></script>
   <script src="ziwei-glossary.js?v=20261117.1"></script>
