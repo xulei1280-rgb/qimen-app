@@ -27,6 +27,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi / Ziwei Calendar Switch Appearance — 2026-11-22
+
+- 八字和紫微公历／农历采用等宽分段外观，分别沿用墨金纸色和靛青主题；保留原生单选、键盘焦点及原有事件绑定，共享日期样式缓存更新。
+- 八字页面检查、两页 1440px／390px 浏览器检查通过，核对点击与键盘切换、选中态、无横溢及日期控件尺寸不变；另核对紫微 390px 暗色主题。换历、闰月、校时、历史和算法逻辑未改，未重跑相关大套回归。
+- 本轮按用户授权直接在 main 提交推送；详细报告与手机局部截图位于 `I:\codex-tasks\bazi-ziwei-calendar-switch-20261122`。
+
 ### Bazi Birth Time Input — 2026-11-22
 
 - 八字出生时间直接显示年月日时分。新建默认北京时间，可切换真太阳时，夏令时独立保留。旧记录和导入记录按原设置恢复。

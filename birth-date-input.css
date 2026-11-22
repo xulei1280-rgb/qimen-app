@@ -1,9 +1,15 @@
 /* Loaded by birth forms only; the question charts keep their existing controls. */
 .birth-date-entry{min-width:0}
-.birth-calendar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-.birth-calendar label,.birth-basis label{display:inline-flex;gap:6px;align-items:center;min-height:36px;padding:4px 12px;border:1px solid var(--line,#dcd6c8);border-radius:6px;cursor:pointer}
-.birth-calendar label:has(input:checked),.birth-basis label:has(input:checked){background:var(--gold-soft,#f3eee1);border-color:var(--gold,#ad8951)}
+.birth-calendar{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-bottom:10px}
+.birth-basis label{display:inline-flex;gap:6px;align-items:center;min-height:36px;padding:4px 12px;border:1px solid var(--line,#dcd6c8);border-radius:6px;cursor:pointer}
+.birth-basis label:has(input:checked){background:var(--gold-soft,#f3eee1);border-color:var(--gold,#ad8951)}
 .birth-calendar input,.birth-basis input{width:auto!important;min-height:0!important;margin:0;accent-color:var(--gold,#ad8951)}
+.birth-calendar-switch{display:inline-flex;flex:0 1 160px;min-width:0;padding:4px;border:1px solid var(--line,#dcd6c8);border-radius:10px;background:var(--zw-card-2,var(--pm-card-2));font:inherit;font-size:14px}
+.birth-calendar-switch>label{position:relative;display:flex;flex:1;min-width:0;align-items:center;justify-content:center;min-height:36px;padding:4px 12px;border-radius:6px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.birth-calendar-switch>label:hover{background:var(--zw-indigo-wash,var(--pm-gold-wash))}
+.birth-calendar-switch>label:has(input:checked){background:var(--zw-indigo-deep,var(--pm-ink));color:var(--zw-star,var(--pm-on-ink))}
+.birth-calendar-switch>label:has(input:focus-visible){outline:2px solid var(--gold);outline-offset:2px}
+.birth-calendar-switch input{position:absolute;width:1px!important;height:1px;padding:0;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
 .birth-date-controls{display:grid;grid-template-columns:minmax(90px,1.3fr) repeat(4,minmax(64px,1fr));gap:8px;min-width:0}
 .birth-date-controls input,.birth-date-controls select{width:100%;min-width:0;min-height:44px;font:inherit;font-size:16px;font-variant-numeric:tabular-nums;box-sizing:border-box;padding:8px;border:1px solid var(--zw-indigo-line,var(--pm-line,var(--line,#ddd6c8)));border-radius:6px;background:var(--zw-card,var(--pm-surface,#fffefb));color:var(--zw-text,var(--pm-ink,var(--ink,#222)))}
 .birth-date-controls input:focus,.birth-date-controls select:focus{outline:2px solid var(--gold,#ad8951);outline-offset:1px}
@@ -11,7 +17,7 @@
 .birth-date-controls input::-webkit-inner-spin-button,.birth-date-controls input::-webkit-outer-spin-button{appearance:none;margin:0}
 .birth-leap{display:inline-flex;align-items:center;gap:4px;font-size:13px;margin-left:auto;white-space:nowrap}
 .birth-leap[hidden]{display:none!important}
-.birth-calendar .birth-leap label{border:0;padding:0;min-height:36px}
+.birth-calendar .birth-leap label{display:inline-flex;align-items:center;border:0;padding:0;min-height:36px;cursor:pointer}
 .birth-date-error{color:#a33;font-size:13px;line-height:1.5}
 .birth-date-error:empty{display:none}
 .birth-basis{display:inline-flex;gap:6px;flex-wrap:wrap}
@@ -22,5 +28,5 @@
   .birth-date-controls{grid-template-columns:minmax(90px,1.3fr) repeat(2,minmax(0,1fr))}
   .birth-date-controls #birthHour{grid-column:1}
   .birth-calendar{gap:6px}
-  .birth-calendar label,.birth-basis label{padding:4px 9px}
+  .birth-basis label{padding:4px 9px}
 }

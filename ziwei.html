@@ -1136,7 +1136,7 @@
   </style>
   <link rel="stylesheet" href="premium-base.css?v=20261101.2">
   <link rel="stylesheet" href="ziwei-premium.css?v=20261117.3">
-  <link rel="stylesheet" href="birth-date-input.css?v=20261122.1">
+  <link rel="stylesheet" href="birth-date-input.css?v=20261122.2">
 </head>
 <body class="zw">
   <a class="skip-link" href="#main">跳到主要内容</a>
@@ -1193,8 +1193,10 @@
 
           <div class="birth-date-entry">
             <div class="birth-calendar" role="radiogroup" aria-label="出生日期历法">
-              <label><input class="chart-input" type="radio" name="calendarType" value="solar" checked> 公历</label>
-              <label><input class="chart-input" type="radio" name="calendarType" value="lunar"> 农历</label>
+              <div class="birth-calendar-switch">
+                <label><input class="chart-input" type="radio" name="calendarType" value="solar" checked> 公历</label>
+                <label><input class="chart-input" type="radio" name="calendarType" value="lunar"> 农历</label>
+              </div>
               <span class="birth-leap" id="birthLeapLabel" hidden><input class="chart-input" id="birthLeap" type="checkbox"><label for="birthLeap">闰月</label></span>
             </div>
             <div class="birth-date-controls">
