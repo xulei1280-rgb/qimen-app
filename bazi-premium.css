@@ -186,6 +186,7 @@
 .core-card:first-child{padding-left:24px}
 .core-card:last-child{padding-right:24px}
 .core-card span{color:rgba(220,192,138,.78);letter-spacing:.24em;font-size:11px}
+#structureSummary > .core-card > span{color:var(--pm-gold-light);font-size:13px;font-weight:600;letter-spacing:.12em;white-space:nowrap}
 .core-card strong{font-family:var(--pm-serif);color:var(--pm-on-ink);font-size:30px;letter-spacing:.06em}
 .core-card em{color:var(--pm-on-ink-muted)}
 .core-context summary{color:var(--pm-gold-light)}
