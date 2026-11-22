@@ -12,7 +12,7 @@ async function setClock(page, kind, date, time) {
     await page.locator('#solarDate').fill(date);
     await page.locator('#birthTime').fill(time);
   } else {
-    if (!await page.locator('#birthYear').isVisible()) await page.locator('#birthTimeDisplay').click();
+    assert.equal(await page.locator('#birthYear').isVisible(), true);
     const [year, month, day] = date.split('-').map(Number), [hour, minute] = time.split(':').map(Number);
     await page.locator('#birthYear').fill(String(year));
     for (const [id, value] of [['birthMonth', month], ['birthDay', day], ['birthHour', hour], ['birthMinute', minute]]) {
@@ -78,7 +78,7 @@ async function screenshot(page, name) {
       assert.equal(rows[0].id, id);
       assert.equal(kind === 'bazi' ? rows[0].bazi.time.used.hour : rows[0].natalSnapshot.effective.clockTime.slice(0, 2), kind === 'bazi' ? 22 : '22');
       await edit(page, kind);
-      if (kind === 'bazi') await page.locator('#useTrueSolar').uncheck();
+      if (kind === 'bazi') await page.locator('#useBeijingTime').check();
       else await page.locator('input[name="timeBasis"][value="beijing"]').check();
       await submit(page, kind);
       rows = await records(page, kind);
@@ -135,8 +135,7 @@ async function screenshot(page, name) {
       await setClock(page, kind, '1990-09-16', '01:30');
       assert.match(await preview.textContent(), /出现两次/);
       await setClock(page, kind, '1990-07-01', '00:30');
-      if (kind === 'bazi') await page.locator('#birthTimeDisplay').click();
-      else if (await page.locator('#statusBanner').isVisible()) await page.locator('#statusBanner').click();
+      if (kind === 'ziwei' && await page.locator('#statusBanner').isVisible()) await page.locator('#statusBanner').click();
       for (const width of [1440, 768, 390]) {
         await page.setViewportSize({ width, height: 1000 });
         await option.scrollIntoViewIfNeeded();

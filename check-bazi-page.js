@@ -74,10 +74,10 @@ assert(sourceManifest.includes('《周易》') && sourceManifest.includes('不�
 
 [
   'id="personName"',
-  'id="birthTimeDisplay"',
+  'class="editor-panel time-grid"',
   'id="birthYearPicker"',
   'aria-label="滚动选择出生年份"',
-  'oninput="syncBirthYearPicker();refreshBirthTimeDisplay()"',
+  'oninput="refreshBirthTimeInput()"',
   'id="birthLocationDisplay"',
   'id="locationSearch"',
   'id="solarPreview"',
@@ -297,7 +297,7 @@ assert(html.includes('.core-cards[hidden]{display:none!important}'), 'the struct
 ].forEach((name) => assert(require('./china-locations.js').locations.some(location => location.name === name), `missing local location ${name}`));
 
 assert(require('./china-locations.js').search('上海').length > 0, 'location search should include Shanghai');
-assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261115.1'), 'birth place must use shared offline search');
+assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261122.1'), 'birth place must use shared offline search');
 
 const qimen = fs.readFileSync('qimen.js', 'utf8');
 const shensha = fs.readFileSync('bazi-shensha.js', 'utf8');
@@ -338,7 +338,8 @@ assert(html.includes('data-view="basic"'), 'result layer should expose a basic i
 assert(/function buildBazi\(\)[\s\S]*showBaziResult\(\)/.test(html), 'buildBazi should enter the result layer after charting');
 assert(/function buildBazi\(\)[\s\S]*autoSaveBuild[\s\S]*saveBaziRecord/.test(html), 'buildBazi should auto-save when the checkbox is enabled');
 assert(/id="autoSaveBuild" type="checkbox" checked/.test(html), 'auto-save should default on');
-assert(/id="useTrueSolar" type="checkbox" onchange=/.test(html) && html.includes('时间校对：'), 'true solar correction should default off and have an explanatory label');
+assert(!html.includes('birthTimeDisplay'), 'birth time fields should have no duplicate summary');
+assert(/id="useBeijingTime" type="radio" name="birthTimeBasis" checked [^>]+> 北京时间/.test(html) && /id="useTrueSolar" type="radio" name="birthTimeBasis" onchange=/.test(html) && html.includes('时间校对：'), 'time correction should default to Beijing time');
 assert(html.includes('id="birthLocationField"') && html.includes('locationField.hidden=!enabled'), 'birth address should only be shown for true solar time');
 assert(/function buildBazi\(\)[\s\S]*editingActiveRecord[\s\S]*saveBaziRecord/.test(html), 'editing a saved bazi should sync the saved record after rebuilding');
 assert(html.includes('修改时间和地址') && html.includes('onclick="editCurrentBaziInput()"'), 'basic info should expose an edit time/location action');

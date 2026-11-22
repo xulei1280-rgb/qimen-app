@@ -544,7 +544,7 @@ function runPageContracts() {
   assert(pageTest.brightnessClass("庙") === "miao" && pageTest.brightnessClass("陷") === "xian", "亮度颜色映射错误");
   assert(pageTest.mutagenClass("禄") === "lu" && pageTest.mutagenClass("忌") === "ji", "四化颜色映射错误");
   assert(pageTest.LOCATIONS.some((location) => location.name.includes("昆明")) && pageTest.LOCATIONS.some((location) => location.name.includes("师宗")), "八字同口径本地地点数据缺失");
-  assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261115.1'), "出生地必须使用共享本地搜索");
+  assert(!html.includes('id="customLongitude"') && html.includes('china-locations.js?v=20261122.1'), "出生地必须使用共享本地搜索");
   const legacyLocation = pageTest.normalizeStoredLocation({ longitude: "102.7183" });
   assert(legacyLocation.name === "自定义地点" && legacyLocation.lng === 102.7183, "旧记录经度兼容失败");
   const storedLocation = pageTest.normalizeStoredLocation({ location: { name: "云南省 昆明市", lng: 102.7183, lat: 25.0389 } });

@@ -110,7 +110,9 @@ h1{margin:0;font-size:32px;letter-spacing:3px;color:#222}
   background:#fcfdf9;
   padding:12px;
 }
-.time-grid{display:grid;grid-template-columns:1.1fr repeat(4,1fr);gap:8px}
+.time-grid{display:grid;grid-template-columns:1.1fr repeat(4,minmax(0,1fr));gap:4px;margin-top:0;padding:6px}
+.time-grid input,.time-grid select{min-width:0;padding:0 4px}
+.time-grid select{padding-right:0}
 .year-control{min-width:0}
 .year-control input{height:100%}
 .birth-year-picker{display:none}
@@ -579,7 +581,7 @@ body.help-popover-open #entryPanel,body.help-popover-open #entryPanel .entry-lay
   .entry-card{padding:24px 18px;border-radius:18px}
   .field{grid-template-columns:1fr;gap:8px}
   .editor-panel{grid-column:1}
-  .time-grid{grid-template-columns:1.45fr repeat(4,minmax(0,1fr))}
+  .time-grid{grid-template-columns:minmax(64px,1.15fr) repeat(4,minmax(0,1fr))}
   .options,.solar-preview,.build-btn{margin-left:0;width:100%}
   .core-cards{grid-template-columns:1fr 1fr}
   .structure-grid{grid-template-columns:1fr}
@@ -633,7 +635,7 @@ body.help-popover-open #entryPanel,body.help-popover-open #entryPanel .entry-lay
   .year-control input,.year-control input:focus,.birth-year-picker,.birth-year-picker:focus{height:42px!important;min-height:42px;border:0!important;border-radius:0;background:transparent;box-shadow:none!important}
   .birth-year-picker{display:block;color:transparent;font-size:0!important;padding:0!important}
   .birth-year-picker option{color:#222;font-size:14px}
-  .time-grid input,.time-grid select{min-width:0;min-height:44px;padding:0 4px;font-size:14px}
+  .time-grid input,.time-grid select{min-height:44px;font-size:14px}
   .time-grid input[type=number]{appearance:textfield;-moz-appearance:textfield}
   .time-grid input[type=number]::-webkit-inner-spin-button{appearance:none;margin:0}
   .custom-row{grid-template-columns:1fr}
@@ -712,7 +714,8 @@ h1{font-family:"Noto Serif CJK SC","Source Han Serif SC","Songti SC",SimSun,seri
 .segmented input{margin:0}
 .options{gap:20px;margin:24px 0 12px 96px;flex-wrap:wrap;font-size:13px;color:var(--ink)}
 .options label{min-height:36px;cursor:pointer}
-.options-label{align-self:center;color:var(--muted)}
+.time-basis{display:flex;flex-wrap:wrap;align-items:center;gap:0 12px}
+.options-label{color:var(--muted)}
 .time-option{display:inline-flex;align-items:center}
 .option-save{margin-left:auto}
 .solar-preview{margin-left:96px;font-size:12px;color:var(--muted);line-height:1.9;background:#f6f8f3;padding:12px 14px;border-radius:6px}
@@ -962,6 +965,9 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 @media(max-width:420px){
   body:not([data-display-mode="professional"]) .year-grid .fortune-item{flex-basis:88px}
 }
+@media(max-width:375px){
+  .time-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 </style>
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="bazi-premium.css?v=20261122.1">
@@ -1011,13 +1017,24 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
     <div class="field">
       <label>出生时间</label>
-      <button id="birthTimeDisplay" class="display-field" type="button" aria-label="编辑出生时间" aria-controls="timeEditor" aria-expanded="false" onclick="toggleTimeEditor()">1990年05月07日 07:00</button>
-      <div id="timeEditor" class="editor-panel" hidden></div>
+      <div class="editor-panel time-grid">
+        <div class="year-control">
+          <input id="birthYear" type="number" aria-label="输入出生年份" oninput="refreshBirthTimeInput()" onchange="updateDays();refreshBirthTimeInput()">
+          <select id="birthYearPicker" class="birth-year-picker" aria-label="滚动选择出生年份" onchange="selectBirthYear()"><option value="">年</option></select>
+        </div>
+        <select id="birthMonth" aria-label="出生月份" onchange="updateDays();refreshSolarPreview()"></select>
+        <select id="birthDay" aria-label="出生日期" onchange="refreshSolarPreview()"></select>
+        <select id="birthHour" aria-label="出生小时" onchange="refreshSolarPreview()"></select>
+        <select id="birthMinute" aria-label="出生分钟" onchange="refreshSolarPreview()"></select>
+      </div>
     </div>
 
     <div class="options">
-      <span class="options-label">时间校对：</span>
-      <label><input id="useTrueSolar" type="checkbox" onchange="refreshSolarPreview()"> 真太阳时</label>
+      <div class="time-basis" role="radiogroup" aria-labelledby="timeBasisLabel">
+        <span id="timeBasisLabel" class="options-label">时间校对：</span>
+        <label><input id="useBeijingTime" type="radio" name="birthTimeBasis" checked onchange="refreshSolarPreview()"> 北京时间</label>
+        <label><input id="useTrueSolar" type="radio" name="birthTimeBasis" onchange="refreshSolarPreview()"> 真太阳时</label>
+      </div>
       <span class="time-option"><label><input id="useDaylightSaving" type="checkbox" onchange="refreshSolarPreview()"> 夏令时</label><span id="daylightSavingHelp"></span></span>
       <label class="option-save"><input id="autoSaveBuild" type="checkbox" checked> 排盘后保存</label>
     </div>
@@ -1037,7 +1054,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
     </div><aside class="entry-guide" aria-label="排盘使用说明">
       <h2>使用顺序</h2>
       <ol>
-        <li><b>确认出生信息</b><p>填写出生时间，姓名可以留空；勾选真太阳时后核对出生地点。</p></li>
+        <li><b>确认出生信息</b><p>填写出生时间，姓名可以留空；选择真太阳时后核对出生地点。</p></li>
         <li><b>查看四柱与格局</b><p>先读主要结论，再按需展开完整判断依据。</p></li>
         <li><b>继续看岁运与分析</b><p>切换大运流年，或进入 AI 分析继续提问。</p></li>
       </ol>
@@ -1069,7 +1086,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 
 <script src="qimen.js"></script>
 <script src="birth-time.js?v=20261107.1"></script>
-<script src="china-locations.js?v=20261115.1"></script>
+<script src="china-locations.js?v=20261122.1"></script>
 <script src="bazi-shensha.js?v=20261122.1"></script>
 <script src="bazi-engine.js?v=shensha-20261120.1"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
@@ -1169,7 +1186,7 @@ function resetLuckSelection(){restoreLuckSelection({})}
 
 document.addEventListener('DOMContentLoaded',function(){
   initDisplayMode();
-  initTimeEditor();
+  initBirthTimeOptions();
   renderLocations();
   resetBaziFormToNow();
   showBaziHome('form');
@@ -1199,21 +1216,12 @@ function renderDisplayModeControl(){
 
 function pad(n){n=parseInt(n,10)||0;return(n<10?'0':'')+n}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function initTimeEditor(){
-  document.getElementById('timeEditor').innerHTML=
-    '<div class="time-grid">'+
-    '<div class="year-control"><input id="birthYear" type="number" value="1990" aria-label="输入出生年份" oninput="syncBirthYearPicker();refreshBirthTimeDisplay()" onchange="updateDays();refreshBirthTimeDisplay()"><select id="birthYearPicker" class="birth-year-picker" aria-label="滚动选择出生年份" onchange="selectBirthYear()"><option value="">年</option></select></div>'+
-    '<select id="birthMonth" aria-label="出生月份" onchange="updateDays();refreshBirthTimeDisplay()"></select>'+
-    '<select id="birthDay" aria-label="出生日期" onchange="refreshBirthTimeDisplay()"></select>'+
-    '<select id="birthHour" aria-label="出生小时" onchange="refreshBirthTimeDisplay()"></select>'+
-    '<select id="birthMinute" aria-label="出生分钟" onchange="refreshBirthTimeDisplay()"></select>'+
-    '</div>';
+function initBirthTimeOptions(){
   var m=document.getElementById('birthMonth'),h=document.getElementById('birthHour'),mi=document.getElementById('birthMinute'),yp=document.getElementById('birthYearPicker'),centerYear=new Date().getFullYear();
   for(var y=centerYear+50;y>=centerYear-50;y--)yp.innerHTML+='<option value="'+y+'">'+y+'</option>';
   for(var i=1;i<=12;i++)m.innerHTML+='<option value="'+i+'">'+i+'月</option>';
   for(i=0;i<24;i++)h.innerHTML+='<option value="'+i+'">'+pad(i)+'时</option>';
   for(i=0;i<60;i++)mi.innerHTML+='<option value="'+i+'">'+pad(i)+'分</option>';
-  m.value=5;h.value=7;mi.value=0;updateDays(7);refreshBirthTimeDisplay();
 }
 function syncBirthYearPicker(){
   var input=document.getElementById('birthYear'),picker=document.getElementById('birthYearPicker');
@@ -1226,7 +1234,7 @@ function selectBirthYear(){
   if(!input||!picker||!picker.value)return;
   input.value=picker.value;
   updateDays();
-  refreshBirthTimeDisplay();
+  refreshBirthTimeInput();
 }
 function updateDays(preferred){
   var y=parseInt(document.getElementById('birthYear').value,10)||1990;
@@ -1261,16 +1269,9 @@ function getInquiryTimeInfo(date){
   var note=flowYear===t.year?'已过立春，八字流年按'+flowGz:'未到立春，八字流年仍按'+flowGz;
   return {time:t,text:formatTime(t),lunar:getLunarText(date),flowYearNumber:flowYear,flowYearGz:flowGz,solarTermNote:note};
 }
-function refreshBirthTimeDisplay(){
-  var t=getInputTime();
+function refreshBirthTimeInput(){
   syncBirthYearPicker();
-  document.getElementById('birthTimeDisplay').textContent=t.year+'年'+pad(t.month)+'月'+pad(t.day)+'日 '+pad(t.hour)+':'+pad(t.minute);
   refreshSolarPreview();
-}
-function toggleTimeEditor(){
-  var panel=document.getElementById('timeEditor');
-  panel.hidden=!panel.hidden;
-  document.getElementById('birthTimeDisplay').ariaExpanded=String(!panel.hidden);
 }
 function toggleLocationPanel(){
   var panel=document.getElementById('locationPanel');
@@ -1354,7 +1355,7 @@ function refreshSolarPreview(){
     var data=getUsedTime();
     preview.innerHTML=(note?esc(note)+'<br>':'')+(data.daylightSaving?'夏令时已校正 −1小时；标准北京时间：'+formatTime(data.standard)+'<br>':'')+(data.enabled
       ? '真太阳时：<strong>'+formatTime(data.used)+'</strong><br>'+formatSolarCorrection(data)+'<br>地址经纬：'+locationCoordText(data.location)
-      : data.daylightSaving?'排盘时间：<strong>'+formatTime(data.used)+'</strong>':'未启用真太阳时，将按输入时间排盘');
+      : data.daylightSaving?'排盘时间：<strong>'+formatTime(data.used)+'</strong>':'按输入的北京时间排盘');
   }catch(error){preview.textContent=error.message}
 }
 function resetBaziFormToNow(){
@@ -1368,9 +1369,9 @@ function resetBaziFormToNow(){
   document.getElementById('birthMinute').value=now.getMinutes();
   selectedLocation=defaultLocation;
   document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
-  document.getElementById('useTrueSolar').checked=false;
+  document.getElementById('useBeijingTime').checked=true;
   document.getElementById('useDaylightSaving').checked=false;
-  refreshBirthTimeDisplay();
+  refreshBirthTimeInput();
 }
 function fillBaziFormFromData(data){
   if(!data)return;
@@ -1386,9 +1387,9 @@ function fillBaziFormFromData(data){
     selectedLocation={name:data.time.location.name||'自定义地点',lng:data.time.location.lng!=null&&Number.isFinite(Number(data.time.location.lng))?Number(data.time.location.lng):120,lat:data.time.location.lat==null?null:Number(data.time.location.lat)};
     document.getElementById('birthLocationDisplay').textContent=selectedLocation.name;
   }
-  document.getElementById('useTrueSolar').checked=!(data.time&&data.time.enabled===false);
+  document.getElementById(data.time&&data.time.enabled===false?'useBeijingTime':'useTrueSolar').checked=true;
   document.getElementById('useDaylightSaving').checked=!!(data.time&&data.time.daylightSaving);
-  refreshBirthTimeDisplay();
+  refreshBirthTimeInput();
 }
 function editCurrentBaziInput(){
   if(blockBaziAiMutation())return;
