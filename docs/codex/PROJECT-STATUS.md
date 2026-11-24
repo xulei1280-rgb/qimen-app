@@ -27,6 +27,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Relation Flow and Luck Trend Charts — 2026-11-24
+
+- 在八字「格局喜用」和「大运流年」卡片底部内嵌两张默认展开的可视化互动图（`bazi-visuals.css`、`bazi-visuals.js`），不改动排盘算法内核、历史记录、导出与 AI 契约。
+- 原局能量与流通图支持日主生克泄耗星盘、四柱位次流通、干支合冲刑破三层切换；五扇瓣按非线性强弱分级并设极弱保底，食伤按喜忌与强弱动态标为「泄秀／泄气／生泄」，十天干统一四字意象并接入方案 A 水墨底纹（己土 A2 沃野阡陌、庚金 A1 霜刃汉古剑，其余沿用方案 A），下方采用全宽双栏「交互焦点详解」。
+- 大运流年起伏走势图采用分帧异步推算（`renderLuckSectionAsync` + 竞态取消），支持 10 步大运总览、单运放大、`⇄ 跨年对比` 及与上方大运／流年选择双向联动。
+- 验证通过：主程序区 `node --check .\bazi-visuals.js`、`check-bazi-page.js`（含 720 组测例）、`check-baselines.js`（18 项基线）及 `git diff --cached --check`；分支阶段已完成全五行／十干／异步取消校验及 1440px／390px 浏览器核心交互与无横溢核对。本轮按用户明确授权在 `main` 提交并推送；隔离工作树 `codex/bazi-visual-charts-20261124` 暂保留。
+
 ### Bazi / Ziwei Calendar Switch Appearance — 2026-11-22
 
 - 八字和紫微公历／农历采用等宽分段外观，分别沿用墨金纸色和靛青主题；保留原生单选、键盘焦点及原有事件绑定，共享日期样式缓存更新。

@@ -956,6 +956,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="bazi-premium.css?v=20261122.1">
 <link rel="stylesheet" href="birth-date-input.css?v=20261122.2">
+<link rel="stylesheet" href="bazi-visuals.css?v=20261124.1">
 </head>
 <body>
 <a class="skip-link" href="#homeTabs">跳到排盘与记录</a>
@@ -1087,6 +1088,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
 <script src="bazi-glossary.js?v=20261122.3" defer></script>
+<script src="bazi-visuals.js?v=20261124.1" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -2514,7 +2516,8 @@ function renderStructure(data){
     (view.limits.length?detailBox(modeCopy('已有阻碍','组合冲突'),modeCopy('上面的「主要受限」已逐项列出本盘仍在的阻碍；已有根基不能抵消仍在的问题。',view.limits.map(function(x){return '<p>'+esc(x.professional)+'</p>'}).join(''))):'')+
     detailBox(modeCopy('问题与化解路径','病药通关'),modeCopy(esc(remedyCopy),caseReadingText(data,true))+classicalDiseaseNote())+
     (specials.length?detailBox(modeCopy('特殊配合','特殊格局'),modeCopy(caseReadingText(data,false,view),esc(specialPatternText(a))+caseAuditText(data,true))+classicalTransformNote(a),true):'')+detailBox(modeCopy('当前阶段参考','当前大运格局'),'<button type="button" class="small-action" onclick="switchBaziView(\'luck\')">查看当前阶段与年度变化</button>',true)+detailBox(modeCopy('相互作用','干支作用'),modeCopy('本盘有效的生扶、生财和制约已在「已有根基」说明；合冲只用来解释这些力量怎样配合或受牵制。',caseReadingText(data,true)),true)+'</div></details>'+
-    '<p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>';
+    '<p class="hint-line">这是所选传统框架的结构解释，不承诺现实结果。</p>'+
+    '<section id="baziRelationVisual" class="bzv-section bzv-relation-section" data-bz-plain aria-label="原局能量与流通图"></section>';
 }
 function modeCopy(standardBody,professionalBody){
   return '<div class="mode-copy standard-only" data-standard-copy>'+standardBody+'</div><div class="mode-copy professional-only" data-professional-copy>'+professionalBody+'</div>';
@@ -3667,6 +3670,22 @@ function selectLuckPart(part,index){
   syncActiveBaziRecord();
   dispatchBaziView('luck-'+part);
 }
+function selectLuckYear(luckIndex,yearIndex){
+  luckSelection.luck=luckIndex;
+  luckSelection.year=yearIndex;
+  luckSelection.month=null;
+  var panel=document.querySelector('[data-view-panel="luck"] .result-card');
+  if(panel&&currentBazi){
+    panel.innerHTML=renderLuckPanel(currentBazi);
+    mobileLuckTracks(panel).forEach(centerSelectedFortune);
+  }
+  var chart=document.querySelector('.basic-dashboard .result-card');
+  if(chart&&currentBazi)chart.innerHTML=renderPillarTable(currentBazi,currentBaziView==='luck');
+  var aiPanel=document.querySelector('[data-view-panel="ai"] .result-card');
+  if(aiPanel&&currentBazi)aiPanel.innerHTML=renderAiPanel();
+  syncActiveBaziRecord();
+  dispatchBaziView('luck-year');
+}
 function isMobileLuckViewport(){
   return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width: 800px)').matches;
 }
@@ -3965,7 +3984,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
 }
 function renderProfessionalLuckPanel(data){
   var ctx=getSelectedLuckContext(data);
-  return '<div class="section-title">大运流年</div><div class="luck-professional">'+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'</div>';
+  return '<div class="section-title">大运流年</div><div class="luck-professional">'+renderLuckSelector(data,ctx)+renderLuckDetail(data,ctx)+'<section id="baziLuckVisual" class="bzv-section bzv-luck-section luck-visual-panel" data-bz-plain aria-label="大运流年起伏走势图"></section></div>';
 }
 function renderLuckPanel(data){
   return renderProfessionalLuckPanel(data);
