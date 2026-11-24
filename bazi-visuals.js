@@ -103,8 +103,8 @@
     selectedNodeId: null,
     selectedSectorKey: null,
     selectedEdgeId: null,
+    relZoomed: false,
     luckZoomDecade: null,
-    curveMode: 'monotone',
     showWicks: true,
     selectedDecadeIndex: 0,
     selectedYear: null,
@@ -117,6 +117,10 @@
   let lastLuckContext = null;
   const luckModelCache = { key: '', model: null };
   let luckJobToken = 0;
+
+  function isCompactViewport() {
+    return typeof root.innerWidth === 'number' && root.innerWidth > 0 && root.innerWidth <= 640;
+  }
 
   function clamp(v, lo, hi) {
     return Math.max(lo, Math.min(hi, v));
@@ -545,7 +549,7 @@
     return { tier, rIn, rOut, halfSpan, labelR, fillOpacity, strokeDash: null, strokeWidth };
   }
 
-  function computeNodePositions(model) {
+  function computeNodePositions(model, compact) {
     const bySector = {};
     model.sectors.forEach((s, idx) => { bySector[s.key] = { idx, angle: SECTOR_ANGLES[idx], nodes: [] }; });
     model.nodes.forEach(n => {
@@ -556,13 +560,19 @@
       const list = group.nodes;
       const n = list.length;
       let offsets = [0];
-      let radii = [216];
-      if (n === 2) { offsets = [-17, 17]; radii = [216, 216]; }
-      else if (n === 3) { offsets = [-25, 0, 25]; radii = [214, 224, 214]; }
-      else if (n >= 4) { offsets = [-31, -10.5, 10.5, 31]; radii = [210, 234, 234, 210]; }
+      let radii = compact ? [186] : [216];
+      if (compact) {
+        if (n === 2) { offsets = [-19, 19]; radii = [188, 188]; }
+        else if (n === 3) { offsets = [-28, 0, 28]; radii = [186, 200, 186]; }
+        else if (n >= 4) { offsets = [-34, -11.5, 11.5, 34]; radii = [184, 204, 204, 184]; }
+      } else {
+        if (n === 2) { offsets = [-17, 17]; radii = [216, 216]; }
+        else if (n === 3) { offsets = [-25, 0, 25]; radii = [214, 224, 214]; }
+        else if (n >= 4) { offsets = [-31, -10.5, 10.5, 31]; radii = [210, 234, 234, 210]; }
+      }
       list.forEach((node, i) => {
         const deg = group.angle + (offsets[i] || 0);
-        const dist = radii[i] || 216;
+        const dist = radii[i] || (compact ? 186 : 216);
         const pt = polar(CX, CY, dist, deg);
         pos[node.id] = { x: pt.x, y: pt.y, r: nodeRadius(node.weight), angle: deg, rad: pt.rad, node };
       });
@@ -1400,9 +1410,142 @@
     return Object.assign({}, raw, { marker: idMap[raw.marker] || mapMarkerId(raw.marker) });
   }
 
+  function resolveStarNodeLabelPlacement(np, node, compact) {
+    const cosA = Math.cos(np.rad);
+    const sinA = Math.sin(np.rad);
+    const labelText = `${node.pillarLabel}·${node.tenGod}`;
+    if (compact) {
+      const placeAbove = sinA < -0.55;
+      const lx = np.x;
+      const ly = placeAbove
+        ? (np.y - np.r - (node.isMonthCommand ? 13 : 8))
+        : (np.y + np.r + 14);
+      const estW = labelText.length * 12.8 + 8;
+      return {
+        x: lx,
+        y: ly,
+        anchor: 'middle',
+        fontSize: 12.5,
+        useHalo: true,
+        minX: lx - estW * 0.52,
+        maxX: lx + estW * 0.52,
+        minY: ly - 14,
+        maxY: ly + 6,
+        text: labelText
+      };
+    }
+    const lx = np.x + cosA * (np.r + 14);
+    const ly = np.y + sinA * (np.r + 14) + (sinA > 0.5 ? 8 : (sinA < -0.5 ? -3 : 4));
+    const estW = (node.pillarLabel.length + 1 + node.tenGod.length) * 11.5 + 6;
+    const anchor = cosA > 0.35 ? 'start' : (cosA < -0.35 ? 'end' : 'middle');
+    let minX, maxX;
+    if (cosA > 0.35) {
+      minX = lx - 4;
+      maxX = lx + estW;
+    } else if (cosA < -0.35) {
+      minX = lx - estW;
+      maxX = lx + 4;
+    } else {
+      minX = lx - estW * 0.52;
+      maxX = lx + estW * 0.52;
+    }
+    return {
+      x: lx,
+      y: ly,
+      anchor,
+      fontSize: 11.5,
+      useHalo: false,
+      minX,
+      maxX,
+      minY: ly - 16,
+      maxY: ly + 14,
+      text: labelText
+    };
+  }
+
+  function computeStarWheelViewBox(model, nodePos, displayEdges, compact) {
+    const isCompact = compact !== undefined ? !!compact : isCompactViewport();
+    const baseSpan = isCompact ? 148 : 152;
+    const pillR = isCompact ? 142 : 156;
+    let minX = CX - baseSpan;
+    let maxX = CX + baseSpan;
+    let minY = CY - baseSpan;
+    let maxY = CY + baseSpan;
+
+    (model.nodes || []).forEach(node => {
+      const np = nodePos[node.id];
+      if (!np) return;
+      minX = Math.min(minX, np.x - np.r - 10);
+      maxX = Math.max(maxX, np.x + np.r + 10);
+      minY = Math.min(minY, np.y - np.r - 12);
+      maxY = Math.max(maxY, np.y + np.r + 12);
+
+      if (node.isMonthCommand) {
+        maxX = Math.max(maxX, np.x + np.r * 0.76 + 10);
+        minY = Math.min(minY, np.y - np.r * 0.76 - 10);
+      }
+
+      const lbl = resolveStarNodeLabelPlacement(np, node, isCompact);
+      minX = Math.min(minX, lbl.minX);
+      maxX = Math.max(maxX, lbl.maxX);
+      minY = Math.min(minY, lbl.minY);
+      maxY = Math.max(maxY, lbl.maxY);
+
+      if (uiState.selectedNodeId === node.id && node.kind === '支' && node.hidden && node.hidden.length) {
+        const count = node.hidden.length;
+        const spread = count === 1 ? [0] : (count === 2 ? [-26, 26] : [-38, 0, 38]);
+        node.hidden.forEach((hs, hi) => {
+          const sp = polar(np.x, np.y, np.r + 44, np.angle + spread[hi]);
+          const sx = clamp(sp.x, 58, 682);
+          const sy = clamp(sp.y, 22, 556);
+          const pillTxt = `${hs.stem}${hs.tenGod} ${hs.pct}%`;
+          const pw = pillTxt.length * 8.2 + 16;
+          minX = Math.min(minX, sx - pw / 2 - 6);
+          maxX = Math.max(maxX, sx + pw / 2 + 6);
+          minY = Math.min(minY, sy - 14);
+          maxY = Math.max(maxY, sy + 14);
+        });
+      }
+    });
+
+    (displayEdges || []).forEach(e => {
+      if (!e.nodeId || !nodePos[e.nodeId]) return;
+      const pillPt = polar(CX, CY, pillR, nodePos[e.nodeId].angle);
+      minX = Math.min(minX, pillPt.x - 34);
+      maxX = Math.max(maxX, pillPt.x + 34);
+      minY = Math.min(minY, pillPt.y - 14);
+      maxY = Math.max(maxY, pillPt.y + 14);
+    });
+
+    const pad = isCompact ? 10 : 14;
+    let x0 = Math.max(0, minX - pad);
+    let y0 = Math.max(0, minY - pad);
+    let x1 = Math.min(740, maxX + pad);
+    let y1 = Math.min(580, maxY + pad);
+
+    const minHalfW = 210;
+    const halfW = clamp(Math.max(minHalfW, CX - x0, x1 - CX), minHalfW, CX);
+    x0 = Math.round(CX - halfW);
+    let w = (CX - x0) * 2;
+    let h = y1 - y0;
+    const minH = isCompact ? 360 : 380;
+    if (h < minH) {
+      const midY = (y0 + y1) / 2;
+      h = minH;
+      y0 = clamp(midY - h / 2, 0, 580 - h);
+    }
+    y0 = Math.round(y0);
+    h = Math.round(h);
+    return { x: x0, y: y0, w, h, str: `${x0} ${y0} ${w} ${h}` };
+  }
+
   function renderStarWheelView(svg, model, weightedShares, displayEdges, onUpdate) {
     const P = PALETTE;
-    const nodePos = computeNodePositions(model);
+    const compact = isCompactViewport();
+    const nodePos = computeNodePositions(model, compact);
+    if (typeof svg.setAttribute === 'function') {
+      svg.setAttribute('viewBox', compact ? computeStarWheelViewBox(model, nodePos, displayEdges, true).str : '0 0 740 580');
+    }
 
     const genRingPath = `M ${CX} ${CY - 142} A 142 142 0 1 1 ${(CX - 0.1).toFixed(1)} ${CY - 142} Z`;
     svg.appendChild(svgEl('path', {
@@ -1458,14 +1601,14 @@
       const lg = svgEl('g', { style: 'cursor:pointer', opacity: dimmed ? 0.35 : 1 });
       const haloStyle = `paint-order:stroke; stroke:${P.paper}; stroke-width:3.5px; stroke-linejoin:round;`;
       lg.appendChild(svgEl('text', {
-        x: lp.x.toFixed(1), y: (lp.y - 3.5).toFixed(1),
-        'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 600, fill: P.textDark,
+        x: lp.x.toFixed(1), y: (lp.y - (compact ? 4 : 3.5)).toFixed(1),
+        'text-anchor': 'middle', 'font-size': compact ? 13 : 11.5, 'font-weight': 600, fill: P.textDark,
         style: haloStyle
       }, `${sec.name}·${sec.wx}`));
       const roleTag = sec.role === 'avoid' ? ' 忌' : (sec.roleLabel === '中' ? '' : ` ${sec.roleLabel}`);
       lg.appendChild(svgEl('text', {
-        x: lp.x.toFixed(1), y: (lp.y + 10.5).toFixed(1),
-        'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 600,
+        x: lp.x.toFixed(1), y: (lp.y + (compact ? 11.5 : 10.5)).toFixed(1),
+        'text-anchor': 'middle', 'font-size': compact ? 11.5 : 10.5, 'font-weight': 600,
         fill: st.text, class: 'bzv-tabular', style: haloStyle
       }, `${share.pct.toFixed(1)}%${roleTag}`));
       lg.addEventListener('click', () => {
@@ -1528,9 +1671,12 @@
       const trunkOpacity = trunkSel ? 1 : (grpFocused ? (grp.active ? 0.88 : 0.92) : 0.14);
       const trunkWidth = Math.min(4.0, Math.max(1.7, 1.45 + totalWeight / 26));
 
+      const pillR = compact ? 142 : 156;
+      const juncR = compact ? 160 : 178;
+      const ctrlR = compact ? 170 : 190;
       const cInner = polar(CX, CY, 52, meanAngle);
-      const pillPt = polar(CX, CY, 156, meanAngle);
-      const juncPt = polar(CX, CY, 178, meanAngle);
+      const pillPt = polar(CX, CY, pillR, meanAngle);
+      const juncPt = polar(CX, CY, juncR, meanAngle);
 
       if (grp.edges.length === 1) {
         const e = grp.edges[0];
@@ -1631,7 +1777,7 @@
           const dist = Math.hypot(ux, uy) || 1;
           const nEdgeX = np.x - (ux / dist) * (np.r + 4);
           const nEdgeY = np.y - (uy / dist) * (np.r + 4);
-          const ctrlPt = polar(CX, CY, 190, meanAngle);
+          const ctrlPt = polar(CX, CY, ctrlR, meanAngle);
 
           const bg = svgEl('g', { style: 'cursor:pointer', opacity: branchOp });
           const dBranch = grp.toDM
@@ -1674,16 +1820,18 @@
       }
 
       const pillLbl = grp.active ? grp.action : `${grp.action}✕`;
-      const pw = pillLbl.length * 11 + 14;
+      const pillFont = compact ? 12 : 11;
+      const pillH = compact ? 21 : 19;
+      const pw = pillLbl.length * pillFont + 14;
       const pg = svgEl('g', { style: 'cursor:pointer', opacity: grpFocused ? 1 : 0.2 });
       pg.appendChild(svgEl('rect', {
-        x: (pillPt.x - pw / 2).toFixed(1), y: (pillPt.y - 9.5).toFixed(1),
-        width: pw, height: 19, rx: 9.5,
+        x: (pillPt.x - pw / 2).toFixed(1), y: (pillPt.y - pillH / 2).toFixed(1),
+        width: pw, height: pillH, rx: pillH / 2,
         fill: P.paper, stroke: st.color, 'stroke-width': trunkSel ? 1.8 : 1.25
       }));
       pg.appendChild(svgEl('text', {
-        x: pillPt.x.toFixed(1), y: (pillPt.y + 3.8).toFixed(1),
-        'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: st.color
+        x: pillPt.x.toFixed(1), y: (pillPt.y + (compact ? 4.2 : 3.8)).toFixed(1),
+        'text-anchor': 'middle', 'font-size': pillFont, 'font-weight': 700, fill: st.color
       }, pillLbl));
       pg.addEventListener('click', () => {
         uiState.selectedEdgeId = primaryEdge.id;
@@ -1731,14 +1879,14 @@
 
     const dmHalo = `paint-order:stroke; stroke:${P.paper}; stroke-width:2.6px; stroke-linejoin:round;`;
     dmGroup.appendChild(svgEl('text', {
-      x: CX, y: CY - 17, 'text-anchor': 'middle', 'font-size': 10.5, fill: P.muted, style: dmHalo
+      x: CX, y: CY - 17, 'text-anchor': 'middle', 'font-size': compact ? 11.5 : 10.5, fill: P.muted, style: dmHalo
     }, '日主'));
     dmGroup.appendChild(svgEl('text', {
-      x: CX, y: CY + 8, 'text-anchor': 'middle', 'font-size': 28, 'font-weight': 700,
+      x: CX, y: CY + 8, 'text-anchor': 'middle', 'font-size': compact ? 31 : 28, 'font-weight': 700,
       fill: P.textDark, class: 'bzv-serif', style: dmHalo
     }, model.meta.dayStem));
     dmGroup.appendChild(svgEl('text', {
-      x: CX, y: CY + 25, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 600,
+      x: CX, y: CY + 25, 'text-anchor': 'middle', 'font-size': compact ? 11.5 : 10.5, 'font-weight': 600,
       fill: P.gold, class: 'bzv-tabular', style: dmHalo
     }, `${model.meta.dayElement} · 扶身 ${model.meta.supportScore}`));
     dmGroup.addEventListener('click', () => {
@@ -1787,7 +1935,7 @@
 
       ng.appendChild(svgEl('text', {
         x: np.x.toFixed(1), y: (np.y + 6).toFixed(1),
-        'text-anchor': 'middle', 'font-size': np.r >= 22 ? 20 : 16, 'font-weight': 700,
+        'text-anchor': 'middle', 'font-size': np.r >= 22 ? (compact ? 21 : 20) : (compact ? 17.5 : 16), 'font-weight': 700,
         fill: P.textDark, class: 'bzv-serif'
       }, node.char));
 
@@ -1802,17 +1950,17 @@
         });
       }
 
-      const cosA = Math.cos(np.rad), sinA = Math.sin(np.rad);
-      const lx = np.x + cosA * (np.r + 14);
-      const ly = np.y + sinA * (np.r + 14);
-      const anchor = cosA > 0.35 ? 'start' : (cosA < -0.35 ? 'end' : 'middle');
-      const labelOffsetY = sinA > 0.5 ? 8 : (sinA < -0.5 ? -3 : 4);
+      const lbl = resolveStarNodeLabelPlacement(np, node, compact);
       const isExpandedBranch = isSel && node.kind === '支' && node.hidden.length > 0;
       if (!isExpandedBranch) {
-        ng.appendChild(svgEl('text', {
-          x: lx.toFixed(1), y: (ly + labelOffsetY).toFixed(1),
-          'text-anchor': anchor, 'font-size': 11.5, 'font-weight': 600, fill: P.textDark
-        }, `${node.pillarLabel}·${node.tenGod}`));
+        const lblAttrs = {
+          x: lbl.x.toFixed(1), y: lbl.y.toFixed(1),
+          'text-anchor': lbl.anchor, 'font-size': lbl.fontSize, 'font-weight': 600, fill: P.textDark
+        };
+        if (lbl.useHalo) {
+          lblAttrs.style = `paint-order:stroke; stroke:${P.paper}; stroke-width:3px; stroke-linejoin:round;`;
+        }
+        ng.appendChild(svgEl('text', lblAttrs, lbl.text));
       }
 
       if (node.isMonthCommand) {
@@ -2185,8 +2333,11 @@
     svg.appendChild(nodesGroup);
   }
 
-  function renderRelationSection(container, data) {
+  function renderRelationSection(container, data, opts) {
     if (!container || !data) return;
+    const recenter = !(opts && opts.recenter === false);
+    const prevScrollEl = container.querySelector('#bzvRelScroll');
+    const prevScrollLeft = prevScrollEl && typeof prevScrollEl.scrollLeft === 'number' ? prevScrollEl.scrollLeft : null;
     const model = buildRelationModel(data);
     const weightedShares = computeWeightedSectorShares(model);
     const displayEdges = buildDisplayFlowEdges(model);
@@ -2214,7 +2365,11 @@
         <div class="bzv-relation-grid">
           <div class="bzv-stage-wrap">
             <div class="bzv-stage-canvas">
-              <svg id="bzvRelationSvg" viewBox="0 0 740 580" class="bzv-svg" role="img" aria-label="原局日主能量与四柱位次流通图"></svg>
+              <button type="button" class="bzv-stage-zoom-btn" id="bzvRelZoomBtn"></button>
+              <div class="bzv-stage-scroll" id="bzvRelScroll">
+                <svg id="bzvRelationSvg" viewBox="0 0 740 580" class="bzv-svg" role="img" aria-label="原局日主能量与四柱位次流通图"></svg>
+              </div>
+              <div class="bzv-mobile-hint" id="bzvRelMobileHint"></div>
             </div>
             <div class="bzv-legend" id="bzvRelLegend"></div>
           </div>
@@ -2232,7 +2387,8 @@
       </div>
     `;
 
-    const rerender = () => renderRelationSection(container, data);
+    const rerender = () => renderRelationSection(container, data, { recenter: true });
+    const rerenderKeepScroll = () => renderRelationSection(container, data, { recenter: false });
 
     const layerDefs = [
       ['flow', '日主生克泄耗'],
@@ -2258,14 +2414,34 @@
     remoteBtn.classList.toggle('is-active', !!uiState.showRemote);
     remoteBtn.onclick = () => {
       uiState.showRemote = !uiState.showRemote;
-      rerender();
+      rerenderKeepScroll();
     };
+
+    const compactViewport = isCompactViewport();
+    const relZoomBtn = container.querySelector('#bzvRelZoomBtn');
+    if (relZoomBtn) {
+      relZoomBtn.hidden = !(uiState.relLayer === 'flow' && compactViewport);
+      relZoomBtn.classList.toggle('is-active', !!uiState.relZoomed);
+      const zoomLabel = uiState.relZoomed ? '缩小还原星盘' : '放大查看星盘';
+      if (typeof relZoomBtn.setAttribute === 'function') {
+        relZoomBtn.setAttribute('aria-label', zoomLabel);
+        relZoomBtn.setAttribute('title', zoomLabel);
+        relZoomBtn.setAttribute('aria-pressed', uiState.relZoomed ? 'true' : 'false');
+      }
+      relZoomBtn.innerHTML = uiState.relZoomed
+        ? `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>`
+        : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>`;
+      relZoomBtn.onclick = () => {
+        uiState.relZoomed = !uiState.relZoomed;
+        rerender();
+      };
+    }
 
     const motionBtn = container.querySelector('#bzvMotionBtn');
     motionBtn.textContent = uiState.motion ? '动效：开' : '动效：关';
     motionBtn.onclick = () => {
       uiState.motion = !uiState.motion;
-      rerender();
+      rerenderKeepScroll();
     };
 
     container.querySelector('#bzvRelResetBtn').onclick = () => {
@@ -2276,11 +2452,47 @@
     };
 
     const svg = container.querySelector('#bzvRelationSvg');
+    const isWideRel = uiState.relLayer !== 'flow';
+    const isZoomedRel = uiState.relLayer === 'flow' && !!uiState.relZoomed;
+    const isFlowMobile = uiState.relLayer === 'flow' && !isZoomedRel;
+    if (svg.classList) {
+      svg.classList.toggle('is-wide-mobile', isWideRel);
+      svg.classList.toggle('is-zoomed-mobile', isZoomedRel);
+      svg.classList.toggle('is-flow-mobile', isFlowMobile);
+    }
+    const relHintEl = container.querySelector('#bzvRelMobileHint');
+    if (relHintEl) {
+      const hintTxt = isWideRel
+        ? '← 左右滑动查看四柱全貌 →'
+        : (isZoomedRel ? '← 左右滑动细看星盘 · 点右上角缩小 →' : '← 左右滑动查看星盘 · 右上角可放大 →');
+      relHintEl.textContent = hintTxt;
+      if (relHintEl.classList) relHintEl.classList.toggle('is-active', !!hintTxt);
+    }
+
     appendSvgDefs(svg, model.meta.dayElement);
     if (uiState.relLayer === 'flow') {
-      renderStarWheelView(svg, model, weightedShares, displayEdges, rerender);
+      renderStarWheelView(svg, model, weightedShares, displayEdges, rerenderKeepScroll);
     } else {
-      renderMatrixRelationView(svg, model, matrix, posEdges, rerender);
+      if (typeof svg.setAttribute === 'function') {
+        svg.setAttribute('viewBox', '0 0 740 580');
+      }
+      renderMatrixRelationView(svg, model, matrix, posEdges, rerenderKeepScroll);
+    }
+
+    const relScrollEl = container.querySelector('#bzvRelScroll');
+    if (compactViewport && relScrollEl) {
+      const syncRelScroll = () => {
+        const maxScroll = relScrollEl.scrollWidth - relScrollEl.clientWidth;
+        if (maxScroll > 0) {
+          relScrollEl.scrollLeft = (recenter || prevScrollLeft === null)
+            ? Math.round(maxScroll / 2)
+            : clamp(prevScrollLeft, 0, maxScroll);
+        }
+      };
+      syncRelScroll();
+      if (typeof root.requestAnimationFrame === 'function') {
+        root.requestAnimationFrame(syncRelScroll);
+      }
     }
 
     // Layer-specific Legend
@@ -3108,10 +3320,6 @@
     return path;
   }
 
-  function linearPath(pts) {
-    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  }
-
   function notifySelectYear(yrObj) {
     if (!yrObj) return;
     uiState.selectedDecadeIndex = yrObj.decadeIndex;
@@ -3155,6 +3363,10 @@
       }
       const pos = coordsFromEvent(e, ctx);
       if (pos.svgY >= ctx.M.top - 4 && pos.svgX >= ctx.M.left - 12 && pos.svgX <= ctx.M.left + ctx.plotW + 12) {
+        if (e.pointerType === 'touch') {
+          drag = { mode: 'touch-tap', startX: e.clientX, startY: e.clientY, anchorObj: pos.yrObj, moved: false };
+          return;
+        }
         drag = { mode: 'sweep', anchorYear: pos.yr, anchorObj: pos.yrObj, startX: e.clientX, moved: false, pointerId: e.pointerId };
         try { mainSvg.setPointerCapture(e.pointerId); } catch (_) {}
       }
@@ -3163,6 +3375,12 @@
     mainSvg.addEventListener('pointermove', e => {
       const ctx = mainSvg._bzvCtx;
       if (!ctx) return;
+      if (drag && drag.mode === 'touch-tap') {
+        if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 8) {
+          drag.moved = true;
+        }
+        return;
+      }
       const pos = coordsFromEvent(e, ctx);
       if (drag) {
         if (drag.mode === 'handle') {
@@ -3188,6 +3406,7 @@
         }
         return;
       }
+      if (e.pointerType === 'touch') return;
       if (pos.svgY >= ctx.M.top - 4 && pos.svgX >= ctx.M.left - 12 && pos.svgX <= ctx.M.left + ctx.plotW + 12) {
         uiState.hoverYear = pos.yr;
         ctx.syncHoverUI(pos.idx);
@@ -3200,7 +3419,9 @@
     function endDrag() {
       if (!drag) return;
       const ctx = mainSvg._bzvCtx;
-      try { mainSvg.releasePointerCapture(drag.pointerId); } catch (_) {}
+      if (drag.pointerId !== undefined) {
+        try { mainSvg.releasePointerCapture(drag.pointerId); } catch (_) {}
+      }
       const wasMoved = drag.moved;
       const anchorObj = drag.anchorObj;
       const dragMode = drag.mode;
@@ -3213,13 +3434,18 @@
       } else if (dragMode === 'sweep' && uiState.compare && uiState.compare.a === uiState.compare.b) {
         uiState.compare = null;
         notifySelectYear(anchorObj);
-      } else {
+      } else if (dragMode !== 'touch-tap') {
         ctx.rerender();
       }
     }
 
     mainSvg.addEventListener('pointerup', endDrag);
-    mainSvg.addEventListener('pointercancel', endDrag);
+    mainSvg.addEventListener('pointercancel', () => {
+      if (drag && drag.pointerId !== undefined) {
+        try { mainSvg.releasePointerCapture(drag.pointerId); } catch (_) {}
+      }
+      drag = null;
+    });
     mainSvg.addEventListener('pointerleave', () => {
       if (drag) return;
       const ctx = mainSvg._bzvCtx;
@@ -3235,6 +3461,7 @@
     const model = buildLuckModel(data);
     if (!model || !model.decades.length) return;
     const technical = isTechnicalMode();
+    const compactViewport = isCompactViewport();
     const P = PALETTE;
 
     const allFlat = model.allYears;
@@ -3254,22 +3481,28 @@
         <div class="bzv-toolbar">
           <div class="bzv-btn-group">
             <button type="button" class="bzv-btn" id="bzvZoomBackBtn">← 返回总览</button>
+            <button type="button" class="bzv-btn" id="bzvZoomCurrentBtn">放大当前十年</button>
             <strong class="bzv-serif" id="bzvLuckScopeLabel" style="font-size:13.5px; color:${P.ink}"></strong>
             <span id="bzvLuckScopeHint" style="font-size:12px; color:${P.muted}"></span>
           </div>
           <div class="bzv-btn-group">
-            <div class="bzv-segmented" id="bzvCurveSwitch"></div>
             <button type="button" class="bzv-btn" id="bzvWickBtn"></button>
             <button type="button" class="bzv-btn bzv-btn-primary" id="bzvCompareToggleBtn"></button>
           </div>
         </div>
         <div class="bzv-luck-body">
           <div class="bzv-luck-stage">
-            <svg id="bzvLuckMainSvg" viewBox="0 0 920 342" class="bzv-svg bzv-luck-main-svg" role="img" aria-label="大运流年承接式起伏走势图"></svg>
-            <div id="bzvLuckTooltip" class="bzv-tooltip bzv-hidden"></div>
-            <div class="bzv-luck-delta-wrap">
-              <svg id="bzvLuckDeltaSvg" viewBox="0 0 920 76" class="bzv-svg" role="img" aria-label="单年推升与回撤副图"></svg>
+            <div class="bzv-luck-scroll" id="bzvLuckScroll">
+              <div class="bzv-luck-track" id="bzvLuckTrack">
+                <svg id="bzvLuckMainSvg" viewBox="0 0 920 342" class="bzv-svg bzv-luck-main-svg" role="img" aria-label="大运流年承接式起伏走势图"></svg>
+                <div class="bzv-luck-delta-wrap">
+                  <div class="bzv-delta-sticky-label">单年涨跌（绿升 · 红降 · 点平）</div>
+                  <svg id="bzvLuckDeltaSvg" viewBox="0 0 920 ${compactViewport ? 62 : 76}" class="bzv-svg" role="img" aria-label="单年推升与回撤副图"></svg>
+                </div>
+              </div>
             </div>
+            <div id="bzvLuckTooltip" class="bzv-tooltip bzv-hidden"></div>
+            <div class="bzv-mobile-hint is-active" id="bzvLuckMobileHint">← 左右滑动看十年起伏 · 点大运标题可放大 →</div>
           </div>
           <div class="bzv-luck-footer">
             <span id="bzvLuckLegend"></span>
@@ -3293,7 +3526,13 @@
     const flatYears = [];
     visibleDecades.forEach(dc => { dc.years.forEach(yr => flatYears.push(yr)); });
 
+    const trackEl = container.querySelector('#bzvLuckTrack');
+    if (trackEl && trackEl.classList) {
+      trackEl.classList.toggle('is-decade-zoom', uiState.luckZoomDecade !== null);
+    }
+
     const zoomBackBtn = container.querySelector('#bzvZoomBackBtn');
+    const zoomCurBtn = container.querySelector('#bzvZoomCurrentBtn');
     const scopeLabel = container.querySelector('#bzvLuckScopeLabel');
     const scopeHint = container.querySelector('#bzvLuckScopeHint');
     zoomBackBtn.hidden = uiState.luckZoomDecade === null;
@@ -3301,6 +3540,14 @@
       uiState.luckZoomDecade = null;
       rerender();
     };
+    if (zoomCurBtn) {
+      zoomCurBtn.hidden = uiState.luckZoomDecade !== null;
+      zoomCurBtn.onclick = () => {
+        const dcIdx = clamp(Number(uiState.selectedDecadeIndex) || 0, 0, model.decades.length - 1);
+        uiState.luckZoomDecade = dcIdx;
+        rerender();
+      };
+    }
     if (uiState.luckZoomDecade === null) {
       scopeLabel.textContent = `全盘总览（${model.decades.length}步大运）`;
       scopeHint.textContent = '点大运标题可放大十年 · 拖动图面可框选对比';
@@ -3310,20 +3557,6 @@
       scopeLabel.textContent = `${zDc.gz}大运（${lbl}）`;
       scopeHint.textContent = `${zDc.startYear}–${zDc.endYear} · ${zDc.startAge}–${zDc.endAge}岁`;
     }
-
-    const curveWrap = container.querySelector('#bzvCurveSwitch');
-    curveWrap.innerHTML = [
-      ['monotone', '平滑曲线'],
-      ['linear', '经典折线']
-    ].map(([k, lbl]) => `
-      <button type="button" data-curve="${k}" class="${uiState.curveMode === k ? 'is-active' : ''}">${lbl}</button>
-    `).join('');
-    curveWrap.querySelectorAll('button').forEach(b => {
-      b.onclick = () => {
-        uiState.curveMode = b.getAttribute('data-curve');
-        rerender();
-      };
-    });
 
     const wickBtn = container.querySelector('#bzvWickBtn');
     wickBtn.textContent = uiState.showWicks ? '包络：开' : '包络：关';
@@ -3503,8 +3736,7 @@
     });
 
     const pts = flatYears.map((yr, idx) => ({ x: xOf(idx), y: yOf(yr.level), yr }));
-    const pathFn = uiState.curveMode === 'monotone' ? monotonePath : linearPath;
-    const lineD = pathFn(pts);
+    const lineD = monotonePath(pts);
     const areaD = `${lineD} L ${pts[pts.length - 1].x.toFixed(1)} ${yZero.toFixed(1)} L ${pts[0].x.toFixed(1)} ${yZero.toFixed(1)} Z`;
 
     mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaPosGrad)', 'clip-path': 'url(#bzvClipAboveZero)' }));
@@ -3513,7 +3745,7 @@
     if (uiState.showWicks && pts.length >= 2) {
       const upperPts = pts.map(p => ({ x: p.x, y: yOf(p.yr.level + p.yr.bandUp) }));
       const lowerPts = pts.map(p => ({ x: p.x, y: yOf(p.yr.level - p.yr.bandDown) }));
-      const ribbonD = `${pathFn(upperPts)} ${pathFn(lowerPts.slice().reverse()).replace(/^M/, 'L')} Z`;
+      const ribbonD = `${monotonePath(upperPts)} ${monotonePath(lowerPts.slice().reverse()).replace(/^M/, 'L')} Z`;
       mainSvg.appendChild(svgEl('path', {
         d: ribbonD, fill: P.gold, opacity: uiState.luckZoomDecade !== null ? 0.18 : 0.14, stroke: 'none'
       }));
@@ -3603,11 +3835,18 @@
     mainSvg.appendChild(focusRing);
 
     const deltaSvg = container.querySelector('#bzvLuckDeltaSvg');
-    const dH = 76, dZero = 46;
+    const dH = compactViewport ? 62 : 76;
+    const dZero = compactViewport ? 34 : 46;
+    const dTop = compactViewport ? 6 : 18;
+    if (typeof deltaSvg.setAttribute === 'function') {
+      deltaSvg.setAttribute('viewBox', `0 0 920 ${dH}`);
+    }
     const maxStep = Math.max(1.2, Math.max.apply(null, flatYears.map(y => Math.abs(y.netStep))));
-    deltaSvg.appendChild(svgEl('text', {
-      x: M.left, y: 13, 'font-size': 11, 'font-weight': 600, fill: P.muted
-    }, '单年涨跌（绿升 · 红降 · 点平）'));
+    if (!compactViewport) {
+      deltaSvg.appendChild(svgEl('text', {
+        x: M.left, y: 13, 'font-size': 11, 'font-weight': 600, fill: P.muted
+      }, '单年涨跌（绿升 · 红降 · 点平）'));
+    }
     const deltaCompareG = svgEl('g');
     deltaSvg.appendChild(deltaCompareG);
     deltaSvg.appendChild(svgEl('line', {
@@ -3635,7 +3874,7 @@
       }
     });
     const deltaCross = svgEl('line', {
-      x1: actPt.x.toFixed(1), y1: 18, x2: actPt.x.toFixed(1), y2: dH - 4,
+      x1: actPt.x.toFixed(1), y1: dTop, x2: actPt.x.toFixed(1), y2: dH - 4,
       stroke: P.textDark, 'stroke-width': 1, 'stroke-dasharray': '3 3',
       opacity: uiState.compare ? 0 : 0.5
     });
@@ -3688,10 +3927,17 @@
       const box = mainSvg.getBoundingClientRect();
       const width = box.width || 800;
       const height = box.height || 300;
-      const relX = (pt.x / W) * width;
+      const scrollEl = container.querySelector('#bzvLuckScroll');
+      const stageEl = scrollEl && scrollEl.parentNode ? scrollEl.parentNode : null;
+      const stageBox = stageEl && stageEl.getBoundingClientRect ? stageEl.getBoundingClientRect() : box;
+      const stageW = stageBox.width || width;
+      const scrollLeft = (scrollEl && scrollEl.scrollLeft) || 0;
+      const visX = (pt.x / W) * width - scrollLeft;
       const relY = (pt.y / H) * height;
-      const placeLeft = relX > width * 0.65;
-      tooltip.style.left = placeLeft ? `${Math.max(8, relX - 242)}px` : `${Math.min(Math.max(8, width - 245), relX + 14)}px`;
+      const placeLeft = visX > stageW * 0.62;
+      tooltip.style.left = placeLeft
+        ? `${Math.max(8, visX - 238)}px`
+        : `${Math.min(Math.max(8, stageW - 240), visX + 14)}px`;
       tooltip.style.top = `${clamp(relY - 34, 8, Math.max(12, height - 95))}px`;
       tooltip.classList.remove('bzv-hidden');
     }
@@ -3804,7 +4050,7 @@
         fill: P.gold, opacity: 0.11, 'pointer-events': 'none'
       }));
       deltaCompareG.appendChild(svgEl('rect', {
-        x: xLeft.toFixed(1), y: 18, width: spanW.toFixed(1), height: dH - 22,
+        x: xLeft.toFixed(1), y: dTop, width: spanW.toFixed(1), height: Math.max(8, dH - dTop - 4),
         fill: P.gold, opacity: 0.14
       }));
       compareLayerG.appendChild(svgEl('line', {
@@ -3822,7 +4068,7 @@
           stroke: P.textDark, 'stroke-width': 1.4, opacity: 0.65, 'pointer-events': 'none'
         }));
         deltaCompareG.appendChild(svgEl('line', {
-          x1: pt.x.toFixed(1), y1: 18, x2: pt.x.toFixed(1), y2: dH - 4,
+          x1: pt.x.toFixed(1), y1: dTop, x2: pt.x.toFixed(1), y2: dH - 4,
           stroke: P.textDark, 'stroke-width': 1.3, opacity: 0.6
         }));
         compareLayerG.appendChild(svgEl('circle', {
@@ -3880,7 +4126,10 @@
     uiState.selectedYear = selYearObj.y;
     const globalIdx = allFlat.findIndex(y => y.y === selYearObj.y);
 
-    container.querySelector('#bzvStepperLabel').textContent = `${selYearObj.y} ${selYearObj.gz} · ${selYearObj.a}岁 · 较前年${PREV_MAP[selYearObj.pv] || '待核'}`;
+    const yrHead = `${selYearObj.y} ${selYearObj.gz} · ${selYearObj.a}岁`;
+    const yrChg = `较前年${PREV_MAP[selYearObj.pv] || '待核'}`;
+    container.querySelector('#bzvStepperLabel').innerHTML =
+      `<span class="bzv-stepper-yr">${esc(yrHead)}</span><span class="bzv-stepper-sep"> · </span><span class="bzv-stepper-chg">${esc(yrChg)}</span>`;
     const prevBtn = container.querySelector('#bzvPrevYearBtn');
     const nextBtn = container.querySelector('#bzvNextYearBtn');
     prevBtn.disabled = globalIdx <= 0;
@@ -3903,6 +4152,20 @@
     };
 
     syncCompareUI();
+
+    const luckScrollEl = container.querySelector('#bzvLuckScroll');
+    if (isCompactViewport() && luckScrollEl && actPt) {
+      const centerLuckScroll = () => {
+        if (luckScrollEl.scrollWidth > luckScrollEl.clientWidth) {
+          const targetX = (actPt.x / W) * luckScrollEl.scrollWidth - luckScrollEl.clientWidth * 0.48;
+          luckScrollEl.scrollLeft = clamp(Math.round(targetX), 0, luckScrollEl.scrollWidth - luckScrollEl.clientWidth);
+        }
+      };
+      centerLuckScroll();
+      if (typeof root.requestAnimationFrame === 'function') {
+        root.requestAnimationFrame(centerLuckScroll);
+      }
+    }
   }
 
   function isLuckViewActive() {
@@ -3931,6 +4194,7 @@
       uiState.selectedNodeId = null;
       uiState.selectedSectorKey = null;
       uiState.selectedEdgeId = null;
+      uiState.relZoomed = false;
       uiState.luckZoomDecade = null;
       uiState.hoverYear = null;
       uiState.compare = null;
@@ -3962,8 +4226,21 @@
     if (mounted) return;
     mounted = true;
     const doc = root.document;
+    let lastCompact = isCompactViewport();
+    let resizeTimer = null;
     if (root && typeof root.addEventListener === 'function') {
       root.addEventListener('bazi:view', event => handleBaziView(event && event.detail));
+      root.addEventListener('resize', () => {
+        if (resizeTimer && typeof root.clearTimeout === 'function') root.clearTimeout(resizeTimer);
+        const schedule = typeof root.setTimeout === 'function' ? root.setTimeout.bind(root) : setTimeout;
+        resizeTimer = schedule(() => {
+          const nextCompact = isCompactViewport();
+          if (nextCompact !== lastCompact) {
+            lastCompact = nextCompact;
+            if (lastSnapshot) handleBaziView({ snapshot: lastSnapshot, reason: 'resize' });
+          }
+        }, 160);
+      });
     }
     if (doc && doc.getElementById && root.currentBazi) {
       handleBaziView({ snapshot: root.currentBazi, reason: 'mount' });
@@ -3977,6 +4254,7 @@
     buildLuckModel,
     computeWeightedSectorShares,
     computeSectorVisualGeometry,
+    computeStarWheelViewBox,
     resolveOutputAction,
     STEM_IMAGERY,
     renderDayMasterInkMotif,

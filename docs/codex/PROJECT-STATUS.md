@@ -27,6 +27,14 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Visual Charts Mobile UX Polish — 2026-11-25
+
+- 针对实机手机体验优化双图谱展示与交互（`bazi.html`、`bazi-visuals.css`、`bazi-visuals.js`，资源缓存更新至 `20261124.4` / `20261124.3`），不改动排盘算法内核与 AI／记录契约：
+  - 流通图（`#baziRelationVisual`）：移动端紧裁切 `viewBox` 改为以日主圆心（`CX=370`）水平对称居中；普通与放大双模式均支持横向滑动并默认居中日主；放大开关移至画布右上角并改为放大镜 `+`/`-` 图标；移动端画布保留四边 14px 圆角并与下方图例／详解对齐；全图禁用移动端点击灰块高亮（`-webkit-tap-highlight-color: transparent`）。
+  - 大运流年走势图（`#baziLuckVisual`）：固定使用平滑曲线并移除折线切换控件；拆分 `pointercancel` 防止滑动误触选年；`selectLuckYear` 改为原地替换上方选择区与详解区并做视口顶部锚定，解决图内选年页面上跳问题；移动端副图标题改为粘性定位，步进条改为两行居中。
+- 验证通过：`node --check .\bazi-visuals.js`、`check-bazi-page.js`（720 组测例）、`check-baselines.js`（18 项基线）、双图谱全五行／对称居中校验脚本与 `git diff --check`，并完成 390px／1440px 浏览器与实体手机核验。本轮按用户授权提交并推送至 `main`。
+- 下一步（交接给 Codex／内核评审）：第一阶段先修同扇区 ≥5 干支节点防重叠与 `renderLuckSectionAsync` 异常失败提示／重试；第二阶段先输出字段映射与防重复计分方案（岁运双边力度与关系图模型有效权重占比），确认后再实现。
+
 ### Bazi Relation Flow and Luck Trend Charts — 2026-11-24
 
 - 在八字「格局喜用」和「大运流年」卡片底部内嵌两张默认展开的可视化互动图（`bazi-visuals.css`、`bazi-visuals.js`），不改动排盘算法内核、历史记录、导出与 AI 契约。

@@ -956,7 +956,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="bazi-premium.css?v=20261122.1">
 <link rel="stylesheet" href="birth-date-input.css?v=20261122.2">
-<link rel="stylesheet" href="bazi-visuals.css?v=20261124.1">
+<link rel="stylesheet" href="bazi-visuals.css?v=20261124.4">
 </head>
 <body>
 <a class="skip-link" href="#homeTabs">跳到排盘与记录</a>
@@ -1088,7 +1088,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
 <script src="bazi-glossary.js?v=20261122.3" defer></script>
-<script src="bazi-visuals.js?v=20261124.1" defer></script>
+<script src="bazi-visuals.js?v=20261124.3" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -3675,8 +3675,27 @@ function selectLuckYear(luckIndex,yearIndex){
   luckSelection.year=yearIndex;
   luckSelection.month=null;
   var panel=document.querySelector('[data-view-panel="luck"] .result-card');
+  var visual=panel&&typeof panel.querySelector==='function'?panel.querySelector('#baziLuckVisual'):null;
+  var prevVisualTop=visual&&typeof visual.getBoundingClientRect==='function'?visual.getBoundingClientRect().top:null;
   if(panel&&currentBazi){
-    panel.innerHTML=renderLuckPanel(currentBazi);
+    var prof=typeof panel.querySelector==='function'?panel.querySelector('.luck-professional'):null;
+    var oldSel=prof&&prof.querySelector('.luck-selector');
+    var oldDetail=prof&&prof.querySelector('.luck-detail-panel');
+    if(prof&&oldSel&&oldDetail&&visual&&typeof prof.replaceChild==='function'&&typeof document.createElement==='function'){
+      var ctx=getSelectedLuckContext(currentBazi);
+      var tmp=document.createElement('div');
+      tmp.innerHTML=renderLuckSelector(currentBazi,ctx)+renderLuckDetail(currentBazi,ctx);
+      var newSel=tmp.querySelector('.luck-selector');
+      var newDetail=tmp.querySelector('.luck-detail-panel');
+      if(newSel&&newDetail){
+        prof.replaceChild(newSel,oldSel);
+        prof.replaceChild(newDetail,oldDetail);
+      }else{
+        panel.innerHTML=renderLuckPanel(currentBazi);
+      }
+    }else{
+      panel.innerHTML=renderLuckPanel(currentBazi);
+    }
     mobileLuckTracks(panel).forEach(centerSelectedFortune);
   }
   var chart=document.querySelector('.basic-dashboard .result-card');
@@ -3685,6 +3704,11 @@ function selectLuckYear(luckIndex,yearIndex){
   if(aiPanel&&currentBazi)aiPanel.innerHTML=renderAiPanel();
   syncActiveBaziRecord();
   dispatchBaziView('luck-year');
+  visual=panel&&typeof panel.querySelector==='function'?panel.querySelector('#baziLuckVisual'):null;
+  if(visual&&prevVisualTop!==null&&typeof visual.getBoundingClientRect==='function'&&typeof window!=='undefined'&&typeof window.scrollBy==='function'){
+    var deltaY=visual.getBoundingClientRect().top-prevVisualTop;
+    if(Math.abs(deltaY)>1)window.scrollBy(0,deltaY);
+  }
 }
 function isMobileLuckViewport(){
   return typeof window!=='undefined'&&window.matchMedia&&window.matchMedia('(max-width: 800px)').matches;
