@@ -526,6 +526,39 @@
     WUXING.forEach(function(element){if(Math.abs(scores[element])<0.0000001)scores[element]=0;scores[element]=Math.max(0,scores[element])});
     return scores;
   }
+  // A separate mass vector: the existing support projection is never an input.
+  function computeNatalEffectiveWeights(bazi){
+    var input=bazi&&bazi.pillars||bazi||{},pillars={},missing=[];
+    NATAL_PILLAR_KEYS.forEach(function(key){if(getGZ60().indexOf(input[key])<0)missing.push('pillars.'+key);else pillars[key]=input[key]});
+    var result={available:false,label:'模型有效权重占比（除日主外七字）',fallbackLabel:'原始位置权重（未折算有效占比）',baseBudget:100,total:null,loss:null,byElement:null,shares:null,parts:[],missingFields:missing};
+    if(missing.length)return result;
+    var feedback=strengthScore(pillars.day[0],pillars,{fullInteractionFeedback:true}),interactions=feedback.interactions,mass={木:0,火:0,土:0,金:0,水:0};
+    ['yearStem','monthStem','hourStem','yearBranch','monthBranch','dayBranch','hourBranch'].forEach(function(id){
+      var key=id.replace(/Stem|Branch/g,''),isStem=/Stem$/.test(id),position=NATAL_PILLAR_KEYS.indexOf(key),weight=STRENGTH_WEIGHTS[id],allocation={木:0,火:0,土:0,金:0,水:0},retention=1,penalty=0,change,attack=null;
+      if(isStem){
+        allocation[STEM_WX[pillars[key][0]]]=1;change=stemInteractionChange(position,interactions);
+        if(change.effect==='transform'){allocation[STEM_WX[pillars[key][0]]]=0;allocation[change.target]=1}
+        else retention=change.retention;
+      }else{
+        var hidden=HIDDEN[pillars[key][1]],ratios=hiddenRatios(hidden.length);
+        hidden.forEach(function(stem,index){allocation[STEM_WX[stem]]+=ratios[index]});
+        change=branchInteractionChange(key,interactions,true);attack=branchAttackInfo(pillars[key][1],pillars,key,interactions);penalty=attack.penalty;
+        if(change&&change.effect==='transform'){
+          WUXING.forEach(function(wx){allocation[wx]*=change.retention});allocation[change.element]+=1-change.retention;
+        }else if(change&&change.effect==='bind')retention=change.retention;
+      }
+      var vector={},total=0;
+      WUXING.forEach(function(wx){var value=weight*allocation[wx]*retention*(1-penalty);vector[wx]=value;mass[wx]+=value;total+=value});
+      if(!Number.isFinite(total)||total<0||total>weight+1e-8)missing.push(id+'.mass');
+      result.parts.push({id:id,weight:weight,allocation:allocation,usableRetention:retention,penalty:penalty,change:change,attack:attack,byElement:vector,total:total});
+    });
+    var total=WUXING.reduce(function(sum,wx){return sum+mass[wx]},0);
+    if(!Number.isFinite(total)||total<=0||total>100+1e-8)missing.push('effectiveTotal');
+    if(missing.length)return result;
+    result.available=true;result.byElement=mass;result.total=total;result.loss=100-total;result.shares={};
+    WUXING.forEach(function(wx){result.shares[wx]=100*mass[wx]/total});
+    return result;
+  }
   function strengthScore(dayStem,pillars,options){
     options=options||{};
     var parts=[],support=0,interactions=interactionAnalysis(pillars),dayWx=STEM_WX[dayStem],resource=resourceElement(dayWx),interactionAdjustment=0,hasLuck=!!pillars.luck,hasFlowYear=!!(options.outlookFlowYear&&pillars.flowYear),fullInteractionFeedback=hasLuck||!!options.fullInteractionFeedback,totalWeight=(hasLuck?121:100)+(hasFlowYear?21:0),weightScale=100/totalWeight;
@@ -3470,6 +3503,87 @@
     var summary=assessment==='conditional'?(positive&&negative?'已有独立助益与牵制，整体表现还取决于':(positive?'已有改善依据，整体表现还取决于':(negative?'已有受阻依据，整体表现还取决于':'整体表现取决于')))+subject+'。':(assessment==='unsupported'?'当前规则尚不足以归纳这个组合的整体方向。':'');
     return settleTemporalOutlook(before,after,analysis,{direction:direction,tendency:tendency,assessment:assessment,summary:summary,possibleDirections:assessment==='unsupported'?[]:possibleDirections,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}});
   }
+  // Engineering amplitudes only. Verdicts and their evidence remain untouched.
+  function computeOutlookAmplitude(result,context){
+    result=result||{};context=context||{};
+    var strongRules=['T-year-same','T-year-clash','T-year-tkdc','Y2-special','Y3-medicine','Y3-required-path'];
+    var weights={Y2:2.2,Y3:1.7,Y4:1.2,'Y5-primary':0.9,'Y5-secondary-avoid':0.65,Y6:0.55};
+    var breakdown=[],missing=result.direction==='pending'||result.direction==='unavailable'?(result.missingFields||[]).slice():[],groups={},strong={positive:false,negative:false,sourceKeys:[]};
+    if(['positive','negative','mixed','neutral'].indexOf(result.direction)<0)missing.push('direction.'+(result.direction||'missing'));
+    var evidence=Array.isArray(result.evidence)?result.evidence:[],reservations=Array.isArray(result.reservations)?result.reservations:[];
+    if(!Array.isArray(result.evidence))missing.push('evidence');
+    if(!Array.isArray(result.reservations))missing.push('reservations');
+    function actorKeys(value){
+      if(!value)return [];
+      if(Array.isArray(value))return unique(value.reduce(function(out,x){return out.concat(actorKeys(x))},[])).sort();
+      if(typeof value!=='object')return [];
+      if(value.key)return [value.key];
+      if(value.pillar)return [[value.pillar,value.kind||'',value.stem||value.branch||''].join(':')];
+      return Object.keys(value).reduce(function(out,key){return out.concat(actorKeys(value[key]))},[]).sort();
+    }
+    function pending(e){return e.pending===true||e.confirmed===false||e.direction==='pending'||e.direction==='unavailable'||['pending','uncertain','conditional'].indexOf(e.status)>=0}
+    function toneWeight(){
+      var score=result.tone&&result.tone.score;
+      if(!Number.isFinite(score)||score===0){missing.push('tone.score.nonzero');return 0}
+      return Math.abs(score)>=3?0.65:Math.abs(score)>=2?0.50:0.35;
+    }
+    function add(e,path){
+      if(!e)return;
+      var side=e.direction,rule=e.ruleId||'',lv=e.level||'unknown',a=actorKeys(e.actors&&e.actors.before||e.before),b=actorKeys(e.actors&&e.actors.after||e.after);
+      var changed=unique(a.filter(function(k){return b.indexOf(k)<0}).concat(b.filter(function(k){return a.indexOf(k)<0}))).sort();
+      var actorIdentity=changed.length?changed:unique(a.concat(b)).sort();
+      var relation=(context.causeEntries||[]).find(function(x){return x.evidence===e});
+      var causeKey=rule==='T-tone'?'tone':relation?relation.causeKey:actorIdentity.length?'actors:'+actorIdentity.join('|'):[rule,e.taskId||''].join(':');
+      var row={side:side,ruleId:rule,level:lv,taskId:e.taskId||'',text:e.plainText||e.text||'',actorKeys:actorIdentity,before:e.before,after:e.after,sourcePath:path,status:'confirmed',weight:0,causeKey:causeKey,exclusion:null};
+      breakdown.push(row);
+      if(e.legacyReference===true){row.exclusion='legacy-reference';return}
+      if(pending(e)){row.status='potential';row.exclusion='pending-condition';return}
+      if(side!=='positive'&&side!=='negative'){row.exclusion=side==='neutral'?'neutral':'undetermined';row.status=side==='neutral'?'excluded':'potential';return}
+      if(rule==='T-seeming'&&evidence.concat(reservations).some(function(x){return x!==e&&x.direction===side&&!x.legacyReference&&!pending(x)&&x.ruleId!=='T-tone'&&x.ruleId!=='T-seeming'})){
+        row.exclusion='explanatory-summary';return;
+      }
+      var isStrong=strongRules.indexOf(rule)>=0;
+      var weight=rule==='T-tone'?toneWeight():weights[lv];
+      if(weight==null)weight=/^T-year-/.test(rule)?(isStrong?1.5:0.7):/^LK-/.test(rule)?0.60:rule==='T-seeming'?0.35:0;
+      if(!weight){row.exclusion='missing-weight-source';missing.push(path+'.weight');return}
+      var factor=1;
+      if(path.indexOf('reservations')===0){
+        var sameLayer=result.toneBasis==='tone-tiebreak'&&side!==result.direction&&evidence.some(function(x){return x.direction===result.direction&&x.level===lv&&x.ruleId!=='T-tone'});
+        factor=sameLayer?0.75:0.50;
+      }
+      row.factor=factor;row.weight=weight*factor;row.strongTrigger=isStrong;
+      var key=side+':'+causeKey,group=groups[key]||(groups[key]={side:side,causeKey:causeKey,rows:[],strong:false});
+      group.rows.push(row);group.strong=group.strong||isStrong;
+    }
+    evidence.forEach(function(e,i){add(e,'evidence['+i+']')});reservations.forEach(function(e,i){add(e,'reservations['+i+']')});
+    // Tone is a single reason slot per side, even when structure agrees and no T-tone was inserted.
+    var tone=result.tone;
+    if(tone&&(tone.direction==='positive'||tone.direction==='negative')&&Number.isFinite(tone.score)&&tone.score!==0){
+      add({direction:tone.direction,ruleId:'T-tone',level:'T-tone',taskId:'tone'},'tone');
+    }
+    var sums={positive:0,negative:0};
+    Object.keys(groups).forEach(function(key){
+      var g=groups[key],winner=g.rows.reduce(function(best,row){return row.weight>best.weight?row:best}),cap=g.strong?2.4:1.8;
+      g.rows.forEach(function(row){row.contribution=row===winner?Math.min(cap,row.weight):0;if(row!==winner)row.exclusion='duplicate-cause'});
+      sums[g.side]+=Math.min(cap,winner.weight);
+      if(g.strong){strong[g.side]=true;strong.sourceKeys.push(key)}
+    });
+    ['positive','negative'].forEach(function(side){
+      var cap=strong[side]?4.0:3.5;
+      if(sums[side]>cap)breakdown.push({side:side,sourcePath:'side-cap',status:'capped',weight:0,uncappedTotal:sums[side],cap:cap,exclusion:'side-cap',text:'单侧同因结算合计 '+sums[side].toFixed(2)+'，按上限保留 '+cap.toFixed(2)});
+      sums[side]=Math.min(cap,sums[side]);
+      if((result.direction===side||result.direction==='mixed')&&sums[side]===0)missing.push(side+'.source');
+    });
+    var hasPending=result.direction==='pending'||result.direction==='unavailable'||(result.uncertainty||[]).length>0||result.assessment==='conditional'||breakdown.some(function(x){return x.status==='potential'});
+    (result.uncertainty||[]).forEach(function(text,i){breakdown.push({sourcePath:'uncertainty['+i+']',status:'potential',weight:0,exclusion:'pending-condition',text:text})});
+    return {positive:sums.positive,negative:sums.negative,strongTrigger:strong,breakdown:breakdown,available:missing.length===0&&result.direction!=='pending'&&result.direction!=='unavailable',missingFields:unique(missing),hasPending:hasPending};
+  }
+  function attachOutlookAmplitudes(out){
+    function attach(item){if(item&&!item.amplitude)item.amplitude=computeOutlookAmplitude(item)}
+    attach(out.natal);attach(out.previous);
+    (out.years||[]).forEach(function(year){attach(year.annual);attach(year.increment);attach(year.previousYear)});
+    return out;
+  }
   function labelOutlook(result,kind){
     var labels={natal:{positive:'助益',neutral:'持平',negative:'受阻',mixed:'利弊并存',pending:'待判'},previous:{positive:'上升',neutral:'持平',negative:'下降',mixed:'利弊并存',pending:'待判'},annual:{positive:'偏吉',neutral:'平',negative:'偏凶',mixed:'吉凶并见',pending:'待判'},increment:{positive:'改善',neutral:'维持',negative:'拖累',mixed:'利弊并存',pending:'待判'}};
     var label=labels[kind][result.direction];
@@ -3600,7 +3714,7 @@
   // 第三批：岁运关系（《滴天髓阐微·岁运》战冲和好；《三命通会》岁运并临；《渊海子平》日犯岁君只提示）。
   function seatScore(stem,branch){var wx=STEM_WX[stem],b=BRANCH_WX[branch];return b===wx||gen[b]===wx?1:ctrl[b]===wx?-1:0}
   function partyScore(natal,gz,wx){var n=0;['year','month','day','hour'].forEach(function(k){var p=natal[k];if(STEM_WX[p[0]]===wx)n++;if(BRANCH_WX[p[1]]===wx)n++});if(STEM_WX[gz[0]]===wx||gen[STEM_WX[gz[0]]]===wx)n++;return n}
-  function yearLuckRelations(analysis,natal,luckGz,yearGz){
+  function yearLuckRelations(analysis,natal,luckGz,yearGz,causeEntries){
     var role=luckToneRoles(analysis.useful),day=natal.day[0],items=[],weak=/弱/.test(analysis.strength||'');
     function sign(r){return r==='忌'?-1:r==='中'?0:1}
     function hurt(loserWx,label,prof){var s=sign(role(loserWx));if(!s)return;items.push(luckEvidence('T-year-'+label,'T-year',s>0?'negative':'positive',prof[0],prof[1]))}
@@ -3620,13 +3734,13 @@
     }
     if(stemFight&&branchClash)items.push(luckEvidence('T-year-tkdc','T-year',weak?'negative':'neutral',weak?'这一年和大运天干相克、地支相冲，自身根基偏弱，这样的年份更要稳着来。':'这一年和大运天干相克、地支相冲，好在自身根基不弱，影响有限。','岁运天克地冲，日主'+(weak?'休囚必凶':'旺相虽凶无碍')+'（《滴天髓阐微·岁运》任注）。'));
     var sc=LUCK_STEM_COMBINE[ls][0]===ys?LUCK_STEM_COMBINE[ls][1]:null,bc=LUCK_BRANCH_COMBINE[lb]&&LUCK_BRANCH_COMBINE[lb][0]===yb?LUCK_BRANCH_COMBINE[lb][1]:null;
-    [sc,bc].forEach(function(wx,i){if(!wx)return;var s=sign(role(wx));if(s)items.push(luckEvidence('T-year-harmony','T-year',s>0?'positive':'negative','这一年和大运'+(i?'地支':'天干')+'相合，合出来的'+wx+'是'+role(wx)+(s>0?'，对你有利。':'，对你不利。'),'岁运'+(i?lb+yb:ls+ys)+'合化'+wx+'（'+role(wx)+'）（《滴天髓阐微·岁运·和》）。'))});
+    [sc,bc].forEach(function(wx,i){if(!wx)return;var s=sign(role(wx));if(s){var item=luckEvidence('T-year-harmony','T-year',s>0?'positive':'negative','这一年和大运'+(i?'地支':'天干')+'相合，合出来的'+wx+'是'+role(wx)+(s>0?'，对你有利。':'，对你不利。'),'岁运'+(i?lb+yb:ls+ys)+'合化'+wx+'（'+role(wx)+'）（《滴天髓阐微·岁运·和》）。');items.push(item);if(causeEntries)causeEntries.push({evidence:item,causeKey:'T-year-harmony:'+(i?'branch:luck:'+lb+'|flowYear:'+yb:'stem:luck:'+ls+'|flowYear:'+ys)})}});
     if(ctrl[STEM_WX[day]]===STEM_WX[ys])items.push(luckEvidence('T-year-dayhit','T-year','neutral','提示：日主'+day+'克流年'+ys+'（古书叫“日犯岁君”），做事宜收敛，不单独改判。','日犯岁君（《渊海子平·继善篇》），仅作提示。'));
     return items;
   }
   function applyYearLuck(result,analysis,natal,luckGz,yearGz){
     if(!result||!analysis.useful||result.assessment==='input-error')return result;
-    var items=yearLuckRelations(analysis,natal,luckGz,yearGz);if(!items.length)return result;
+    var causeEntries=[],items=yearLuckRelations(analysis,natal,luckGz,yearGz,causeEntries);if(!items.length)return result;
     var r=Object.assign({},result,{evidence:(result.evidence||[]).slice(),reservations:(result.reservations||[]).concat(items.filter(function(e){return e.direction==='neutral'}))}),strong=items.filter(function(e){return /same|clash|tkdc/.test(e.ruleId)&&e.direction!=='neutral'}),weakItems=items.filter(function(e){return /fight|harmony/.test(e.ruleId)});
     function dirOf(list){var p=list.some(function(e){return e.direction==='positive'}),n=list.some(function(e){return e.direction==='negative'});return p&&n?'mixed':p?'positive':n?'negative':null}
     var ds=dirOf(strong),dw=dirOf(weakItems),d=r.direction;
@@ -3636,6 +3750,7 @@
     var dir=r.direction,keep=function(e){return dir==='mixed'||e.direction===dir};
     r.evidence=r.evidence.concat(strong.concat(weakItems).filter(function(e){return r.evidence.indexOf(e)<0&&keep(e)}));
     r.reservations=r.reservations.concat(strong.concat(weakItems).filter(function(e){return r.evidence.indexOf(e)<0}));
+    r.amplitude=computeOutlookAmplitude(r,{causeEntries:causeEntries});
     return r;
   }
   function evaluateLuckOutlook(bazi,luckGz,previousGz,flowYears){
@@ -3644,7 +3759,7 @@
     var pending=outlookPending('四柱、日主或所选大运资料不完整');
     if(!complete){
       out.natal=labelOutlook(pending,'natal');out.previous=previousGz?labelOutlook(pending,'previous'):{label:'无上一柱可比较',direction:'unavailable',evidence:[],reservations:[],uncertainty:[],life:[]};
-      out.years=years.map(function(year){return {year:year.year,gz:year.gz,annual:labelOutlook(pending,'annual'),increment:labelOutlook(pending,'increment')}});return out;
+      out.years=years.map(function(year){return {year:year.year,gz:year.gz,annual:labelOutlook(pending,'annual'),increment:labelOutlook(pending,'increment')}});return attachOutlookAmplitudes(out);
     }
     // Always rederive from the four natal pillars: saved or previous temporal results are not inputs.
     var natalPillars={year:bazi.pillars.year,month:bazi.pillars.month,day:bazi.pillars.day,hour:bazi.pillars.hour};
@@ -3666,7 +3781,7 @@
         labelOutlook(outlookPending('上一年干支或所属大运无效'),'previous');
       return item;
     });
-    return out;
+    return attachOutlookAmplitudes(out);
   }
   function usefulPriority(mainPattern,strength,monthBranch,specials){
     if((specials||[]).some(function(x){return /^从格：|^化气格：|^专旺格：/.test(x)})){
@@ -4347,7 +4462,7 @@
     return data;
   }
 
-  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,CLASSICAL_PATTERN_POTENTIAL_RULES:CLASSICAL_PATTERN_POTENTIAL_RULES,SPECIAL_PATTERN_RULES:SPECIAL_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,STRUCTURE_SCORE_LEVEL_BANDS:STRUCTURE_SCORE_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS,PATTERN_LEVEL_AUDIT_VERSION:PATTERN_LEVEL_AUDIT_VERSION,LEGAL_FOUR_PILLAR_GENERATOR_VERSION:LEGAL_FOUR_PILLAR_GENERATOR_VERSION,PATTERN_LEVEL_AUDIT_WEIGHTS:PATTERN_LEVEL_AUDIT_WEIGHTS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,buildBirthTime:buildBirthTime,createBaziProfile:createBaziProfile,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,nearestMajorSolarTerm:nearestMajorSolarTerm,scoreWuxing:scoreWuxing,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,analyzeTemporalInteractions:analyzeTemporalInteractions,evaluateLuckImpact:evaluateLuckImpact,evaluateLuckOutlook:evaluateLuckOutlook,patternStructureRawScore:patternStructureRawScore,reweightPatternScore:reweightPatternScore,percentileFromHistogram:percentileFromHistogram,percentileRangeFromHistogram:percentileRangeFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,structureGradeFromScore:structureGradeFromScore,patternGradeIndexWithinGates:patternGradeIndexWithinGates,forEachLegalFourPillar:forEachLegalFourPillar,buildPatternLevelAudit:buildPatternLevelAudit,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
+  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,CLASSICAL_PATTERN_POTENTIAL_RULES:CLASSICAL_PATTERN_POTENTIAL_RULES,SPECIAL_PATTERN_RULES:SPECIAL_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,STRUCTURE_SCORE_LEVEL_BANDS:STRUCTURE_SCORE_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS,PATTERN_LEVEL_AUDIT_VERSION:PATTERN_LEVEL_AUDIT_VERSION,LEGAL_FOUR_PILLAR_GENERATOR_VERSION:LEGAL_FOUR_PILLAR_GENERATOR_VERSION,PATTERN_LEVEL_AUDIT_WEIGHTS:PATTERN_LEVEL_AUDIT_WEIGHTS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,buildBirthTime:buildBirthTime,createBaziProfile:createBaziProfile,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,nearestMajorSolarTerm:nearestMajorSolarTerm,scoreWuxing:scoreWuxing,computeNatalEffectiveWeights:computeNatalEffectiveWeights,computeOutlookAmplitude:computeOutlookAmplitude,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,analyzeTemporalInteractions:analyzeTemporalInteractions,evaluateLuckImpact:evaluateLuckImpact,evaluateLuckOutlook:evaluateLuckOutlook,patternStructureRawScore:patternStructureRawScore,reweightPatternScore:reweightPatternScore,percentileFromHistogram:percentileFromHistogram,percentileRangeFromHistogram:percentileRangeFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,structureGradeFromScore:structureGradeFromScore,patternGradeIndexWithinGates:patternGradeIndexWithinGates,forEachLegalFourPillar:forEachLegalFourPillar,buildPatternLevelAudit:buildPatternLevelAudit,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
   root.BaziEngine=api;
   if(root.window)root.window.BaziEngine=api; // window.BaziEngine
 })(typeof globalThis!=='undefined'?globalThis:this);

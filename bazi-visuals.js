@@ -279,7 +279,7 @@
 
     return defs.map(d => {
       const pt = partMap[d.partKey] || {};
-      const weight = Number.isFinite(pt.weight) ? pt.weight : (STRENGTH_WEIGHTS[d.id] || 0);
+      const weight = STRENGTH_WEIGHTS[d.id] || 0;
       if (d.kind === '干') {
         const wx = engRef.STEM_WX[d.char];
         return {
@@ -485,6 +485,8 @@
         phenomena: (pa.elementPhenomena || []).map(x => x.canonicalName || x.name)
       },
       sectors,
+      effectiveWeights: engRef.eng && typeof engRef.eng.computeNatalEffectiveWeights === 'function'
+        ? engRef.eng.computeNatalEffectiveWeights(data) : { available: false, missingFields: ['computeNatalEffectiveWeights'] },
       nodes,
       flowEdges,
       interactions
@@ -492,6 +494,13 @@
   }
 
   function computeWeightedSectorShares(model) {
+    const effective = model.effectiveWeights;
+    if (effective && effective.available) {
+      const byKey = {};
+      model.sectors.forEach(sec => { byKey[sec.key] = { raw: effective.byElement[sec.wx], pct: effective.shares[sec.wx] }; });
+      return { byKey, maxPct: Math.max(1, ...Object.values(byKey).map(x => x.pct)), totalWeight: effective.total,
+        baseBudget: effective.baseBudget, loss: effective.loss, available: true, label: effective.label };
+    }
     const rawByWx = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
     let totalWeight = 0;
     model.nodes.forEach(node => {
@@ -516,7 +525,14 @@
       byKey[sec.key] = { raw, pct };
       if (pct > maxPct) maxPct = pct;
     });
-    return { byKey, maxPct, totalWeight };
+    return { byKey, maxPct, totalWeight, baseBudget: 100, loss: null, available: false,
+      label: '原始位置权重（未折算有效占比）', missingFields: effective ? effective.missingFields : ['effectiveWeights'] };
+  }
+
+  function weightBasisText(shares) {
+    return shares.available
+      ? `${shares.label} · 基础预算 ${shares.baseBudget} · 有效总量 T ${shares.totalWeight.toFixed(2)} · 折损 ${shares.loss.toFixed(2)}`
+      : `${shares.label} · 有效占比不可用：${(shares.missingFields || []).join('、') || '有效总量不足'}`;
   }
 
   function computeSectorVisualGeometry(pct, maxPct) {
@@ -564,20 +580,81 @@
       if (compact) {
         if (n === 2) { offsets = [-19, 19]; radii = [188, 188]; }
         else if (n === 3) { offsets = [-28, 0, 28]; radii = [186, 200, 186]; }
-        else if (n >= 4) { offsets = [-34, -11.5, 11.5, 34]; radii = [184, 204, 204, 184]; }
+        else if (n === 4) { offsets = [-34, -11.5, 11.5, 34]; radii = [184, 204, 204, 184]; }
       } else {
         if (n === 2) { offsets = [-17, 17]; radii = [216, 216]; }
         else if (n === 3) { offsets = [-25, 0, 25]; radii = [214, 224, 214]; }
-        else if (n >= 4) { offsets = [-31, -10.5, 10.5, 31]; radii = [210, 234, 234, 210]; }
+        else if (n === 4) { offsets = [-31, -10.5, 10.5, 31]; radii = [210, 234, 234, 210]; }
+      }
+      if (n >= 5) {
+        const innerCount = Math.floor(n / 2);
+        offsets = list.map((_, i) => {
+          const count = i < innerCount ? innerCount : n - innerCount;
+          const slot = i < innerCount ? i : i - innerCount;
+          return -28 + slot * 56 / (count - 1);
+        });
+        radii = list.map((_, i) => (compact ? 224 : 245) + (i < innerCount ? 0 : 140));
       }
       list.forEach((node, i) => {
         const deg = group.angle + (offsets[i] || 0);
         const dist = radii[i] || (compact ? 186 : 216);
         const pt = polar(CX, CY, dist, deg);
-        pos[node.id] = { x: pt.x, y: pt.y, r: nodeRadius(node.weight), angle: deg, rad: pt.rad, node };
+        pos[node.id] = { x: pt.x, y: pt.y, r: nodeRadius(node.weight), angle: deg, rad: pt.rad, node, dense: n >= 5 };
       });
     });
+    // Only dense charts need extra room; keep labels clear of the inner action capsules too.
+    const entries = model.nodes.map(node => pos[node.id]).filter(Boolean);
+    const hasDense = entries.some(np => np.dense);
+    let crowded;
+    do {
+      crowded = entries.filter(np => {
+        if (!hasDense) return false;
+        const box = starNodeBounds(np, compact);
+        const innerDistance = Math.hypot(Math.max(box.minX - CX, 0, CX - box.maxX), Math.max(box.minY - CY, 0, CY - box.maxY));
+        return innerDistance < (compact ? 142 : 156) + 34 || entries.some(other =>
+          other !== np && starBoundsOverlap(box, starNodeBounds(other, compact)));
+      });
+      crowded.forEach(np => {
+        const pt = polar(CX, CY, Math.hypot(np.x - CX, np.y - CY) * 1.06, np.angle);
+        np.x = pt.x;
+        np.y = pt.y;
+      });
+    } while (crowded.length);
     return pos;
+  }
+
+  function starBoundsOverlap(a, b) {
+    return a.minX < b.maxX + 6 && a.maxX + 6 > b.minX && a.minY < b.maxY + 6 && a.maxY + 6 > b.minY;
+  }
+
+  function starNodeBounds(np, compact) {
+    const label = resolveStarNodeLabelPlacement(np, np.node, compact);
+    return {
+      minX: Math.min(np.x - np.r - 10, label.minX), maxX: Math.max(np.x + np.r + 10, label.maxX),
+      minY: Math.min(np.y - np.r - 12, label.minY), maxY: Math.max(np.y + np.r + 12, label.maxY)
+    };
+  }
+
+  function starHiddenPills(np, node, nodePos, compact) {
+    const count = node.hidden.length;
+    const spread = count === 1 ? [0] : (count === 2 ? [-26, 26] : [-38, 0, 38]);
+    const denseChart = Object.values(nodePos).some(other => other.dense);
+    let distance = np.r + (denseChart ? 80 : 44);
+    let pills;
+    do {
+      const center = polar(np.x, np.y, distance, np.angle);
+      pills = node.hidden.map((hs, hi) => {
+        const sp = polar(np.x, np.y, distance, np.angle + spread[hi]);
+        const x = denseChart ? center.x : clamp(sp.x, 58, 682);
+        const y = denseChart ? center.y + (hi - (count - 1) / 2) * 30 : clamp(sp.y, 22, 556);
+        const text = `${hs.stem}${hs.tenGod} ${hs.pct}%`;
+        const width = text.length * 8.2 + 16;
+        return { x, y, text, width, minX: x - width / 2 - 6, maxX: x + width / 2 + 6, minY: y - 14, maxY: y + 14 };
+      });
+      distance += 16;
+    } while (denseChart && pills.some(pill => Object.values(nodePos).some(other =>
+      other.node && starBoundsOverlap(pill, starNodeBounds(other, compact)))));
+    return pills;
   }
 
   function roleStyle(role) {
@@ -1492,18 +1569,11 @@
       maxY = Math.max(maxY, lbl.maxY);
 
       if (uiState.selectedNodeId === node.id && node.kind === '支' && node.hidden && node.hidden.length) {
-        const count = node.hidden.length;
-        const spread = count === 1 ? [0] : (count === 2 ? [-26, 26] : [-38, 0, 38]);
-        node.hidden.forEach((hs, hi) => {
-          const sp = polar(np.x, np.y, np.r + 44, np.angle + spread[hi]);
-          const sx = clamp(sp.x, 58, 682);
-          const sy = clamp(sp.y, 22, 556);
-          const pillTxt = `${hs.stem}${hs.tenGod} ${hs.pct}%`;
-          const pw = pillTxt.length * 8.2 + 16;
-          minX = Math.min(minX, sx - pw / 2 - 6);
-          maxX = Math.max(maxX, sx + pw / 2 + 6);
-          minY = Math.min(minY, sy - 14);
-          maxY = Math.max(maxY, sy + 14);
+        starHiddenPills(np, node, nodePos, isCompact).forEach(pill => {
+          minX = Math.min(minX, pill.minX);
+          maxX = Math.max(maxX, pill.maxX);
+          minY = Math.min(minY, pill.minY);
+          maxY = Math.max(maxY, pill.maxY);
         });
       }
     });
@@ -1516,26 +1586,32 @@
       minY = Math.min(minY, pillPt.y - 14);
       maxY = Math.max(maxY, pillPt.y + 14);
     });
+    if (Object.values(nodePos).some(np => np.dense)) {
+      minX = Math.min(minX, CX - pillR - 34);
+      maxX = Math.max(maxX, CX + pillR + 34);
+      minY = Math.min(minY, CY - pillR - 14);
+      maxY = Math.max(maxY, CY + pillR + 14);
+    }
 
     const pad = isCompact ? 10 : 14;
-    let x0 = Math.max(0, minX - pad);
-    let y0 = Math.max(0, minY - pad);
-    let x1 = Math.min(740, maxX + pad);
-    let y1 = Math.min(580, maxY + pad);
+    let x0 = minX - pad;
+    let y0 = minY - pad;
+    let x1 = maxX + pad;
+    let y1 = maxY + pad;
 
     const minHalfW = 210;
-    const halfW = clamp(Math.max(minHalfW, CX - x0, x1 - CX), minHalfW, CX);
-    x0 = Math.round(CX - halfW);
+    const halfW = Math.max(minHalfW, CX - x0, x1 - CX);
+    x0 = Math.floor(CX - halfW);
     let w = (CX - x0) * 2;
     let h = y1 - y0;
     const minH = isCompact ? 360 : 380;
     if (h < minH) {
       const midY = (y0 + y1) / 2;
       h = minH;
-      y0 = clamp(midY - h / 2, 0, 580 - h);
+      y0 = midY - h / 2;
     }
-    y0 = Math.round(y0);
-    h = Math.round(h);
+    h = Math.ceil(y0 + h) - Math.floor(y0);
+    y0 = Math.floor(y0);
     return { x: x0, y: y0, w, h, str: `${x0} ${y0} ${w} ${h}` };
   }
 
@@ -1544,7 +1620,8 @@
     const compact = isCompactViewport();
     const nodePos = computeNodePositions(model, compact);
     if (typeof svg.setAttribute === 'function') {
-      svg.setAttribute('viewBox', compact ? computeStarWheelViewBox(model, nodePos, displayEdges, true).str : '0 0 740 580');
+      svg.setAttribute('viewBox', compact || Object.values(nodePos).some(np => np.dense)
+        ? computeStarWheelViewBox(model, nodePos, displayEdges, compact).str : '0 0 740 580');
     }
 
     const genRingPath = `M ${CX} ${CY - 142} A 142 142 0 1 1 ${(CX - 0.1).toFixed(1)} ${CY - 142} Z`;
@@ -1654,7 +1731,15 @@
 
     Object.values(groupsMap).forEach((grp, gIdx) => {
       grp.edges.sort((a, b) => nodePos[a.nodeId].angle - nodePos[b.nodeId].angle);
-      const meanAngle = grp.edges.reduce((acc, e) => acc + nodePos[e.nodeId].angle, 0) / grp.edges.length;
+      let meanAngle = grp.edges.reduce((acc, e) => acc + nodePos[e.nodeId].angle, 0) / grp.edges.length;
+      if (grp.edges.some(e => nodePos[e.nodeId].dense)) {
+        const siblings = Object.values(groupsMap).filter(g => g.sectorKey === grp.sectorKey);
+        if (siblings.length > 1) {
+          const sectorIndex = model.sectors.findIndex(s => s.key === grp.sectorKey);
+          const halfSpan = Math.max(16, (siblings.length - 1) * 11);
+          meanAngle = SECTOR_ANGLES[sectorIndex] - halfSpan + 2 * halfSpan * siblings.indexOf(grp) / (siblings.length - 1);
+        }
+      }
       const totalWeight = grp.edges.reduce((acc, e) => acc + (e.weight || 8), 0);
       const st = resolveSemanticStyle(grp.action, grp.active);
       const primaryEdge = grp.edges.slice().sort((a, b) => (b.weight || 0) - (a.weight || 0))[0];
@@ -1984,14 +2069,9 @@
 
       if (isExpandedBranch) {
         const satGroup = svgEl('g', { class: uiState.motion ? 'bzv-anim-sat' : '' });
-        const count = node.hidden.length;
-        const spread = count === 1 ? [0] : (count === 2 ? [-26, 26] : [-38, 0, 38]);
-        node.hidden.forEach((hs, hi) => {
-          const satAngle = np.angle + spread[hi];
-          const satDist = np.r + 44;
-          const sp = polar(np.x, np.y, satDist, satAngle);
-          const sx = clamp(sp.x, 58, 682);
-          const sy = clamp(sp.y, 22, 556);
+        starHiddenPills(np, node, nodePos, compact).forEach(pill => {
+          const sx = pill.x;
+          const sy = pill.y;
 
           satGroup.appendChild(svgEl('line', {
             x1: np.x.toFixed(1), y1: np.y.toFixed(1),
@@ -1999,8 +2079,8 @@
             stroke: P.gold, 'stroke-width': 1.2, 'stroke-dasharray': '3 2'
           }));
 
-          const pillTxt = `${hs.stem}${hs.tenGod} ${hs.pct}%`;
-          const pw = pillTxt.length * 8.2 + 16;
+          const pillTxt = pill.text;
+          const pw = pill.width;
           satGroup.appendChild(svgEl('rect', {
             x: (sx - pw / 2).toFixed(1), y: (sy - 11).toFixed(1),
             width: pw, height: 22, rx: 11,
@@ -2351,7 +2431,7 @@
         <div class="bzv-block-title">
           <div class="bzv-block-title-main">
             <strong>原局能量与流通图</strong>
-            <span>星盘按位置权重呈强弱 · 位次图按年—月—日—时看远近</span>
+            <span>${esc(weightBasisText(weightedShares))}</span>
           </div>
         </div>
         <div class="bzv-toolbar">
@@ -2528,7 +2608,7 @@
           <span class="bzv-legend-item"><svg width="13" height="10" viewBox="0 0 13 10"><polygon points="1,1.8 11.5,5 1,8.2 4,5" fill="${P.neg}"/></svg>克压/克制（向内）</span>
           <span class="bzv-legend-item"><svg width="16" height="10" viewBox="0 0 16 10"><line x1="1" y1="5" x2="15" y2="5" stroke="${P.neg}" stroke-width="1.6" stroke-dasharray="3 2"/></svg>受阻✕（合绊）</span>
         </div>
-        <span>扇瓣大小按强弱分级呈现 · 极弱保底可见（月令 40 最高）</span>
+        <span>${esc(weightBasisText(weightedShares))} · 扇瓣极弱保底可见</span>
       `;
     }
 
@@ -2696,7 +2776,8 @@
           : '四柱地支无同五行本气/余气通根'}</p>
         <div class="bzv-detail-grid">
           <div class="bzv-detail-card">
-            <div class="bzv-detail-card-title"><span>五行力量格局分布</span><span>总权重 ${totalW}</span></div>
+            <div class="bzv-detail-card-title"><span>${esc(weightedShares.label)}</span><span>有效总量 ${weightedShares.available ? totalW : '不可用'}</span></div>
+            <div class="bzv-sub-note">${esc(weightBasisText(weightedShares))}</div>
             <div class="bzv-sub-note">生扶方 ${summary.supportPct.toFixed(1)}%</div>
             ${summary.rows.slice(0, 2).map(sectorRowHtml).join('')}
             <div class="bzv-sub-note" style="margin-top:4px">泄耗克方 ${summary.drainPct.toFixed(1)}%</div>
@@ -2713,7 +2794,9 @@
       const node = model.nodes.find(n => n.id === uiState.selectedNodeId);
       if (!node) return;
       const sec = model.sectors.find(s => s.key === node.sectorKey);
-      const weightPct = round2((node.weight / totalW) * 100);
+      const weightPct = node.weight;
+      const effectivePart = model.effectiveWeights && model.effectiveWeights.available
+        ? model.effectiveWeights.parts.find(part => part.id === node.id) : null;
       const dmEdge = displayEdges.find(e => e.nodeId === node.id || (e.sourceType && e.sourceType.indexOf('daymaster') === 0 && (e.fromId === node.id || e.toId === node.id)));
       focusPill.textContent = node.kind === '支' ? '地支·藏干已展' : '天干透出';
 
@@ -2769,6 +2852,7 @@
             <span class="bzv-inspector-meta">原生权重 ${node.weight}（占全盘 ${weightPct.toFixed(1)}%） · 扶身贡献 ${node.supportScore}</span>
           </div>
         </div>
+        ${effectivePart ? `<p class="bzv-sub-note">有效质量 ${effectivePart.total.toFixed(2)} · ${Object.entries(effectivePart.byElement).filter(([, value]) => value > 0).map(([wx, value]) => `${esc(wx)} ${value.toFixed(2)}`).join(' / ')} · 保留率 ${effectivePart.usableRetention} · 有效攻击扣率 ${effectivePart.penalty}</p>` : ''}
         <p>${esc(pillarPositionHint(node))}${dmEdge ? ` · 对日主：${esc(dmEdge.action)}（${esc(edgeActionSemantics(dmEdge.action))}，${dmEdge.active ? '畅通' : '受阻✕'}）` : ''}</p>
         ${feedbackHtml}
         <div class="bzv-detail-grid">
@@ -2796,7 +2880,7 @@
           <strong>${esc(sec.name)}（${esc(sec.wx)} · ${esc(sec.rel)}）</strong>
           <div class="bzv-inspector-head-right">
             ${roleBadgeHtml(sec.role, sec.roleLabel)}
-            <span class="bzv-inspector-meta">加权占比 ${share.pct.toFixed(1)}% · 五行分值 ${sec.score}</span>
+            <span class="bzv-inspector-meta">${esc(weightedShares.label)} ${share.pct.toFixed(1)}% · 五行分值 ${sec.score}</span>
           </div>
         </div>
         <div class="bzv-detail-grid">
@@ -2924,7 +3008,7 @@
         ? '按真实「年—月—日—时」排布同柱上下、紧贴邻柱与隔柱十神互作用；点连线或干支看完整拆解。'
         : (uiState.relLayer === 'interactions'
           ? '按四柱位次展示合冲刑破远近：水平主道为紧贴，上下弧道为隔柱与遥合；点连线或干支看完整条款。'
-          : '当前展示原局 7 处干支与日主的生克泄耗流向及原生位置权重；点日主、扇瓣、连线或任意干支看完整剖析。');
+          : `${weightBasisText(weightedShares)}；点日主、扇瓣、连线或任意干支看完整剖析。`);
 
       const highlights = [];
       if (blocked.length) {
@@ -2963,46 +3047,34 @@
   }
 
   // ---------- Luck Curve Data Extraction (Lazy & Memoized) ----------
-  function layerWeight(ev) {
-    const lv = String((ev && ev.level) || '');
-    if (lv === 'Y1' || lv === 'Y2') return 2.6;
-    if (lv === 'Y3') return 1.9;
-    if (lv === 'Y4') return 1.3;
-    if (lv === 'Y5-primary') return 0.95;
-    if (lv.indexOf('Y5-') === 0) return 0.65;
-    if (lv === 'T-year') return 0.85;
-    if (lv === 'T-tone') return 0.55;
-    return 0.4;
-  }
+  const TREND_PARAMETERS = Object.freeze({ compression: 0.12, deltaMin: 0.10, kappa: 0.55, bandScale: 0.45, idleEpsilon: 0.05 });
 
-  function computeSeriesValues(item, dir, toneScore, inc) {
-    const ev = (item && item.evidence) || [];
-    const res = (item && item.reservations) || [];
-    const posEv = ev.filter(e => e.direction === 'positive');
-    const negEv = ev.filter(e => e.direction === 'negative');
-    const posStr = posEv.length ? Math.max.apply(null, posEv.map(layerWeight)) + 0.2 * (posEv.length - 1) : 0;
-    const negStr = negEv.length ? Math.max.apply(null, negEv.map(layerWeight)) + 0.2 * (negEv.length - 1) : 0;
-    const resPos = res.some(r => r.direction === 'positive') ? 0.35 : 0;
-    const resNeg = res.some(r => r.direction === 'negative') ? 0.35 : 0;
-
-    let base = 0;
-    if (dir === 'positive') base = Math.max(posStr, 0.8);
-    else if (dir === 'negative') base = -Math.max(negStr, 0.8);
-    else if (dir === 'mixed') base = (posStr - negStr) * 0.65;
-
-    const toneAdj = (toneScore || 0) * 0.45;
-    const incAdj = inc === 'positive' ? 0.25 : (inc === 'negative' ? -0.25 : 0);
-    const yValue = clamp(round2(base + toneAdj + incAdj), -4.8, 4.8);
-
-    const hasDual = dir === 'mixed' || (posStr > 0 && negStr > 0);
-    const wickUp = (hasDual || resPos > 0)
-      ? clamp(round2(Math.max(posStr, resPos) + Math.max(0, toneScore || 0) * 0.25), 0, 2.2)
-      : 0;
-    const wickDown = (hasDual || resNeg > 0)
-      ? clamp(round2(Math.max(negStr, resNeg) + Math.max(0, -(toneScore || 0)) * 0.25), 0, 2.2)
-      : 0;
-
-    return { yValue, wickUp, wickDown };
+  function computeAnnualStep(annual, natal) {
+    const amp = annual && annual.amplitude;
+    const missingFields = amp ? (amp.missingFields || []).slice() : ['amplitude'];
+    const P = amp && amp.positive, N = amp && amp.negative;
+    const valid = amp && amp.available && Number.isFinite(P) && Number.isFinite(N) && P >= 0 && N >= 0;
+    const direction = annual && annual.direction;
+    let available = !!valid && ['positive', 'negative', 'mixed', 'neutral'].includes(direction);
+    if (available && ((direction === 'positive' && P === 0) || (direction === 'negative' && N === 0) || (direction === 'mixed' && (P === 0 || N === 0)))) {
+      available = false; missingFields.push('direction.source');
+    }
+    const F = x => x / (1 + TREND_PARAMETERS.compression * x);
+    const breakdown = [], hasPending = amp && (amp.hasPending || (amp.breakdown || []).some(x => x.status === 'potential')) || (annual && (annual.uncertainty || []).length > 0);
+    const qualifyingIdle = available && direction === 'neutral' && P === 0 && N === 0 && !hasPending && natal && natal.direction === 'negative' && annual.tone && annual.tone.label === '闲运';
+    let delta = 0;
+    if (available) {
+      if (direction === 'positive') delta = TREND_PARAMETERS.kappa * Math.max(TREND_PARAMETERS.deltaMin, F(P) - F(N));
+      else if (direction === 'negative') delta = -TREND_PARAMETERS.kappa * Math.max(TREND_PARAMETERS.deltaMin, F(N) - F(P));
+      else if (direction === 'mixed') delta = TREND_PARAMETERS.kappa * (F(P) - F(N));
+      else if (hasPending || P !== 0 || N !== 0) { available = false; missingFields.push('neutral.unresolved'); }
+      else if (qualifyingIdle) {
+        delta = -TREND_PARAMETERS.idleEpsilon;
+        breakdown.push({ causeKey: 'qualifyingIdle', delta, text: '不利大运闲年极轻微底盘折耗（示意参数）' });
+      }
+    }
+    return { available, missingFields, qualifyingIdle: !!qualifyingIdle, breakdown, delta: available ? delta : null,
+      bandUp: valid ? TREND_PARAMETERS.bandScale * F(P) : 0, bandDown: valid ? TREND_PARAMETERS.bandScale * F(N) : 0 };
   }
 
   function extractOutlookLines(ann) {
@@ -3068,7 +3140,6 @@
   }
 
   function computeOneDecadeStep(data, eng, row, dIdx, prevGz, startLevel) {
-    const LAMBDA = 0.075, STEP_SCALE = 0.45, DECADE_SCALE = 1.25;
     let S = startLevel;
     const startYear = typeof root.luckStartYear === 'function' ? root.luckStartYear(data, row) : (data.time.used.year + row.from - 1);
     const fy = Array.from({ length: 10 }, (_, i) => {
@@ -3086,8 +3157,6 @@
       root.tagOutlookPeriods(out, row.gz, fy);
     }
     const natalTone = out.natal && out.natal.tone ? out.natal.tone.score : 0;
-    const decadeSeries = computeSeriesValues(out.natal, out.natal.direction, natalTone, 'neutral');
-    const B = decadeSeries.yValue * DECADE_SCALE;
     const natalProLabel = out.natal.label || '持平';
     const natalStdLabel = typeof root.outlookPlainResult === 'function'
       ? root.outlookPlainResult(typeof root.outlookDisplayView === 'function' ? root.outlookDisplayView(out.natal) : out.natal)
@@ -3103,20 +3172,16 @@
       natalDir: out.natal.direction,
       natalProLbl: natalProLabel,
       natalStdLbl: natalStdLabel,
-      toneScore: natalTone,
-      decadeAttractor: round2(B)
+      toneScore: natalTone
     };
 
     const years = out.years.map((yObj, yIdx) => {
       const ann = yObj.annual;
       const tone = ann.tone ? ann.tone.score : 0;
-      const incDir = yObj.increment ? yObj.increment.direction : 'neutral';
-      const metrics = computeSeriesValues(ann, ann.direction, tone, incDir);
+      const metrics = computeAnnualStep(ann, out.natal);
       const prevLevel = S;
-      const rawDelta = round2(metrics.yValue * STEP_SCALE);
-      const pull = LAMBDA * (B - S);
-      const nextS = round2(S + rawDelta + pull);
-      const netStep = round2(nextS - S);
+      const nextS = metrics.available ? S + metrics.delta : S;
+      const netStep = nextS - S;
       S = nextS;
 
       const lines = extractOutlookLines(ann);
@@ -3138,15 +3203,18 @@
         tl: ann.tone ? ann.tone.label : '平稳',
         t: tone,
         pv: yObj.previousYear ? dirCode(yObj.previousYear.direction) : '0',
-        v: metrics.yValue,
-        wu: metrics.wickUp,
-        wd: metrics.wickDown,
+        v: metrics.delta,
+        amplitude: ann.amplitude,
+        available: metrics.available,
+        missingFields: metrics.missingFields,
+        qualifyingIdle: metrics.qualifyingIdle,
+        breakdown: metrics.breakdown,
         level: nextS,
         prevLevel,
-        rawDelta,
+        rawDelta: metrics.delta,
         netStep,
-        bandUp: round2(metrics.wickUp * 0.42),
-        bandDown: round2(metrics.wickDown * 0.42),
+        bandUp: metrics.bandUp,
+        bandDown: metrics.bandDown,
         lines
       };
     });
@@ -3184,96 +3252,114 @@
     return model;
   }
 
-  function renderLuckSectionAsync(container, data) {
+  async function renderLuckSectionAsync(container, data) {
     if (!container || !data) return Promise.resolve(null);
-    const engRef = getEngineRef();
-    const eng = engRef.eng;
-    if (!eng || !eng.evaluateLuckOutlook || typeof root.getLuckData !== 'function') {
-      return Promise.resolve(null);
-    }
-    const luck = root.getLuckData(data);
-    if (!luck || !luck.rows || !luck.rows.length) {
-      return Promise.resolve(null);
-    }
-    const usefulView = getUsefulSummary(data);
-    const cacheKey = getLuckCacheKey(data, luck, usefulView);
-
-    if (luckModelCache.key === cacheKey && luckModelCache.model) {
-      luckJobToken++;
-      if (isLuckViewActive()) {
-        renderLuckSection(container, data);
-      }
-      return Promise.resolve(luckModelCache.model);
-    }
-
     const token = ++luckJobToken;
-    const total = luck.rows.length;
-    container.innerHTML = `
-      <div class="bzv-panel">
-        <div class="bzv-block-title">
-          <div class="bzv-block-title-main">
-            <strong>大运流年起伏走势</strong>
-            <span>主线承接上年起落 · 与上方大运流年选择双向联动</span>
+    const isCurrent = () => token === luckJobToken && container.isConnected !== false && isLuckViewActive();
+    try {
+      const engRef = getEngineRef();
+      const eng = engRef.eng;
+      if (!eng || !eng.evaluateLuckOutlook || typeof root.getLuckData !== 'function') {
+        throw new Error('走势数据暂不可用');
+      }
+      const luck = root.getLuckData(data);
+      if (!luck || !luck.rows || !luck.rows.length) {
+        throw new Error('走势数据暂不可用');
+      }
+      const usefulView = getUsefulSummary(data);
+      const cacheKey = getLuckCacheKey(data, luck, usefulView);
+
+      if (luckModelCache.key === cacheKey && luckModelCache.model) {
+        if (isCurrent()) {
+          renderLuckSection(container, data);
+        }
+        return Promise.resolve(luckModelCache.model);
+      }
+
+      const total = luck.rows.length;
+      container.innerHTML = `
+        <div class="bzv-panel">
+          <div class="bzv-block-title">
+            <div class="bzv-block-title-main">
+              <strong>大运流年起伏走势</strong>
+              <span>主线承接上年起落 · 与上方大运流年选择双向联动</span>
+            </div>
+          </div>
+          <div class="bzv-loading" role="status" aria-live="polite">
+            <div class="bzv-loading-title">正在推算大运流年走势（0 / ${total} 步大运）…</div>
+            <div class="bzv-progress-track"><div class="bzv-progress-fill" style="width:0%"></div></div>
+            <div class="bzv-loading-meta">分步推演十年干支与承接水位，完成后自动展开互动图谱</div>
           </div>
         </div>
-        <div class="bzv-loading" role="status" aria-live="polite">
-          <div class="bzv-loading-title">正在推算大运流年走势（0 / ${total} 步大运）…</div>
-          <div class="bzv-progress-track"><div class="bzv-progress-fill" style="width:0%"></div></div>
-          <div class="bzv-loading-meta">分步推演十年干支与承接水位，完成后自动展开互动图谱</div>
-        </div>
-      </div>
-    `;
+      `;
 
-    const titleEl = typeof container.querySelector === 'function' ? container.querySelector('.bzv-loading-title') : null;
-    const fillEl = typeof container.querySelector === 'function' ? container.querySelector('.bzv-progress-fill') : null;
-    const scheduleTick = typeof root.setTimeout === 'function' ? root.setTimeout.bind(root) : setTimeout;
+      const titleEl = typeof container.querySelector === 'function' ? container.querySelector('.bzv-loading-title') : null;
+      const fillEl = typeof container.querySelector === 'function' ? container.querySelector('.bzv-progress-fill') : null;
+      const scheduleTick = typeof root.setTimeout === 'function' ? root.setTimeout.bind(root) : setTimeout;
 
-    return new Promise((resolve) => {
-      let dIdx = 0;
-      let S = 0;
-      const decadesRaw = [];
+      return await new Promise((resolve, reject) => {
+        let dIdx = 0;
+        let S = 0;
+        const decadesRaw = [];
 
-      function tick() {
-        if (token !== luckJobToken || container.isConnected === false) {
-          resolve(null);
-          return;
-        }
-        try {
-          const row = luck.rows[dIdx];
-          const prevGz = dIdx > 0 ? luck.rows[dIdx - 1].gz : null;
-          const stepRes = computeOneDecadeStep(data, eng, row, dIdx, prevGz, S);
-          S = stepRes.nextLevel;
-          decadesRaw.push(stepRes.dcMeta);
-          dIdx++;
-
-          const pct = Math.round((dIdx / total) * 100);
-          if (titleEl) titleEl.textContent = `正在推算大运流年走势（${dIdx} / ${total} 步大运）…`;
-          if (fillEl && fillEl.style) fillEl.style.width = `${pct}%`;
-
-          if (dIdx < total) {
-            scheduleTick(tick, 0);
+        function tick() {
+          if (!isCurrent()) {
+            resolve(null);
             return;
           }
+          try {
+            const row = luck.rows[dIdx];
+            const prevGz = dIdx > 0 ? luck.rows[dIdx - 1].gz : null;
+            const stepRes = computeOneDecadeStep(data, eng, row, dIdx, prevGz, S);
+            S = stepRes.nextLevel;
+            decadesRaw.push(stepRes.dcMeta);
+            dIdx++;
 
-          const model = {
-            currentYear: luck.currentYear,
-            decades: decadesRaw,
-            allYears: decadesRaw.flatMap(d => d.years)
-          };
-          luckModelCache.key = cacheKey;
-          luckModelCache.model = model;
+            const pct = Math.round((dIdx / total) * 100);
+            if (titleEl) titleEl.textContent = `正在推算大运流年走势（${dIdx} / ${total} 步大运）…`;
+            if (fillEl && fillEl.style) fillEl.style.width = `${pct}%`;
 
-          if (token === luckJobToken && container.isConnected !== false && isLuckViewActive()) {
-            renderLuckSection(container, data);
+            if (dIdx < total) {
+              scheduleTick(tick, 0);
+              return;
+            }
+
+            const model = {
+              currentYear: luck.currentYear,
+              decades: decadesRaw,
+              allYears: decadesRaw.flatMap(d => d.years)
+            };
+            if (!isCurrent()) { resolve(null); return; }
+            luckModelCache.key = cacheKey;
+            luckModelCache.model = model;
+
+            if (isCurrent()) {
+              renderLuckSection(container, data);
+            }
+            resolve(model);
+          } catch (err) {
+            reject(err);
           }
-          resolve(model);
-        } catch (err) {
-          resolve(null);
         }
-      }
 
-      scheduleTick(tick, 0);
-    });
+        scheduleTick(tick, 0);
+      });
+    } catch (err) {
+      if (isCurrent()) {
+        luckModelCache.key = '';
+        luckModelCache.model = null;
+        container.innerHTML = `<div class="bzv-panel"><div class="bzv-loading" role="alert">
+          <div class="bzv-loading-title">大运流年走势推算失败</div>
+          <div class="bzv-loading-meta">暂时无法生成走势，请重试。</div>
+          <button type="button" class="bzv-btn" data-bzv-luck-retry>重新推算</button>
+        </div></div>`;
+        const retry = container.querySelector('[data-bzv-luck-retry]');
+        if (retry) retry.onclick = () => {
+          if (isCurrent()) renderLuckSectionAsync(container, data);
+        };
+      }
+      return null;
+    }
   }
 
   function monotonePath(pts) {
@@ -3512,6 +3598,7 @@
               <button type="button" class="bzv-btn" id="bzvNextYearBtn">后一年 →</button>
             </div>
           </div>
+          <details class="bzv-detail-card" id="bzvAmplitudeDetail"></details>
           <div id="bzvComparePanel" class="bzv-compare-panel bzv-hidden"></div>
         </div>
       </div>
@@ -3601,7 +3688,7 @@
     const stepX = n > 1 ? plotW / (n - 1) : plotW;
     const xOf = idx => (n === 1 ? M.left + plotW / 2 : M.left + idx * stepX);
 
-    const extVals = flatYears.flatMap(y => [y.level - y.bandDown * 0.6, y.level + y.bandUp * 0.6]);
+    const extVals = flatYears.flatMap(y => [y.level - y.bandDown, y.level + y.bandUp]);
     extVals.push(0);
     const rawMin = Math.min.apply(null, extVals);
     const rawMax = Math.max.apply(null, extVals);
@@ -3736,26 +3823,41 @@
     });
 
     const pts = flatYears.map((yr, idx) => ({ x: xOf(idx), y: yOf(yr.level), yr }));
-    const lineD = monotonePath(pts);
-    const areaD = `${lineD} L ${pts[pts.length - 1].x.toFixed(1)} ${yZero.toFixed(1)} L ${pts[0].x.toFixed(1)} ${yZero.toFixed(1)} Z`;
-
-    mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaPosGrad)', 'clip-path': 'url(#bzvClipAboveZero)' }));
-    mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaNegGrad)', 'clip-path': 'url(#bzvClipBelowZero)' }));
-
-    if (uiState.showWicks && pts.length >= 2) {
-      const upperPts = pts.map(p => ({ x: p.x, y: yOf(p.yr.level + p.yr.bandUp) }));
-      const lowerPts = pts.map(p => ({ x: p.x, y: yOf(p.yr.level - p.yr.bandDown) }));
-      const ribbonD = `${monotonePath(upperPts)} ${monotonePath(lowerPts.slice().reverse()).replace(/^M/, 'L')} Z`;
-      mainSvg.appendChild(svgEl('path', {
-        d: ribbonD, fill: P.gold, opacity: uiState.luckZoomDecade !== null ? 0.18 : 0.14, stroke: 'none'
-      }));
-    }
-
-    mainSvg.appendChild(svgEl('path', {
-      d: lineD, fill: 'none', stroke: P.textDark,
-      'stroke-width': uiState.luckZoomDecade !== null ? 2.5 : 2.1,
-      'stroke-linejoin': 'round', 'stroke-linecap': 'round'
-    }));
+    const axisLabelY = M.top + plotH / 2;
+    mainSvg.appendChild(svgEl('text', { x: 14, y: axisLabelY, transform: `rotate(-90 14 ${axisLabelY})`, 'text-anchor': 'middle', 'font-size': 11, fill: P.muted }, '累计走势示意'));
+    const runs = [];
+    pts.forEach((p, i) => {
+      if (p.yr.available) {
+        if (i === 0 || !pts[i - 1].yr.available) runs.push([]);
+        runs[runs.length - 1].push(p);
+      } else {
+        const marker = svgEl('circle', { cx: p.x, cy: p.y, r: 3, fill: P.paper, stroke: P.muted, 'data-pending-year': p.yr.y });
+        marker.appendChild(svgEl('title', {}, `${p.yr.y} 待判；累计基准承接上年，不作平年`));mainSvg.appendChild(marker);
+        if (i === 0 || pts[i - 1].yr.available) mainSvg.appendChild(svgEl('text', { x: p.x, y: p.y - 10, 'font-size': 10, fill: P.muted }, '待判'));
+      }
+      if (i > 0 && (!p.yr.available || !pts[i - 1].yr.available)) {
+        mainSvg.appendChild(svgEl('path', { d: monotonePath([pts[i - 1], p]), fill: 'none', stroke: P.muted, 'stroke-width': 1.5, 'stroke-dasharray': '4 4', 'data-pending-bridge': p.yr.y }));
+      }
+    });
+    runs.forEach(run => {
+      const lineD = monotonePath(run);
+      if (run.length >= 2) {
+        const areaD = `${lineD} L ${run[run.length - 1].x.toFixed(1)} ${yZero.toFixed(1)} L ${run[0].x.toFixed(1)} ${yZero.toFixed(1)} Z`;
+        mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaPosGrad)', 'clip-path': 'url(#bzvClipAboveZero)' }));
+        mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaNegGrad)', 'clip-path': 'url(#bzvClipBelowZero)' }));
+      }
+      if (uiState.showWicks) {
+        if (run.length >= 2) {
+          const upper = run.map(p => ({ x: p.x, y: yOf(p.yr.level + p.yr.bandUp) }));
+          const lower = run.map(p => ({ x: p.x, y: yOf(p.yr.level - p.yr.bandDown) }));
+          mainSvg.appendChild(svgEl('path', { d: `${monotonePath(upper)} ${monotonePath(lower.reverse()).replace(/^M/, 'L')} Z`, fill: P.gold, opacity: 0.18, stroke: 'none', 'data-amplitude-band': 'true' }));
+        } else {
+          const p = run[0];
+          mainSvg.appendChild(svgEl('line', { x1: p.x, x2: p.x, y1: yOf(p.yr.level + p.yr.bandUp), y2: yOf(p.yr.level - p.yr.bandDown), stroke: P.gold, 'stroke-width': 3, 'data-amplitude-band': 'true' }));
+        }
+      }
+      mainSvg.appendChild(svgEl('path', { d: lineD, fill: 'none', stroke: P.textDark, 'stroke-width': uiState.luckZoomDecade !== null ? 2.5 : 2.1, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-trend-run': 'true' }));
+    });
 
     const nowY = model.currentYear;
     const idxNow = flatYears.findIndex(y => y.y === nowY);
@@ -3856,13 +3958,16 @@
     flatYears.forEach((yr, idx) => {
       const cxB = xOf(idx);
       const isAct = yr.y === (uiState.hoverYear || uiState.selectedYear);
-      const mag = clamp((Math.abs(yr.netStep) / maxStep) * 22, 3, 22);
-      if (yr.netStep > 0.08) {
+      const mag = (Math.abs(yr.netStep) / maxStep) * 22;
+      if (!yr.available) {
+        const marker = svgEl('text', { x: cxB, y: dZero + 3, 'text-anchor': 'middle', fill: P.muted, 'font-size': 10, 'data-pending-year': yr.y }, '×');
+        marker.appendChild(svgEl('title', {}, `${yr.y} 待判`));deltaSvg.appendChild(marker);
+      } else if (yr.netStep > 0) {
         deltaSvg.appendChild(svgEl('rect', {
           x: (cxB - barW / 2).toFixed(1), y: (dZero - mag).toFixed(1), width: barW.toFixed(1), height: mag.toFixed(1), rx: 1.5,
           fill: P.pos, opacity: isAct ? 1 : 0.75
         }));
-      } else if (yr.netStep < -0.08) {
+      } else if (yr.netStep < 0) {
         deltaSvg.appendChild(svgEl('rect', {
           x: (cxB - barW / 2).toFixed(1), y: dZero, width: barW.toFixed(1), height: mag.toFixed(1), rx: 1.5,
           fill: P.neg, opacity: isAct ? 1 : 0.75
@@ -3909,9 +4014,9 @@
       deltaCross.setAttribute('x1', pt.x.toFixed(1));
       deltaCross.setAttribute('x2', pt.x.toFixed(1));
 
-      const dirLbl = technical ? yr.proLbl : yr.stdLbl;
+      const dirLbl = yr.available ? (technical ? yr.proLbl : yr.stdLbl) : '待判';
       const badgeCls = yr.d === 'p' ? 'bzv-dir-pos' : (yr.d === 'n' ? 'bzv-dir-neg' : 'bzv-dir-mix');
-      const stepStr = `${yr.netStep >= 0 ? '+' : ''}${yr.netStep.toFixed(2)}`;
+      const stepStr = yr.available ? `${yr.netStep >= 0 ? '+' : ''}${yr.netStep.toFixed(2)}` : '待判（沿用累计基准）';
       const posL = technical ? yr.lines.posPro : yr.lines.posStd;
       const negL = technical ? yr.lines.negPro : yr.lines.negStd;
 
@@ -3921,6 +4026,7 @@
           <span class="${badgeCls}">${esc(dirLbl)}</span>
         </div>
         <div class="bzv-tooltip-meta">水位 ${yr.level >= 0 ? '+' : ''}${yr.level.toFixed(2)}（本年 ${stepStr}）· ${esc(yr.decade.gz)}大运</div>
+        ${yr.qualifyingIdle ? '<div class="bzv-tooltip-line">不利大运闲年极轻微底盘折耗（示意参数）</div>' : ''}
         ${posL[0] ? `<div class="bzv-tooltip-line bzv-dir-pos">+ ${esc(posL[0])}</div>` : ''}
         ${negL[0] ? `<div class="bzv-tooltip-line bzv-dir-neg">- ${esc(negL[0])}</div>` : ''}
       `;
@@ -3984,7 +4090,7 @@
             </div>
             <div class="bzv-compare-metrics">
               <span>累积水位 <strong>${yr.level >= 0 ? '+' : ''}${yr.level.toFixed(2)}</strong></span>
-              <span>当年净变化 <strong>${yr.netStep >= 0 ? '+' : ''}${yr.netStep.toFixed(2)}</strong></span>
+              <span>当年净变化 <strong>${yr.available ? `${yr.netStep >= 0 ? '+' : ''}${yr.netStep.toFixed(2)}` : '待判'}</strong></span>
               <span>大运 ${esc(yr.decade.gz)}（${esc(dcLbl)}）</span>
             </div>
             <div class="bzv-compare-notes">
@@ -4120,10 +4226,17 @@
 
     mainSvg._bzvCtx = { M, W, H, plotW, plotH, n, stepX, flatYears, pts, syncHoverUI, syncCompareUI, rerender };
 
-    container.querySelector('#bzvLuckLegend').textContent = '主线 = 累积走势 · 金带 = 波动包络 · 点选年份联动上方，或点「⇄ 跨年对比」拖动 A/B 游标';
+    container.querySelector('#bzvLuckLegend').textContent = '主线 = 累计走势示意 · 金带 = 双向作用幅度示意（无统计置信含义）· 虚线 / × = 待判，沿用累计基准 · 点选年份联动上方，或点「⇄ 跨年对比」拖动 A/B 游标';
 
     const selYearObj = flatYears.find(y => y.y === uiState.selectedYear) || flatYears[0];
     uiState.selectedYear = selYearObj.y;
+    const amp = selYearObj.amplitude;
+    container.querySelector('#bzvAmplitudeDetail').innerHTML = `
+      <summary>${selYearObj.y} 双边力度来源 · ${selYearObj.available ? `正 ${amp.positive.toFixed(2)} / 负 ${amp.negative.toFixed(2)}` : '待判'}</summary>
+      <div class="bzv-sub-note">工程示意参数；年度结论沿用原判。${selYearObj.qualifyingIdle ? '不利大运闲年极轻微底盘折耗（示意参数）。' : ''}${selYearObj.available ? '' : `缺口：${esc(selYearObj.missingFields.join('、') || '年度条件待判')}；累计基准承接上年。`}</div>
+      ${amp ? `<div>强触发：正 ${amp.strongTrigger.positive ? '是' : '否'} / 负 ${amp.strongTrigger.negative ? '是' : '否'}</div>
+      <ul>${amp.breakdown.map(row => `<li>${row.side === 'positive' ? '有利' : row.side === 'negative' ? '不利' : '提示/待判'} ${row.contribution > 0 ? row.contribution.toFixed(2) : '0'} · ${esc(row.text || (row.sourcePath === 'tone' ? '干支喜忌底色' : row.taskId || '条件尚待确认'))}${row.exclusion ? `（${esc({ 'legacy-reference': '旧判参考不计入', 'neutral': '中性提示不计入', 'undetermined': '未定作用', 'pending-condition': '潜在/待判不计入', 'explanatory-summary': '解释包装不重复计入', 'duplicate-cause': '同因已计入', 'missing-weight-source': '力度来源不足', 'side-cap': '单侧封顶' }[row.exclusion] || row.exclusion)}）` : ''}${technical ? ` · ${esc(row.ruleId || '')} ${esc(row.level || '')}` : ''}</li>`).join('')}</ul>` : ''}
+    `;
     const globalIdx = allFlat.findIndex(y => y.y === selYearObj.y);
 
     const yrHead = `${selYearObj.y} ${selYearObj.gz} · ${selYearObj.a}岁`;
@@ -4261,6 +4374,8 @@
     buildDisplayFlowEdges,
     computeMatrixPositions,
     buildPositionFlowEdges,
+    computeAnnualStep,
+    TREND_PARAMETERS,
     computeCumulativeSeries: (luckModel) => luckModel,
     renderRelationSection,
     renderLuckSection,
