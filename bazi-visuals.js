@@ -1,6 +1,6 @@
 /* 八字分析页 · 只读双可视化模块（bazi-visuals.js）
  * 1) #baziRelationVisual：日主能量与流通图（星盘 + 2×4 四柱位次流通 + 2×4 合冲刑破）
- * 2) #baziLuckVisual：大运流年起伏走势图（方案 A 承接式累积 + 跨年对比 + 与选运双向联动）
+ * 2) #baziLuckVisual：大运流年运势走势图（年度裁决与当年净力度 + 财运周期均值 + 跨年对比 + 与选运双向联动）
  * 严格只读 currentBazi 与 BaziEngine，不改动排盘、格局喜用、AI 或本地记录逻辑。 */
 (function (root, factory) {
   'use strict';
@@ -38,7 +38,6 @@
   const CX = 370;
   const CY = 290;
 
-  const PREV_MAP = { '0': '首年无对照', p: '上升', n: '下降', m: '利弊并见', u: '持平', x: '暂缺结论' };
   const DIR_PRO_MAP = { p: '偏吉', n: '偏凶', m: '吉凶并见', u: '平稳', pending: '待判' };
   const DIR_STD_MAP = { p: '顺利', n: '多留心', m: '有好有坏', u: '平稳', pending: '待定' };
   const DIST_LABELS = ['同柱上下（距 0）', '紧贴邻柱（距 1）', '隔柱作用（距 2）', '年时遥隔（距 3）'];
@@ -105,7 +104,9 @@
     selectedEdgeId: null,
     relZoomed: false,
     luckZoomDecade: null,
+    luckWindow: null,
     showWicks: true,
+    firstDecadeFadeIn: true,
     selectedDecadeIndex: 0,
     selectedYear: null,
     hoverYear: null,
@@ -116,6 +117,7 @@
   let lastSnapshot = null;
   let lastLuckContext = null;
   const luckModelCache = { key: '', model: null };
+  const luckSwitchHelpCleanup = new WeakMap();
   let luckJobToken = 0;
 
   function isCompactViewport() {
@@ -3047,34 +3049,45 @@
   }
 
   // ---------- Luck Curve Data Extraction (Lazy & Memoized) ----------
-  const TREND_PARAMETERS = Object.freeze({ compression: 0.12, deltaMin: 0.10, kappa: 0.55, bandScale: 0.45, idleEpsilon: 0.05 });
+  const TREND_PARAMETERS = Object.freeze({ compression: 0.12, kappa: 0.55, bandScale: 0.45, oppDamp: 0.35 });
 
-  function computeAnnualStep(annual, natal) {
+  function computeAnnualLevel(annual) {
     const amp = annual && annual.amplitude;
     const missingFields = amp ? (amp.missingFields || []).slice() : ['amplitude'];
     const P = amp && amp.positive, N = amp && amp.negative;
     const valid = amp && amp.available && Number.isFinite(P) && Number.isFinite(N) && P >= 0 && N >= 0;
     const direction = annual && annual.direction;
     let available = !!valid && ['positive', 'negative', 'mixed', 'neutral'].includes(direction);
-    if (available && ((direction === 'positive' && P === 0) || (direction === 'negative' && N === 0) || (direction === 'mixed' && (P === 0 || N === 0)))) {
-      available = false; missingFields.push('direction.source');
-    }
     const F = x => x / (1 + TREND_PARAMETERS.compression * x);
-    const breakdown = [], hasPending = amp && (amp.hasPending || (amp.breakdown || []).some(x => x.status === 'potential')) || (annual && (annual.uncertainty || []).length > 0);
-    const qualifyingIdle = available && direction === 'neutral' && P === 0 && N === 0 && !hasPending && natal && natal.direction === 'negative' && annual.tone && annual.tone.label === '闲运';
-    let delta = 0;
-    if (available) {
-      if (direction === 'positive') delta = TREND_PARAMETERS.kappa * Math.max(TREND_PARAMETERS.deltaMin, F(P) - F(N));
-      else if (direction === 'negative') delta = -TREND_PARAMETERS.kappa * Math.max(TREND_PARAMETERS.deltaMin, F(N) - F(P));
-      else if (direction === 'mixed') delta = TREND_PARAMETERS.kappa * (F(P) - F(N));
-      else if (hasPending || P !== 0 || N !== 0) { available = false; missingFields.push('neutral.unresolved'); }
-      else if (qualifyingIdle) {
-        delta = -TREND_PARAMETERS.idleEpsilon;
-        breakdown.push({ causeKey: 'qualifyingIdle', delta, text: '不利大运闲年极轻微底盘折耗（示意参数）' });
-      }
+    const hasPending = amp && (amp.hasPending || (amp.breakdown || []).some(x => x.status === 'potential')) || (annual && (annual.uncertainty || []).length > 0);
+    if (available && direction === 'neutral' && (hasPending || P !== 0 || N !== 0)) {
+      available = false; missingFields.push('neutral.unresolved');
     }
-    return { available, missingFields, qualifyingIdle: !!qualifyingIdle, breakdown, delta: available ? delta : null,
-      bandUp: valid ? TREND_PARAMETERS.bandScale * F(P) : 0, bandDown: valid ? TREND_PARAMETERS.bandScale * F(N) : 0 };
+    const fp = valid ? F(P) : 0;
+    const fn = valid ? F(N) : 0;
+    const hasNet = amp && Number.isFinite(amp.net);
+    const level = available
+      ? (hasNet
+        ? TREND_PARAMETERS.kappa * Math.sign(amp.net) * F(Math.abs(amp.net))
+        : TREND_PARAMETERS.kappa * (fp - fn) / (1 + TREND_PARAMETERS.oppDamp * Math.min(fp, fn)))
+      : null;
+    return { available, missingFields, level,
+      bandUp: valid ? TREND_PARAMETERS.bandScale * fp : 0, bandDown: valid ? TREND_PARAMETERS.bandScale * fn : 0 };
+  }
+
+  function formatSigned(value) {
+    return value === null ? '待判' : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
+  }
+
+  function describeTrendLevel(yr) {
+    return yr.available ? `${yr.cumulativeHasPriorPending ? '已知推动小计，累计含待判' : '已知年度推动累计'} ${formatSigned(yr.displayLevel)}` : '当年待判';
+  }
+
+  function describeAnnualImpulse(yr) {
+    if (!yr.available) return '当年待判';
+    if (yr.displayImpulse > 0) return `当年助力 +${yr.displayImpulse.toFixed(2)}`;
+    if (yr.displayImpulse < 0) return `当年阻力 ${yr.displayImpulse.toFixed(2)}`;
+    return '当年净力度 0.00';
   }
 
   function extractOutlookLines(ann) {
@@ -3102,10 +3115,10 @@
       return {
         posStd: Array.from(new Set(posStd)).slice(0, 3),
         negStd: Array.from(new Set(negStd)).slice(0, 3),
-        resStd: [],
+        resStd: (ann.uncertainty || []).slice(),
         posPro: Array.from(new Set(posPro)).slice(0, 3),
         negPro: Array.from(new Set(negPro)).slice(0, 3),
-        resPro: []
+        resPro: (ann.uncertainty || []).slice()
       };
     }
 
@@ -3130,17 +3143,17 @@
     return 'pending';
   }
 
-  function getLuckCacheKey(data, luck, usefulView) {
+  function getLuckCacheKey(data, luck, usefulView, options) {
     return JSON.stringify([
       chartFingerprint(data),
       (usefulView && usefulView.version) || '',
       luck.currentYear,
-      luck.rows.map(r => r.gz)
+      luck.rows.map(r => [r.gz, r.from, r.to, typeof root.luckStartYear === 'function' ? root.luckStartYear(data, r) : null]),
+      options && Number.isFinite(options.wealthExtraWeight) ? options.wealthExtraWeight : null
     ]);
   }
 
-  function computeOneDecadeStep(data, eng, row, dIdx, prevGz, startLevel) {
-    let S = startLevel;
+  function computeOneDecadeStep(data, eng, row, dIdx, prevGz, options) {
     const startYear = typeof root.luckStartYear === 'function' ? root.luckStartYear(data, row) : (data.time.used.year + row.from - 1);
     const fy = Array.from({ length: 10 }, (_, i) => {
       const y = startYear + i;
@@ -3152,7 +3165,7 @@
         previous: prevLuck ? { year: prevY, gz: eng.getFlowYearGZ(prevY), luckGz: prevLuck } : null
       };
     });
-    const out = eng.evaluateLuckOutlook(data, row.gz, prevGz, fy);
+    const out = options ? eng.evaluateLuckOutlook(data, row.gz, prevGz, fy, options) : eng.evaluateLuckOutlook(data, row.gz, prevGz, fy);
     if (typeof root.tagOutlookPeriods === 'function') {
       root.tagOutlookPeriods(out, row.gz, fy);
     }
@@ -3178,12 +3191,9 @@
     const years = out.years.map((yObj, yIdx) => {
       const ann = yObj.annual;
       const tone = ann.tone ? ann.tone.score : 0;
-      const metrics = computeAnnualStep(ann, out.natal);
-      const prevLevel = S;
-      const nextS = metrics.available ? S + metrics.delta : S;
-      const netStep = nextS - S;
-      S = nextS;
-
+      const metrics = computeAnnualLevel(ann);
+      const wealth = yObj.wealth;
+      const wealthMetrics = computeAnnualLevel(wealth);
       const lines = extractOutlookLines(ann);
       const annStdLabel = typeof root.outlookPlainResult === 'function'
         ? root.outlookPlainResult(typeof root.outlookDisplayView === 'function' ? root.outlookDisplayView(ann) : ann)
@@ -3203,56 +3213,90 @@
         tl: ann.tone ? ann.tone.label : '平稳',
         t: tone,
         pv: yObj.previousYear ? dirCode(yObj.previousYear.direction) : '0',
-        v: metrics.delta,
+        v: metrics.level,
         amplitude: ann.amplitude,
         available: metrics.available,
         missingFields: metrics.missingFields,
-        qualifyingIdle: metrics.qualifyingIdle,
-        breakdown: metrics.breakdown,
-        level: nextS,
-        prevLevel,
-        rawDelta: metrics.delta,
-        netStep,
+        level: metrics.level,
+        annualImpulse: metrics.level,
+        rawDelta: metrics.level,
+        netStep: metrics.level,
         bandUp: metrics.bandUp,
         bandDown: metrics.bandDown,
+        wealthImpulse: wealthMetrics.level,
+        wealthDir: wealth?.direction,
+        wealthLabel: wealth?.label,
+        wealthReasons: wealth?.reasons || [],
+        wealthNote: wealth?.note || '',
+        wealthUncertainty: wealth?.uncertainty || [],
+        wealthAvailable: wealthMetrics.available,
+        wealthMerge: yObj.wealthMerge || ann.wealthMerge || null,
+        baseRange: yObj.comprehensiveRange || null,
+        wealthRange: yObj.wealthRange || null,
         lines
       };
     });
 
     dcMeta.years = years;
-    return { dcMeta, nextLevel: S };
+    return dcMeta;
   }
 
-  function buildLuckModel(data) {
+  function finalizeLuckModel(currentYear, decades) {
+    const allYears = decades.flatMap(d => d.years).sort((a, b) => a.y - b.y);
+    let cumulative = 0, wealthHeight = 0, priorPending = false;
+    for (const yr of allYears) {
+      yr.prevPlotLevel = cumulative;
+      yr.cumulativeHasPriorPending = priorPending;
+      if (yr.available) cumulative += yr.annualImpulse;
+      else priorPending = true;
+      yr.plotLevel = cumulative;
+      yr.level = yr.available ? cumulative : null;
+      yr.prevWealthPlotLevel = wealthHeight;
+      if (yr.wealthAvailable) wealthHeight = yr.wealthImpulse;
+      yr.wealthPlotLevel = wealthHeight;
+      yr.wealthLevel = yr.wealthImpulse;
+    }
+    return Object.freeze({ currentYear, decades, allYears });
+  }
+
+  function compareLuckInterval(allYears, yrA, yrB) {
+    const [earlyYr, lateYr] = yrA.y <= yrB.y ? [yrA, yrB] : [yrB, yrA];
+    const steps = allYears.filter(yr => yr.y > earlyYr.y && yr.y <= lateYr.y);
+    const missingSteps = lateYr.y - earlyYr.y - steps.filter(yr => yr.available).length;
+    const missing = missingSteps + (earlyYr.available ? 0 : 1);
+    const diff = missing ? null : yrB.displayLevel - yrA.displayLevel;
+    const known = [earlyYr, ...steps].filter(yr => yr.available);
+    const peak = known.reduce((best, yr) => yr.displayLevel > best.displayLevel ? yr : best, known[0]);
+    const trough = known.reduce((best, yr) => yr.displayLevel < best.displayLevel ? yr : best, known[0]);
+    const summary = missing
+      ? `含 ${missing} 个待判年份，完整累计升降未知`
+      : `已知累计变化 ${formatSigned(diff)}`;
+    return { diff, missing, summary, peak, trough };
+  }
+
+  function buildLuckModel(data, options) {
     const engRef = getEngineRef();
     const eng = engRef.eng;
     if (!data || !eng || !eng.evaluateLuckOutlook || typeof root.getLuckData !== 'function') return null;
     const luck = root.getLuckData(data);
     const usefulView = getUsefulSummary(data);
-    const cacheKey = getLuckCacheKey(data, luck, usefulView);
+    const cacheKey = getLuckCacheKey(data, luck, usefulView, options);
     if (luckModelCache.key === cacheKey && luckModelCache.model) {
       return luckModelCache.model;
     }
 
-    let S = 0;
-    const decadesRaw = luck.rows.map((row, dIdx) => {
+    const decades = luck.rows.map((row, dIdx) => {
       const prevGz = dIdx > 0 ? luck.rows[dIdx - 1].gz : null;
-      const stepRes = computeOneDecadeStep(data, eng, row, dIdx, prevGz, S);
-      S = stepRes.nextLevel;
-      return stepRes.dcMeta;
+      return computeOneDecadeStep(data, eng, row, dIdx, prevGz, options);
     });
-
-    const model = {
-      currentYear: luck.currentYear,
-      decades: decadesRaw,
-      allYears: decadesRaw.flatMap(d => d.years)
-    };
+    const model = finalizeLuckModel(luck.currentYear, decades);
     luckModelCache.key = cacheKey;
     luckModelCache.model = model;
     return model;
   }
 
-  async function renderLuckSectionAsync(container, data) {
+  async function renderLuckSectionAsync(container, data, options) {
+    luckSwitchHelpCleanup.get(container)?.();
     if (!container || !data) return Promise.resolve(null);
     const token = ++luckJobToken;
     const isCurrent = () => token === luckJobToken && container.isConnected !== false && isLuckViewActive();
@@ -3267,11 +3311,11 @@
         throw new Error('走势数据暂不可用');
       }
       const usefulView = getUsefulSummary(data);
-      const cacheKey = getLuckCacheKey(data, luck, usefulView);
+      const cacheKey = getLuckCacheKey(data, luck, usefulView, options);
 
       if (luckModelCache.key === cacheKey && luckModelCache.model) {
         if (isCurrent()) {
-          renderLuckSection(container, data);
+          renderLuckSection(container, data, options);
         }
         return Promise.resolve(luckModelCache.model);
       }
@@ -3281,14 +3325,14 @@
         <div class="bzv-panel">
           <div class="bzv-block-title">
             <div class="bzv-block-title-main">
-              <strong>大运流年起伏走势</strong>
-              <span>主线承接上年起落 · 与上方大运流年选择双向联动</span>
+              <strong>大运流年运势走势</strong>
+              <span>主线为已知年度推动累计，副柱为当年净力度</span>
             </div>
           </div>
           <div class="bzv-loading" role="status" aria-live="polite">
             <div class="bzv-loading-title">正在推算大运流年走势（0 / ${total} 步大运）…</div>
             <div class="bzv-progress-track"><div class="bzv-progress-fill" style="width:0%"></div></div>
-            <div class="bzv-loading-meta">分步推演十年干支与承接水位，完成后自动展开互动图谱</div>
+            <div class="bzv-loading-meta">分步推演十年干支与年度状态，完成后自动展开互动图谱</div>
           </div>
         </div>
       `;
@@ -3299,7 +3343,6 @@
 
       return await new Promise((resolve, reject) => {
         let dIdx = 0;
-        let S = 0;
         const decadesRaw = [];
 
         function tick() {
@@ -3310,9 +3353,7 @@
           try {
             const row = luck.rows[dIdx];
             const prevGz = dIdx > 0 ? luck.rows[dIdx - 1].gz : null;
-            const stepRes = computeOneDecadeStep(data, eng, row, dIdx, prevGz, S);
-            S = stepRes.nextLevel;
-            decadesRaw.push(stepRes.dcMeta);
+            decadesRaw.push(computeOneDecadeStep(data, eng, row, dIdx, prevGz, options));
             dIdx++;
 
             const pct = Math.round((dIdx / total) * 100);
@@ -3324,17 +3365,13 @@
               return;
             }
 
-            const model = {
-              currentYear: luck.currentYear,
-              decades: decadesRaw,
-              allYears: decadesRaw.flatMap(d => d.years)
-            };
+            const model = finalizeLuckModel(luck.currentYear, decadesRaw);
             if (!isCurrent()) { resolve(null); return; }
             luckModelCache.key = cacheKey;
             luckModelCache.model = model;
 
             if (isCurrent()) {
-              renderLuckSection(container, data);
+              renderLuckSection(container, data, options);
             }
             resolve(model);
           } catch (err) {
@@ -3418,7 +3455,7 @@
     }
   }
 
-  function bindLuckPointerEvents(mainSvg) {
+  function bindLuckPointerEvents(mainSvg, allowCompare = true) {
     if (!mainSvg || mainSvg._bzvBound) return;
     mainSvg._bzvBound = true;
     let drag = null;
@@ -3442,14 +3479,14 @@
       if (handleEl && uiState.compare) {
         const which = handleEl.getAttribute('data-handle');
         const fixedYear = which === 'a' ? uiState.compare.b : uiState.compare.a;
-        drag = { mode: 'handle', fixedYear, moved: true, anchorObj: ctx.flatYears[0], pointerId: e.pointerId };
+        drag = { mode: 'handle', fixedYear, which, moved: true, anchorObj: ctx.flatYears[0], pointerId: e.pointerId };
         try { mainSvg.setPointerCapture(e.pointerId); } catch (_) {}
         e.preventDefault();
         return;
       }
       const pos = coordsFromEvent(e, ctx);
       if (pos.svgY >= ctx.M.top - 4 && pos.svgX >= ctx.M.left - 12 && pos.svgX <= ctx.M.left + ctx.plotW + 12) {
-        if (e.pointerType === 'touch') {
+        if (!allowCompare || e.pointerType === 'touch') {
           drag = { mode: 'touch-tap', startX: e.clientX, startY: e.clientY, anchorObj: pos.yrObj, moved: false };
           return;
         }
@@ -3470,8 +3507,8 @@
       const pos = coordsFromEvent(e, ctx);
       if (drag) {
         if (drag.mode === 'handle') {
-          const nextA = Math.min(pos.yr, drag.fixedYear);
-          const nextB = Math.max(pos.yr, drag.fixedYear);
+          const nextA = drag.which === 'a' ? pos.yr : drag.fixedYear;
+          const nextB = drag.which === 'b' ? pos.yr : drag.fixedYear;
           if (!uiState.compare || uiState.compare.a !== nextA || uiState.compare.b !== nextB) {
             uiState.compare = { a: nextA, b: nextB };
             ctx.syncCompareUI();
@@ -3481,8 +3518,8 @@
             drag.moved = true;
           }
           if (drag.moved) {
-            const nextA = Math.min(drag.anchorYear, pos.yr);
-            const nextB = Math.max(drag.anchorYear, pos.yr);
+            const nextA = drag.anchorYear;
+            const nextB = pos.yr;
             if (!uiState.compare || uiState.compare.a !== nextA || uiState.compare.b !== nextB) {
               uiState.compare = { a: nextA, b: nextB };
               ctx.syncHoverUI(null);
@@ -3495,7 +3532,7 @@
       if (e.pointerType === 'touch') return;
       if (pos.svgY >= ctx.M.top - 4 && pos.svgX >= ctx.M.left - 12 && pos.svgX <= ctx.M.left + ctx.plotW + 12) {
         uiState.hoverYear = pos.yr;
-        ctx.syncHoverUI(pos.idx);
+        ctx.syncHoverUI(pos.idx, mainSvg);
       } else if (uiState.hoverYear !== null) {
         uiState.hoverYear = null;
         ctx.syncHoverUI(null);
@@ -3514,12 +3551,9 @@
       drag = null;
       if (!ctx) return;
       if (!wasMoved) {
-        uiState.compare = null;
-        uiState.hoverYear = null;
-        notifySelectYear(anchorObj);
+        ctx.selectYear(anchorObj, true);
       } else if (dragMode === 'sweep' && uiState.compare && uiState.compare.a === uiState.compare.b) {
-        uiState.compare = null;
-        notifySelectYear(anchorObj);
+        ctx.selectYear(anchorObj, true);
       } else if (dragMode !== 'touch-tap') {
         ctx.rerender();
       }
@@ -3542,53 +3576,178 @@
     });
   }
 
-  function renderLuckSection(container, data) {
+  function bindLuckSwitchHelp(container, switches) {
+    const doc = root.document;
+    const panel = container.querySelector('.bzv-luck-panel');
+    const groups = switches.map(([switchBtn, id]) => ({
+      switchBtn,
+      wrapper: switchBtn.parentElement,
+      button: container.querySelector(`#bzv${id}HelpBtn`),
+      popover: container.querySelector(`#bzv${id}Popover`)
+    }));
+    const canListenOutside = typeof doc?.addEventListener === 'function' && typeof doc.removeEventListener === 'function';
+    let active = null;
+    let timer = null;
+    let pinned = false;
+
+    function close() {
+      if (!active) return;
+      if (timer !== null && typeof root.clearTimeout === 'function') root.clearTimeout(timer);
+      timer = null;
+      active.popover.hidden = true;
+      active.button.setAttribute('aria-expanded', 'false');
+      active = null;
+      pinned = false;
+      if (canListenOutside) {
+        doc.removeEventListener('click', onOutsideClick);
+        doc.removeEventListener('keydown', onEscape);
+      }
+    }
+    function onOutsideClick(event) {
+      if (!groups.some(({ wrapper }) => wrapper?.contains?.(event.target))) close();
+    }
+    function onEscape(event) {
+      if (event.key === 'Escape') close();
+    }
+    function show(group) {
+      const { popover, wrapper, button } = group;
+      const panelBox = panel?.getBoundingClientRect?.();
+      const wrapperBox = wrapper?.getBoundingClientRect?.();
+      popover.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      if (panelBox && wrapperBox) {
+        const left = Math.max(panelBox.left, 0) + 8;
+        const right = Math.min(panelBox.right, root.innerWidth || panelBox.right) - 8;
+        popover.style.maxWidth = `${Math.max(0, right - left)}px`;
+        const width = popover.offsetWidth;
+        const edge = clamp(wrapperBox.right, left + width, right);
+        popover.style.right = `${wrapperBox.right - edge}px`;
+      }
+    }
+    function activate(group, pin) {
+      close();
+      active = group;
+      pinned = pin;
+      if (canListenOutside) {
+        doc.addEventListener('click', onOutsideClick);
+        doc.addEventListener('keydown', onEscape);
+      }
+    }
+
+    for (const group of groups) {
+      const { switchBtn, wrapper, button, popover } = group;
+      popover.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      button.onclick = () => {
+        if (active === group && !popover.hidden) return close();
+        activate(group, true);
+        show(group);
+      };
+      switchBtn.addEventListener?.('pointerenter', event => {
+        if (event?.pointerType === 'touch' || pinned || active === group) return;
+        if (typeof root.setTimeout !== 'function' || typeof root.clearTimeout !== 'function') return;
+        activate(group, false);
+        timer = root.setTimeout(() => {
+          timer = null;
+          if (switchBtn.isConnected === false) close();
+          else show(group);
+        }, 500);
+      });
+      wrapper?.addEventListener?.('pointerleave', () => {
+        if (active === group && !pinned) close();
+      });
+    }
+    luckSwitchHelpCleanup.set(container, close);
+    return close;
+  }
+
+  function getLuckEnvelopeWidths(years) {
+    const widths = years.map(yr => yr.available ? { up: yr.displayBandUp, down: yr.displayBandDown } : null);
+    let previous = -1;
+    for (let next = 0; next <= years.length; next++) {
+      if (next < years.length && !widths[next]) continue;
+      const before = widths[previous];
+      const after = widths[next];
+      for (let i = previous + 1; i < next; i++) {
+        if (before && after) {
+          const t = (i - previous) / (next - previous);
+          widths[i] = { up: before.up + (after.up - before.up) * t, down: before.down + (after.down - before.down) * t };
+        } else {
+          const edge = before || after;
+          widths[i] = { up: (edge?.up ?? 0) * 0.55, down: (edge?.down ?? 0) * 0.55 };
+        }
+      }
+      previous = next;
+    }
+    return widths;
+  }
+
+  function renderLuckSection(container, data, options) {
     if (!container || !data) return;
-    const model = buildLuckModel(data);
+    luckSwitchHelpCleanup.get(container)?.();
+    const model = buildLuckModel(data, options);
     if (!model || !model.decades.length) return;
     const technical = isTechnicalMode();
     const compactViewport = isCompactViewport();
     const P = PALETTE;
 
-    const allFlat = model.allYears;
+    let displayCumulative = 0;
+    const allFlat = model.allYears.map(yr => {
+      const fadeWeight = uiState.firstDecadeFadeIn && yr.decadeIndex === 0 ? (yr.yearIndexInDecade + 1) / 10 : 1;
+      const displayImpulse = yr.available ? yr.annualImpulse * fadeWeight : 0;
+      const displayPrevPlotLevel = displayCumulative;
+      displayCumulative += displayImpulse;
+      return {
+        ...yr, displayImpulse, displayPrevPlotLevel, displayPlotLevel: displayCumulative,
+        displayLevel: yr.available ? displayCumulative : null,
+        displayBandUp: yr.bandUp * fadeWeight, displayBandDown: yr.bandDown * fadeWeight
+      };
+    });
     if (uiState.selectedYear == null || !allFlat.some(y => y.y === uiState.selectedYear)) {
       const defDc = model.decades[uiState.selectedDecadeIndex] || model.decades[0];
       uiState.selectedYear = defDc && defDc.years[0] ? defDc.years[0].y : allFlat[0].y;
     }
 
     container.innerHTML = `
-      <div class="bzv-panel">
+      <div class="bzv-panel bzv-luck-panel">
         <div class="bzv-block-title">
           <div class="bzv-block-title-main">
-            <strong>大运流年起伏走势</strong>
-            <span>主线承接上年起落 · 与上方大运流年选择双向联动</span>
+            <strong>大运流年运势走势</strong>
+            <span>主线为已知年度推动累计，副柱为当年净力度</span>
           </div>
         </div>
         <div class="bzv-toolbar">
           <div class="bzv-btn-group">
             <button type="button" class="bzv-btn" id="bzvZoomBackBtn">← 返回总览</button>
-            <button type="button" class="bzv-btn" id="bzvZoomCurrentBtn">放大当前十年</button>
             <strong class="bzv-serif" id="bzvLuckScopeLabel" style="font-size:13.5px; color:${P.ink}"></strong>
             <span id="bzvLuckScopeHint" style="font-size:12px; color:${P.muted}"></span>
           </div>
           <div class="bzv-btn-group">
-            <button type="button" class="bzv-btn" id="bzvWickBtn"></button>
-            <button type="button" class="bzv-btn bzv-btn-primary" id="bzvCompareToggleBtn"></button>
+            <div class="bzv-switch-help">
+              <button type="button" class="bzv-btn" id="bzvWickBtn"></button>
+              <button type="button" id="bzvWickHelpBtn" class="bzv-help-dot" aria-label="包络开关说明" aria-controls="bzvWickPopover" aria-expanded="false">?</button>
+              <div id="bzvWickPopover" class="bzv-help-popover" role="tooltip" hidden>黑线上下这层浅金色阴影带，用来表示这一年背后正反两股力量的拉扯幅度。有些年份净变化接近零、黑线看起来走平，但背后动静其实很大，阴影带就会变宽；关闭后只保留干净的主线。</div>
+            </div>
+            <div class="bzv-switch-help">
+              <button type="button" class="bzv-btn" id="bzvFadeInBtn"></button>
+              <button type="button" id="bzvFadeInHelpBtn" class="bzv-help-dot" aria-label="起步体感淡入说明" aria-controls="bzvFadeInPopover" aria-expanded="false">?</button>
+              <div id="bzvFadeInPopover" class="bzv-help-popover" role="tooltip" hidden>「天时客观强弱」和「人在不同年纪的个人体感」是两层事。孩子几岁时走差运，自己确实不会亏钱破产，个人体感较弱；但家庭变故、父母承压、搬家、生病依然可能发生——能量不是不存在，而是小时候多半由家庭环境替你扛着。因此底层客观账本保持原样（不会把“小时候真的家里出大事”的命盘抹平），只在看图展示层把第一步大运按年份从 10% 逐年淡入到 100%，线条也由浅淡虚线渐变到正常实线；随时关闭「起步体感淡入」开关，即可一键还原 100% 原始客观走势。</div>
+            </div>
           </div>
         </div>
         <div class="bzv-luck-body">
           <div class="bzv-luck-stage">
             <div class="bzv-luck-scroll" id="bzvLuckScroll">
               <div class="bzv-luck-track" id="bzvLuckTrack">
-                <svg id="bzvLuckMainSvg" viewBox="0 0 920 342" class="bzv-svg bzv-luck-main-svg" role="img" aria-label="大运流年承接式起伏走势图"></svg>
+                <svg id="bzvLuckMainSvg" viewBox="0 0 920 342" class="bzv-svg bzv-luck-main-svg" role="img" aria-label="大运流年运势走势图"></svg>
                 <div class="bzv-luck-delta-wrap">
-                  <div class="bzv-delta-sticky-label">单年涨跌（绿升 · 红降 · 点平）</div>
-                  <svg id="bzvLuckDeltaSvg" viewBox="0 0 920 ${compactViewport ? 62 : 76}" class="bzv-svg" role="img" aria-label="单年推升与回撤副图"></svg>
+                  <div class="bzv-delta-sticky-label">当年净力度（绿助力 · 红阻力 · 点净零 · × 待判）</div>
+                  <svg id="bzvLuckDeltaSvg" viewBox="0 0 920 ${compactViewport ? 62 : 76}" class="bzv-svg" role="img" aria-label="年度柱，与综合主线共用年份坐标"></svg>
                 </div>
               </div>
             </div>
             <div id="bzvLuckTooltip" class="bzv-tooltip bzv-hidden"></div>
-            <div class="bzv-mobile-hint is-active" id="bzvLuckMobileHint">← 左右滑动看十年起伏 · 点大运标题可放大 →</div>
+            <div class="bzv-mobile-hint is-active" id="bzvLuckMobileHint">← 左右滑动看走势 · 点年份看详情 →</div>
           </div>
           <div class="bzv-luck-footer">
             <span id="bzvLuckLegend"></span>
@@ -3597,132 +3756,147 @@
               <span class="bzv-stepper-label" id="bzvStepperLabel"></span>
               <button type="button" class="bzv-btn" id="bzvNextYearBtn">后一年 →</button>
             </div>
+            <button type="button" class="bzv-btn bzv-btn-primary" id="bzvInlineCompareBtn" aria-controls="bzvComparePanel"></button>
           </div>
+          <div class="bzv-detail-card" id="bzvWealthDetail"></div>
           <details class="bzv-detail-card" id="bzvAmplitudeDetail"></details>
           <div id="bzvComparePanel" class="bzv-compare-panel bzv-hidden"></div>
         </div>
       </div>
     `;
 
-    const rerender = () => renderLuckSection(container, data);
+    const rerender = () => renderLuckSection(container, data, options);
     if (uiState.luckZoomDecade !== null && (uiState.luckZoomDecade < 0 || uiState.luckZoomDecade >= model.decades.length)) {
       uiState.luckZoomDecade = null;
     }
 
-    const visibleDecades = uiState.luckZoomDecade === null ? model.decades : [model.decades[uiState.luckZoomDecade]];
-    const flatYears = [];
-    visibleDecades.forEach(dc => { dc.years.forEach(yr => flatYears.push(yr)); });
+    const windowSize = Math.min(30, allFlat.length);
+    function setWindow(startIdx) {
+      const start = clamp(startIdx, 0, allFlat.length - windowSize);
+      uiState.luckWindow = { startIdx: start, endIdx: start + windowSize - 1 };
+    }
+    const isDecade = uiState.luckZoomDecade !== null;
+    if (isDecade) uiState.luckWindow = null;
+    if (uiState.luckWindow) {
+      const idx = allFlat.findIndex(yr => yr.y === uiState.selectedYear);
+      const { startIdx, endIdx } = uiState.luckWindow;
+      setWindow(idx < startIdx ? idx : idx > endIdx ? idx - windowSize + 1 : startIdx);
+    }
+    const isOverview = !isDecade && !uiState.luckWindow;
+    const flatYears = isDecade ? allFlat.filter(yr => yr.decadeIndex === uiState.luckZoomDecade)
+      : uiState.luckWindow ? allFlat.slice(uiState.luckWindow.startIdx, uiState.luckWindow.endIdx + 1)
+      : allFlat;
+    const decadeSlices = model.decades.map(dc => ({
+      dc, years: flatYears.filter(yr => yr.decadeIndex === dc.index)
+    })).filter(slice => slice.years.length);
+    if (uiState.compare && [uiState.compare.a, uiState.compare.b].some(y => !flatYears.some(yr => yr.y === y))) {
+      uiState.compare = null;
+    }
+    if (!flatYears.some(yr => yr.y === uiState.selectedYear)) uiState.selectedYear = flatYears[0].y;
 
     const trackEl = container.querySelector('#bzvLuckTrack');
     if (trackEl && trackEl.classList) {
-      trackEl.classList.toggle('is-decade-zoom', uiState.luckZoomDecade !== null);
+      trackEl.classList.toggle('is-decade-zoom', isDecade);
     }
 
     const zoomBackBtn = container.querySelector('#bzvZoomBackBtn');
-    const zoomCurBtn = container.querySelector('#bzvZoomCurrentBtn');
     const scopeLabel = container.querySelector('#bzvLuckScopeLabel');
     const scopeHint = container.querySelector('#bzvLuckScopeHint');
-    zoomBackBtn.hidden = uiState.luckZoomDecade === null;
+    zoomBackBtn.hidden = isOverview;
     zoomBackBtn.onclick = () => {
       uiState.luckZoomDecade = null;
+      uiState.luckWindow = null;
       rerender();
     };
-    if (zoomCurBtn) {
-      zoomCurBtn.hidden = uiState.luckZoomDecade !== null;
-      zoomCurBtn.onclick = () => {
-        const dcIdx = clamp(Number(uiState.selectedDecadeIndex) || 0, 0, model.decades.length - 1);
-        uiState.luckZoomDecade = dcIdx;
-        rerender();
-      };
-    }
-    if (uiState.luckZoomDecade === null) {
+    if (isOverview) {
       scopeLabel.textContent = `全盘总览（${model.decades.length}步大运）`;
-      scopeHint.textContent = '点大运标题可放大十年 · 拖动图面可框选对比';
-    } else {
+      scopeHint.textContent = '点年份看前后30年 · 点大运标题看十年';
+    } else if (isDecade) {
       const zDc = model.decades[uiState.luckZoomDecade];
       const lbl = technical ? zDc.natalProLbl : zDc.natalStdLbl;
       scopeLabel.textContent = `${zDc.gz}大运（${lbl}）`;
       scopeHint.textContent = `${zDc.startYear}–${zDc.endYear} · ${zDc.startAge}–${zDc.endAge}岁`;
+    } else {
+      scopeLabel.textContent = `${flatYears.length}年视图`;
+      scopeHint.textContent = `${flatYears[0].y}–${flatYears.at(-1).y}`;
     }
 
     const wickBtn = container.querySelector('#bzvWickBtn');
+    const fadeBtn = container.querySelector('#bzvFadeInBtn');
+    const closeSwitchHelp = bindLuckSwitchHelp(container, [[wickBtn, 'Wick'], [fadeBtn, 'FadeIn']]);
     wickBtn.textContent = uiState.showWicks ? '包络：开' : '包络：关';
+    wickBtn.setAttribute('aria-pressed', String(uiState.showWicks));
     wickBtn.onclick = () => {
+      closeSwitchHelp();
       uiState.showWicks = !uiState.showWicks;
       rerender();
+      container.querySelector('#bzvWickBtn').focus?.({ preventScroll: true });
     };
 
-    const compareBtn = container.querySelector('#bzvCompareToggleBtn');
-    const isCmpOn = !!uiState.compare;
-    compareBtn.textContent = isCmpOn ? '⇄ 退出对比' : '⇄ 跨年对比';
-    compareBtn.classList.toggle('is-comparing', isCmpOn);
-    compareBtn.onclick = () => {
-      if (uiState.compare) {
-        uiState.compare = null;
-      } else {
-        const minY = flatYears[0].y;
-        const maxY = flatYears[flatYears.length - 1].y;
-        const anchorY = uiState.selectedYear && uiState.selectedYear >= minY && uiState.selectedYear <= maxY
-          ? uiState.selectedYear
-          : model.currentYear;
-        let defB = clamp(anchorY, minY + 1, maxY);
-        let defA = clamp(defB - 8, minY, defB - 1);
-        if (uiState.luckZoomDecade !== null) {
-          defA = flatYears[Math.min(2, flatYears.length - 1)].y;
-          defB = flatYears[Math.max(0, flatYears.length - 3)].y;
-          if (defA >= defB && flatYears.length >= 2) {
-            defA = flatYears[0].y;
-            defB = flatYears[flatYears.length - 1].y;
-          }
-        }
-        uiState.compare = { a: Math.min(defA, defB), b: Math.max(defA, defB) };
-      }
+    fadeBtn.textContent = `起步体感淡入：${uiState.firstDecadeFadeIn ? '开' : '关'}`;
+    fadeBtn.setAttribute('aria-pressed', String(uiState.firstDecadeFadeIn));
+    fadeBtn.onclick = () => {
+      closeSwitchHelp();
+      uiState.firstDecadeFadeIn = !uiState.firstDecadeFadeIn;
       rerender();
+      container.querySelector('#bzvFadeInBtn').focus?.({ preventScroll: true });
+    };
+    const compareBtn = container.querySelector('#bzvInlineCompareBtn');
+    function exitComparison() {
+      uiState.compare = null;
+      rerender();
+      container.querySelector('#bzvInlineCompareBtn').focus?.({ preventScroll: true });
+    }
+    compareBtn.disabled = flatYears.length < 2;
+    compareBtn.onclick = () => {
+      if (uiState.compare) return exitComparison();
+      const idx = flatYears.findIndex(yr => yr.y === uiState.selectedYear);
+      const other = idx + 1 < flatYears.length ? idx + 1 : idx - 1;
+      if (other >= 0) {
+        uiState.compare = { a: uiState.selectedYear, b: flatYears[other].y };
+        rerender();
+        container.querySelector('#bzvInlineCompareBtn').focus?.({ preventScroll: true });
+      }
     };
 
-    const M = { left: 48, right: 66, top: 42, bottom: 34 };
-    const W = 920, H = 342;
+    const decadeHeader = 42;
+    const M = { left: 48, right: 34, top: decadeHeader + (uiState.compare ? 47 : 0), bottom: uiState.compare ? 62 : 34 };
+    const W = 920, H = M.top + 266 + M.bottom;
     const plotW = W - M.left - M.right;
     const plotH = H - M.top - M.bottom;
     const n = flatYears.length;
     const stepX = n > 1 ? plotW / (n - 1) : plotW;
     const xOf = idx => (n === 1 ? M.left + plotW / 2 : M.left + idx * stepX);
 
-    const extVals = flatYears.flatMap(y => [y.level - y.bandDown, y.level + y.bandUp]);
-    extVals.push(0);
-    const rawMin = Math.min.apply(null, extVals);
-    const rawMax = Math.max.apply(null, extVals);
-    const rawSpan = Math.max(4, rawMax - rawMin);
-    const pad = Math.max(0.9, rawSpan * 0.14);
-    const yMin = rawMin - pad;
-    const yMax = rawMax + pad;
-    const yOf = val => M.top + ((yMax - val) / (yMax - yMin)) * plotH;
-    const yZero = yOf(0);
+    const envelopeWidths = getLuckEnvelopeWidths(flatYears);
+    const extVals = flatYears.flatMap((yr, idx) => {
+      const { up, down } = envelopeWidths[idx];
+      return [yr.displayPrevPlotLevel, yr.displayPlotLevel - down, yr.displayPlotLevel + up];
+    });
+    function levelScale(values, top, height) {
+      const min = Math.min(0, ...values), max = Math.max(0, ...values);
+      const span = Math.max(2.4, max - min), pad = Math.max(0.45, span * 0.10);
+      const yMin = (min + max - span) / 2 - pad;
+      const yMax = (min + max + span) / 2 + pad;
+      return value => top + (yMax - value) * height / (yMax - yMin);
+    }
+    const yOf = levelScale(extVals, M.top, plotH);
 
     const mainSvg = container.querySelector('#bzvLuckMainSvg');
+    mainSvg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     bindLuckPointerEvents(mainSvg);
-
-    const defs = svgEl('defs');
-    const posGrad = svgEl('linearGradient', { id: 'bzvAreaPosGrad', x1: '0', y1: '0', x2: '0', y2: '1' });
-    posGrad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': P.pos, 'stop-opacity': '0.26' }));
-    posGrad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': P.pos, 'stop-opacity': '0.02' }));
-    const negGrad = svgEl('linearGradient', { id: 'bzvAreaNegGrad', x1: '0', y1: '0', x2: '0', y2: '1' });
-    negGrad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': P.neg, 'stop-opacity': '0.02' }));
-    negGrad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': P.neg, 'stop-opacity': '0.26' }));
-    const clipAbove = svgEl('clipPath', { id: 'bzvClipAboveZero' });
-    clipAbove.appendChild(svgEl('rect', { x: M.left, y: M.top, width: plotW, height: Math.max(0, yZero - M.top) }));
-    const clipBelow = svgEl('clipPath', { id: 'bzvClipBelowZero' });
-    clipBelow.appendChild(svgEl('rect', { x: M.left, y: yZero, width: plotW, height: Math.max(0, M.top + plotH - yZero) }));
-    defs.appendChild(posGrad);
-    defs.appendChild(negGrad);
-    defs.appendChild(clipAbove);
-    defs.appendChild(clipBelow);
-    mainSvg.appendChild(defs);
+    function selectYear(yr, fromChart = false) {
+      if (fromChart && isOverview) setWindow(allFlat.indexOf(yr) - 14);
+      uiState.hoverYear = null;
+      if (isDecade || uiState.luckZoomDecade !== null) uiState.luckZoomDecade = yr.decadeIndex;
+      notifySelectYear(yr);
+      if (container.querySelector('#bzvLuckMainSvg') === mainSvg) rerender();
+    }
 
     const bandGroup = svgEl('g');
     let cursor = 0;
-    visibleDecades.forEach((dc, dIdx) => {
-      const len = dc.years.length;
+    decadeSlices.forEach(({ dc, years }, dIdx) => {
+      const len = years.length;
       const xStart = cursor === 0 ? M.left : (xOf(cursor - 1) + xOf(cursor)) / 2;
       const xEnd = cursor + len >= n ? M.left + plotW : (xOf(cursor + len - 1) + xOf(cursor + len)) / 2;
       const bw = xEnd - xStart;
@@ -3746,13 +3920,13 @@
       const cxBand = (xStart + xEnd) / 2;
       const statusDot = dc.natalDir === 'positive' ? P.pos : (dc.natalDir === 'negative' ? P.neg : P.mix);
       const dcLbl = technical ? dc.natalProLbl : dc.natalStdLbl;
-      const hdr = svgEl('g', { style: uiState.luckZoomDecade === null ? 'cursor:pointer' : 'default' });
-      hdr.appendChild(svgEl('title', {}, `${dc.gz}大运（${dcLbl}）\n${dc.startYear}–${dc.endYear} · ${dc.startAge}–${dc.endAge}岁\n点击放大该大运`));
+      const hdr = svgEl('g', { style: isOverview ? 'cursor:pointer' : 'default', 'data-decade-header': dc.index });
+      hdr.appendChild(svgEl('title', {}, `${dc.gz}大运（${dcLbl}）\n${years[0].y}–${years.at(-1).y} · ${years[0].a}–${years.at(-1).a}岁${isOverview ? '\n点击放大该大运' : ''}`));
       hdr.appendChild(svgEl('rect', {
-        x: xStart.toFixed(1), y: 2, width: bw.toFixed(1), height: M.top - 4, fill: 'transparent'
+        x: xStart.toFixed(1), y: 2, width: bw.toFixed(1), height: decadeHeader - 4, fill: 'transparent'
       }));
 
-      if (uiState.luckZoomDecade === null) {
+      if (!isDecade) {
         hdr.appendChild(svgEl('circle', {
           cx: (cxBand - 15).toFixed(1), cy: 14, r: 3.1, fill: statusDot
         }));
@@ -3763,7 +3937,7 @@
         hdr.appendChild(svgEl('text', {
           x: cxBand.toFixed(1), y: 33, 'text-anchor': 'middle', 'font-size': 10,
           fill: P.muted, class: 'bzv-tabular'
-        }, `${dc.startAge}–${dc.endAge}岁`));
+        }, `${years[0].a}–${years.at(-1).a}岁`));
       } else {
         hdr.appendChild(svgEl('circle', {
           cx: (cxBand - 54).toFixed(1), cy: 14.5, r: 3.5, fill: statusDot
@@ -3778,14 +3952,11 @@
         }, `${dc.startYear}–${dc.endYear} · ${dc.startAge}–${dc.endAge}岁`));
       }
 
-      if (uiState.luckZoomDecade === null) {
+      if (isOverview) {
         hdr.addEventListener('click', () => {
           uiState.luckZoomDecade = dc.index;
-          if (uiState.compare && (uiState.compare.a < dc.startYear || uiState.compare.b > dc.endYear)) {
-            uiState.compare = null;
-          }
           if (uiState.selectedYear < dc.startYear || uiState.selectedYear > dc.endYear) {
-            notifySelectYear(dc.years[0]);
+            selectYear(years[0]);
           } else {
             rerender();
           }
@@ -3795,69 +3966,50 @@
       cursor += len;
     });
     mainSvg.appendChild(bandGroup);
-
-    const stepTick = rawSpan > 14 ? 4 : (rawSpan > 7 ? 2 : 1);
-    const tickVals = [0];
-    for (let t = stepTick; t <= yMax - 0.2; t += stepTick) tickVals.push(t);
-    for (let t = -stepTick; t >= yMin + 0.2; t -= stepTick) tickVals.push(t);
-    tickVals.sort((a, b) => b - a).forEach(val => {
-      const y = yOf(val);
-      const isZero = val === 0;
-      mainSvg.appendChild(svgEl('line', {
-        x1: M.left, y1: y.toFixed(1), x2: M.left + plotW, y2: y.toFixed(1),
-        stroke: isZero ? P.textDark : P.line,
-        'stroke-width': isZero ? 1.1 : 0.75,
-        'stroke-dasharray': isZero ? '4 4' : 'none',
-        opacity: isZero ? 0.42 : 0.55
+    const pts = flatYears.map((yr, idx) => ({ x: xOf(idx), y: yOf(yr.displayPlotLevel), yr }));
+    function referenceLine(svg, y, label) {
+      const line = svgEl('line', {
+        x1: M.left, y1: y, x2: M.left + plotW, y2: y, stroke: P.line, opacity: 0.75
+      });
+      line.appendChild(svgEl('title', {}, label));
+      svg.appendChild(line);
+    }
+    referenceLine(mainSvg, yOf(0), '累计起点');
+    if (uiState.showWicks) {
+      const upper = pts.map(({ x, yr }, idx) => ({ x, y: yOf(yr.displayPlotLevel + envelopeWidths[idx].up) }));
+      const lower = pts.map(({ x, yr }, idx) => ({ x, y: yOf(yr.displayPlotLevel - envelopeWidths[idx].down) }));
+      mainSvg.appendChild(svgEl('path', {
+        d: `${monotonePath(upper)} ${monotonePath(lower.reverse()).replace(/^M/, 'L')} Z`,
+        fill: P.gold, opacity: 0.18, stroke: n === 1 ? P.gold : undefined,
+        'stroke-width': n === 1 ? 3 : undefined, 'data-amplitude-band': 'true'
       }));
-      mainSvg.appendChild(svgEl('text', {
-        x: M.left - 8, y: (y + 4).toFixed(1), 'text-anchor': 'end',
-        'font-size': 11, fill: isZero ? P.textDark : P.muted, 'font-weight': isZero ? 600 : 400, class: 'bzv-tabular'
-      }, val > 0 ? `+${val}` : `${val}`));
-      if (isZero) {
-        mainSvg.appendChild(svgEl('text', {
-          x: M.left + plotW + 8, y: (y + 4).toFixed(1), 'text-anchor': 'start',
-          'font-size': 11, fill: P.muted, 'font-weight': 500
-        }, '起运基准'));
-      }
-    });
-
-    const pts = flatYears.map((yr, idx) => ({ x: xOf(idx), y: yOf(yr.level), yr }));
-    const axisLabelY = M.top + plotH / 2;
-    mainSvg.appendChild(svgEl('text', { x: 14, y: axisLabelY, transform: `rotate(-90 14 ${axisLabelY})`, 'text-anchor': 'middle', 'font-size': 11, fill: P.muted }, '累计走势示意'));
-    const runs = [];
-    pts.forEach((p, i) => {
-      if (p.yr.available) {
-        if (i === 0 || !pts[i - 1].yr.available) runs.push([]);
-        runs[runs.length - 1].push(p);
-      } else {
-        const marker = svgEl('circle', { cx: p.x, cy: p.y, r: 3, fill: P.paper, stroke: P.muted, 'data-pending-year': p.yr.y });
-        marker.appendChild(svgEl('title', {}, `${p.yr.y} 待判；累计基准承接上年，不作平年`));mainSvg.appendChild(marker);
-        if (i === 0 || pts[i - 1].yr.available) mainSvg.appendChild(svgEl('text', { x: p.x, y: p.y - 10, 'font-size': 10, fill: P.muted }, '待判'));
-      }
-      if (i > 0 && (!p.yr.available || !pts[i - 1].yr.available)) {
-        mainSvg.appendChild(svgEl('path', { d: monotonePath([pts[i - 1], p]), fill: 'none', stroke: P.muted, 'stroke-width': 1.5, 'stroke-dasharray': '4 4', 'data-pending-bridge': p.yr.y }));
-      }
-    });
-    runs.forEach(run => {
-      const lineD = monotonePath(run);
-      if (run.length >= 2) {
-        const areaD = `${lineD} L ${run[run.length - 1].x.toFixed(1)} ${yZero.toFixed(1)} L ${run[0].x.toFixed(1)} ${yZero.toFixed(1)} Z`;
-        mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaPosGrad)', 'clip-path': 'url(#bzvClipAboveZero)' }));
-        mainSvg.appendChild(svgEl('path', { d: areaD, fill: 'url(#bzvAreaNegGrad)', 'clip-path': 'url(#bzvClipBelowZero)' }));
-      }
-      if (uiState.showWicks) {
-        if (run.length >= 2) {
-          const upper = run.map(p => ({ x: p.x, y: yOf(p.yr.level + p.yr.bandUp) }));
-          const lower = run.map(p => ({ x: p.x, y: yOf(p.yr.level - p.yr.bandDown) }));
-          mainSvg.appendChild(svgEl('path', { d: `${monotonePath(upper)} ${monotonePath(lower.reverse()).replace(/^M/, 'L')} Z`, fill: P.gold, opacity: 0.18, stroke: 'none', 'data-amplitude-band': 'true' }));
-        } else {
-          const p = run[0];
-          mainSvg.appendChild(svgEl('line', { x1: p.x, x2: p.x, y1: yOf(p.yr.level + p.yr.bandUp), y2: yOf(p.yr.level - p.yr.bandDown), stroke: P.gold, 'stroke-width': 3, 'data-amplitude-band': 'true' }));
-        }
-      }
-      mainSvg.appendChild(svgEl('path', { d: lineD, fill: 'none', stroke: P.textDark, 'stroke-width': uiState.luckZoomDecade !== null ? 2.5 : 2.1, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-trend-run': 'true' }));
-    });
+    }
+    function drawYearLine() {
+      const fadeDashes = ['3 5', '5 4', '7 3', '10 2', 'none'];
+      pts.forEach((p, idx) => {
+        const prev = pts[idx - 1];
+        const pending = !p.yr.available;
+        const fade = !pending && uiState.firstDecadeFadeIn && p.yr.decadeIndex === 0;
+        const yearInDecade = p.yr.yearIndexInDecade;
+        mainSvg.appendChild(svgEl('line', {
+          x1: prev ? prev.x : Math.max(0, p.x - Math.min(20, stepX / 2)),
+          y1: prev ? prev.y : yOf(p.yr.displayPrevPlotLevel),
+          x2: p.x, y2: p.y, stroke: P.textDark, 'stroke-width': 2,
+          'stroke-opacity': pending ? 0.45 : fade ? (0.30 + 0.70 * yearInDecade / 9).toFixed(2) : 1,
+          'stroke-dasharray': pending ? '3 2.5' : fade ? fadeDashes[Math.floor(yearInDecade / 2)] : 'none',
+          'data-year-segment': p.yr.y
+        }));
+      });
+      pts.forEach(({x, y, yr}) => {
+        if (yr.available) return;
+        const marker = svgEl('circle', { cx: x, cy: y, r: clamp(stepX * 0.22, 1.8, 3.0),
+          fill: P.paper, stroke: P.textDark, 'stroke-opacity': 0.58, 'stroke-width': 1.3, 'data-pending-year': yr.y });
+        const reasons = technical ? yr.lines.resPro : yr.lines.resStd;
+        marker.appendChild(svgEl('title', {}, [`${yr.y} 待判，沿用上一绘图高度`, ...reasons].join('；')));
+        mainSvg.appendChild(marker);
+      });
+    }
+    drawYearLine();
 
     const nowY = model.currentYear;
     const idxNow = flatYears.findIndex(y => y.y === nowY);
@@ -3882,14 +4034,7 @@
     const dotsG = svgEl('g');
     pts.forEach((p, idx) => {
       const yr = p.yr;
-      const isMixed = yr.d === 'm';
-      const dotColor = yr.d === 'p' ? P.pos : (yr.d === 'n' ? P.neg : P.mix);
-
-      if (uiState.luckZoomDecade !== null) {
-        dotsG.appendChild(svgEl('circle', {
-          cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: isMixed ? 4.8 : 4.2,
-          fill: isMixed ? P.paper : dotColor, stroke: isMixed ? P.mix : P.paper, 'stroke-width': isMixed ? 2 : 1.2
-        }));
+      if (isDecade) {
         dotsG.appendChild(svgEl('text', {
           x: p.x.toFixed(1), y: M.top + plotH + 15, 'text-anchor': 'middle',
           'font-size': 11, 'font-weight': 600, fill: P.textDark, class: 'bzv-tabular'
@@ -3899,19 +4044,7 @@
           'font-size': 11, fill: P.muted
         }, yr.gz));
       } else {
-        const prevV = idx > 0 ? flatYears[idx - 1].level : yr.level;
-        const nextV = idx < n - 1 ? flatYears[idx + 1].level : yr.level;
-        const isTurn = (idx > 0 && idx < n - 1) &&
-          ((yr.level > prevV && yr.level >= nextV) || (yr.level < prevV && yr.level <= nextV));
-        if (isTurn || yr.y === nowY) {
-          dotsG.appendChild(svgEl('circle', {
-            cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: yr.y === nowY ? 4 : 2.7,
-            fill: yr.y === nowY ? P.gold : (isMixed ? P.paper : dotColor),
-            stroke: isMixed && yr.y !== nowY ? P.mix : P.paper,
-            'stroke-width': isMixed ? 1.8 : 1.1
-          }));
-        }
-        if (idx % 10 === 0 || idx === n - 1) {
+        if (idx % (isOverview ? 10 : 5) === 0 || idx === n - 1) {
           dotsG.appendChild(svgEl('text', {
             x: p.x.toFixed(1), y: M.top + plotH + 18, 'text-anchor': 'middle',
             'font-size': 11, fill: P.muted, class: 'bzv-tabular'
@@ -3931,7 +4064,7 @@
     const focusRing = svgEl('circle', {
       cx: actPt.x.toFixed(1), cy: actPt.y.toFixed(1), r: 6.5,
       fill: 'none', stroke: P.gold, 'stroke-width': 2.2,
-      opacity: uiState.compare ? 0 : 1
+      opacity: uiState.compare ? 0 : 1, 'data-focus-ring': 'true'
     });
     mainSvg.appendChild(crossLine);
     mainSvg.appendChild(focusRing);
@@ -3943,11 +4076,11 @@
     if (typeof deltaSvg.setAttribute === 'function') {
       deltaSvg.setAttribute('viewBox', `0 0 920 ${dH}`);
     }
-    const maxStep = Math.max(1.2, Math.max.apply(null, flatYears.map(y => Math.abs(y.netStep))));
+    const maxStep = Math.max(1.2, ...flatYears.map(yr => Math.abs(yr.displayImpulse)));
     if (!compactViewport) {
       deltaSvg.appendChild(svgEl('text', {
         x: M.left, y: 13, 'font-size': 11, 'font-weight': 600, fill: P.muted
-      }, '单年涨跌（绿升 · 红降 · 点平）'));
+      }, '当年净力度（绿助力 · 红阻力 · 点净零 · × 待判）'));
     }
     const deltaCompareG = svgEl('g');
     deltaSvg.appendChild(deltaCompareG);
@@ -3958,23 +4091,24 @@
     flatYears.forEach((yr, idx) => {
       const cxB = xOf(idx);
       const isAct = yr.y === (uiState.hoverYear || uiState.selectedYear);
-      const mag = (Math.abs(yr.netStep) / maxStep) * 22;
+      const val = yr.displayImpulse;
+      const mag = yr.available ? (Math.abs(val) / maxStep) * 22 : null;
       if (!yr.available) {
         const marker = svgEl('text', { x: cxB, y: dZero + 3, 'text-anchor': 'middle', fill: P.muted, 'font-size': 10, 'data-pending-year': yr.y }, '×');
         marker.appendChild(svgEl('title', {}, `${yr.y} 待判`));deltaSvg.appendChild(marker);
-      } else if (yr.netStep > 0) {
+      } else if (val > 0) {
         deltaSvg.appendChild(svgEl('rect', {
-          x: (cxB - barW / 2).toFixed(1), y: (dZero - mag).toFixed(1), width: barW.toFixed(1), height: mag.toFixed(1), rx: 1.5,
-          fill: P.pos, opacity: isAct ? 1 : 0.75
+          x: cxB - barW / 2, y: dZero - mag, width: barW, height: mag, rx: 1.5,
+          fill: P.pos, opacity: isAct ? 1 : 0.75, 'data-year-bar': yr.y, 'data-annual-impulse': val
         }));
-      } else if (yr.netStep < 0) {
+      } else if (val < 0) {
         deltaSvg.appendChild(svgEl('rect', {
-          x: (cxB - barW / 2).toFixed(1), y: dZero, width: barW.toFixed(1), height: mag.toFixed(1), rx: 1.5,
-          fill: P.neg, opacity: isAct ? 1 : 0.75
+          x: cxB - barW / 2, y: dZero, width: barW, height: mag, rx: 1.5,
+          fill: P.neg, opacity: isAct ? 1 : 0.75, 'data-year-bar': yr.y, 'data-annual-impulse': val
         }));
       } else {
         deltaSvg.appendChild(svgEl('circle', {
-          cx: cxB.toFixed(1), cy: dZero, r: 2.3, fill: P.mix, opacity: 0.85
+          cx: cxB, cy: dZero, r: 2.3, fill: P.mix, opacity: 0.85, 'data-year-bar': yr.y, 'data-annual-impulse': val
         }));
       }
     });
@@ -3989,7 +4123,61 @@
     mainSvg.appendChild(compareLayerG);
 
     const tooltip = container.querySelector('#bzvLuckTooltip');
-    function syncHoverUI(idx) {
+    const wealthCard = container.querySelector('#bzvWealthDetail');
+    function fmtRange(range) {
+      if (!range || range.min == null || range.max == null) return '待判';
+      return range.min === range.max ? formatSigned(range.min) : `${formatSigned(range.min)}~${formatSigned(range.max)}`;
+    }
+    function settledRangeDetails(yr) {
+      const m = yr.wealthMerge;
+      if (!yr.available || !m || m.reversalRisk) return [];
+      return [['基础综合推动', m.baseRange], ['合算推动', m.combinedRange]].flatMap(([label, range]) =>
+        range && !range.pending && Number.isFinite(range.min) && Number.isFinite(range.max) && range.min !== range.max
+          ? [`${label}区间 ${fmtRange(range)}（按最小确定幅度 ${formatSigned(range.guaranteed)} 入账）`] : []);
+    }
+    function wealthDetail(yr) {
+      const m = yr.wealthMerge;
+      const details = yr.wealthReasons.slice(0, 2).map(item => technical ? item.text : item.plainText || item.text);
+      if (!yr.wealthAvailable) details.push(...yr.wealthUncertainty);
+      if (!details.length && yr.wealthNote) details.push(yr.wealthNote);
+      let meta = '';
+      if (m) {
+        const pct = Math.round((m.weight || 0) * 100);
+        if (m.reversalRisk) {
+          const wMin = m.wealthRange && m.wealthRange.min != null ? m.weight * m.wealthRange.min : 0;
+          const wMax = m.wealthRange && m.wealthRange.max != null ? m.weight * m.wealthRange.max : 0;
+          meta = `基础综合推动 ${fmtRange(m.baseRange)} · 财运加权（${pct}%）${wMin === wMax ? formatSigned(wMin) : `${formatSigned(wMin)}~${formatSigned(wMax)}`} · 反转风险：可行情景出现涨跌反转，该年综合主线按待判画虚线占位`;
+        } else if (m.wealthPending) {
+          meta = `当年财运待判，未纳入财运加权${yr.available ? '（基础综合推动照常显示）' : ''}`;
+        } else if (!yr.available && yr.wealthAvailable && yr.wealthImpulse !== 0) {
+          meta = `当年财运净力度 ${formatSigned(yr.wealthImpulse)}（当年综合待判，未并入主线）`;
+        } else if (m.wealthApplied) {
+          const baseVal = m.appliedBase ?? (m.baseRange && m.baseRange.guaranteed);
+          meta = `当年财运净力度 ${formatSigned(yr.wealthImpulse)} · 基础推动 ${formatSigned(baseVal)} · 财运加权（${pct}%）${formatSigned(m.appliedDelta)}` +
+            (m.wealthBounded && m.wealthRange ? ` · 已锁定区间 ${fmtRange(m.wealthRange)}（按合算保证值对应的情景加权）` : '');
+        } else if (m.weight === 0) {
+          meta = `当年财运净力度 ${formatSigned(yr.wealthImpulse)} · 财运权重已调回 0%，还原基础综合推动`;
+        } else if (yr.wealthAvailable && yr.wealthImpulse === 0) {
+          meta = `当年财运净力度 ${formatSigned(yr.wealthImpulse)} · 财路助阻相抵或持平`;
+        } else if (yr.wealthAvailable) {
+          meta = `当年财运净力度 ${formatSigned(yr.wealthImpulse)}（当年未并入主线）`;
+        } else {
+          meta = '当年财运待判，未纳入财运加权';
+        }
+      } else {
+        meta = yr.wealthAvailable ? `当年财运净力度 ${formatSigned(yr.wealthImpulse)}` : '当年财运待判，未纳入财运加权';
+      }
+      return `<strong>${yr.y} ${esc(yr.gz)} · ${esc(yr.wealthLabel || '财路待判')}</strong>` +
+        `<div class="bzv-tooltip-meta">${esc([meta, ...settledRangeDetails(yr)].join(' · '))}</div>` +
+        details.map(line => `<div class="bzv-tooltip-line">${esc(line)}</div>`).join('');
+    }
+    function selectedInterval() {
+      if (!uiState.compare) return null;
+      const a = allFlat.find(yr => yr.y === uiState.compare.a);
+      const b = allFlat.find(yr => yr.y === uiState.compare.b);
+      return a && b ? { a, b, ...compareLuckInterval(allFlat, a, b) } : null;
+    }
+    function syncHoverUI(idx, sourceSvg = mainSvg) {
       if (idx === null || idx === undefined) {
         tooltip.classList.add('bzv-hidden');
         const curIdx = Math.max(0, flatYears.findIndex(y => y.y === uiState.selectedYear));
@@ -4016,36 +4204,38 @@
 
       const dirLbl = yr.available ? (technical ? yr.proLbl : yr.stdLbl) : '待判';
       const badgeCls = yr.d === 'p' ? 'bzv-dir-pos' : (yr.d === 'n' ? 'bzv-dir-neg' : 'bzv-dir-mix');
-      const stepStr = yr.available ? `${yr.netStep >= 0 ? '+' : ''}${yr.netStep.toFixed(2)}` : '待判（沿用累计基准）';
       const posL = technical ? yr.lines.posPro : yr.lines.posStd;
       const negL = technical ? yr.lines.negPro : yr.lines.negStd;
 
+      const comparison = selectedInterval();
+      const pendingReasons = yr.available ? [] : (technical ? yr.lines.resPro : yr.lines.resStd);
       tooltip.innerHTML = `
         <div class="bzv-tooltip-head">
           <span>${yr.y} ${esc(yr.gz)}（${yr.a}岁）</span>
-          <span class="${badgeCls}">${esc(dirLbl)}</span>
+          <span class="${badgeCls}">当年状态 ${esc(dirLbl)}</span>
         </div>
-        <div class="bzv-tooltip-meta">水位 ${yr.level >= 0 ? '+' : ''}${yr.level.toFixed(2)}（本年 ${stepStr}）· ${esc(yr.decade.gz)}大运</div>
-        ${yr.qualifyingIdle ? '<div class="bzv-tooltip-line">不利大运闲年极轻微底盘折耗（示意参数）</div>' : ''}
+        <div class="bzv-tooltip-meta"> ${esc(describeAnnualImpulse(yr))} · ${yr.available ? esc(describeTrendLevel(yr)) + ' · ' : ''}${esc(yr.decade.gz)}大运</div>
         ${posL[0] ? `<div class="bzv-tooltip-line bzv-dir-pos">+ ${esc(posL[0])}</div>` : ''}
         ${negL[0] ? `<div class="bzv-tooltip-line bzv-dir-neg">- ${esc(negL[0])}</div>` : ''}
+        ${pendingReasons.length ? `<div class="bzv-tooltip-line">整体待判原因：${esc(pendingReasons.join('；'))}</div>` : ''}
+        ${comparison ? `<div class="bzv-tooltip-line">${esc(comparison.summary)}${comparison.missing ? ' · 完整区间峰谷未知' : ''}</div>` : ''}
+        ${wealthDetail(yr)}
       `;
-      const box = mainSvg.getBoundingClientRect();
+      const box = sourceSvg.getBoundingClientRect();
       const width = box.width || 800;
       const height = box.height || 300;
-      const scrollEl = container.querySelector('#bzvLuckScroll');
-      const stageEl = scrollEl && scrollEl.parentNode ? scrollEl.parentNode : null;
-      const stageBox = stageEl && stageEl.getBoundingClientRect ? stageEl.getBoundingClientRect() : box;
-      const stageW = stageBox.width || width;
-      const scrollLeft = (scrollEl && scrollEl.scrollLeft) || 0;
-      const visX = (pt.x / W) * width - scrollLeft;
-      const relY = (pt.y / H) * height;
-      const placeLeft = visX > stageW * 0.62;
-      tooltip.style.left = placeLeft
-        ? `${Math.max(8, visX - 238)}px`
-        : `${Math.min(Math.max(8, stageW - 240), visX + 14)}px`;
-      tooltip.style.top = `${clamp(relY - 34, 8, Math.max(12, height - 95))}px`;
+      const stage = tooltip.parentElement;
+      const stageBox = stage?.getBoundingClientRect?.() || box;
+      const stageW = stage?.clientWidth || stageBox.width || width;
+      const stageH = stage?.clientHeight || stageBox.height || height;
+      const visX = box.left - stageBox.left - (stage?.clientLeft || 0) + pt.x * width / W;
+      const relY = box.top - stageBox.top - (stage?.clientTop || 0) + pt.y * height / H;
       tooltip.classList.remove('bzv-hidden');
+      const tooltipW = tooltip.offsetWidth || 0;
+      const tooltipH = tooltip.offsetHeight || 0;
+      const left = visX + 14 + tooltipW <= stageW - 8 ? visX + 14 : visX - 14 - tooltipW;
+      tooltip.style.left = `${clamp(left, 8, Math.max(8, stageW - tooltipW - 8))}px`;
+      tooltip.style.top = `${clamp(relY - 34, 8, Math.max(8, stageH - tooltipH - 8))}px`;
     }
 
     function renderCompareCard() {
@@ -4055,25 +4245,18 @@
         panelEl.innerHTML = '';
         return;
       }
-      const yrA = allFlat.find(x => x.y === uiState.compare.a) || flatYears[0];
-      const yrB = allFlat.find(x => x.y === uiState.compare.b) || flatYears[flatYears.length - 1];
-      const diff = round2(yrB.level - yrA.level);
-      const spanYears = yrB.y - yrA.y;
-      const diffSign = diff >= 0 ? '+' : '';
-      const diffTone = Math.abs(diff) < 0.35
-        ? '与起点基本持平'
-        : (diff > 0 ? '总体水位明显抬升' : '总体水位低于起点');
-      const diffCls = Math.abs(diff) < 0.35 ? 'is-mix' : (diff > 0 ? 'is-pos' : 'is-neg');
-
-      const subSlice = allFlat.filter(x => x.y >= yrA.y && x.y <= yrB.y);
-      const peakYr = subSlice.reduce((best, cur) => (cur.level > best.level ? cur : best), subSlice[0]);
-      const troughYr = subSlice.reduce((best, cur) => (cur.level < best.level ? cur : best), subSlice[0]);
+      const comparison = selectedInterval();
+      if (!comparison) return;
+      const { a: yrA, b: yrB, diff, missing, summary, peak, trough } = comparison;
+      const spanYears = Math.abs(yrB.y - yrA.y);
+      const diffCls = diff === null || diff === 0 ? 'is-mix' : (diff > 0 ? 'is-pos' : 'is-neg');
       const optionsHtml = selectedVal => flatYears.map(y =>
         `<option value="${y.y}" ${y.y === selectedVal ? 'selected' : ''}>${y.y} ${y.gz}（${y.a}岁）</option>`
       ).join('');
 
       const renderCol = (tag, yr) => {
-        const dirLbl = technical ? yr.proLbl : yr.stdLbl;
+        const answer = technical ? yr.proLbl : yr.stdLbl;
+        const dirLbl = yr.available || answer === '待判' ? answer : '待判 · ' + answer;
         const dcLbl = technical ? yr.decade.natalProLbl : yr.decade.natalStdLbl;
         const badgeCls = yr.d === 'p' ? 'bzv-dir-pos' : (yr.d === 'n' ? 'bzv-dir-neg' : 'bzv-dir-mix');
         const posArr = technical ? yr.lines.posPro : yr.lines.posStd;
@@ -4086,17 +4269,17 @@
                 <span class="bzv-compare-tag">${tag}</span>
                 <strong class="bzv-serif bzv-tabular" style="margin-left:6px">${yr.y} ${esc(yr.gz)}（${yr.a}岁）</strong>
               </div>
-              <span class="${badgeCls}" style="font-weight:700">${esc(dirLbl)} · ${esc(yr.tl)}</span>
+              <span class="${badgeCls}" style="font-weight:700">当年状态 ${esc(dirLbl)} · ${esc(yr.tl)}</span>
             </div>
             <div class="bzv-compare-metrics">
-              <span>累积水位 <strong>${yr.level >= 0 ? '+' : ''}${yr.level.toFixed(2)}</strong></span>
-              <span>当年净变化 <strong>${yr.available ? `${yr.netStep >= 0 ? '+' : ''}${yr.netStep.toFixed(2)}` : '待判'}</strong></span>
+              <span><strong>${esc(describeTrendLevel(yr))}</strong></span>
+              <span><strong>${esc(describeAnnualImpulse(yr))}</strong></span>
               <span>大运 ${esc(yr.decade.gz)}（${esc(dcLbl)}）</span>
             </div>
             <div class="bzv-compare-notes">
               ${posArr.map(x => `<p class="bzv-dir-pos">+ ${esc(x)}</p>`).join('')}
               ${negArr.map(x => `<p class="bzv-dir-neg">- ${esc(x)}</p>`).join('')}
-              ${!posArr.length && !negArr.length && resArr.length ? `<p>• ${esc(resArr[0])}</p>` : ''}
+              ${!yr.available && resArr.length ? `<p>整体待判原因：${esc(resArr.join('；'))}</p>` : ''}
             </div>
           </div>
         `;
@@ -4110,11 +4293,12 @@
             <label>起点 A <select id="bzvCmpSelectA">${optionsHtml(yrA.y)}</select></label>
             <span>→</span>
             <label>终点 B <select id="bzvCmpSelectB">${optionsHtml(yrB.y)}</select></label>
-            <span class="bzv-compare-diff ${diffCls}">跨度 ${spanYears} 年 · ${diffTone}（${diffSign}${diff.toFixed(2)}）</span>
+            <span class="bzv-compare-diff ${diffCls}">跨度 ${spanYears} 年 · ${esc(summary)}</span>
           </div>
+          <button type="button" class="bzv-btn" id="bzvCompareCloseBtn">关闭对比 ×</button>
           <div class="bzv-compare-extrema">
-            区间峰值 <strong>${peakYr.y} ${esc(peakYr.gz)} (${peakYr.level >= 0 ? '+' : ''}${peakYr.level.toFixed(2)})</strong> ·
-            谷底 <strong>${troughYr.y} ${esc(troughYr.gz)} (${troughYr.level >= 0 ? '+' : ''}${troughYr.level.toFixed(2)})</strong>
+            ${missing ? '完整区间峰谷未知' : `已知区间峰值 <strong>${peak.y} ${esc(peak.gz)} (${formatSigned(peak.displayLevel)})</strong> ·
+            谷底 <strong>${trough.y} ${esc(trough.gz)} (${formatSigned(trough.displayLevel)})</strong>`}
           </div>
         </div>
         <div class="bzv-compare-cols">${renderCol('A', yrA)}${renderCol('B', yrB)}</div>
@@ -4122,9 +4306,10 @@
 
       const selA = panelEl.querySelector('#bzvCmpSelectA');
       const selB = panelEl.querySelector('#bzvCmpSelectB');
+      panelEl.querySelector('#bzvCompareCloseBtn').onclick = exitComparison;
       const syncFromSelect = () => {
         const va = Number(selA.value), vb = Number(selB.value);
-        uiState.compare = { a: Math.min(va, vb), b: Math.max(va, vb) };
+        uiState.compare = { a: va, b: vb };
         rerender();
       };
       selA.onchange = syncFromSelect;
@@ -4132,6 +4317,9 @@
     }
 
     function syncCompareUI() {
+      compareBtn.textContent = uiState.compare ? '退出对比' : '与他年对比';
+      compareBtn.setAttribute('aria-expanded', String(!!uiState.compare));
+      compareBtn.classList.toggle('is-comparing', !!uiState.compare);
       compareLayerG.innerHTML = '';
       deltaCompareG.innerHTML = '';
       if (!uiState.compare) {
@@ -4146,8 +4334,8 @@
       }
       const pA = pts[idxA];
       const pB = pts[idxB];
-      const diff = round2(pB.yr.level - pA.yr.level);
-      const cmpColor = Math.abs(diff) < 0.35 ? P.gold : (diff > 0 ? P.pos : P.neg);
+      const { diff, summary } = selectedInterval();
+      const cmpColor = diff === null || diff === 0 ? P.gold : (diff > 0 ? P.pos : P.neg);
       const xLeft = Math.min(pA.x, pB.x);
       const spanW = Math.max(2, Math.abs(pB.x - pA.x));
 
@@ -4159,7 +4347,8 @@
         x: xLeft.toFixed(1), y: dTop, width: spanW.toFixed(1), height: Math.max(8, dH - dTop - 4),
         fill: P.gold, opacity: 0.14
       }));
-      compareLayerG.appendChild(svgEl('line', {
+      if (diff !== null) compareLayerG.appendChild(svgEl('line', {
+        'data-compare-link': 'true',
         x1: pA.x.toFixed(1), y1: pA.y.toFixed(1),
         x2: pB.x.toFixed(1), y2: pB.y.toFixed(1),
         stroke: cmpColor, 'stroke-width': 2, 'stroke-dasharray': '5 4', 'pointer-events': 'none'
@@ -4177,15 +4366,15 @@
           x1: pt.x.toFixed(1), y1: dTop, x2: pt.x.toFixed(1), y2: dH - 4,
           stroke: P.textDark, 'stroke-width': 1.3, opacity: 0.6
         }));
-        compareLayerG.appendChild(svgEl('circle', {
-          cx: pt.x.toFixed(1), cy: pt.y.toFixed(1), r: 6.5,
+        if (pt.yr.available) compareLayerG.appendChild(svgEl('circle', {
+          'data-focus-ring': 'true', cx: pt.x.toFixed(1), cy: pt.y.toFixed(1), r: 6.5,
           fill: P.paper, stroke: cmpColor, 'stroke-width': 2.5, 'pointer-events': 'none'
         }));
 
         const close = Math.abs(pB.x - pA.x) < 88;
-        const hy = (which === 'b' && close) ? M.top + 26 : M.top + 4;
-        const label = `◂ ${tag} ${pt.yr.y} ▸`;
-        const hw = 78;
+        const hy = decadeHeader + (which === 'b' && close ? 26 : 4);
+        const label = `◂ ${tag} ${pt.yr.y}${pt.yr.available ? '' : ' 待判'} ▸`;
+        const hw = pt.yr.available ? 78 : 99;
         const hx = clamp(pt.x - hw / 2, M.left, M.left + plotW - hw);
         const hg = svgEl('g', {
           'data-handle': which,
@@ -4203,13 +4392,16 @@
         compareLayerG.appendChild(hg);
       });
 
+      if (M.top === decadeHeader) {
+        renderCompareCard();
+        return;
+      }
+
       const mx = (pA.x + pB.x) / 2;
-      const my = (pA.y + pB.y) / 2;
-      const arrow = Math.abs(diff) < 0.05 ? '→' : (diff > 0 ? '↑' : '↓');
-      const callout = `${pA.yr.y}→${pB.yr.y}：${diff >= 0 ? '+' : ''}${diff.toFixed(2)} ${arrow}`;
-      const cw = callout.length * 7.6 + 18;
+      const callout = `${pA.yr.y}→${pB.yr.y}  ${summary}`;
+      const cw = callout.length * 10 + 18;
       const cxBox = clamp(mx, M.left + cw / 2 + 4, M.left + plotW - cw / 2 - 4);
-      const cyBox = clamp(my - 16, M.top + 40, M.top + plotH - 18);
+      const cyBox = H - 15;
       compareLayerG.appendChild(svgEl('rect', {
         x: (cxBox - cw / 2).toFixed(1), y: (cyBox - 12).toFixed(1),
         width: cw, height: 24, rx: 12,
@@ -4224,23 +4416,31 @@
       renderCompareCard();
     }
 
-    mainSvg._bzvCtx = { M, W, H, plotW, plotH, n, stepX, flatYears, pts, syncHoverUI, syncCompareUI, rerender };
+    mainSvg._bzvCtx = { M, W, H, plotW, plotH, n, stepX, flatYears, pts, syncHoverUI, syncCompareUI, rerender, selectYear };
 
-    container.querySelector('#bzvLuckLegend').textContent = '主线 = 累计走势示意 · 金带 = 双向作用幅度示意（无统计置信含义）· 虚线 / × = 待判，沿用累计基准 · 点选年份联动上方，或点「⇄ 跨年对比」拖动 A/B 游标';
+    container.querySelector('#bzvLuckLegend').textContent =
+      '主线累计综合推动，副柱显示当年净力度，空心点为待判。点选年份看财运明细，横向拖动可比较两年。';
 
     const selYearObj = flatYears.find(y => y.y === uiState.selectedYear) || flatYears[0];
     uiState.selectedYear = selYearObj.y;
+    if (wealthCard) wealthCard.innerHTML = wealthDetail(selYearObj);
     const amp = selYearObj.amplitude;
+    const wm = selYearObj.wealthMerge;
+    const wmBase = wm ? (wm.appliedBase ?? (wm.baseRange && wm.baseRange.guaranteed)) : null;
+    const wmSummary = wm ? (wm.reversalRisk ? '含反转风险（按待判处理）' : wm.wealthPending ? '当年财运待判，未纳入财运加权' : wm.wealthApplied ? `基础推动 ${formatSigned(wmBase)}，财运加权 ${formatSigned(wm.appliedDelta)}` : `基础推动 ${formatSigned(wmBase)}`) : '';
+    const detailNotes = [describeTrendLevel(selYearObj), selYearObj.available ? describeAnnualImpulse(selYearObj) : '',
+      wmSummary, ...settledRangeDetails(selYearObj), '金带为当年双向作用幅度'].filter(Boolean);
+    const netShown = amp ? (Number.isFinite(amp.net) ? amp.net : amp.positive - amp.negative) : 0;
     container.querySelector('#bzvAmplitudeDetail').innerHTML = `
-      <summary>${selYearObj.y} 双边力度来源 · ${selYearObj.available ? `正 ${amp.positive.toFixed(2)} / 负 ${amp.negative.toFixed(2)}` : '待判'}</summary>
-      <div class="bzv-sub-note">工程示意参数；年度结论沿用原判。${selYearObj.qualifyingIdle ? '不利大运闲年极轻微底盘折耗（示意参数）。' : ''}${selYearObj.available ? '' : `缺口：${esc(selYearObj.missingFields.join('、') || '年度条件待判')}；累计基准承接上年。`}</div>
+      <summary>${selYearObj.y} 双边力度来源 · ${amp && amp.available ? `助力 ${amp.positive.toFixed(2)} / 阻力 ${amp.negative.toFixed(2)} · 净值 ${formatSigned(netShown)}` : '待判'}</summary>
+      <div class="bzv-sub-note">${esc(detailNotes.join('。'))}。${selYearObj.available ? '' : `缺口：${esc((technical ? selYearObj.lines.resPro : selYearObj.lines.resStd).join('；') || '年度条件待判')}。`}</div>
       ${amp ? `<div>强触发：正 ${amp.strongTrigger.positive ? '是' : '否'} / 负 ${amp.strongTrigger.negative ? '是' : '否'}</div>
-      <ul>${amp.breakdown.map(row => `<li>${row.side === 'positive' ? '有利' : row.side === 'negative' ? '不利' : '提示/待判'} ${row.contribution > 0 ? row.contribution.toFixed(2) : '0'} · ${esc(row.text || (row.sourcePath === 'tone' ? '干支喜忌底色' : row.taskId || '条件尚待确认'))}${row.exclusion ? `（${esc({ 'legacy-reference': '旧判参考不计入', 'neutral': '中性提示不计入', 'undetermined': '未定作用', 'pending-condition': '潜在/待判不计入', 'explanatory-summary': '解释包装不重复计入', 'duplicate-cause': '同因已计入', 'missing-weight-source': '力度来源不足', 'side-cap': '单侧封顶' }[row.exclusion] || row.exclusion)}）` : ''}${technical ? ` · ${esc(row.ruleId || '')} ${esc(row.level || '')}` : ''}</li>`).join('')}</ul>` : ''}
+      <ul>${amp.breakdown.map(row => `<li>${row.side === 'positive' ? '有利' : row.side === 'negative' ? '不利' : '提示/待判'} ${row.contribution > 0 ? row.contribution.toFixed(2) : '0'} · ${esc(row.text || (row.sourcePath === 'tone' ? '干支喜忌底色' : row.taskId || '条件尚待确认'))}${row.exclusion ? `（${esc({ 'legacy-reference': '旧判参考不计入', 'neutral': '中性提示不计入', 'undetermined': '未定作用', 'pending-condition': '潜在/待判不计入', 'explanatory-summary': '解释包装不重复计入', 'duplicate-cause': '同因已计入', 'duplicate-wealth-route': '与财路同因已计入', 'duplicate-seal-continuity': '与承接同因已计入', 'uncertain-replacement-strength': '替代药路强弱未分清', 'no-verified-temporal-action': '无独立岁运实证', 'missing-weight-source': '力度来源不足', 'side-soft-cap': '单侧平滑压缩' }[row.exclusion] || row.exclusion)}）` : ''}${technical ? ` · ${esc(row.ruleId || '')} ${esc(row.level || '')}` : ''}</li>`).join('')}</ul>` : ''}
     `;
     const globalIdx = allFlat.findIndex(y => y.y === selYearObj.y);
 
     const yrHead = `${selYearObj.y} ${selYearObj.gz} · ${selYearObj.a}岁`;
-    const yrChg = `较前年${PREV_MAP[selYearObj.pv] || '待核'}`;
+    const yrChg = selYearObj.available ? describeTrendLevel(selYearObj) : '当年待判';
     container.querySelector('#bzvStepperLabel').innerHTML =
       `<span class="bzv-stepper-yr">${esc(yrHead)}</span><span class="bzv-stepper-sep"> · </span><span class="bzv-stepper-chg">${esc(yrChg)}</span>`;
     const prevBtn = container.querySelector('#bzvPrevYearBtn');
@@ -4248,20 +4448,10 @@
     prevBtn.disabled = globalIdx <= 0;
     nextBtn.disabled = globalIdx >= allFlat.length - 1;
     prevBtn.onclick = () => {
-      if (globalIdx > 0) {
-        uiState.compare = null;
-        const target = allFlat[globalIdx - 1];
-        if (uiState.luckZoomDecade !== null) uiState.luckZoomDecade = target.decadeIndex;
-        notifySelectYear(target);
-      }
+      if (globalIdx > 0) selectYear(allFlat[globalIdx - 1]);
     };
     nextBtn.onclick = () => {
-      if (globalIdx < allFlat.length - 1) {
-        uiState.compare = null;
-        const target = allFlat[globalIdx + 1];
-        if (uiState.luckZoomDecade !== null) uiState.luckZoomDecade = target.decadeIndex;
-        notifySelectYear(target);
-      }
+      if (globalIdx < allFlat.length - 1) selectYear(allFlat[globalIdx + 1]);
     };
 
     syncCompareUI();
@@ -4309,6 +4499,7 @@
       uiState.selectedEdgeId = null;
       uiState.relZoomed = false;
       uiState.luckZoomDecade = null;
+      uiState.luckWindow = null;
       uiState.hoverYear = null;
       uiState.compare = null;
     }
@@ -4374,7 +4565,7 @@
     buildDisplayFlowEdges,
     computeMatrixPositions,
     buildPositionFlowEdges,
-    computeAnnualStep,
+    computeAnnualLevel,
     TREND_PARAMETERS,
     computeCumulativeSeries: (luckModel) => luckModel,
     renderRelationSection,

@@ -729,7 +729,7 @@
       var visible=keys.some(function(key){var state=interactions&&stemInteractionChange(PILLAR_META[key].index,interactions);return STEM_WX[pillars[key][0]]===counterElement&&(!state||state.usable!==false)});
       var rooted=keys.some(function(key){
         var change=interactions&&branchInteractionChange(key,interactions,true),attack=branchAttackInfo(pillars[key][1],pillars,key,interactions);
-        return (HIDDEN[pillars[key][1]]||[]).some(function(stem){return STEM_WX[stem]===counterElement})&&!(change&&change.effect==='transform'&&change.element!==counterElement&&!change.challenged)&&attack.reasons.indexOf('冲')<0;
+        return (HIDDEN[pillars[key][1]]||[]).some(function(stem){return STEM_WX[stem]===counterElement})&&!(change&&(change.effect==='bind'||change.effect==='transform'&&change.element!==counterElement&&!change.challenged))&&!attack.reasons.some(function(x){return /冲/.test(x);});
       });
       counterUsable=visible&&rooted;
     }
@@ -739,6 +739,7 @@
       result.condition+='；'+(pillars?counterElement+'有可用根透，不作极端偏枯':'缺少干支作用证据，不能只按比例提升优先级');
       result.why='仅保留季节需求；比例候选未通过极端偏枯反证排除，不覆盖结构取用。';
     }
+    result.climateTier=result.priority==='主用'?'primary':pillars&&'亥子丑巳午未'.indexOf(monthBranch)>=0?'secondary':'none';
     return result;
   }
   function earthBuriedMetalPhenomenon(dayStem,pillars,scores,strength,weightedStrength){
@@ -754,7 +755,7 @@
     var waterStems=visibleKeys.filter(function(k){return STEM_WX[pillars[k][0]]==='水'});
     var woodStems=visibleKeys.filter(function(k){return STEM_WX[pillars[k][0]]==='木'});
     var roots=weightedStrength&&weightedStrength.dimensions&&weightedStrength.dimensions.roots.items||rootEvidence(dayStem,pillars);
-    var usableRoot=roots.some(function(item){return item.usable!==false&&!item.transformedAway&&(item.rootPower||0)>0&&item.grade!=='余气根'});
+    var usableRoot=roots.some(function(item){return item.usable!==false&&!item.transformedAway&&!outlookRootRestricted(item)&&(item.rootPower||0)>0&&item.grade!=='余气根'});
     var constrainedRoot=!usableRoot;
     var seasonElement=BRANCH_WX[pillars.month[1]],seasonFeedsEarth=seasonElement==='火'||seasonElement==='土';
     var supportedEarth=earthStems.length>=1||earthBranches.length>=2;
@@ -1149,8 +1150,19 @@
     else if(main&&pattern.use.length){selected=patternRoute;type='格局';reason='已有验真主格，先守其作用链；扶抑与调候不另列互斥并集'}
     else{selected=support;type=/弱|强/.test(strength)?'扶抑':'流通';reason='没有可优先采用的验真成格或对症药路，按承载与流通取向处理'}
     selected.status='selected';selected.reason=reason;
-    selected.assessment=selected===support?'proposed':selected===climateRoute?'local':selected===patternRoute?'local':selected.assessment;
-    if(selected.id==='phenomenon-remedy'){selected.priority='main-remedy';selected.assessment='local'}
+    selected.assessment=selected===support?'proposed':selected===climateRoute?'proposed':selected===patternRoute?'local':selected.assessment;
+    if(selected.id==='phenomenon-remedy'){
+      selected.priority='main-remedy';
+      selected.assessment='proposed';
+      selected.effectiveness={};
+      selected.elements.forEach(function(wx){
+        var own=wx===dayWx,link=actionLink(godNamesForElement(dayStem,wx),own?['日主']:godNamesForElement(dayStem,dayWx),own?'扶':'生');
+        var reachable=!!(link&&link.active);
+        var rooted=reachable&&godRootEvidence(profiles,link.left.god).some(function(root){return !outlookRootRestricted(root);});
+        selected.effectiveness[wx]={candidate:true,reachable:reachable,local:rooted,sufficient:false,steps:reachable?[link]:[]};
+      });
+      if(Object.values(selected.effectiveness).some(function(x){return x.local}))selected.assessment='local';
+    }
     routes.forEach(function(r){if(!r.reason)r.reason=r.status==='conditional'?'存在局部作用或替代取法，但条件、副作用未消除，不自动列入默认推荐':r.status==='reference'?'保留独立依据，未达到默认取用条件':'当前不取'});
     var primary=unique(selected.elements),secondary=[],conditionalUse=[],routeDependent=[],avoid=[],decisions=[];
     var monthlyRoute=routes.find(function(r){return r.id==='monthly-bing-wei'});
@@ -1175,12 +1187,12 @@
       function risk(id,status,text,evidence,dominant){
         riskEntries.push({id:id,status:status,text:text,evidence:evidence||[],dominant:!!dominant});
       }
-      if(selected.elements.indexOf(w)>=0)benefit(selected,selected===patternRoute&&(pattern.proposedUse||[]).indexOf(w)>=0?'proposed':(selected.assessment==='local'?'local':'proposed'));
+      if(selected.elements.indexOf(w)>=0)benefit(selected,selected.effectiveness?(selected.effectiveness[w].local?'local':'proposed'):selected===patternRoute&&(pattern.proposedUse||[]).indexOf(w)>=0?'proposed':(selected.assessment==='local'?'local':'proposed'));
       if(main&&pattern.use.indexOf(w)>=0&&selected!==patternRoute)benefit(patternRoute,(pattern.proposedUse||[]).indexOf(w)>=0?'proposed':'local','原局格局中的功能／待接通救应：'+pattern.why);
       if(fuyi.use.indexOf(w)>=0&&selected!==support)benefit(support,'proposed');
       if(wealthRoute.elements.indexOf(w)>=0&&wealthRoute.active&&selected!==wealthRoute)benefit(wealthRoute,'local','已有局部可达作用：'+wealthRoute.benefit);
       if(w===resource&&sealNeed&&sealRoute.active&&selected!==sealRoute)benefit(sealRoute,'local');
-      if(climate.priority==='主用'&&climate.use.indexOf(w)>=0&&selected!==climateRoute)benefit(climateRoute,'local');
+      if(climate.priority==='主用'&&climate.use.indexOf(w)>=0&&selected!==climateRoute)benefit(climateRoute,'proposed');
       if(phenomenon&&phenomenon.useCorrection.secondary.indexOf(w)>=0)benefit(selected,'proposed','对症路线的润泄辅助');
       if(monthlyRoute&&monthlyRoute.elements.indexOf(w)>=0)benefit(monthlyRoute,'reference');
       var restriction=patternRestriction(w);
@@ -2133,7 +2145,7 @@
     if(!out.length)add('未见明显组合冲突','待运岁验证','未见直接破坏主格的组合冲突，重点看大运流年是否触发。');
     return out;
   }
-  function interactionFlowAnalysis(mainPattern,profiles,interactions,conflicts,explicitChains){
+  function interactionFlowAnalysis(mainPattern,profiles,interactions,conflicts,explicitChains,options){
     var chains=[];
     if(/财官印相生/.test(mainPattern))chains=[{from:['正财','偏财'],to:['正官'],action:'生'},{from:['正官'],to:['正印','偏印'],action:'生'},{from:['正印','偏印'],to:['日主'],action:'生'}];
     else if(/杀印相生/.test(mainPattern))chains=[{from:['七杀'],to:['正印','偏印'],action:'生'},{from:['正印','偏印'],to:['日主'],action:'生'}];
@@ -2147,19 +2159,20 @@
     function entries(names){
       return (names||[]).reduce(function(out,name){
         var item=profiles[name]||(name==='日主'&&interactions.dayMaster?{stemEntries:[interactions.dayMaster]}:{});
-        return out.concat((item.stemEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'干',usable:x.usable!==false,effect:x.effect||'none',text:x.stem+name}}),(item.branchEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'支',usable:x.usable!==false,transformedAway:!!x.transformedAway,boundByCombine:!!x.boundByCombine,branchChange:x.branchChange||'',text:x.branch+'藏'+x.stem+name}}));
+        return out.concat((item.stemEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'干',usable:x.usable!==false,effect:x.effect||'none',text:x.stem+name}}),(item.branchEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'支',scenarioRetained:!!x.scenarioRetained,usable:x.usable!==false,transformedAway:!!x.transformedAway,boundByCombine:!!x.boundByCombine,branchChange:x.branchChange||'',text:x.branch+'藏'+x.stem+name}}));
       },[]);
     }
     function describePair(best,from,to,action){
       return {from:from,to:to,action:action,status:best.status,active:best.active,distance:best.distance,physicalDistance:best.physicalDistance,effectiveDistance:best.effectiveDistance,left:best.left,right:best.right,text:best.left.text+action+best.right.text+'：'+best.status};
     }
-    function step(from,to,action,capture){
+    function step(from,to,action,capture,criteria){
       var left=entries(from),right=entries(to),pairs=[];
       left.forEach(function(a){right.forEach(function(b){
+        if(criteria&&(criteria.leftActor&&annualActorKey(a)!==criteria.leftActor||criteria.rightActor&&annualActorKey(b)!==criteria.rightActor))return;
         var physicalDistance=Math.abs(a.position-b.position),distance=a.temporal||b.temporal?1:physicalDistance;
         var boundRelations=(interactions.stemCombines||[]).filter(function(x){return x.active!==false&&(/^(bind|transform|contest)$/.test(x.effect)||(x.involvesLuck&&x.effect==='daymaster-combine'))&&((a.kind==='干'&&(x.left===a.position||x.right===a.position))||(b.kind==='干'&&(x.left===b.position||x.right===b.position)))});
-        var damageRelations=(interactions.branchPairs||[]).filter(function(x){return x.active!==false&&/^(冲|刑|害|破)$/.test(x.type)&&((a.kind==='支'&&(x.left===a.position||x.right===a.position))||(b.kind==='支'&&(x.left===b.position||x.right===b.position)))});
-        var entryBlocked=a.usable===false||b.usable===false||a.transformedAway||b.transformedAway,entryCombined=!!(a.boundByCombine||b.boundByCombine),bound=boundRelations.length>0||entryBlocked||entryCombined,damaged=damageRelations.some(function(relation){return relation.type==='冲'});
+        var damageRelations=(interactions.branchPairs||[]).filter(function(x){return x.active!==false&&/^(冲|刑|害|破)$/.test(x.type)&&((a.kind==='支'&&!a.scenarioRetained&&(x.left===a.position||x.right===a.position))||(b.kind==='支'&&!b.scenarioRetained&&(x.left===b.position||x.right===b.position)))});
+        var entryBlocked=a.usable===false||b.usable===false||a.transformedAway||b.transformedAway,entryCombined=!!(a.boundByCombine&&!a.scenarioRetained||b.boundByCombine&&!b.scenarioRetained),bound=boundRelations.length>0||entryBlocked||entryCombined,damaged=damageRelations.some(function(relation){return relation.type==='冲'});
         var remote=distance>2,sameHidden=physicalDistance===0&&a.kind==='支'&&b.kind==='支';
         var entryTransformed=a.transformedAway||b.transformedAway||a.effect==='transform'||b.effect==='transform';
         var entryContested=a.effect==='contest'||b.effect==='contest';
@@ -2181,11 +2194,21 @@
         return aDirect-bDirect;
       });
       if(capture)capture(pairs);
+      if(options&&options.capture)options.capture(pairs.filter(function(x){return x.active;}).map(function(x){return describePair(x,from,to,action);}));
       return describePair(pairs[0],from,to,action);
     }
-    var chainOptions=[],steps=chains.map(function(item,index){return step(item.from,item.to,item.action,function(pairs){chainOptions[index]=pairs.filter(function(pair){return pair.active})})}),sequence=[],continuity=[];
+    var chainOptions=[],steps=chains.map(function(item,index){return step(item.from,item.to,item.action,function(pairs){chainOptions[index]=pairs.filter(function(pair){return pair.active})},item)}),sequence=[],continuity=[];
     function canContinue(left,right){
       if(left.god!==right.god)return false;
+      if(options&&options.exactMediator){
+        if(annualActorKey(left)===annualActorKey(right))return true;
+        if(left.kind===right.kind)return false;
+        var root=left.kind==='支'?left:right,stem=left.kind==='干'?left:right;
+        return (root.temporal||stem.temporal||Math.abs(root.position-stem.position)<=1)&&
+          (profiles[root.god].branchEntries||[]).some(function(x){
+            return annualActorKey(x)===annualActorKey(root)&&x.usable!==false&&!x.transformedAway&&!outlookRootRestricted(x)&&x.rootPower>=0.5;
+          });
+      }
       // Same actor, or the same ten god's usable stem/root within the existing
       // reach model. Different bridge gods cannot be silently joined by element.
       return left.temporal||right.temporal||Math.abs(left.position-right.position)<=2;
@@ -2681,11 +2704,27 @@
     });
     return {improved:improved,worsened:worsened,newActive:newActive,resolved:resolved,residualBefore:natalDisease&&natalDisease.residualSeverity||0,residualAfter:currentDisease&&currentDisease.residualSeverity||0};
   }
+  function followChildOutlet(dayStem,profiles,interactions){
+    var dayWx=STEM_WX[dayStem],output=godNamesForElement(dayStem,gen[dayWx]),wealth=godNamesForElement(dayStem,ctrl[dayWx]);
+    var seal=godNamesForElement(dayStem,resourceElement(dayWx)),context={profiles:profiles,interactions:interactions};
+    return outlookTargetPairs(context,output,wealth,'生').find(function(step){
+      var blocked=interactionFlowAnalysis('',profiles,interactions,[],[{
+        from:seal,to:[step.left.god],action:'制',rightActor:annualActorKey(step.left)
+      }]).steps[0];
+      return !blocked.active;
+    })||null;
+  }
   function buildTemporalPatternContext(dayStem,pillars,analysis,options){
     var rawScores=scoreWuxing(pillars),fullOptions={fullInteractionFeedback:true,outlookFlowYear:!!(options&&options.outlookFlowYear),time:analysis.analysisTime||null},weightedStrength=strengthScore(dayStem,pillars,fullOptions),strength=assessStrength(dayStem,pillars,rawScores,fullOptions),interactions=weightedStrength.interactions,scores=effectiveWuxingScores(pillars,rawScores,interactions);
     var monthCommand=analysis.monthCommand,monthGod=monthCommand&&monthCommand.primaryGod;
     var rawCounts=tenGodCounts(dayStem,pillars),profiles=tenGodProfiles(dayStem,pillars,monthCommand,interactions,fullOptions),counts={},rootDetails=weightedStrength.dimensions.roots.items||[];
     Object.keys(profiles).forEach(function(god){counts[god]=profiles[god].count||0});
+    var retained=options&&options.retainedRoots||[];
+    if(retained.length)Object.keys(profiles).forEach(function(god){
+      profiles[god].branchEntries.forEach(function(root){
+        if(retained.indexOf(annualActorKey(root))>=0)root.scenarioRetained=true;
+      });
+    });
     var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength,profiles,pillars),officerAssessment=assessOfficerMixture(profiles,interactions,pillars,carryingCapacity),regular=regularPatternAssessment(dayStem,pillars,monthGod,profiles,strength,monthCommand,interactions,carryingCapacity);
     var mixed=officerAssessment.unresolved;
     var comboResult=monthComboPatterns(monthCommand,counts,{mixed:mixed,officerAssessment:officerAssessment,strength:strength,profiles:profiles,interactions:interactions,dayRootCount:rootDetails.filter(function(item){return item.usable!==false&&!item.transformedAway}).length,strengthSupport:weightedStrength.support,carryingCapacity:carryingCapacity});
@@ -2693,9 +2732,10 @@
     var dynamicSpecials=specialPatterns(dayStem,pillars,scores,counts,strength,rootDetails,interactions,profiles);
     var natalSpecialDetail=analysis.specialPatternQualification||null,natalSpecialName=natalSpecialDetail&&natalSpecialDetail.name||(/^从格：|^化气格：|^专旺格：/.test(analysis.mainPattern||'')?analysis.mainPattern:'');
     var currentSpecialDetail=natalSpecialName?((dynamicSpecials.details||[]).find(function(item){return item.name===natalSpecialName})||null):null;
+    var childOutlet=natalSpecialDetail&&natalSpecialDetail.key==='从儿格'&&followChildOutlet(dayStem,profiles,interactions);
     var currentSpecials=[];currentSpecials.details=[];
     if(currentSpecialDetail){currentSpecials.push(currentSpecialDetail.name);currentSpecials.details.push(currentSpecialDetail)}
-    var specialLost=natalSpecialName&&!currentSpecialDetail?[natalSpecialName]:[];
+    var specialLost=natalSpecialName&&!currentSpecialDetail&&!childOutlet?[natalSpecialName]:[];
     var introducedSpecials=(dynamicSpecials.details||[]).filter(function(item){return item.name!==natalSpecialName});
     var specialClues=dynamicSpecials.filter(function(item){return typeof item==='string'&&/倾向|线索|未成/.test(item)}).slice();
     introducedSpecials.forEach(function(item){specialClues.push('第五柱使'+item.name+'条件暂时齐备，但不得倒推改写原局特殊格，只保留行运线索。')});
@@ -2725,7 +2765,7 @@
     var flowGood=!(interactionFlow.steps||[]).length||(interactionFlow.steps||[]).every(function(item){return item.active});
     var diseaseClear=!patternDisease.partial.length&&!patternDisease.unresolved.length,clarityGood=/^(清|较清)$/.test(clarity.level||'');
     if(currentStatus==='已成'&&(!flowGood||!diseaseClear||!clarityGood))currentStatus='成而有瑕';
-    return {pillars:pillars,scores:scores,rawScores:rawScores,interactions:interactions,strengthScore:weightedStrength,strength:strength,carryingCapacity:carryingCapacity,profiles:profiles,counts:counts,rawCounts:rawCounts,regularPattern:regular,comboResult:comboResult,dynamicSpecials:dynamicSpecials,currentSpecials:currentSpecials,currentSpecialDetail:currentSpecialDetail,specialLost:specialLost,specialClues:specialClues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,patternIssues:patternIssues,conflicts:conflicts,arbitration:arbitration,rawMainPattern:rawMainPattern,interactionFlow:interactionFlow,patternDisease:patternDisease,structures:structures,structuralClarity:structuralClarity,clarity:clarity,clarityConclusion:clarityConclusion,remedy:remedy,currentStatus:currentStatus,flowGood:flowGood,diseaseClear:diseaseClear,clarityGood:clarityGood,strictFormation:currentStatus==='已成'&&flowGood&&diseaseClear&&clarityGood};
+    return {pillars:pillars,scores:scores,rawScores:rawScores,interactions:interactions,strengthScore:weightedStrength,strength:strength,carryingCapacity:carryingCapacity,profiles:profiles,counts:counts,rawCounts:rawCounts,regularPattern:regular,comboResult:comboResult,dynamicSpecials:dynamicSpecials,currentSpecials:currentSpecials,currentSpecialDetail:currentSpecialDetail,childOutlet:childOutlet,specialLost:specialLost,specialClues:specialClues,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,patternIssues:patternIssues,conflicts:conflicts,arbitration:arbitration,rawMainPattern:rawMainPattern,interactionFlow:interactionFlow,patternDisease:patternDisease,structures:structures,structuralClarity:structuralClarity,clarity:clarity,clarityConclusion:clarityConclusion,remedy:remedy,currentStatus:currentStatus,flowGood:flowGood,diseaseClear:diseaseClear,clarityGood:clarityGood,strictFormation:currentStatus==='已成'&&flowGood&&diseaseClear&&clarityGood};
   }
   function luckRecheck(dayStem,luckGz,analysis){
     if(!analysis||!analysis.pillars||!luckGz||luckGz.length<2)return null;
@@ -2733,7 +2773,7 @@
     var current=buildTemporalPatternContext(dayStem,currentPillars,analysis),baseline=buildTemporalPatternContext(dayStem,analysis.pillars,analysis);
     var scores=current.scores,weightedStrength=current.strengthScore,strength=current.strength,interactions=current.interactions,counts=current.counts,profiles=current.profiles,carryingCapacity=current.carryingCapacity,regular=current.regularPattern,comboResult=current.comboResult,dynamicSpecials=current.dynamicSpecials,currentSpecialDetail=current.currentSpecialDetail,currentSpecials=current.currentSpecials,elementPhenomena=current.elementPhenomena,positivePhenomena=current.positivePhenomena,patternIssues=current.patternIssues,conflicts=current.conflicts,arbitration=current.arbitration,rawMainPattern=current.rawMainPattern,interactionFlow=current.interactionFlow,patternDisease=current.patternDisease,structures=current.structures,structuralClarity=current.structuralClarity,clarity=current.clarity,clarityConclusion=current.clarityConclusion,remedy=current.remedy;
     var monthCommand=analysis.monthCommand,monthGod=monthCommand&&monthCommand.ambiguous?'':monthCommand&&monthCommand.primaryGod;
-    var natalSpecialName=analysis.specialPatternQualification&&analysis.specialPatternQualification.name||'',specialLost=baseline.currentSpecialDetail&&!current.currentSpecialDetail?[baseline.currentSpecialDetail.name]:[];
+    var natalSpecialName=analysis.specialPatternQualification&&analysis.specialPatternQualification.name||'',specialLost=current.specialLost;
     var baselineSpecialNames=(baseline.dynamicSpecials.details||[]).map(function(item){return item.name}),specialClues=dynamicSpecials.filter(function(item){return typeof item==='string'&&/倾向|线索|未成/.test(item)}).slice();
     (dynamicSpecials.details||[]).filter(function(item){return item.name!==natalSpecialName&&baselineSpecialNames.indexOf(item.name)<0}).forEach(function(item){specialClues.push('第五柱使'+item.name+'条件暂时齐备，但不得倒推改写原局特殊格，只保留行运线索。')});
     if(specialLost.length)specialClues.push(specialLost[0]+'在当前大运未通过全部验真条件，只判运中受损，不改写原局成立结论。');
@@ -2765,13 +2805,17 @@
     }
     var clarityRanks={清:5,较清:4,可清:3,有瑕:2,待清:1,待辨:1,偏浊:0,不清:0,冲战:0,浊:0};
     var oldClarity=baseline.clarity&&baseline.clarity.level||'待辨',clarityDelta=(clarityRanks[clarity.level]||0)-(clarityRanks[oldClarity]||0);
+    if(current.childOutlet&&baseline.currentSpecialDetail&&!current.currentSpecialDetail){
+      acceptedMainPattern=fromMain;acceptedStatus=fromStatus;
+    }
     var comparisonBaseline={strength:baseline.strength,strengthScore:baseline.strengthScore,carryingCapacity:baseline.carryingCapacity,regularPattern:baseline.regularPattern,comboPatterns:baselineCombos,rawMainPattern:baseline.rawMainPattern,currentStatus:baseline.currentStatus,strictFormation:baseline.strictFormation,patternDisease:baseline.patternDisease,clarity:baseline.clarity};
-    return {ruleVersion:LUCK_RECHECK_VERSION,scope:'大运作为临时第五柱完整复核；原局月令、主格、百分位和层次不改写',pillars:currentPillars,currentPillars:currentPillars,scores:scores,rawScores:current.rawScores,interactions:interactions,strengthScore:weightedStrength,strength:strength,carryingCapacity:carryingCapacity,profiles:profiles,counts:counts,rawCounts:current.rawCounts,regularPattern:regular,comboPatterns:comboResult.formed,comboDetails:comboResult.details,comboClues:comboResult.clues,conflicts:conflicts,arbitration:arbitration,rawMainPattern:rawMainPattern,currentMainPattern:acceptedMainPattern,currentStatus:acceptedStatus,rawCurrentStatus:currentStatus,strictFormation:strictFormation,structures:structures,interactionFlow:interactionFlow,patternIssues:patternIssues,patternDisease:patternDisease,remedy:remedy,structuralClarity:structuralClarity,clarity:clarity,clarityConclusion:clarityConclusion,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,specialPatterns:currentSpecials,specialCandidates:dynamicSpecials,specialPatternQualification:currentSpecialDetail,specialLost:specialLost,specialClues:specialClues,completed:completed,completionClues:completionClues,newBreakers:newBreakers,rescued:rescued,rescueClues:rescueClues,formedAdded:formedAdded,effectiveAdded:effectiveAdded,formedLost:formedLost,rootChanges:rootChanges,diseaseChanges:diseaseChanges,clarityChange:{before:oldClarity,after:clarity.level,direction:clarityDelta>0?'改善':(clarityDelta<0?'转差':'维持')},comparisonBaseline:comparisonBaseline,fromStatus:fromStatus,fromMain:fromMain};
+    return {ruleVersion:LUCK_RECHECK_VERSION,childOutlet:current.childOutlet,scope:'大运作为临时第五柱完整复核；原局月令、主格、百分位和层次不改写',pillars:currentPillars,currentPillars:currentPillars,scores:scores,rawScores:current.rawScores,interactions:interactions,strengthScore:weightedStrength,strength:strength,carryingCapacity:carryingCapacity,profiles:profiles,counts:counts,rawCounts:current.rawCounts,regularPattern:regular,comboPatterns:comboResult.formed,comboDetails:comboResult.details,comboClues:comboResult.clues,conflicts:conflicts,arbitration:arbitration,rawMainPattern:rawMainPattern,currentMainPattern:acceptedMainPattern,currentStatus:acceptedStatus,rawCurrentStatus:currentStatus,strictFormation:strictFormation,structures:structures,interactionFlow:interactionFlow,patternIssues:patternIssues,patternDisease:patternDisease,remedy:remedy,structuralClarity:structuralClarity,clarity:clarity,clarityConclusion:clarityConclusion,elementPhenomena:elementPhenomena,positivePhenomena:positivePhenomena,specialPatterns:currentSpecials,specialCandidates:dynamicSpecials,specialPatternQualification:currentSpecialDetail,specialLost:specialLost,specialClues:specialClues,completed:completed,completionClues:completionClues,newBreakers:newBreakers,rescued:rescued,rescueClues:rescueClues,formedAdded:formedAdded,effectiveAdded:effectiveAdded,formedLost:formedLost,rootChanges:rootChanges,diseaseChanges:diseaseChanges,clarityChange:{before:oldClarity,after:clarity.level,direction:clarityDelta>0?'改善':(clarityDelta<0?'转差':'维持')},comparisonBaseline:comparisonBaseline,fromStatus:fromStatus,fromMain:fromMain};
   }
   function evaluateLuckImpact(dayStem,luckGz,analysis){
     analysis=analysis||{};
     var recheck=luckRecheck(dayStem,luckGz,analysis);
     var useful=analysis.useful||{use:[],avoid:[]},stem=luckGz&&luckGz[0],branch=luckGz&&luckGz[1];
+    if(recheck&&!analysis.specialPatternQualification)recheck.wealthChannel=wealthChannelState(recheck,analysis);
     var stemWx=STEM_WX[stem],branchWx=BRANCH_WX[branch],score=0,reasons=[],elements=[];
     if(recheck){
       var stemRelations=(recheck.interactions.stemCombines||[]).filter(function(item){return item.involvesLuck&&item.active!==false});
@@ -2784,7 +2828,7 @@
     elements=unique(elements);
     var elementScore=0,elementReasons=[],scoreLedger={numericOwner:'喜忌五行',structuralScore:0,elementScore:0};
     elements.forEach(function(w){
-      if((useful.use||[]).indexOf(w)>=0){elementScore++;elementReasons.push(w+'为喜用')}
+      if((useful.use||[]).indexOf(w)>=0&&conditionalLuckUse(recheck,useful,w)){elementScore++;elementReasons.push(w+'为喜用')}
       if((useful.avoid||[]).indexOf(w)>=0){elementScore--;elementReasons.push(w+'为慎用')}
     });
     elementScore=Math.max(-2,Math.min(2,elementScore));scoreLedger.elementScore=elementScore;
@@ -2794,6 +2838,9 @@
       var carryImproved=carryingAfter&&!carryingBefore,carryWorsened=!carryingAfter&&carryingBefore,diseaseImproved=recheck.diseaseChanges.residualAfter<recheck.diseaseChanges.residualBefore,diseaseWorsened=recheck.diseaseChanges.residualAfter>recheck.diseaseChanges.residualBefore||recheck.diseaseChanges.newActive.length>0;
       var decisivePositive=!!(!recheck.specialLost.length&&recheck.strictFormation&&(statusImproved||mainChanged||recheck.effectiveAdded.length)),decisiveNegative=!!(statusWorsened||recheck.specialLost.length||recheck.newBreakers.length||recheck.formedLost.length);
       var softPositive=!!(statusImproved||carryImproved||diseaseImproved||recheck.completed.length||recheck.rescued.length),softNegative=!!(carryWorsened||diseaseWorsened);
+      if(recheck.childOutlet&&!recheck.specialPatternQualification){
+        decisivePositive=false;decisiveNegative=false;softPositive=false;softNegative=false;
+      }
       var hasStructuralChange=decisivePositive||decisiveNegative||softPositive||softNegative,structuralScore=decisivePositive&&!decisiveNegative?2:(decisiveNegative&&!decisivePositive?-2:(softPositive&&!softNegative?1:(softNegative&&!softPositive?-1:0)));
       score=hasStructuralChange?structuralScore:0;
       scoreLedger={numericOwner:decisivePositive||decisiveNegative?'格局状态迁移':(statusImproved?'格局条件改善':(hasStructuralChange?'病药与承载净变化':'未确认结构变化')),structuralScore:structuralScore,elementScore:elementScore,elementCounted:false,reason:'喜忌五行只作方向参考，不据两个字抬降档；根气、承载、病药、救应与成格只按最末端有效结论结算一次'};
@@ -2836,12 +2883,14 @@
     var activationStatus=recheck&&recheck.specialLost.length?'特殊格运中受损':(recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持'))));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261111.1-cross-mixed';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261126.4';
+  var DEFAULT_WEALTH_EXTRA_WEIGHT=0.25;
   function outlookPending(reason){
     return {direction:'pending',assessment:'input-error',summary:reason,evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'资料校验未通过'};
   }
   var OUTLOOK_SOURCES={官:'215722',财:'215720',印:'215718',食:'215716',杀:'215714',伤:'215712',刃:'215710',禄:'215708'};
   function outlookRootRestricted(root){
+    if(root.scenarioRetained)return false;
     var attacks=root.attacks||[];
     // 刑害破 names alone do not establish loss of a usable root (任氏地支注).
     return !!root.boundByCombine||attacks.some(function(x){return /冲/.test(x)})||!!root.attacked&&!attacks.length;
@@ -2896,7 +2945,7 @@
     if((greater||less)&&left.dims[0]===right.dims[0]&&left.dims[4]===right.dims[4])return null;
     return greater&&less?null:(greater?1:(less?-1:0));
   }
-  function outlookLink(context,left,right){
+  function outlookLink(context,left,right,receivers){
     if(!left.present||!right.present)return 0;
     if(!left.usable||!right.clear)return 0;
     var pairs=[];
@@ -2910,6 +2959,7 @@
     if(right.command&&left.stems.length)pairs.push([left.stems[0],right.roots.find(function(x){return x.pillar==='month'})]);
     if(!pairs.length)return 0;
     if(left.uncertain||right.uncertain)return null;
+    if(receivers)pairs.forEach(function(pair){if(pair[1])receivers.push(pair[1]);});
     return 1;
   }
   function outlookCore(context,analysis){
@@ -2955,16 +3005,16 @@
       if(!load.present)return {state:0,reason:'未见当前所用的压力对象'};
       if(!load.usable)return {state:0,reason:'对象未透清得令或未通根，尚未建立实际任用，不据其存在新增承载压力'};
       if(load.uncertain)return {state:null,reason:'所用对象根气受冲绊或运柱内部制约，任用强度尚未确认'};
-      var support=outlookLink(context,g.I,g.B)===1||g.B.usable&&cleanDay.length>0;
-      if(!dayRoots.length&&!support)return {state:-1,reason:'任用对象存在，但日主无可用根且未见有效印比承接'};
+      var sealSupport=outlookLink(context,g.I,g.B)===1,support=sealSupport||g.B.usable&&cleanDay.length>0;
+      if(!dayRoots.length&&!support)return {state:-1,carryingBlock:true,reason:'任用对象存在，但日主无可用根且未见有效印比承接'};
       var loadBalance=outlookRelative(load,g.B);
-      if(loadBalance===1&&!g.I.usable&&!strong)return {state:-1,reason:'所用压力的根令与生扶占优，未见可用印承接，日主尚难任用'};
-      if(cleanDay.length&&(!weak||outlookLink(context,g.I,g.B)===1))return {state:1,reason:'日主有未损根，'+(!weak?'旺衰提示亦支持任用':'有可达之印承接压力生身')};
-      if(weak&&!cleanDay.length&&outlookLink(context,g.I,g.B)!==1)return {state:-1,reason:'所用压力有根透，日主偏弱且根气受损，未见有效印承接'};
-      return {state:0,reason:'有部分根气或扶身，但尚未补足此对象的任用条件'};
+      if(loadBalance===1&&!g.I.usable&&!strong)return {state:-1,carryingBlock:true,reason:'所用压力的根令与生扶占优，未见可用印承接，日主尚难任用'};
+      if(cleanDay.length&&(!weak||sealSupport))return {state:1,viaSeal:weak&&sealSupport,reason:'日主有未损根，'+(!weak?'旺衰提示亦支持任用':'有可达之印承接压力生身')};
+      if(weak&&!cleanDay.length&&!sealSupport)return {state:-1,carryingBlock:true,reason:'所用压力有根透，日主偏弱且根气受损，未见有效印承接'};
+      return {state:0,carryingBlock:true,reason:'有部分根气或扶身，但尚未补足此对象的任用条件'};
     }
-    function breaker(bad,target,medicine){
-      var link=outlookLink(context,g[bad],g[target]);
+    function breaker(bad,target,medicine,receivers){
+      var link=outlookLink(context,g[bad],g[target],receivers);
       if(link!==1)return link===0?{state:0,reason:'未形成对应破坏'}:{state:null,possibleStates:[-1,0],reason:'破坏因素有线索，根透或路径未确认'};
       if(medicine){
         var rescue=outlookLink(context,g[medicine],g[bad]);
@@ -2980,17 +3030,20 @@
     function path(id,label,from,to,options){
       options=options||{};
       var keys=unique([from,to].concat(options.keys||[])),state=outlookLink(context,g[from],g[to]),reason=state===1?'根透与具体作用对象支持路径可达':(state===0?'当前未建立该路径':'根透或具体作用通路尚未确认'),counter=[];
-      var connected=state===1&&options.enabled!==false,maybeAbsent=state===null,possible=state===null?[1]:[state];
+      var connected=state===1&&options.enabled!==false,maybeAbsent=state===null,possible=state===null?[1]:[state],carryingBlock=false,carryingViaSeal=false;
       if(options.enabled===false)state=0,reason='当前所用分支不采用此路径';
       if(options.enabled===false)possible=[0];
       if(possible.indexOf(1)>=0&&options.condition){
         var check=options.condition();
+        carryingBlock=!!check.carryingBlock;
+        carryingViaSeal=!!check.viaSeal;
         if(check.state===null&&!check.possibleStates)check.possibleStates=[-1,0,1];
         possible=settlePath(possible,check);reason+='；'+check.reason;
       }
       if(options.enabled!==false&&(state===1||state===null)&&options.breaks){
         options.breaks.forEach(function(item){
           var result=breaker(item[0],item[1],item[2]);counter.push(result.reason);
+          if(result.state===-1)carryingBlock=false;
           possible=uniqueStates(possible.reduce(function(out,value){
             return out.concat(possibilities(result).map(function(breakState){return value===-1?-1:(breakState===-1?-1:value)}));
           },[]));
@@ -3003,19 +3056,23 @@
       tasks[tasks.length-1].examined=options.enabled!==false&&(connected||maybeAbsent);
       tasks[tasks.length-1].assessed=connected&&g[to].usable&&state!==null;
       tasks[tasks.length-1].possibleStates=possible;
+      tasks[tasks.length-1].carryingBlock=carryingBlock;
+      tasks[tasks.length-1].carryingViaSeal=state===1&&carryingViaSeal;
       tasks[tasks.length-1].signature=JSON.stringify([tasks[tasks.length-1].signature,possible.slice().sort()]);
     }
     function carrying(id,label,key){
       var cap=capacity(g[key]);
       task(id,label,cap.state,[key,'B','I'],cap.reason+'；未损日主根'+cleanDay.length,'任务压力与自身根气、支持条件的匹配发生变化。','LK-05');
       tasks[tasks.length-1].examined=g[key].usable;
+      tasks[tasks.length-1].carryingBlock=!!cap.carryingBlock;
+      tasks[tasks.length-1].carryingViaSeal=!!cap.viaSeal;
     }
     function foodKill(){
       path('food-kill','食神制杀及食杀轻重','F','K',{keys:['I','W','B'],ruleId:'LK-05',condition:function(){
         var balance=outlookRelative(g.F,g.K),cap=capacity(g.K);
         if(balance===null)return {state:null,possibleStates:cap.state===null?[-1,0,1]:uniqueStates([0,cap.state]),reason:'食杀根透优势交叉，轻重尚未确认'};
         if(balance!==0)return {state:0,reason:balance<0?'杀较重、食较轻，需要有效助食，不能只凭见食判制杀完成':'食较重、杀较轻，需要适当助杀或裁食，不能继续一律助食'};
-        return {state:cap.state===1?1:cap.state,reason:'食杀各有可用根透且未见单方优势；'+cap.reason};
+        return {state:cap.state,carryingBlock:cap.carryingBlock,reason:'食杀各有可用根透且未见单方优势；'+cap.reason};
       },breaks:[['I','F','W']],life:'制约任务压力与表达产出的条件发生变化。'});
     }
     function killingSeal(){
@@ -3054,13 +3111,24 @@
       path('wealth-officer','财生官','W','O',{keys:['B','I'],condition:function(){return capacity(g.O)}});
       path('officer-seal','官印承接','O','I',{keys:['B','W'],condition:function(){return {state:outlookLink(context,g.I,g.B),possibleStates:[0,1],reason:'印须实际生身，普通佩印不一律忌财食伤'}}});
       if(g.H.present){
-        var hit=breaker('H','O','I');
-        if(hit.state===-1&&outlookLink(context,g.H,g.W)===1&&outlookLink(context,g.W,g.O)===1)hit={state:0,reason:'伤官有财通关生官，先结算实际通关'};
+        var receivers=[],hit=breaker('H','O','I',receivers);
+        if(hit.state===-1&&context.wealthChannel){
+          var current=context.wealthChannel,bridges=current.blocked?[]:current.bridgeRoutes;
+          var unprotected=current.officerAttacks.filter(function(attack){return !bridges.some(function(steps){
+            return annualActorKey(steps[0].left)===annualActorKey(attack.left)&&annualActorKey(steps[1].right)===annualActorKey(attack.right);
+          })});
+          receivers=unprotected.map(function(x){return x.right});
+          if(bridges.length&&!unprotected.length)hit={state:0,reason:'各受克正官均由同一财星接通其对应通关两段'};
+        }else if(hit.state===-1&&outlookLink(context,g.H,g.W)===1&&outlookLink(context,g.W,g.O)===1)hit={state:0,reason:'伤官有财通关生官，先结算实际通关'};
         task('hurt-officer','印制伤护官与财通关',hit.state,['H','O','I','W'],hit.reason,'工作职责与表达方式之间的协调条件发生变化。','LK-03');
+        tasks[tasks.length-1].protectedTargets=receivers;
       }
     }
     var special=analysis.specialPatternQualification;
-    if(special&&context.currentSpecialDetail){
+    if(special&&special.key==='从儿格'&&context.childOutlet&&!context.currentSpecialDetail){
+      task('special-flow',special.name+'的实际顺势与出口',1,['U','W'],'食伤生财仍可达：'+context.childOutlet.text,'食伤生财出口仍通。','LK-10');
+      task('special-reversal','特殊路线的有效逆势',0,['I','B'],'日主有根可以承泄，未证根气破坏当前食伤生财','','LK-10');
+    }else if(special&&context.currentSpecialDetail){
       var detail=context.currentSpecialDetail,targetGods=godNamesForElement(dayStem,detail.target),target=outlookGod(context,targetGods);
       var flow=!!(detail.flowChecks||[]).length&&detail.flowChecks.every(function(x){return x.met}),opposite=outlookGod(context,godNamesForElement(dayStem,officerElement(detail.target)));
       task('special-flow',detail.name+'的实际顺势与出口',flow&&target.usable&&!opposite.usable?1:null,[],flow?'逐项复核顺势链；'+target.facts.join('；'):'顺势链未完整确认','原有顺势条件与可用出口发生变化。','LK-10');
@@ -3068,7 +3136,7 @@
       task('special-reversal','特殊路线的有效逆势',0,['I','B'],'未见已确认的有效逆势，不以资格保留新增正面证据','','LK-10');
     }else{
       if(special){
-        var reversal=/从格|化气/.test(special.name)&&cleanDay.length>0;
+        var reversal=special.key!=='从儿格'&&/从格|化气/.test(special.name)&&cleanDay.length>0;
         var opposite=outlookGod(context,godNamesForElement(dayStem,officerElement(special.target)));
         if(reversal||opposite.usable){
           var cause=reversal?'日主新增实际未损根，原有无根顺势条件被改变':opposite.facts.join('；')+'实际逆制所用气势';
@@ -3118,7 +3186,7 @@
       }
     }
     var month=context.pillars.month[1],elements=function(wx){return outlookGod(context,godNamesForElement(dayStem,wx))},fire=elements('火'),water=elements('水'),metal=elements('金'),wood=elements('木');
-    var climate=seasonTune(dayStem,month,context.scores),cold='亥子丑'.indexOf(month)>=0,hot='巳午未'.indexOf(month)>=0,dry='申酉戌'.indexOf(month)>=0,damp='寅卯辰'.indexOf(month)>=0;
+    var climate=seasonTune(dayStem,month,context.scores,context.pillars,context.interactions),cold='亥子丑'.indexOf(month)>=0,hot='巳午未'.indexOf(month)>=0,dry='申酉戌'.indexOf(month)>=0,damp='寅卯辰'.indexOf(month)>=0;
     var excess=cold?water:(hot?fire:(dry?metal:wood)),remedy=cold||damp?fire:water;
     if(excess.usable&&(excess.command||excess.dims[1]>1)&&!remedy.usable||climate.priority==='主用'){
       var affected=(cold||hot)&&STEM_WX[dayStem]===(cold?'火':'水')&&tasks.some(function(x){return x.state===-1&&x.ruleId==='LK-05'});
@@ -3137,6 +3205,8 @@
       killPaths.forEach(function(path){combined=uniqueStates(combined.reduce(function(out,a){return out.concat(possibilities(path).map(function(b){return a===1||b===1?1:(a===-1||b===-1?-1:0)}))},[]))});
       tasks[tasks.length-1].possibleStates=combined;
       tasks[tasks.length-1].state=combined.length===1?combined[0]:null;
+      var blocked=killPaths.filter(function(path){return path.state===-1});
+      tasks[tasks.length-1].carryingBlock=blocked.length>0&&blocked.every(function(path){return path.carryingBlock});
     }
     return {family:family,tasks:tasks,route:context.currentSpecialDetail?context.currentSpecialDetail.name:family};
   }
@@ -3144,24 +3214,385 @@
     var theme=/官杀.*承载/.test(family)?'工作职责、规则要求与承受能力之间的压力':(/承载/.test(family)?'任务与自身承受能力之间的压力':(/比劫分财/.test(family)?'竞争、合作及资源分配上的矛盾':(/财印/.test(family)?'资源投入与学习、支持条件之间的冲突':(/印/.test(family)?'学习及支持资源受到的牵制':(/食伤/.test(family)?'表达、产出及成果转化上的牵制':'相关事务中的矛盾')))));
     return theme+(better?'有所缓解。':'可能加重，需要更多精力协调。');
   }
+  function medicineRouteStrength(context,steps){
+    var day=context.pillars.day[0],elements=WUXING.filter(function(wx){
+      var names=godNamesForElement(day,wx);
+      return steps.some(function(step){return names.indexOf(step.left.god)>=0});
+    });
+    var facts=elements.map(function(wx){
+      var role=outlookGod(context,godNamesForElement(day,wx));
+      return {element:wx,visible:role.stems.filter(function(x){return x.pillar!=='day'}).length,
+        command:role.command,roots:unique(role.roots.filter(function(x){return !outlookRootRestricted(x)}).map(function(x){return x.pillar})).length,
+        effective:Math.round((context.scores[wx]||0)*100)/100};
+    });
+    var totals=facts.reduce(function(sum,x){return [sum[0]+x.visible,sum[1]+Number(x.command),sum[2]+x.roots,sum[3]+x.effective]},[0,0,0,0]);
+    return {elements:facts,totals:totals,carrying:context.carryingCapacity.canCarryOutputKill};
+  }
+  function compareMedicineStrength(before,after){
+    var deltas=before.totals.slice(0,3).map(function(n,i){return after.totals[i]-n});
+    var effectiveDelta=after.totals[3]-before.totals[3];
+    var significant=deltas.some(function(n){return n!==0})?0.70:0.35;
+    if(Math.abs(effectiveDelta)>=significant)deltas.push(effectiveDelta);
+    var up=deltas.some(function(n){return n>0}),down=deltas.some(function(n){return n<0});
+    return up&&down?'mixed':up?'positive':down?'negative':'neutral';
+  }
+  function wealthChannelState(context,analysis){
+    var day=context.pillars.day[0],wx=ctrl[STEM_WX[day]],role=luckToneRoles(analysis.useful);
+    var W=['正财','偏财'],U=['食神','伤官'],I=['正印','偏印'],B=['比肩','劫财'],O=['正官'],K=['七杀'],profiles={};
+    function clean(root){return root.usable!==false&&!root.transformedAway&&root.rootPower>0&&!outlookRootRestricted(root)}
+    Object.keys(context.profiles).forEach(function(name){
+      var p=context.profiles[name];
+      profiles[name]={stemEntries:p.stemEntries||[],branchEntries:(p.branchEntries||[]).filter(clean)};
+    });
+    function group(names){return outlookGod(context,names)}
+    function established(g){return g.clear&&!g.uncertain&&g.roots.some(clean)}
+    function wealthKnown(g){return established(g)||!g.uncertain&&g.roots.some(function(r){return clean(r)&&r.rootPower>=0.8})}
+    function stronger(source,target,sourceWx,targetWx){
+      var sourceScore=context.scores[sourceWx]||0,targetScore=context.scores[targetWx]||0;
+      var commandEdge=source.command&&!target.command;
+      return established(source)&&(sourceScore>=targetScore+0.35&&(source.dims[2]>=target.dims[2]||commandEdge)||
+        commandEdge&&sourceScore>=targetScore);
+    }
+    function link(from,to,action){return {from:from,to:to,action:action||'生'}}
+    function path(chains,activeProfiles){
+      var result=interactionFlowAnalysis('',activeProfiles||profiles,context.interactions,[],chains,{exactMediator:!!context.pillars.flowYear}).steps;
+      return result.every(function(x){return x.active})?result:[];
+    }
+    var w=group(W),wealthRoots=w.roots.filter(clean),known=wealthKnown(w),favor=role(wx),sealWx=resourceElement(STEM_WX[day]);
+    var carry=context.carryingCapacity,canCarry=carry.canCarryWealth,canTakeOfficer=carry.tasks.officer.strictFormationEligible;
+    var result={roots:wealthRoots,stems:w.stems,known:known,uncertain:w.uncertain,wealthFacts:w.facts.concat(w.internal),food:[],bridge:[],natalPeerAttack:[],sealDamage:[],blocked:false,effective:false,canCarry:canCarry};
+    var u=group(U),b=group(B),i=group(I),o=group(O),k=group(K),outputWx=gen[STEM_WX[day]],officerWx=officerElement(STEM_WX[day]);
+    // Output feeds actual rooted wealth. A controlled officer/kill outlet must
+    // be connected through the same bridge actors under the existing flow judge.
+    var outputReady=established(u),officerReady=established(o);
+    var food=known&&outputReady?path([link(U,W)]):[];
+    var sealTake=established(i)?path([link(O.concat(K),I),link(I,['日主'])]):[];
+    var foodControl=established(u)&&established(k)?path([link(U,K,'制')]):[];
+    var officerAttacks=outputReady&&officerReady?outlookTargetPairs(context,['伤官'],O,'制',profiles):[];
+    var bridgeRoutes=known?officerAttacks.map(function(attack){
+      return path([Object.assign(link(['伤官'],W),{leftActor:annualActorKey(attack.left)}),Object.assign(link(W,O),{rightActor:annualActorKey(attack.right)})]);
+    }).filter(function(steps){return steps.length}):[];
+    var officialHurt=officerAttacks.length>0;
+    bridgeRoutes.sort(function(a,b){
+      return Number(b[0].right.kind==='干')-Number(a[0].right.kind==='干')||
+        Number(b[1].right.kind==='干')-Number(a[1].right.kind==='干');
+    });
+    var bridge=bridgeRoutes[0]||[];
+    result.officerAttacks=officerAttacks;
+    result.bridgeRoutes=bridgeRoutes;
+    result.outputReady=outputReady;
+    result.bridgeReady=officialHurt&&officerReady;
+    var officerOutlet=canTakeOfficer&&officerReady&&(!officialHurt||bridge.length)?path([link(W,O)]):[];
+    var killOutlet=canTakeOfficer&&established(k)?(sealTake.length?path([link(W,K),link(K,I),link(I,['日主'])]):foodControl.length?path([link(W,K)]):[]):[];
+    var excessKill=established(k)&&path([link(W,K)]).length&&!killOutlet.length&&!canCarry&&
+      !(bridge.length&&(favor==='主用'||favor==='佐用'))&&(stronger(k,b,officerWx,STEM_WX[day])||k.command);
+    var peerStrong=known&&stronger(b,w,STEM_WX[day],wx);
+    var peerBypass=canCarry&&food.length?path([link(B,U),link(U,W)]):[];
+    var officerProtect=known&&stronger(o,b,officerWx,STEM_WX[day])&&(!officialHurt||bridge.length)?path([link(O,B,'制')]):[];
+    var peerDisease=(context.patternDisease.items||[]).some(function(x){return x.family==='比劫分财'&&x.bestRank<2});
+    var peerAttack=known&&(peerStrong||peerDisease&&established(b))&&!peerBypass.length&&!officerProtect.length?path([link(B,W,'制')]):[];
+    if(peerAttack.length){
+      var natalWealth=Object.assign({},profiles);
+      W.forEach(function(name){
+        var p=profiles[name]||{};
+        natalWealth[name]={stemEntries:(p.stemEntries||[]).filter(function(x){return NATAL_PILLAR_KEYS.indexOf(x.pillar)>=0}),
+          branchEntries:(p.branchEntries||[]).filter(function(x){return NATAL_PILLAR_KEYS.indexOf(x.pillar)>=0})};
+      });
+      result.natalPeerAttack=path([link(B,W,'制')],natalWealth);
+    }
+    var sealEssential=role(sealWx)==='主用'||(analysis.interactionFlow&&analysis.interactionFlow.steps||[]).some(function(x){return x.active&&x.from.some(function(name){return I.indexOf(name)>=0})});
+    var sealBreak=(context.patternDisease.items||[]).some(function(x){return x.family==='财印相战'&&x.bestRank<2});
+    var wealthControlsSeal=stronger(w,i,wx,sealWx)&&path([link(W,I,'制')]).length>0;
+    var harmsSeal=sealEssential&&(sealBreak||established(i)&&wealthControlsSeal&&!peerAttack.length);
+    var sealTargets=food.length?[food[0].left.god]:U;
+    var sealOverOutput=stronger(i,u,sealWx,outputWx)?path([link(I,sealTargets,'制')]):[];
+    if(sealOverOutput.length&&!wealthControlsSeal)result.sealDamage=sealOverOutput;
+    result.blocked=!!(peerAttack.length||harmsSeal||excessKill);
+    result.blockedBy={peer:result.natalPeerAttack,seal:!!harmsSeal,kill:!!excessKill};
+    result.food=canCarry&&!result.blocked&&!result.sealDamage.length?food:[];
+    result.bridge=result.blocked?[]:bridge;
+    result.uncoveredOfficerAttacks=officerAttacks.filter(function(attack){
+      return result.blocked||!bridgeRoutes.some(function(steps){
+        return annualActorKey(steps[0].left)===annualActorKey(attack.left)&&annualActorKey(steps[1].right)===annualActorKey(attack.right);
+      });
+    });
+    result.effective=known&&favor!=='忌'&&!result.blocked&&!!(result.food.length||result.bridge.length||officerOutlet.length||
+      killOutlet.length||canCarry&&(favor==='主用'||favor==='佐用'));
+    return result;
+  }
+  function evaluateWealthOutlook(before,after,analysis,natal,luckGz,yearGz){
+    var day=natal.day[0],wx=ctrl[STEM_WX[day]],role=luckToneRoles(analysis.useful),reasons=[],items=[];
+    var special=analysis.specialPatternQualification;
+    var current;
+    function actorKey(actor){
+      var kind=actor.kind||(actor.branch?'支':'干'),text=actor.text||'';
+      var stem=actor.stem||(kind==='支'?(text.split('藏')[1]||'')[0]:text[0]);
+      return [actor.pillar,kind,stem].join(':');
+    }
+    function chainActors(chain){return chain.flatMap(function(step){return [step.left,step.right]})}
+    function recordRouteReplacement(a,b,id,label){
+      if(!a.length||!b.length)return;
+      function signature(route){
+        return JSON.stringify(route.map(function(step){return [actorKey(step.left),step.action,actorKey(step.right)]}));
+      }
+      if(signature(a)===signature(b))return;
+      function describe(route){
+        function actorLabel(actor){
+          var place=PILLAR_META[actor.pillar];
+          return (place?(actor.kind==='干'?place.stemLabel:place.branchLabel):'')+actor.text;
+        }
+        return route.map(function(step){return actorLabel(step.left)+step.action+actorLabel(step.right)}).join('、');
+      }
+      reasons.push({direction:'neutral',ruleId:'W-'+id+'-replacement',
+        text:label+'前后均可达，采用的参与者变更：'+describe(a)+'；现为 '+describe(b),
+        plainText:label+'仍然接得上，但具体承接它的力量变了。'});
+    }
+    function add(direction,id,text,plainText,weight,actors,causeKey){
+      var ruleId='W-'+id,actorKeys=unique((actors||[]).map(actorKey)).sort(),causeFamily='wealth-'+id;
+      reasons.push({direction:direction,ruleId:ruleId,text:text,plainText:plainText,actorKeys:actorKeys,causeFamily:causeFamily,causeKey:causeKey});
+      items.push({direction:direction,ruleId:ruleId,taskId:ruleId,text:text,plainText:plainText,wealthWeight:weight,
+        actorKeys:actorKeys,causeFamily:causeFamily,causeKey:causeKey});
+    }
+    function change(a,b,id,gain,loss,weight,actors,causeKey){
+      if(Boolean(a)!==Boolean(b))add(b?'positive':'negative',id,b?gain[0]:loss[0],b?gain[1]:loss[1],weight,actors,causeKey);
+    }
+    function compareActors(a,b){
+      function diff(x,y){return x.filter(function(actor){return !y.some(function(other){return actorKey(actor)===actorKey(other)})})}
+      var lostRoots=diff(a.roots,b.roots),lostStems=diff(a.stems,b.stems);
+      var gained=b.effective?diff(b.roots,a.effective?a.roots:[]).concat(diff(b.stems,a.effective?a.stems:[])):[];
+      var lost=a.effective?lostRoots.concat(lostStems):[];
+      function describe(x){return x.branch?(PILLAR_META[x.pillar].branchLabel+x.branch+'藏'+x.stem):x.stem}
+      if(gained.length)add('positive','root','财星新增或恢复有效根透：'+gained.map(describe).join('、'),'财星新增可用根透。',1.05,gained);
+      if(!lost.length)return null;
+      var prior=natalLuckContacts(before),contacts=natalLuckContacts(after);
+      var damaged=lostRoots.filter(function(root){
+        return contacts.some(function(c){
+          return c.branch&&c.target===root.pillar&&c.transform!==wx&&
+            !prior.some(function(p){return p.key===c.key&&p.transform===c.transform&&p.source===c.source});
+        });
+      });
+      var text=damaged.length?((damaged.some(function(x){return '辰戌丑未'.includes(x.branch)})?'含财库支或财根':'原局财根')+
+        '受冲绊：'+damaged.map(describe).join('、')):'财星有效根透减损：'+lost.map(describe).join('、');
+      var causeKey='wealth-root:'+lost.map(actorKey).sort().join('|');
+      add('negative','root',text,damaged.length?'财根受冲绊。':'财星可用根透减少。',1.05,lost,causeKey);
+      return lostRoots.length===1&&!lostStems.length?{actor:actorKey(lostRoots[0]),key:causeKey}:null;
+    }
+    function stillUsable(actor){
+      var profile=after.profiles[actor.god]||{},entries=actor.kind==='干'?profile.stemEntries:profile.branchEntries;
+      return (entries||[]).some(function(x){
+        return actorKey(x)===actorKey(actor)&&x.usable!==false&&
+          (actor.kind==='干'?x.effect!=='transform'&&x.effect!=='contest':
+            !x.transformedAway&&x.rootPower>0&&!outlookRootRestricted(x));
+      });
+    }
+    if(special){
+      // Follow the already-qualified route. Ordinary body capacity and its remedies do not apply.
+      function specialState(ctx){
+        var names=godNamesForElement(day,wx),w=outlookGod(ctx,names),target=special.target;
+        function reaches(from,to,action){
+          return interactionFlowAnalysis('',ctx.profiles,ctx.interactions,[],[{from:godNamesForElement(day,from),to:godNamesForElement(day,to),action:action}]).steps.some(function(x){return x.active});
+        }
+        var roots=w.roots.filter(function(x){return !outlookRootRestricted(x)}),known=roots.length&&!w.uncertain;
+        var valid=ctx.currentSpecialDetail&&ctx.currentSpecialDetail.ruleId===special.ruleId||special.key==='从儿格'&&!!ctx.childOutlet;
+        var food=false,reverse=false,admitted=false;
+        if(special.key==='从财格'||special.key==='从儿格'){
+          food=known&&reaches(gen[STEM_WX[day]],wx,'生');
+          admitted=special.key==='从财格'||food;
+        }else if(special.type==='专旺格'){
+          food=known&&reaches(target,gen[target],'生')&&reaches(gen[target],wx,'生');
+          var officer=officerElement(target);
+          reverse=known&&reaches(wx,officer,'生')&&reaches(officer,target,'制');
+          admitted=food&&!reverse;
+        }else if(special.type==='化气格'){
+          food=wx===gen[target]&&(role(wx)==='主用'||role(wx)==='佐用')&&reaches(target,wx,'生');
+          reverse=known&&(ctrl[wx]===target&&reaches(wx,target,'制')||
+            gen[wx]===officerElement(target)&&reaches(wx,officerElement(target),'生')&&reaches(officerElement(target),target,'制'));
+          admitted=wx===target||food||gen[wx]===target&&(role(wx)==='主用'||role(wx)==='佐用')&&reaches(wx,target,'生');
+        }else{
+          admitted=gen[wx]===target&&reaches(wx,target,'生');
+        }
+        return {roots:roots,stems:w.stems,uncertain:w.uncertain,wealthFacts:w.facts.concat(w.internal),effective:!!(valid&&known&&admitted&&!reverse),reverse:reverse,
+          food:!!(valid&&food&&!reverse),valid:!!valid};
+      }
+      var sa=specialState(before),sb=specialState(after);
+      current=sb;
+      compareActors(sa,sb);
+      change(sa.food,sb.food,'special-flow',['顺势生财或泄秀出口接通','顺势财路接通。'],['顺势生财或泄秀出口中断','顺势财路受阻。'],0.9,sa.roots.concat(sb.roots));
+      change(sb.reverse,sa.reverse,'special-reversal',['财星逆制或助逆得解','财星对主势的牵制解除。'],['财星逆制或转生克破主势','财星牵制原有主势。'],1.05,sa.roots.concat(sb.roots));
+      if(sa.valid!==sb.valid&&!sa.reverse&&!sb.reverse&&(sa.effective||sb.effective)&&sa.food===sb.food){
+        change(sa.valid,sb.valid,'special-qualification',['原格顺势条件恢复，财星重新承势','财星重新承接原格。'],
+          ['原格顺势条件受损，财星失去原有承接','原格顺势财路失去承接。'],0.9,sa.roots.concat(sb.roots));
+      }
+    }else{
+      var a=wealthChannelState(before,analysis),b=wealthChannelState(after,analysis);
+      current=b;
+      var rootLoss=compareActors(a,b);
+      recordRouteReplacement(a.food,b.food,'food','食伤生财');
+      recordRouteReplacement(a.bridge,b.bridge,'bridge','财星通关');
+      function sameRootCause(route,hasIndependentBlock){
+        if(!rootLoss||!route.length||hasIndependentBlock||b.blocked)return null;
+        var actors=chainActors(route),wealthNames=['正财','偏财'];
+        var dependsOnRoot=!b.known||actors.some(function(actor){return actorKey(actor)===rootLoss.actor});
+        return dependsOnRoot&&actors.filter(function(actor){return wealthNames.indexOf(actor.god)<0}).every(stillUsable)?rootLoss.key:null;
+      }
+      change(a.food.length,b.food.length,'food',['食伤生财接通：'+(b.food[0]||{}).text,'食伤生财接通。'],
+        ['食伤生财受阻','食伤生财受阻。'],0.9,chainActors(a.food.concat(b.food)),
+        sameRootCause(a.food,!b.canCarry||!b.outputReady||b.sealDamage.length));
+      change(a.bridge.length,b.bridge.length,'bridge',['财通关接通（伤官→财→官）','财星接通伤官与正官。'],
+        ['财通关中断（伤官→财→官）','伤官与正官失去财星通关。'],1.05,chainActors(a.bridge.concat(b.bridge)),
+        sameRootCause(a.bridge,!b.bridgeReady));
+      change(b.natalPeerAttack.length,a.natalPeerAttack.length,'peer',['比劫夺财得解','原局财星的争夺减轻。'],
+        ['比劫夺财：比劫可达原局财星且未见有效制约','比劫牵制原局财星。'],1.05,chainActors(a.natalPeerAttack.concat(b.natalPeerAttack)));
+      if(a.food.length||b.food.length||a.sealDamage.length&&b.sealDamage.length){
+        change(b.sealDamage.length,a.sealDamage.length,'seal',['印夺食得解，生财源头恢复','印对生财源头的牵制解除。'],
+          ['印夺食，印作用于生财源头','印星截断食伤生财。'],0.9,chainActors(a.sealDamage.concat(b.sealDamage)));
+      }
+      if(a.known||b.known)change(a.canCarry,b.canCarry,'capacity',['日主根气或印比支持补足任财条件','任财承载改善。'],
+        ['日主根气或印比支持不足，任财受限','任财承载减弱。'],0.65);
+    }
+    var positive=reasons.some(function(x){return x.direction==='positive'}),negative=reasons.some(function(x){return x.direction==='negative'});
+    var direction=current.uncertain?'pending':positive&&negative?'mixed':positive?'positive':negative?'negative':'neutral';
+    var labels={positive:'财路助益',negative:'财路受限',mixed:'财路利弊并见',neutral:'财路平稳',pending:'财路待判'};
+    var note=(yearGz?yearGz+'流年随'+luckGz+'大运':luckGz+'大运')+'对照原局。'+
+      (special?'沿用'+special.name+'顺势条件。':'沿用原局喜忌与任财条件。');
+    var uncertainty=current.uncertain?['财星有效根透待核：'+current.wealthFacts.join('；')]:[];
+    var missingFields=current.uncertain?['wealth.effectiveActors']:[];
+    var amplitude=computeOutlookAmplitude({direction:direction,evidence:items,reservations:[],uncertainty:uncertainty,missingFields:missingFields});
+    return {direction:direction,label:labels[direction],amplitude:amplitude,reasons:reasons,note:note,
+      uncertainty:uncertainty,missingFields:missingFields};
+  }
+  function hasDecisiveOutlookUncertainty(result){
+    return (result.uncertainty||[]).length>0;
+  }
   // Y1–Y8 are project arbitration policies; natal qualification and scores stay frozen.
-  function settleTemporalOutlook(before,after,analysis,legacy){
-    if(!analysis.useful)return legacy;
+  function settleTemporalOutlook(before,after,analysis,legacy,annualSettlement){
+    if(!analysis.useful||legacy.assessment==='input-error')return legacy;
     var day=before.pillars.day[0],useful=analysis.useful||{},layers=[[],[],[],[],[],[]],checked=[],seen={};
     function actorKey(x){return [x.pillar,x.kind||'根',x.stem||x.text,x.god||''].join(':')}
-    function element(ctx,wx){return outlookGod(ctx,godNamesForElement(day,wx))}
+    var elementStates=new Map();
+    function element(ctx,wx){
+      if(!elementStates.has(ctx))elementStates.set(ctx,{});
+      var cache=elementStates.get(ctx);
+      return cache[wx]||(cache[wx]=outlookGod(ctx,godNamesForElement(day,wx)));
+    }
     function actors(ctx,wx){
       var g=element(ctx,wx);
       // Internal control without a bridge/other root does not become effective support.
       if(g.uncertain)return [];
       return g.stems.filter(function(x){return g.roots.length>0}).map(function(x){return Object.assign({kind:'干'},x)}).concat(g.roots.filter(function(x){return !outlookRootRestricted(x)}));
     }
-    function facts(list){return list.map(function(x){return {key:actorKey(x),pillar:x.pillar,stem:x.stem||null,text:x.text||((x.branch||'')+'藏'+x.stem),kind:x.kind||'根'}})}
+    function facts(list){return list.map(function(x){return {key:actorKey(x),pillar:x.pillar,branch:x.branch||null,stem:x.stem||null,text:x.text||((x.branch||'')+'藏'+x.stem),kind:x.kind||'根'}})}
+    function physicalKey(ctx,actor){
+      var text=actor.text||'',hidden=actor.kind==='支'||actor.kind==='根'||!!actor.branch;
+      var stem=actor.stem||(hidden?text.split('藏')[1]||'':text)[0];
+      if(!actor.pillar||!STEM_WX[stem])return null;
+      var branch=hidden&&(actor.branch||text.includes('藏')&&text[0]||(ctx.pillars[actor.pillar]||'')[1]);
+      return [actor.pillar,hidden?branch+'藏'+stem:stem,STEM_WX[stem]].join(':');
+    }
+    function effectiveKeys(ctx){
+      return new Set(WUXING.reduce(function(keys,wx){
+        return keys.concat(actors(ctx,wx).map(function(actor){return physicalKey(ctx,actor)}).filter(Boolean));
+      },[]));
+    }
+    function physicalActors(ctx){
+      var keys=new Set();
+      Object.keys(ctx.profiles).forEach(function(name){
+        var p=ctx.profiles[name];
+        (p.stemEntries||[]).concat(p.branchEntries||[]).forEach(function(actor){
+          if(actor.usable!==false&&actor.effect!=='contest'&&actor.effect!=='transform'&&
+            (!actor.branch||!actor.transformedAway&&actor.rootPower>0&&!outlookRootRestricted(actor))){
+            var key=physicalKey(ctx,actor);
+            if(key)keys.add(key);
+          }
+        });
+      });
+      return keys;
+    }
+    var beforeKeys,afterKeys,beforeActors,afterActors;
+    function physicalCauses(oldFacts,newFacts,loss,mode,routeOwners){
+      var from=loss?before:after,to=loss?after:before,prefix=loss?'loss:':'gain:';
+      var changed=oldFacts.filter(function(f){return !newFacts.some(function(g){return f.key===g.key})});
+      if(!changed.length)return [];
+      if(!beforeKeys){
+        beforeKeys=effectiveKeys(before);afterKeys=effectiveKeys(after);
+        beforeActors=physicalActors(before);afterActors=physicalActors(after);
+      }
+      var was=loss?beforeKeys:afterKeys,now=loss?afterKeys:beforeKeys;
+      var present=loss?beforeActors:afterActors,remaining=loss?afterActors:beforeActors;
+      function actorCause(actor,fromActiveStep){
+        var key=physicalKey(from,actor);
+        if(!key)return null;
+        if(fromActiveStep&&present.has(key)&&!remaining.has(key))return key;
+        if(!was.has(key)||now.has(key))return null;
+        // A natal stem that stays physically usable can gain or lose its function
+        // with its sole root. Check the same stem in the other snapshot first.
+        if(actor.kind==='干'&&NATAL_PILLAR_KEYS.indexOf(actor.pillar)>=0){
+          var wx=STEM_WX[key.split(':')[1]],other=element(to,wx);
+          var stillVisible=other.stems.some(function(x){return physicalKey(to,Object.assign({kind:'干'},x))===key});
+          if(stillVisible&&(other.uncertain||!other.roots.some(function(x){return !outlookRootRestricted(x)}))){
+            var roots=Array.from(was).filter(function(k){return k.endsWith(':'+wx)&&k.includes('藏')&&!now.has(k)});
+            if(roots.length===1)return roots[0];
+          }
+        }
+        return key;
+      }
+      return unique(changed.flatMap(function(f){
+        if(!f.left||!f.right){var actor=actorCause(f);return actor?prefix+actor:null;}
+        var l=physicalKey(from,f.left),r=physicalKey(from,f.right);
+        if(!l||!r)return null;
+        var a=actorCause(f.left,true),b=actorCause(f.right,true);
+        // A usable receiving day stem is the same target even when its own rooting changes.
+        var sameRecipient=f.right.god==='日主'&&(!to.interactions.dayMaster||to.interactions.dayMaster.usable!==false);
+        if(sameRecipient)b=null;
+        var action=f.key.split('>')[1],opposite=a&&!b?r:b&&!a?l:null;
+        // An officer/killing feeding a seal is the pressure being mediated.
+        // Losing that pressure by itself does not impair the medicine.
+        if(mode==='medicine-loss'&&isOfficerSealSupply(f,action)){
+          if(b)return prefix+b;
+          if(a)return null;
+        }
+        // Lost medicine routes may share several independently lost actors.
+        if((mode==='medicine-loss'||mode==='medicine-change')&&a&&b)return unique([prefix+a,prefix+b]);
+        // An unchanged source feeding a newly credited receiver repeats its gain.
+        if(mode==='incoming-support'&&action==='生'&&!a&&b&&present.has(l)&&remaining.has(l))return prefix+b;
+        if(mode!=='role-action'&&mode!=='incoming-support'&&opposite&&
+          ((was.has(opposite)&&now.has(opposite)||present.has(opposite)&&remaining.has(opposite))||a&&sameRecipient))return prefix+(a||b);
+        var route=prefix+l+'>'+action+'>'+r;
+        // An already-booked medicine can own its lost incoming supply or
+        // restraint. Without that owner, the whole changed route is evidence.
+        var owner=action==='生'?b:action==='制'?a:null;
+        if(routeOwners&&owner)routeOwners[route]=prefix+owner;
+        return route;
+      }).filter(Boolean));
+    }
+    function isOfficerSealSupply(f,action){
+      return action==='生'&&/^(正官|七杀)$/.test(f.left.god)&&/^(正印|偏印)$/.test(f.right.god);
+    }
     function add(level,id,direction,subject,a,b,reason){
       var key=id+':'+direction+':'+JSON.stringify([a,b]);if(seen[key])return;seen[key]=true;
       var item={ruleId:id,taskId:subject,direction:direction,kind:'temporal-action',text:subject+'：'+reason,life:'',
         source:{title:'项目 Y1–Y8 岁运工程裁决政策',url:''},level:['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'][level],actors:{before:a,after:b},before:a,after:b,
         adoptedReason:reason,excludedReason:'较低层不覆盖本层；同因作用只结算一次',conditions:[],counterEvidence:[]};
+      if(Array.isArray(a)&&Array.isArray(b)&&a.concat(b).every(function(f){return f&&f.key})){
+        var isReplacement=id==='Y3-replacement-medicine';
+        var medicineLoss=annualSettlement&&id==='Y3-medicine'&&direction==='negative';
+        var routeOwners=annualSettlement&&id==='Y5-role-action'&&direction==='negative'?{}:null;
+        var lost=isReplacement&&direction==='positive'?[]:physicalCauses(a,b,true,
+          medicineLoss?'medicine-loss':id==='Y3-medicine'?'medicine-change':null,routeOwners);
+        var mode=id==='Y5-role-action'?(direction==='positive'?'incoming-support':'role-action'):null;
+        var gained=isReplacement&&direction==='negative'?[]:physicalCauses(b,a,false,mode);
+        if(medicineLoss&&a.some(function(f){return f.left&&f.right&&isOfficerSealSupply(f,f.key.split('>')[1]);})){
+          var recipient=annualActorKey({pillar:'day',stem:before.pillars.day[0]});
+          // When the receiver itself is disabled, the broken transmission
+          // is distinct from the loss of the seal that would have fed it.
+          item.medicineTransmissionLoss=!lost.includes('loss:'+recipient);
+          // New actors are not evidence of a medicine loss when the former
+          // pressure vanished and no actual medicine loss could be verified.
+          gained=[];
+        }
+        if(routeOwners&&Object.keys(routeOwners).length)item.routeOwners=routeOwners;
+        if(lost.length||gained.length)item.physicalCauses=lost.concat(gained);
+      }
       layers[level].push(item);return item;
     }
     function difference(level,id,subject,a,b,sign){
@@ -3171,8 +3602,8 @@
         checked.push({subject:subject+'替代作用核验',before:a,after:b,reason:'同一任用需求仍有实际路径；替代演员不作为两个独立利弊，不按数量比较强弱'});
         return;
       }
-      if(gained.length)add(level,id,sign>0?'positive':'negative',subject,a,b,'新增可用作用：'+gained.map(function(x){return x.text}).join('、'));
-      if(lost.length)add(level,id,sign>0?'negative':'positive',subject,a,b,'原可用作用受限：'+lost.map(function(x){return x.text}).join('、'));
+      if(gained.length)return add(level,id,sign>0?'positive':'negative',subject,a,b,'新增可用作用：'+gained.map(function(x){return x.text}).join('、'));
+      if(lost.length)return add(level,id,sign>0?'negative':'positive',subject,a,b,'原可用作用受限：'+lost.map(function(x){return x.text}).join('、'));
     }
     function flow(ctx,chains){
       var interactions=ctx.interactions,recipient=interactions.dayMaster;
@@ -3198,21 +3629,48 @@
     }
     function stepFacts(steps){return steps.filter(function(x){return x.active}).map(function(x){return {key:actorKey(x.left)+'>'+x.action+'>'+actorKey(x.right),text:x.text,left:x.left,right:x.right,active:true}})}
     function medicineFacts(item){return (item&&item.medicines||[]).filter(function(m){return m.rank>0}).reduce(function(out,m){return out.concat(stepFacts(m.steps||[]))},[]).filter(function(x,i,a){return a.findIndex(function(y){return x.key===y.key})===i})}
-    var special=analysis.specialPatternQualification;
+    var special=analysis.specialPatternQualification,strict=(useful.decision&&useful.decision.primaryRouteIds||[]).indexOf('strict-special')>=0;
+    var settlementNotes=[],comparisonNotes=[];
+    function note(rule,subject,reason,a,b){
+      settlementNotes.push({ruleId:rule,taskId:subject,direction:'neutral',kind:'qualification',text:reason,before:a,after:b,conditions:[],counterEvidence:[],life:''});
+    }
+    function compareReplacement(subject,a,b){
+      var sa=medicineRouteStrength(before,a),sb=medicineRouteStrength(after,b),direction=compareMedicineStrength(sa,sb);
+      function describe(s){return s.elements.map(function(x){return x.element+'（透干'+x.visible+'、'+(x.command?'得令':'未得令')+'、未损根'+x.roots+'、有效五行'+x.effective+'）'}).join('、')}
+      var text='同一承载需求的替代药路：'+describe(sa)+' → '+describe(sb)+'；'+{
+        positive:'药力增强',negative:'药力减弱',mixed:'根、透或得令的变化方向有分歧',neutral:'可核药力相近'
+      }[direction]+'。';
+      comparisonNotes.push({subject:subject,before:sa,after:sb,direction:direction});
+      note('Y3-replacement-medicine',subject,text,sa,sb);
+      (direction==='mixed'?['positive','negative']:direction==='neutral'?[]:[direction]).forEach(function(side){
+        var item=add(1,'Y3-replacement-medicine',side,subject+(direction==='mixed'?(side==='positive'?'·增强条件':'·减弱条件'):''),a,b,text);
+        if(item&&side==='negative'&&!sb.carrying)item.causeFamily='daymaster-carrying';
+        if(item&&side==='positive'&&/承载/.test(subject))item.causeFamily='daymaster-carrying-support';
+        if(item&&direction==='mixed'){item.mixedReplacement=true;item.replacementSubject=subject;}
+      });
+    }
     if(special){
       var lt=legacy.review.beforeTasks.filter(function(t){return t.ruleId==='LK-10'}),rt=legacy.review.afterTasks.filter(function(t){return t.ruleId==='LK-10'});
       lt.forEach(function(a){var b=rt.find(function(t){return t.id===a.id});if(!b||a.state===null||b.state===null)return;
         if(a.state!==b.state)add(0,'Y2-special',b.state>a.state?'positive':'negative',b.label,a.conditions,b.conditions,b.reason);
       });
     }
+    var pathogenChains={
+      '官伤冲战':[{from:['伤官'],to:['正官'],action:'制'}],
+      '财印相战':[{from:['正财','偏财'],to:['正印','偏印'],action:'制'}],
+      '比劫分财':[{from:['比肩','劫财'],to:['正财','偏财'],action:'制'}],
+      '枭夺食':[{from:['偏印'],to:['食神'],action:'制'}],
+      '食伤受印':[{from:['正印','偏印'],to:['食神','伤官'],action:'制'}]
+    };
     (analysis.patternDisease&&analysis.patternDisease.items||[]).forEach(function(anchor){
       function find(ctx){
         var found=(ctx.patternDisease.items||[]).find(function(x){return x.family===anchor.family&&(x.source||[]).some(function(s){return anchor.source.indexOf(s)>=0})});
         if(found)return found;
-        // A renamed/absent diagnosis still rechecks the fixed natal medicines; it is never an automatic cure.
+        var pathogen=pathogenChains[anchor.family];
+        var conflictResolved=!!pathogen&&!flow(ctx,pathogen).some(function(x){return x.active});
         var medicines=anchor.medicines.map(function(m){var steps=flow(ctx,m.steps||[]);return {name:m.name,steps:steps,rank:steps.some(function(x){return x.active})?1:0}});
         var rank=medicines.some(function(m){return m.rank>0})?1:0;
-        return {family:anchor.family,source:anchor.source,status:rank?'部分化解':'未解',bestRank:rank,medicines:medicines,anchorRecheck:true};
+        return {family:anchor.family,source:anchor.source,status:rank?'部分化解':'未解',bestRank:rank,medicines:medicines,anchorRecheck:true,conflictResolved:conflictResolved};
       }
       var a=find(before),b=find(after),af=medicineFacts(a),bf=medicineFacts(b);
       function anchoredState(ctx,item){
@@ -3222,23 +3680,29 @@
       }
       checked.push({subject:anchor.family+'药路与负荷逐项核验',before:anchoredState(before,a),after:anchoredState(after,b)});
 
-      checked.push({subject:anchor.family,before:{status:a&&a.status,rank:a&&a.bestRank,steps:af},after:{status:b&&b.status,rank:b&&b.bestRank,steps:bf}});
+      checked.push({subject:anchor.family,before:{status:a&&a.status,rank:a&&a.bestRank,steps:af},after:{status:b.status,rank:b.bestRank,steps:bf,conflictResolved:!!b.conflictResolved}});
       function medicineDemand(item){return {family:anchor.family,source:anchor.source,status:item.status,rank:item.bestRank,
         medicines:item.medicines.filter(function(m){return m.rank>0}).map(function(m){return {name:m.name,rank:m.rank,steps:(m.steps||[]).map(function(s){return {from:s.from,to:s.to,action:s.action,active:s.active}})}})}}
       if(a.bestRank>0&&b.bestRank>0&&af.length&&bf.length&&JSON.stringify(medicineDemand(a))===JSON.stringify(medicineDemand(b)))
         checked.push({subject:anchor.family+'同需求药路延续',before:medicineDemand(a),after:medicineDemand(b),physicalEvidence:{before:af,after:bf}});
 
       // Disappearance of a diagnostic is not proof of cure; demand actual chain changes.
-      if(a&&b&&a.bestRank!==b.bestRank&&JSON.stringify(af)!==JSON.stringify(bf)){
+      if(b.conflictResolved&&b.bestRank<a.bestRank)return;
+      if(a.bestRank!==b.bestRank&&JSON.stringify(af)!==JSON.stringify(bf)){
         var medicineChange=add(1,'Y3-medicine',b.bestRank>a.bestRank?'positive':'negative',anchor.family,af,bf,'对应药路'+a.status+' → '+b.status+'；'+bf.map(function(x){return x.text}).join('；'));
         if(medicineChange)medicineChange.causalChange={family:anchor.family,source:anchor.source,beforeRank:a.bestRank,afterRank:b.bestRank,
           verifiedCompleteTransition:!a.anchorRecheck&&!b.anchorRecheck&&((a.bestRank===0&&b.bestRank===2)||(a.bestRank===2&&b.bestRank===0))};
+        if(medicineChange&&medicineChange.direction==='negative'&&/承载/.test(anchor.family)&&!after.carryingCapacity.canCarryOutputKill)
+          medicineChange.causeFamily='daymaster-carrying';
       }else if(a&&b){
         var ar=af.map(function(x){return x.key}),br=bf.map(function(x){return x.key});
         // Replacing a path treating the same disease is not simultaneous gain and loss.
         if(!af.length&&bf.length)add(1,'Y3-medicine','positive',anchor.family,af,bf,'对应药路接通，'+b.status);
         else if(af.length&&!bf.length)add(1,'Y3-medicine','negative',anchor.family,af,bf,'原有效药路受阻，'+b.status);
-        else if(JSON.stringify(ar)!==JSON.stringify(br))checked.push({subject:anchor.family+'替代药路',before:af,after:bf,reason:'同需求仍有药路，不凭演员替换判损益'});
+        else if(/承载/.test(anchor.family)&&af.length&&bf.length&&JSON.stringify(ar)!==JSON.stringify(br)){
+          var kinds=function(steps){return unique(steps.map(function(x){return x.left.god})).sort().join('/')};
+          if(kinds(af)!==kinds(bf))compareReplacement(anchor.family,af,bf);
+        }
       }
       if(/承载/.test(anchor.family)){
         var supportA=stepFacts(flow(before,[{from:['正印','偏印'],to:['日主'],action:'生'}])).concat(stepFacts(flow(before,[{from:['比肩','劫财'],to:['日主'],action:'扶'}])));
@@ -3251,7 +3715,13 @@
           supportA=supportA.filter(function(x){return !/印/.test(x.left.god)});
           supportB=supportB.filter(function(x){return !/印/.test(x.left.god)});
         }
-        if(!layers[1].some(function(x){return x.taskId===anchor.family}))difference(1,'Y3-carry-support',anchor.family+'实际扶身',supportA,supportB,1);
+        if(!comparisonNotes.some(function(x){return x.subject===anchor.family})&&!layers[1].some(function(x){return x.taskId===anchor.family})){
+          var supportKeys=function(steps){return steps.map(function(x){return x.key})};
+          var ak=supportKeys(supportA),bk=supportKeys(supportB);
+          if(ak.some(function(key){return bk.indexOf(key)<0})&&bk.some(function(key){return ak.indexOf(key)<0}))
+            compareReplacement(anchor.family,supportA,supportB);
+          else difference(1,'Y3-carry-support',anchor.family+'实际扶身',supportA,supportB,1);
+        }
         var loadNames=anchor.family==='官杀承载不足'?['正官','七杀']:['正财','偏财'];
         var loadChain=anchor.family==='官杀承载不足'?[{from:loadNames,to:['日主'],action:'制'}]:[{from:['日主'],to:loadNames,action:'制'}];
         var loadA=stepFacts(flow(before,loadChain)),loadB=stepFacts(flow(after,loadChain));
@@ -3259,7 +3729,27 @@
         if(!after.carryingCapacity.canCarryOutputKill&&JSON.stringify(supportA)===JSON.stringify(supportB))difference(1,'Y3-carry-load',anchor.family+'有效负荷',loadA,loadB,-1);
       }
     });
+    layers[1].forEach(function(e){
+      if(e.direction==='negative'&&/^Y3-carry-/.test(e.ruleId)&&!after.carryingCapacity.canCarryOutputKill)e.causeFamily='daymaster-carrying';
+      if(e.direction==='positive'&&e.ruleId==='Y3-carry-support')e.causeFamily='daymaster-carrying-support';
+    });
     (analysis.elementPhenomena||[]).filter(function(x){return x.name==='土厚埋金'}).forEach(function(anchor){
+      var earth=godNamesForElement(day,'土'),wood=godNamesForElement(day,'木'),fire=godNamesForElement(day,'火');
+      function soilRestraint(ctx){
+        var soil=stepFacts(flow(ctx,[{from:wood,to:earth,action:'制'}]));
+        var supporting=interactionFlowAnalysis('杀印相生',ctx.profiles,ctx.interactions,[]).steps;
+        return soil.filter(function(step){
+          var required=supporting.some(function(x){return x.active&&annualActorKey(x.right)===annualActorKey(step.right)});
+          return !required;
+        });
+      }
+      difference(1,'Y3-earth-wood',anchor.name+'·木疏土',soilRestraint(before),soilRestraint(after),1);
+      var oldSeal=interactionFlowAnalysis('',before.profiles,before.interactions,[],[{from:fire,to:earth,action:'生'},{from:earth,to:['日主'],action:'生'}]).steps;
+      var newSeal=interactionFlowAnalysis('',after.profiles,after.interactions,[],[{from:fire,to:earth,action:'生'},{from:earth,to:['日主'],action:'生'}]).steps;
+      if(oldSeal.length&&oldSeal.every(function(x){return x.active})&&newSeal.every(function(x){return x.active})&&
+        annualActorKey(oldSeal[0].right)!==annualActorKey(newSeal[0].right)){
+        note('Y3-earth-seal-replacement','杀印生身·印土替代','原路径 '+qualifiedActorLabel(oldSeal[0].right)+'；当前 '+qualifiedActorLabel(newSeal[0].right)+' 接续 '+qualifiedActorLabel(newSeal[0].left)+' 生印、印生辛金的作用。',oldSeal,newSeal);
+      }
       ['金','水','土','火'].forEach(function(wx){
         var a=facts(actors(before,wx)),b=facts(actors(after,wx));
         // Water must actually receive metal; fire must actually feed earth.
@@ -3287,26 +3777,62 @@
       var outletA=stepFacts(flow(before,outputChain)),outletB=stepFacts(flow(after,outputChain));
       if(outletA.length&&outletB.length&&/强/.test(analysis.strength||before.strength))checked.push({subject:'承泄需求与有效出口延续',before:{canCarry:true,outletActive:true},after:{canCarry:true,outletActive:true},physicalEvidence:{before:outletA,after:outletB}});
     }
+    function legacyPhysicalCauses(e,a,b){
+      if(e.physicalCauses||!a||!b)return e.physicalCauses;
+      var loss=e.direction==='negative',active=loss?a:b,other=loss?b:a;
+      if(active.state!==1||other.state===1)return;
+      var source=loss?before:after,previous=loss?after:before,tasks=loss?legacy.review.beforeTasks:legacy.review.afterTasks;
+      function groupFacts(task,key){
+        var g=task.actorGroups&&task.actorGroups[key];
+        return !g?[]:facts(g.stems.filter(function(x){return x.usable}).concat(g.roots.filter(function(x){return x.usable&&!x.restricted}))).sort(function(x,y){return x.key.localeCompare(y.key)});
+      }
+      function samePressure(key){
+        var now=groupFacts(active,key),earlier=groupFacts(other,key);
+        return now.length>0&&JSON.stringify(now.map(function(x){return physicalKey(source,x)}))===JSON.stringify(earlier.map(function(x){return physicalKey(previous,x)}));
+      }
+      if(active.id==='handle-kill'){
+        var paths=tasks.filter(function(task){return task.state===1&&['food-kill','kill-seal','blade-kill','hurt-kill'].indexOf(task.id)>=0});
+        if(!paths.length||!samePressure('K')||!paths.every(function(task){return task.id==='kill-seal'||task.carryingViaSeal}))return;
+      }else if(active.id==='officer-seal'){
+        if(!samePressure('O'))return;
+      }else if(!active.carryingViaSeal)return;
+      var causes=physicalCauses(groupFacts(active,'I'),groupFacts(other,'I'),loss);
+      if(causes.length)return causes;
+    }
     // Existing determinate tasks remain the conventional structure layer, with real physical changes.
     legacy.evidence.filter(function(x){return x.direction==='positive'||x.direction==='negative'}).forEach(function(x){
       var a=legacy.review.beforeTasks.find(function(t){return t.id===x.taskId}),b=legacy.review.afterTasks.find(function(t){return t.id===x.taskId});
-      if((a||b)&&(!a||!b||a.signature!==b.signature))layers[x.ruleId==='LK-10'?0:2].push(Object.assign({},x,{level:x.ruleId==='LK-10'?'Y2':'Y4',before:a||null,after:b||null,actors:{before:a?a.conditions:[],after:b?b.conditions:[]},adoptedReason:'既有已核验作用：'+x.text,excludedReason:'固定原局主病药或必要链优先；任务缺边仍保留已验真因果'}));
+      if((a||b)&&(!a||!b||a.signature!==b.signature))layers[x.ruleId==='LK-10'?0:2].push(Object.assign({},x,{level:x.ruleId==='LK-10'?'Y2':'Y4',before:a||null,after:b||null,physicalCauses:legacyPhysicalCauses(x,a,b),actors:{before:a?a.conditions:[],after:b?b.conditions:[]},adoptedReason:'既有已核验作用：'+x.text,excludedReason:'固定原局主病药或必要链优先；任务缺边仍保留已验真因果'}));
     });
     function usefulLayer(elements,level,sign){
       (elements||[]).forEach(function(wx){
-        difference(level,'Y5-role-root',(sign>0?'喜用':'忌')+wx+'可用根透',facts(actors(before,wx)),facts(actors(after,wx)),sign);
+        function allowed(ctx,actor){return sign<0||conditionalLuckUse(ctx,useful,wx,actor&&annualActorKey(actor));}
+        function roleActors(ctx){return facts(actors(ctx,wx).filter(function(actor){return allowed(ctx,actor);}));}
+        var rootChange=difference(level,'Y5-role-root',(sign>0?'喜用':'忌')+wx+'可用根透',roleActors(before),roleActors(after),sign);
+        if(rootChange)rootChange.roleElement=wx;
         // Only concrete reachable one-step actions; no remote five-element-ring inference.
         ['木','火','土','金','水'].forEach(function(from){
           if(gen[from]!==wx&&ctrl[from]!==wx)return;
           var action=gen[from]===wx?'生':'制',chains=[{from:godNamesForElement(day,from),to:godNamesForElement(day,wx),action:action}];
           function active(ctx){
             var source=element(ctx,from),target=element(ctx,wx);
-            if(!source.present||source.uncertain||!target.present||target.uncertain)return [];
-            return stepFacts(flow(ctx,chains));
+            if(!allowed(ctx)||!source.present||source.uncertain||!target.present||target.uncertain)return [];
+            return stepFacts(flow(ctx,chains)).filter(function(f){return allowed(ctx,f.right);});
           }
           var a=active(before),b=active(after);
           // Control of an avoid actor requires a verified adverse role, not a generic counter-element.
           if(sign<0&&action==='制'&&!(useful.decision&&useful.decision.elements||[]).some(function(x){return x.element===wx&&(x.riskEntries||[]).some(function(r){return r.status==='effective'})}))return;
+          if(sign>0&&action==='制'&&a.some(function(f){return !b.some(function(g){return g.key===f.key})})){
+            var surviving=actors(after,wx).map(function(x){return physicalKey(after,x)});
+            // Loss of effective targeting is verified on the actual recipient.
+            // If the controller is uncertain, a still-reachable path can block a relief claim.
+            var uncertainReach=element(after,from).uncertain?stepFacts(flow(after,chains)):[];
+            a=a.filter(function(f){
+              if(b.some(function(g){return g.key===f.key}))return true;
+              var recipient=physicalKey(before,f.right);
+              return surviving.indexOf(recipient)>=0&&!uncertainReach.some(function(g){return physicalKey(after,g.right)===recipient});
+            });
+          }
           difference(level,'Y5-role-action',from+action+(sign>0?'喜用':'忌')+wx,a,b,action==='生'?sign:-sign);
         });
       });
@@ -3316,37 +3842,107 @@
       var outlet=[{from:['比肩','劫财'],to:['食神','伤官'],action:'生'}];
       difference(2,'Y4-blade-outlet','刃禄食伤出口',stepFacts(flow(before,outlet)),stepFacts(flow(after,outlet)),1);
     }
-    // A secondary element promoted to primary (promotedPrimary) is weighed as primary, like the page shows it.
     usefulLayer(useful.primaryUse||[],3,1);
-    usefulLayer((useful.secondaryUse||[]).filter(function(wx){
-      var item=(useful.decision&&useful.decision.elements||[]).find(function(x){return x.element===wx});
-      var ownSupport=wx===STEM_WX[day]&&element(after,wx).usable&&!element(after,wx).uncertain;
-      return ownSupport||!item||!(item.requirements||[]).length||(useful.decision.routes||[]).some(function(r){return (r.elements||[]).indexOf(wx)>=0&&r.active&&r.steps&&r.steps.length&&interactionFlowAnalysis('',after.profiles,after.interactions,[],r.steps).steps.every(function(x){return x.active})});
-    }),4,1);
+    usefulLayer(useful.secondaryUse||[],4,1);
     usefulLayer(useful.avoid,4,-1);
+    var activeTransforms=function(ctx){return (ctx.interactions.stemCombines||[]).filter(function(x){return x.active!==false&&x.effect==='transform'})};
+    var earlierTransforms=activeTransforms(before),laterTransforms=activeTransforms(after);
+    function transformKey(x){return [x.leftKey,x.rightKey,x.target].join('·')}
+    function transformedFacts(ctx,wx){
+      var g=element(ctx,wx);
+      return {score:ctx.scores[wx]||0,carrying:ctx.carryingCapacity.canCarryOutputKill,command:g.command,uncertain:g.uncertain,roots:facts(actors(ctx,wx))};
+    }
+    earlierTransforms.concat(laterTransforms).forEach(function(x){
+      var key=transformKey(x),wasActive=earlierTransforms.some(function(y){return transformKey(y)===key}),isActive=laterTransforms.some(function(y){return transformKey(y)===key});
+      if(wasActive===isActive)return;
+      var wx=x.target,role=luckToneRoles(useful,isActive?after:before)(wx),a=transformedFacts(before,wx),b=transformedFacts(after,wx),transformed=isActive?b:a;
+      var reason=x.text+(isActive?'，合化角色切换':'，原合化角色解除')+'；按'+wx+'有效五行、可用根透与承载复核（'+a.score.toFixed(2)+' → '+b.score.toFixed(2)+'）';
+      note('Y8-TRANSFORM-CARRY-ACTOR',key,reason,a,b);
+      if(strict)return;
+      var changesDay=x.leftKey==='day'||x.rightKey==='day';
+      var dir=changesDay&&a.carrying!==b.carrying?(b.carrying?'positive':'negative'):null;
+      if(!dir&&role!=='中'&&!transformed.uncertain&&transformed.roots.length&&Math.abs(b.score-a.score)>=0.35)
+        dir=(b.score>a.score)===(role!=='忌')?'positive':'negative';
+      if(dir){
+        var entry=add(role==='主用'?3:4,'Y5-transformed-qi',dir,key,a,b,reason);
+        var ctx=isActive?after:before;
+        if(entry&&transformed.roots.length){
+          entry.annualMagnitude=changesDay&&a.carrying!==b.carrying?2:1;
+          entry.action={sourceKeys:[x.leftKey,x.rightKey].map(function(pillar){
+            return annualActorKey({pillar:pillar,stem:ctx.pillars[pillar][0]});
+          }),mediatorKeys:[],targetKeys:transformed.roots.map(annualActorKey).filter(Boolean),effect:'effective-transformation'};
+        }
+      }
+    });
     legacy.review.beforeTasks.forEach(function(a){
       var b=legacy.review.afterTasks.find(function(t){return t.id===a.id});
       if(b&&a.state!==null&&a.state!==0&&a.state===b.state&&a.signature===b.signature)
         checked.push({subject:a.label,before:a.conditions,after:b.conditions});
     });
     var climate=useful.layers&&useful.layers.tiaohou;
-    if(climate&&climate.priority==='主用'&&climate.qualification&&climate.qualification.ratioCandidate){
-      (climate.use||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局'+climate.condition+'·'+wx,facts(actors(before,wx)),facts(actors(after,wx)),1)});
+    if(climate&&climate.climateTier==='primary'){
+      (climate.use||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局'+climate.condition+'·'+wx,conditionalLuckUse(before,useful,wx)?facts(actors(before,wx)):[],conditionalLuckUse(after,useful,wx)?facts(actors(after,wx)):[],1)});
       (climate.avoid||[]).forEach(function(wx){difference(5,'Y6-natal-climate','原局偏性增援·'+wx,facts(actors(before,wx)),facts(actors(after,wx)),-1)});
+    }else if(climate&&climate.climateTier==='secondary'){
+      var remedy=climate.qualification.counterElement,excess=remedy==='火'?'水':'火';
+      function climateState(ctx){
+        var current=seasonTune(day,ctx.pillars.month[1],ctx.scores,ctx.pillars,ctx.interactions);
+        var over=element(ctx,excess);
+        var shortage=current.qualification.ratioCandidate&&!current.qualification.counterUsable&&
+          over.clear&&over.roots.some(function(x){return !outlookRootRestricted(x);});
+        return {shortage:shortage,opposition:shortage?facts(actors(ctx,excess)):[],
+          remedy:conditionalLuckUse(ctx,useful,remedy)?facts(actors(ctx,remedy)):[]};
+      }
+      var climateBefore=climateState(before),climateAfter=climateState(after);
+      if(climateBefore.shortage!==climateAfter.shortage){
+        var cooling=climateBefore.shortage&&climateAfter.remedy.length;
+        var drying=climateAfter.shortage&&(!climateAfter.remedy.length||climateBefore.remedy.length>climateAfter.remedy.length);
+        if(cooling||drying){
+          var actual=difference(5,'Y6-natal-climate','次级调候·'+remedy+'实际缓解',
+            climateBefore.remedy,climateAfter.remedy,1);
+          if(actual){actual.climateTier='secondary';actual.causeFamily='seasonal-climate';}
+          else if(drying){
+            actual=difference(5,'Y6-natal-climate','次级调候·'+excess+'形成偏枯',climateBefore.opposition,climateAfter.opposition,-1);
+            if(actual){actual.climateTier='secondary';actual.causeFamily='seasonal-climate';}
+          }
+        }
+      }
     }
     // 特殊格局成立时只按顺势：扶抑、承载、泄身、调候层不参与（《滴天髓·顺局》）。
-    if((useful.decision&&useful.decision.primaryRouteIds||[]).indexOf('strict-special')>=0){layers[1]=[];layers[2]=[];layers[5]=[];}
+    if(strict){layers[1]=[];layers[2]=[];layers[5]=[];}
+    var independent=luckActions(analysis,before,after);
     var first=layers.findIndex(function(x){return x.length}),selected=first>=0?layers[first]:[],positive=selected.some(function(x){return x.direction==='positive'}),negative=selected.some(function(x){return x.direction==='negative'});
     var direction=positive&&negative?'mixed':(positive?'positive':(negative?'negative':null));
-    if(!direction){
+    var decisive=hasDecisiveOutlookUncertainty(legacy), unsupported=legacy.assessment==='unsupported';
+    if(!direction&&!decisive&&!unsupported){
       // Continuity needs nonempty checked actors and states; empty evidence never becomes neutral.
       var stable=checked.filter(function(x){return JSON.stringify(x.before)===JSON.stringify(x.after)&&JSON.stringify(x.before)!=='[]'&&x.before!=null});
       var knownStable=stable.filter(function(x){return Array.isArray(x.before)?x.before.length:!!(x.before.steps&&x.before.steps.length||x.before.medicines&&x.before.medicines.length||x.before.active||x.before.canCarry&&x.before.outletActive)});
-      if(knownStable.length&&!special&&!(analysis.monthCommand&&analysis.monthCommand.ambiguous)){
+      if(knownStable.length&&!independent.length&&!special&&!(analysis.monthCommand&&analysis.monthCommand.ambiguous)){
         direction='neutral';selected=[{ruleId:'Y7-continuity',source:{title:'项目 Y7 逐项延续核验',url:''},level:'Y7',taskId:'verified-continuity',direction:'neutral',kind:'stable',text:'已核验主线延续：'+knownStable.map(function(x){return x.subject}).join('、'),before:knownStable.map(function(x){return x.before}),after:knownStable.map(function(x){return x.after}),actors:{before:knownStable.map(function(x){return x.physicalEvidence?x.physicalEvidence.before:x.before}),after:knownStable.map(function(x){return x.physicalEvidence?x.physicalEvidence.after:x.after})},conditions:[],counterEvidence:[],life:'',adoptedReason:'同一角色的实际作用与可用状态逐项延续'}];
       }
     }
     var review=Object.assign({},legacy.review,{policyVersion:LUCK_OUTLOOK_VERSION,checkedLayers:['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'],checked:checked,layerEvidence:layers,legacyDirection:legacy.direction,legacyTendency:legacy.tendency,legacyAssessment:legacy.assessment});
+    review.replacementMedicine=comparisonNotes;
+    function finish(result){
+      var evidence=result.evidence.slice(),reservations=result.reservations.concat(settlementNotes);
+      independent.forEach(function(e){
+        var priorityVerdict=(first===0||first===1)&&(result.direction==='positive'||result.direction==='negative');
+        if(!direction&&(decisive||unsupported)){reservations.push(e);return;}
+        if(!e.strongTrigger&&priorityVerdict&&e.direction!==result.direction)reservations.push(e);
+        else evidence.push(e);
+      });
+      var p=evidence.some(function(x){return x.direction==='positive'}),n=evidence.some(function(x){return x.direction==='negative'});
+      if(!direction&&(decisive||unsupported))return Object.assign({},result,{direction:'pending',evidence:evidence,reservations:reservations,review:review});
+      var dir=p&&n?'mixed':p?'positive':n?'negative':result.direction;
+      if(!evidence.length||dir==='pending')return Object.assign({},result,{evidence:evidence,reservations:reservations,review:review});
+      (result.uncertainty||[]).forEach(function(reason){
+        if(!reservations.some(function(x){return x.text.indexOf(reason)>=0}))
+          reservations.push({direction:'neutral',kind:'qualification',ruleId:'Y8-EVIDENCE-QUALIFICATION',text:reason,conditions:[],counterEvidence:[],life:''});
+      });
+      return Object.assign({},result,{direction:dir,assessment:'determined',tendency:null,possibleDirections:[dir],uncertainty:[],
+        summary:dir==='neutral'?'当前实质作用平稳，未定条件见附注。':'',evidence:evidence,reservations:reservations,review:review});
+    }
     // Legacy task verdicts stand only when the new role layers are silent or agree; otherwise the new layers decide and the legacy verdict stays as reference evidence.
     var legacyReference=[],crossEvidence=[];
     if(legacy.assessment==='determined'){
@@ -3373,28 +3969,30 @@
       }else{
       var oldEvidence=legacy.evidence.map(function(e){
         var a=legacy.review.beforeTasks.find(function(t){return t.id===e.taskId}),b=legacy.review.afterTasks.find(function(t){return t.id===e.taskId});
-        return Object.assign({},e,{level:['Y2','Y3','Y4'][priority(e)],before:a||legacy.review.beforeTasks,after:b||legacy.review.afterTasks,
+        return Object.assign({},e,{level:['Y2','Y3','Y4'][priority(e)],before:a||legacy.review.beforeTasks,after:b||legacy.review.afterTasks,physicalCauses:legacyPhysicalCauses(e,a,b),
           actors:{before:a?a.conditions:legacy.review.beforeTasks.map(function(t){return t.conditions}),after:b?b.conditions:legacy.review.afterTasks.map(function(t){return t.conditions})},
           adoptedReason:'Y7.4 保留已确定的'+e.text});
       });
-      return Object.assign({},legacy,{evidence:oldEvidence,review:review});
+      var oldKeys=new Set(oldEvidence.map(outlookTaskKey));
+      var extra=layers.reduce(function(out,entries){return out.concat(entries)},[]).filter(function(e){
+        return !oldKeys.has(outlookTaskKey(e))&&(e.ruleId==='Y6-natal-climate'||e.causeFamily==='daymaster-carrying'||
+          e.direction!==legacy.direction&&e.physicalCauses&&e.physicalCauses.length);
+      });
+      return finish(Object.assign({},legacy,{evidence:oldEvidence,reservations:legacy.reservations.concat(extra)}));
       }
     }
     if(!direction){
-      var transforms=(after.interactions.stemCombines||[]).filter(function(x){return x.active!==false&&x.effect==='transform'});
-      var replacement=checked.find(function(x){return /替代作用核验/.test(x.subject)&&Array.isArray(x.before)&&x.before.length&&Array.isArray(x.after)&&x.after.length});
-      if(replacement)review.residualDetails={subject:replacement.subject,beforeActors:replacement.before,afterActors:replacement.after,
-        obstruction:(after.interactions.stemCombines||[]).filter(function(x){return x.active!==false&&x.effect!=='transform'}).map(function(x){return {effect:x.effect,left:x.leftKey,right:x.rightKey,text:x.text}}),
-        carryingBefore:before.carryingCapacity.canCarryOutputKill,carryingAfter:after.carryingCapacity.canCarryOutputKill};
-      return Object.assign({},legacy,{assessment:'unsupported',direction:'pending',tendency:null,possibleDirections:[],
-        residualCode:replacement?'Y8-REPLACEMENT-MEDICINE-STRENGTH':transforms.length?'Y8-TRANSFORM-CARRY-ACTOR':'Y8-ACTOR-PATH-GAP',
-        missingFields:replacement?['同一承载需求下印生身与比劫扶身替代药路的药力对照']:transforms.length?['已变气日主的承载主体映射','变气后替代药路的可达作用者']:['可核验的必要角色或有效作用链'],
-        checkedLayers:review.checkedLayers,knownFacts:[before.rawMainPattern,before.strength].concat(transforms.map(function(x){return x.text})).concat(replacement?replacement.before.map(function(x){return '原有效作用：'+x.text}).concat(replacement.after.map(function(x){return '现有效作用：'+x.text})):[]),review:review});
+      return finish(Object.assign({},legacy,{basis:'实质变化与底色依次复核'}));
     }
-    return Object.assign({},legacy,{direction:direction,tendency:null,assessment:'determined',possibleDirections:[direction],summary:'',evidence:selected.concat(crossEvidence),
-      reservations:layers.slice(first+1).reduce(function(out,x){return out.concat(x)},[]).concat(legacyReference,legacy.reservations),life:[],basis:'固定原局角色；实际作用与病药优先裁决',review:review});
+    var crossKeys=new Set(crossEvidence.map(outlookTaskKey));
+    var picked=selected.filter(function(e){return !crossKeys.has(outlookTaskKey(e))}).concat(crossEvidence),pickedKeys=new Set(picked.map(outlookTaskKey));
+    var reserved=layers.slice(first+1).reduce(function(out,x){return out.concat(x)},[]).concat(legacyReference,legacy.reservations).filter(function(e){return !pickedKeys.has(outlookTaskKey(e));});
+    return finish(Object.assign({},legacy,{direction:direction,evidence:picked,reservations:reserved,life:[],basis:'固定原局角色；实际作用与病药优先裁决'}));
   }
-  function compareOutlookContexts(before,after,analysis){
+  function compareOutlookContexts(before,after,analysis,annualSettlement){
+    if(analysis.useful&&analysis.patternDisease&&!analysis.specialPatternQualification){
+      [before,after].forEach(function(ctx){if(!ctx.wealthChannel)ctx.wealthChannel=wealthChannelState(ctx,analysis);});
+    }
     var left=outlookCore(before,analysis),right=outlookCore(after,analysis),evidence=[],reservations=[],uncertainty=[],risks=[];
     var states={1:'有效',0:'未采用或尚待补足','-1':'存在未解破坏'},ids=unique(left.tasks.concat(right.tasks).map(function(x){return x.id}));
     function evidenceItem(task,direction,text,beforeTask){
@@ -3445,6 +4043,14 @@
         return;
       }
       if(a.state===b.state)return;
+      if(id==='hurt-officer'&&a.state===-1&&b.state===0&&a.protectedTargets&&a.protectedTargets.length){
+        var officer=b.actorGroups.O;
+        var surviving=officer.stems.concat(officer.roots.filter(function(x){return !x.restricted}));
+        if(!a.protectedTargets.some(function(target){return surviving.some(function(x){return x.usable&&x.pillar===target.pillar&&x.stem===target.stem&&x.branch===(target.branch||null)})})){
+          reservations.push(evidenceItem(b,'neutral',b.label+'：原受克的正官已失用，作用中止不作救应',a));
+          return;
+        }
+      }
       if((b.state<a.state?b:a).conditions.some(function(x){return /已变气|失用，合化改性/.test(x)})){
         uncertainty.push(task.label+'：所用因素合化改性，旧路径受限；变气后的替代任用尚未建立共同参照');
         reservations.push(evidenceItem(task,'neutral',task.label+'：不能仅据旧路径失用判整运下降',a));
@@ -3457,7 +4063,9 @@
         if(physical(before)===physical(after)){uncertainty.push(task.label+'：仅旺衰数值或阈值发生变化，不独立裁决方向');return}
       }
       var better=b.state>a.state;
-      evidence.push(evidenceItem(task,better?'positive':'negative',task.label+'：'+states[a.state]+' → '+states[b.state]+'；变化前：'+a.reason+'；变化后：'+b.reason,a));
+      var changed=evidenceItem(task,better?'positive':'negative',task.label+'：'+states[a.state]+' → '+states[b.state]+'；变化前：'+a.reason+'；变化后：'+b.reason,a);
+      if(!better&&b.carryingBlock)changed.causeFamily='daymaster-carrying';
+      evidence.push(changed);
     });
     if(analysis.monthCommand&&analysis.monthCommand.ambiguous)uncertainty.push('原局月令取用未定，无法可靠归纳整体方向');
     var positive=evidence.some(function(x){return x.direction==='positive'}),negative=evidence.some(function(x){return x.direction==='negative'});
@@ -3501,14 +4109,19 @@
     var focus=risks.length?risks[0].task.id:'';
     var subject=/^carry-/.test(focus)?'自身基础与可用支持能否承接当前压力':(/kill/.test(focus)?'任务压力能否得到有效承接':(/wealth|sharing/.test(focus)?'资源转化、分配与自身支持能否配合':(/seal/.test(focus)?'学习与支持资源能否有效发挥作用':(/output|food|hurt/.test(focus)?'表达产出能否得到有效承接':'主要助力能否形成实际作用'))));
     var summary=assessment==='conditional'?(positive&&negative?'已有独立助益与牵制，整体表现还取决于':(positive?'已有改善依据，整体表现还取决于':(negative?'已有受阻依据，整体表现还取决于':'整体表现取决于')))+subject+'。':(assessment==='unsupported'?'当前规则尚不足以归纳这个组合的整体方向。':'');
-    return settleTemporalOutlook(before,after,analysis,{direction:direction,tendency:tendency,assessment:assessment,summary:summary,possibleDirections:assessment==='unsupported'?[]:possibleDirections,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}});
+    return settleTemporalOutlook(before,after,analysis,{direction:direction,tendency:tendency,assessment:assessment,summary:summary,possibleDirections:assessment==='unsupported'?[]:possibleDirections,evidence:evidence,reservations:reservations,uncertainty:unique(uncertainty),life:unique(evidence.map(function(x){return x.life}).filter(Boolean)),basis:'实际任用路径、反证与救应结算',review:{beforeRoute:left.route,afterRoute:right.route,beforeTasks:left.tasks,afterTasks:right.tasks}},annualSettlement);
+  }
+  function outlookTaskKey(e){return (e.ruleId||'')+':'+(e.taskId||'')}
+  function pendingOutlookEvidence(e){
+    return e.pending===true||e.confirmed===false||e.direction==='pending'||e.direction==='unavailable'||
+      ['pending','uncertain','conditional'].indexOf(e.status)>=0;
   }
   // Engineering amplitudes only. Verdicts and their evidence remain untouched.
   function computeOutlookAmplitude(result,context){
     result=result||{};context=context||{};
     var strongRules=['T-year-same','T-year-clash','T-year-tkdc','Y2-special','Y3-medicine','Y3-required-path'];
     var weights={Y2:2.2,Y3:1.7,Y4:1.2,'Y5-primary':0.9,'Y5-secondary-avoid':0.65,Y6:0.55};
-    var breakdown=[],missing=result.direction==='pending'||result.direction==='unavailable'?(result.missingFields||[]).slice():[],groups={},strong={positive:false,negative:false,sourceKeys:[]};
+    var breakdown=[],missing=result.direction==='pending'||result.direction==='unavailable'?(result.missingFields||[]).slice():[],groups={},tasks=new Map(),strong={positive:false,negative:false,sourceKeys:[]};
     if(['positive','negative','mixed','neutral'].indexOf(result.direction)<0)missing.push('direction.'+(result.direction||'missing'));
     var evidence=Array.isArray(result.evidence)?result.evidence:[],reservations=Array.isArray(result.reservations)?result.reservations:[];
     if(!Array.isArray(result.evidence))missing.push('evidence');
@@ -3521,9 +4134,9 @@
       if(value.pillar)return [[value.pillar,value.kind||'',value.stem||value.branch||''].join(':')];
       return Object.keys(value).reduce(function(out,key){return out.concat(actorKeys(value[key]))},[]).sort();
     }
-    function pending(e){return e.pending===true||e.confirmed===false||e.direction==='pending'||e.direction==='unavailable'||['pending','uncertain','conditional'].indexOf(e.status)>=0}
     function toneWeight(){
       var score=result.tone&&result.tone.score;
+      if(score===0&&result.tone.split)return 0.35;
       if(!Number.isFinite(score)||score===0){missing.push('tone.score.nonzero');return 0}
       return Math.abs(score)>=3?0.65:Math.abs(score)>=2?0.50:0.35;
     }
@@ -3531,47 +4144,81 @@
       if(!e)return;
       var side=e.direction,rule=e.ruleId||'',lv=e.level||'unknown',a=actorKeys(e.actors&&e.actors.before||e.before),b=actorKeys(e.actors&&e.actors.after||e.after);
       var changed=unique(a.filter(function(k){return b.indexOf(k)<0}).concat(b.filter(function(k){return a.indexOf(k)<0}))).sort();
-      var actorIdentity=changed.length?changed:unique(a.concat(b)).sort();
+      var actorIdentity=e.actorKeys||(changed.length?changed:unique(a.concat(b)).sort());
       var relation=(context.causeEntries||[]).find(function(x){return x.evidence===e});
-      var causeKey=rule==='T-tone'?'tone':relation?relation.causeKey:actorIdentity.length?'actors:'+actorIdentity.join('|'):[rule,e.taskId||''].join(':');
-      var row={side:side,ruleId:rule,level:lv,taskId:e.taskId||'',text:e.plainText||e.text||'',actorKeys:actorIdentity,before:e.before,after:e.after,sourcePath:path,status:'confirmed',weight:0,causeKey:causeKey,exclusion:null};
+      var taskKey=outlookTaskKey(e);
+      var causeKey=e.causeKey||(rule==='T-tone'?'tone':e.causeFamily||
+        (relation?relation.causeKey:actorIdentity.length?'actors:'+actorIdentity.join('|'):taskKey));
+      var row={side:side,ruleId:rule,level:lv,taskId:e.taskId||'',text:e.plainText||e.text||'',actorKeys:actorIdentity,causeFamily:e.causeFamily,before:e.before,after:e.after,sourcePath:path,status:'confirmed',weight:0,causeKey:causeKey,exclusion:null};
+      if(e.natalContact){row.natalContact=e.natalContact;row.natalRoleElement=e.natalRoleElement;}
+      if(e.roleElement)row.roleElement=e.roleElement;
       breakdown.push(row);
       if(e.legacyReference===true){row.exclusion='legacy-reference';return}
-      if(pending(e)){row.status='potential';row.exclusion='pending-condition';return}
+      if(pendingOutlookEvidence(e)){row.status='potential';row.exclusion='pending-condition';return}
       if(side!=='positive'&&side!=='negative'){row.exclusion=side==='neutral'?'neutral':'undetermined';row.status=side==='neutral'?'excluded':'potential';return}
-      if(rule==='T-seeming'&&evidence.concat(reservations).some(function(x){return x!==e&&x.direction===side&&!x.legacyReference&&!pending(x)&&x.ruleId!=='T-tone'&&x.ruleId!=='T-seeming'})){
+      if(rule==='T-seeming'&&evidence.concat(reservations).some(function(x){return x!==e&&x.direction===side&&!x.legacyReference&&!pendingOutlookEvidence(x)&&x.ruleId!=='T-tone'&&x.ruleId!=='T-seeming'})){
         row.exclusion='explanatory-summary';return;
       }
-      var isStrong=strongRules.indexOf(rule)>=0;
-      var weight=rule==='T-tone'?toneWeight():weights[lv];
+      var isStrong=e.strongTrigger===true||strongRules.indexOf(rule)>=0;
+      var weight=rule==='T-tone'?toneWeight():e.wealthWeight||
+        (rule==='Y6-natal-climate'&&e.climateTier==='secondary'?0.32:e.natalContact?e.impactWeight:weights[lv]);
       if(weight==null)weight=/^T-year-/.test(rule)?(isStrong?1.5:0.7):/^LK-/.test(rule)?0.60:rule==='T-seeming'?0.35:0;
       if(!weight){row.exclusion='missing-weight-source';missing.push(path+'.weight');return}
-      var factor=1;
-      if(path.indexOf('reservations')===0){
-        var sameLayer=result.toneBasis==='tone-tiebreak'&&side!==result.direction&&evidence.some(function(x){return x.direction===result.direction&&x.level===lv&&x.ruleId!=='T-tone'});
-        factor=sameLayer?0.75:0.50;
-      }
-      row.factor=factor;row.weight=weight*factor;row.strongTrigger=isStrong;
-      var key=side+':'+causeKey,group=groups[key]||(groups[key]={side:side,causeKey:causeKey,rows:[],strong:false});
-      group.rows.push(row);group.strong=group.strong||isStrong;
+      row.weight=weight;row.strongTrigger=isStrong;
+      if(e.physicalCauses)row.physicalCauses=e.physicalCauses.slice();
+      // Keep mirrored tone separate and retain distinct verified changes for the same task.
+      var identity=(rule==='T-tone'?'T-tone':taskKey)+':'+side+(row.physicalCauses?':'+row.physicalCauses.slice().sort().join('|'):'');
+      var prior=tasks.get(identity);
+      if(!prior||row.weight>prior.weight||row.weight===prior.weight&&row.strongTrigger&&!prior.strongTrigger){
+        if(prior){prior.exclusion='duplicate-cause';prior.contribution=0}
+        tasks.set(identity,row);
+      }else {row.exclusion='duplicate-cause';row.contribution=0}
     }
     evidence.forEach(function(e,i){add(e,'evidence['+i+']')});reservations.forEach(function(e,i){add(e,'reservations['+i+']')});
     // Tone is a single reason slot per side, even when structure agrees and no T-tone was inserted.
     var tone=result.tone;
-    if(tone&&(tone.direction==='positive'||tone.direction==='negative')&&Number.isFinite(tone.score)&&tone.score!==0){
+    if(tone&&result.direction!=='pending'&&result.assessment!=='unsupported'&&!hasDecisiveOutlookUncertainty(result)&&(tone.direction==='positive'||tone.direction==='negative')&&Number.isFinite(tone.score)&&tone.score!==0){
       add({direction:tone.direction,ruleId:'T-tone',level:'T-tone',taskId:'tone'},'tone');
     }
+    // Each scored row keeps its original wording. A downstream row can own
+    // only a cause left uncovered by the higher-weight physical observations.
+    var covered={positive:new Map(),negative:new Map()};
+    var originRows=Array.from(tasks.values()).filter(function(row){return row.physicalCauses});
+    originRows.sort(function(a,b){return b.weight-a.weight||Number(b.strongTrigger)-Number(a.strongTrigger)||
+      Number(b.ruleId==='Y5-role-root')-Number(a.ruleId==='Y5-role-root')||
+      a.physicalCauses.length-b.physicalCauses.length||
+      (a.ruleId+':'+a.taskId+':'+a.physicalCauses.join('|')).localeCompare(b.ruleId+':'+b.taskId+':'+b.physicalCauses.join('|'));}).forEach(function(row){
+      var owners=covered[row.side];
+      var novel=row.physicalCauses.filter(function(key){return !owners.has(key)});
+      if(!novel.length){
+        row.exclusion='duplicate-cause';row.contribution=0;
+        row.causeKey=owners.get(row.physicalCauses[0]).causeKey;
+        return;
+      }
+      row.causeKey='physical:'+novel.join('|');
+      novel.forEach(function(key){owners.set(key,row)});
+    });
+    tasks.forEach(function(row){
+      if(row.exclusion==='duplicate-cause')return;
+      var key=row.side+':'+row.causeKey,group=groups[key]||(groups[key]={side:row.side,rows:[]});
+      row.causeKey=key.slice(row.side.length+1);
+      group.rows.push(row);
+    });
     var sums={positive:0,negative:0};
-    Object.keys(groups).forEach(function(key){
-      var g=groups[key],winner=g.rows.reduce(function(best,row){return row.weight>best.weight?row:best}),cap=g.strong?2.4:1.8;
+    Object.keys(groups).sort().forEach(function(key){
+      var g=groups[key],winner=g.rows.reduce(function(best,row){return row.weight>best.weight||row.weight===best.weight&&row.strongTrigger&&!best.strongTrigger?row:best}),cap=winner.strongTrigger?2.4:1.8;
       g.rows.forEach(function(row){row.contribution=row===winner?Math.min(cap,row.weight):0;if(row!==winner)row.exclusion='duplicate-cause'});
       sums[g.side]+=Math.min(cap,winner.weight);
-      if(g.strong){strong[g.side]=true;strong.sourceKeys.push(key)}
+      if(winner.strongTrigger){strong[g.side]=true;strong.sourceKeys.push(key)}
     });
     ['positive','negative'].forEach(function(side){
-      var cap=strong[side]?4.0:3.5;
-      if(sums[side]>cap)breakdown.push({side:side,sourcePath:'side-cap',status:'capped',weight:0,uncappedTotal:sums[side],cap:cap,exclusion:'side-cap',text:'单侧同因结算合计 '+sums[side].toFixed(2)+'，按上限保留 '+cap.toFixed(2)});
-      sums[side]=Math.min(cap,sums[side]);
+      var softStart=strong[side]?3.2:2.8,ceiling=strong[side]?6.4:5.6;
+      if(sums[side]>softStart){
+        var excess=sums[side]-softStart,room=ceiling-softStart,compressed=softStart+(room*excess)/(room+excess);
+        breakdown.push({side:side,sourcePath:'side-cap',status:'compressed',weight:0,uncappedTotal:sums[side],cap:ceiling,
+          compressedTotal:compressed,exclusion:'side-soft-cap',text:'单侧同因结算合计 '+sums[side].toFixed(2)+'，平滑压缩为 '+compressed.toFixed(2)});
+        sums[side]=compressed;
+      }
       if((result.direction===side||result.direction==='mixed')&&sums[side]===0)missing.push(side+'.source');
     });
     var hasPending=result.direction==='pending'||result.direction==='unavailable'||(result.uncertainty||[]).length>0||result.assessment==='conditional'||breakdown.some(function(x){return x.status==='potential'});
@@ -3608,18 +4255,45 @@
   var LUCK_STEM_COMBINE={甲:['己','土'],己:['甲','土'],乙:['庚','金'],庚:['乙','金'],丙:['辛','水'],辛:['丙','水'],丁:['壬','木'],壬:['丁','木'],戊:['癸','火'],癸:['戊','火']};
   var LUCK_BRANCH_COMBINE={子:['丑','土'],丑:['子','土'],寅:['亥','木'],亥:['寅','木'],卯:['戌','火'],戌:['卯','火'],辰:['酉','金'],酉:['辰','金'],巳:['申','水'],申:['巳','水']};
   var LUCK_BLADE={甲:'卯',丙:'午',戊:'午',庚:'酉',壬:'子'};
-  function luckToneRoles(useful){
+  function conditionalLuckUse(context,useful,wx,actor){
+    var decision=useful&&useful.decision,conditional=decision&&decision.conclusion&&decision.conclusion.conditional||[];
+    if(conditional.indexOf(wx)<0)return true;
+    if(!context)return false;
+    var day=context.pillars.day[0],names=godNamesForElement(day,wx);
+    var g=outlookGod(context,names);
+    var usable=g.stems.filter(function(x){return g.roots.some(function(r){return !outlookRootRestricted(r)})}).concat(g.roots.filter(function(x){return !outlookRootRestricted(x)}));
+    if(g.uncertain||!usable.length||actor&&!usable.some(function(x){return annualActorKey(x)===actor}))return false;
+    var route=(decision.routes||[]).find(function(r){return r.id==='wealth-flow'&&r.elements.indexOf(wx)>=0});
+    if(route&&context.wealthChannel){
+      var routes=[context.wealthChannel.bridge,context.wealthChannel.food].filter(function(steps){return steps.length});
+      if(routes.some(function(steps){return steps.some(function(step){return !actor||[step.left,step.right].some(function(x){return annualActorKey(x)===actor})})}))return true;
+    }
+    var specific=(decision.elements||[]).find(function(x){return x.element===wx});
+    return (decision.routes||[]).some(function(r){
+      if(r.id==='wealth-flow'||r.elements.indexOf(wx)<0||!r.steps||!r.steps.length)return false;
+      var steps=interactionFlowAnalysis('',context.profiles,context.interactions,[],r.steps).steps;
+      if(!steps.every(function(x){return x.active}))return false;
+      var picked=steps.flatMap(function(step){return [step.left,step.right]}).filter(function(x){return names.indexOf(x.god)>=0&&(!actor||annualActorKey(x)===actor)});
+      if(!picked.length||!specific)return false;
+      return !(specific.riskEntries||[]).some(function(x){return x.status==='effective'&&x.dominant});
+    });
+  }
+  function luckToneRoles(useful,context){
     var c=useful&&useful.decision&&useful.decision.conclusion,sec=(c?c.secondary:useful&&useful.secondaryUse)||[];
     var pri=((c?c.primary:useful&&(useful.primaryUse||useful.use))||[]).filter(function(x){return sec.indexOf(x)<0}),avoid=(c?c.avoid:useful&&useful.avoid)||[];
-    return function(wx){return pri.indexOf(wx)>=0?'主用':sec.indexOf(wx)>=0?'佐用':avoid.indexOf(wx)>=0?'忌':'中'};
+    return function(wx){return (pri.indexOf(wx)>=0||sec.indexOf(wx)>=0)&&context&&!conditionalLuckUse(context,useful,wx)?'中':pri.indexOf(wx)>=0?'主用':sec.indexOf(wx)>=0?'佐用':avoid.indexOf(wx)>=0?'忌':'中'};
   }
   // 喜忌底色：《子平真诠·论行运》以运配八字喜忌；大运十年合看、地支为重，盖头减半、截脚且支为忌整步偏差（《滴天髓阐微·岁运》任注）；太岁重天干。
-  function luckTone(useful,gz,kind){
-    var role=luckToneRoles(useful),sw=STEM_WX[gz[0]],bw=BRANCH_WX[gz[1]],sr=role(sw),br=role(bw);
+  function luckTone(useful,gz,kind,confirmed){
+    var role=luckToneRoles(useful),sw=STEM_WX[gz[0]],bw=BRANCH_WX[gz[1]],sr=role(sw),br=role(bw),notConfirmed=[];
+    var conditional=useful.decision&&useful.decision.conclusion&&useful.decision.conclusion.conditional||[];
+    if(confirmed&&(sr==='佐用'||sr==='主用')&&conditional.indexOf(sw)>=0&&!confirmed(false)){notConfirmed.push(gz[0]+sw);sr='中';}
+    if(confirmed&&(br==='佐用'||br==='主用')&&conditional.indexOf(bw)>=0&&!confirmed(true)){notConfirmed.push(gz[1]+bw);br='中';}
     function v(r){return r==='忌'?-1:r==='中'?0:1}
     var annual=kind==='annual',ws=annual?2:1,wb=annual?1:2,cover=!annual&&ctrl[sw]===bw,cut=!annual&&ctrl[bw]===sw,note='';
     if(cover){wb=1;note='盖头（运干'+gz[0]+'克运支'+gz[1]+'），吉凶减半';}
     if(cut){ws=0;note='截脚（运支'+gz[1]+'克运干'+gz[0]+'），天干力量落空';}
+    if(notConfirmed.length)note+=(note?'；':'')+'取用条件未证（'+notConfirmed.join('、')+'）';
     var score=v(sr)*ws+v(br)*wb,dir=score>0?'positive':score<0?'negative':null;
     if(cut&&v(br)<0)dir='negative';
     var split=v(sr)*v(br)<0,label;
@@ -3633,77 +4307,177 @@
       plain:label==='闲运'?'五行上没有碰到你最需要或最要避开的力量。':split?'五行上有好有坏，'+(annual?'这一年更看天干':'这十年更看地支')+'，略偏'+(dir==='positive'?'有利':'不利')+'。':'五行上'+unit+'是'+plainLabel+'。',
       professional:(annual?'流年':'大运')+'底色：'+gz[0]+sw+'为'+sr+'，'+gz[1]+bw+'为'+br+(note?'；'+note:'')+'，'+(annual?'太岁重天干':'十年合看、地支为重')+' → '+label+lean+'。'};
   }
-  // 运或岁对原局的具体动作：冲月令/喜用根、合走用神，以及反向的冲去忌根、合去忌神。
-  function luckActions(useful,natal,gz){
-    var role=luckToneRoles(useful),out={bad:[],good:[]},keys=['year','month','day','hour'],names={year:'年',month:'月',day:'日',hour:'时'};
-    keys.forEach(function(k){
-      var p=natal[k];if(!p)return;
-      if(BRANCH_CLASH[gz[1]]===p[1]){
-        var r=role(BRANCH_WX[p[1]]);
-        if(r==='忌')out.good.push(gz[1]+'冲去'+names[k]+'支'+p[1]+'（忌神之根）');
-        else if(k==='month')out.bad.push(gz[1]+'冲月令'+p[1]);
-        else if(r!=='中')out.bad.push(gz[1]+'冲'+names[k]+'支'+p[1]+'（'+r+'之根）');
+  function natalLuckContacts(context){
+    var interactions=context.interactions,keys=interactions.pillarKeys||NATAL_PILLAR_KEYS;
+    var pairs=(interactions.branchPairs||[]).filter(function(x){return x.active!==false&&(x.type==='冲'||x.type==='六合'&&/^(bind|transform)$/.test(x.effect))})
+      .concat((interactions.stemCombines||[]).filter(function(x){return x.active!==false&&/^(bind|transform)$/.test(x.effect)}));
+    return pairs.reduce(function(out,pair){
+      var a=pair.leftKey||keys[pair.left],b=pair.rightKey||keys[pair.right];
+      var target=NATAL_PILLAR_KEYS.indexOf(a)>=0?a:b,source=target===a?b:a;
+      if(NATAL_PILLAR_KEYS.indexOf(target)<0||TEMPORAL_PILLAR_KEYS.indexOf(source)<0)return out;
+      var branch=!!pair.type,clash=pair.type==='冲',kind=branch?'branch':'stem';
+      out.push({key:[target,kind,clash?'clash':'combine',pair.effect||''].join(':'),target:target,source:source,
+        branch:branch,clash:clash,transform:pair.effect==='transform'?pair.target:null,text:pair.text});
+      return out;
+    },[]);
+  }
+  function luckActions(analysis,before,after){
+    function collect(ctx){
+      var role=luckToneRoles(analysis.useful,ctx);
+      var winners=new Map();
+      natalLuckContacts(ctx).forEach(function(c){
+        var gz=ctx.pillars[c.target],stems=c.branch?HIDDEN[gz[1]]:[gz[0]],rootWx=unique(stems.map(function(s){return STEM_WX[s]}));
+        var mainWx=rootWx[0],mainRole=role(mainWx),signed=0,strong=false,action;
+        var central=c.target==='month'||c.target==='day',favor=mainRole==='主用'||mainRole==='佐用';
+        function solePrimaryRoot(wx){
+          if(wx===c.transform||role(wx)!=='主用')return null;
+          var names=godNamesForElement(ctx.pillars.day[0],wx);
+          var roots=outlookGod(ctx,names).roots.concat(ctx===before?[]:outlookGod(before,names).roots);
+          if(roots.some(function(root){return root.pillar!==c.target&&!outlookRootRestricted(root)}))return null;
+          return roots.find(function(root){return root.pillar===c.target&&STEM_WX[root.stem]===wx});
+        }
+        function record(element,weight,trigger,description){
+          var rule=c.clash?'T-natal-clash':'T-natal-combine',label=PILLAR_META[c.target][c.branch?'branchLabel':'stemLabel'];
+          var reason=c.text+'，'+label+gz[c.branch?1:0]+(c.branch?'本气':'')+mainWx+'为'+mainRole+'，'+description;
+          var key=[c.target,c.branch?'branch':'stem',element].join(':'),old=winners.get(key);
+          if(!old||Math.abs(weight)>Math.abs(old.signed)||Math.abs(weight)===Math.abs(old.signed)&&weight<old.signed)
+            winners.set(key,{rule:rule,signed:weight,strong:trigger,reason:reason,contact:c,roleElement:element});
+        }
+        if(c.clash){
+          var residual=rootWx.slice(1).map(solePrimaryRoot).filter(Boolean);
+          residual.forEach(function(root){record(STEM_WX[root.stem],-1.25,true,'冲伤唯一主用根（'+root.branch+'藏'+root.stem+'）')});
+          if(mainRole==='忌'){signed=central?0.90:0.70;action='冲忌去病';}
+          else if(favor){
+            strong=c.target==='month'||mainRole==='主用';
+            signed=strong?-1.25:-0.90;
+            action='冲伤'+mainRole+'根';
+          }else if(central&&!residual.length){signed=-0.45;action='闲气受冲，轻动月日';}
+        }else{
+          var source=c.branch?ctx.pillars[c.source][1]:'',target=gz[1];
+          var generating=c.branch&&!c.transform&&['辰酉','酉辰','寅亥','亥寅','午未','未午'].indexOf(source+target)>=0;
+          if(generating){
+            rootWx.map(solePrimaryRoot).filter(Boolean).forEach(function(root){
+              if(outlookRootRestricted(root))record(STEM_WX[root.stem],-0.55,false,'生合绊住唯一主用根（'+root.branch+'藏'+root.stem+'）');
+            });
+            var feedsTarget=gen[STEM_WX[HIDDEN[source][0]]]===mainWx;
+            if(feedsTarget&&favor){signed=0.35;action='生合助喜用本气';}
+            else if(feedsTarget&&mainRole==='忌'){signed=-0.45;action='生合助忌神本气';}
+          }else if(mainWx!==c.transform&&(favor||mainRole==='忌')){
+            signed=favor?-0.85:0.60;
+            action=(c.transform?'合化移去':c.branch?'克合牵制':'天干合绊牵制')+(favor?'喜用':'忌神');
+          }
+        }
+        if(signed)record(mainWx,signed,strong,action);
+      });
+      return winners;
+    }
+    var earlier=collect(before),later=collect(after);
+    return unique(Array.from(earlier.keys()).concat(Array.from(later.keys()))).reduce(function(out,key){
+      var a=earlier.get(key),b=later.get(key),delta=(b?b.signed:0)-(a?a.signed:0);
+      if(!delta)return out;
+      var owner=!b||a&&Math.abs(a.signed)>Math.abs(b.signed)?a:b;
+      var reason=(a?'先前 '+a.reason:'先前未见对应作用')+'；'+(b?'当前 '+b.reason:'当前对应作用解除');
+      var ev=luckEvidence(owner.rule,'T-year',delta>0?'positive':'negative',reason,reason),c=owner.contact;
+      ev.taskId=key;ev.causeFamily='natal-'+key;ev.impactWeight=Math.abs(delta);ev.strongTrigger=owner.strong;ev.natalContact=c;ev.natalRoleElement=owner.roleElement;
+      function usableTarget(ctx){
+        var wx=owner.roleElement,g=outlookGod(ctx,godNamesForElement(ctx.pillars.day[0],wx));
+        var actors=c.branch?g.roots.filter(function(root){return !outlookRootRestricted(root)}):g.stems;
+        return actors.filter(function(x){return x.pillar===c.target}).map(function(x){
+          return [c.target,c.branch?x.branch+'藏'+x.stem:x.stem,wx].join(':');
+        });
       }
-      if(LUCK_BRANCH_COMBINE[gz[1]]&&LUCK_BRANCH_COMBINE[gz[1]][0]===p[1]){
-        var rb=role(BRANCH_WX[p[1]]);
-        if(rb==='忌')out.good.push(gz[1]+'合住'+names[k]+'支'+p[1]+'（忌神之根）');
-        else if(rb!=='中')out.bad.push(gz[1]+'合住'+names[k]+'支'+p[1]+'（'+rb+'之根）');
+      var lost=!!b&&!a,gained=!!a&&!b;
+      if(lost||gained){
+        // A contact explains a repeated root/stem loss only if that same target
+        // actually changes availability as the contact appears or disappears.
+        var was=usableTarget(lost?before:after),remains=usableTarget(lost?after:before);
+        var changes=was.filter(function(actor){return remains.indexOf(actor)<0});
+        if(changes.length)ev.physicalCauses=changes.map(function(actor){return (lost?'loss:':'gain:')+actor});
       }
-      if(k!=='day'&&LUCK_STEM_COMBINE[gz[0]][0]===p[0]){
-        var rs=role(STEM_WX[p[0]]);
-        if(rs==='忌')out.good.push(gz[0]+'合去'+names[k]+'干'+p[0]+'（忌神）');
-        else if(rs!=='中')out.bad.push(gz[0]+'合走'+names[k]+'干'+p[0]+'（'+rs+'）');
-      }
-    });
-    return out;
+      ev.before={pillar:c.target,kind:c.branch?'支':'干',elements:[owner.roleElement]};ev.after={text:reason};
+      out.push(ev);return out;
+    },[]);
   }
   // 运改变格局提示（《子平真诠·论行运成格变格》）：运干透出月令藏干，或冲开月令库。
-  function luckPatternShift(analysis,natal,gz){
+  function luckPatternShift(analysis,natal,gz,context){
     var month=natal.month[1],day=natal.day[0],shown=[natal.year[0],natal.month[0],natal.hour[0]],regular=analysis.regularPattern&&analysis.regularPattern.name||'',out=null;
     if((HIDDEN[month]||[]).indexOf(gz[0])>=0&&shown.indexOf(gz[0])<0){
-      var god=tenGod(day,gz[0]),ro=luckToneRoles(analysis.useful)(STEM_WX[gz[0]]);if(god&&god!=='比肩'&&god!=='劫财'){var same=regular.indexOf(god)===0;
+      var god=tenGod(day,gz[0]),ro=luckToneRoles(analysis.useful,context)(STEM_WX[gz[0]]);if(god&&god!=='比肩'&&god!=='劫财'){var same=regular.indexOf(god)===0;
         out={kind:ro==='忌'?'变格':(same||ro!=='中')?'成格':'提示',text:'运干'+gz[0]+'透出月令'+month+'中的'+god+(same?'，'+regular+'更透清':ro==='忌'?'（'+god+'为忌），格局有由'+(regular||'原格')+'转向'+god+'之势':ro!=='中'?'，格局借喜用之神更有力':'，格局路线有调整之势')+'（'+(ro==='忌'?'变格':(same||ro!=='中')?'成格':'提示')+'）'};}
     }
     if(!out&&'辰戌丑未'.indexOf(month)>=0&&BRANCH_CLASH[gz[1]]===month)out={kind:'提示',text:gz[1]+'冲开月令'+month+'库，藏干透出，格局有变化之势'};
     return out;
   }
-  function luckEvidence(rule,level,direction,plain,professional){return {ruleId:rule,level:level,taskId:rule,direction:direction,kind:'mainstream',plainText:plain,text:professional,before:null,after:{text:professional},source:{title:'主流判运补充',url:''}}}
+  function luckEvidence(rule,level,direction,plain,professional){return {ruleId:rule,level:level,taskId:rule,direction:direction,kind:'mainstream',plainText:plain,text:professional,before:null,after:{text:professional},conditions:[professional],counterEvidence:[],source:{title:'主流判运补充',url:''}}}
   // 第二批：底色参与定结论；结构与底色相反时，有原书认可原因按结构判，说不出原因判有好有坏。
-  function applyLuckTone(result,analysis,natal,gz,kind){
+  function applyLuckTone(result,analysis,natal,gz,kind,context){
     if(!result||!analysis.useful||result.assessment==='input-error')return result;
-    var tone=luckTone(analysis.useful,gz,kind),r=Object.assign({},result,{tone:tone,evidence:(result.evidence||[]).slice()}),t=tone.direction,d=r.direction;
+    var confirm=context?function(branch){
+      var stem=branch?(HIDDEN[gz[1]]||[])[0]:gz[0],pillar=kind==='annual'?'flowYear':'luck';
+      return conditionalLuckUse(context,analysis.useful,STEM_WX[stem],annualActorKey({pillar:pillar,stem:stem,branch:branch?gz[1]:null}));
+    }:null;
+    var tone=luckTone(analysis.useful,gz,kind,confirm),r=Object.assign({},result,{tone:tone,evidence:(result.evidence||[]).slice()}),t=tone.direction,d=r.direction;
+    if(r.assessment==='unsupported'||hasDecisiveOutlookUncertainty(r)||d==='pending')return r;
     var strict=(analysis.useful.decision&&analysis.useful.decision.primaryRouteIds||[]).indexOf('strict-special')>=0;
+    var independent=r.evidence.filter(function(e){return e.natalContact});
     var toneEv=t?luckEvidence('T-tone','T-tone',t,tone.split?'五行上有好有坏，'+(kind==='annual'?'这一年更看天干，':'这十年更看地支，')+(t==='positive'?'略偏有利。':'略偏不利。'):(t==='positive'?'五行上帮到了你最需要的那股力量':'五行上送来的是你最怕的那股力量')+'（'+tone.label+'）。',tone.professional):null;
     function set(dir,basis){r.direction=dir;r.assessment='determined';r.possibleDirections=[dir];r.tendency=null;r.toneBasis=basis;}
     if(strict){
       // 特殊格局只顺势：以喜用页顺势五行为准，仅当 Y2 顺逆势核验给出相反方向时并见。
-      var y2=(result.evidence||[]).filter(function(e){return e.ruleId==='Y2-special'});
-      if(!t){if(tone.split){set('mixed','special-split');r.evidence=splitEv();}return r;}
+      var y2=(result.evidence||[]).filter(function(e){return e.ruleId==='Y2-special'||e.ruleId==='LK-10'&&e.direction!=='neutral'}).concat(independent);
+      if(!t){if(tone.split){set('mixed','special-split');r.evidence=splitEv().concat(y2);}return r;}
       r.evidence=[toneEv].concat(y2);
       set(y2.some(function(e){return e.direction&&e.direction!==t})?'mixed':t,'special-tone');return r;
     }
-    // 结构两面同层相持时，用十年（一年）干支本身的喜忌作次一级权重：差距明显（|分|≥2，大运即地支或干支同向，流年即天干或干支同向）才定向，另一面写“也有一点”。
+    // 次级底色只在同一已核验条件的正反变化相抵后参与定向。
     function toneTiebreak(){
       var pd=r.review&&r.review.protectedDetermined;if(pd&&pd.decision==='cross-mixed')return r;
+      if(independent.some(function(e){return e.strongTrigger;}))return r;
       if(!t||tone.split||Math.abs(tone.score)<2)return r;
       var order=['Y2','Y3','Y4','Y5-primary','Y5-secondary-avoid','Y6'];function rank(e){var i=order.indexOf(e.level);return i<0?order.length:i}
-      var ev=r.evidence.filter(function(e){return e.direction==='positive'||e.direction==='negative'}),same=ev.filter(function(e){return e.direction===t}),opp=ev.filter(function(e){return e.direction!==t});
+      function confirmed(e){
+        return !e.legacyReference&&!pendingOutlookEvidence(e)&&(e.direction==='positive'||e.direction==='negative');
+      }
+      var ev=r.evidence.filter(confirmed),same=ev.filter(function(e){return e.direction===t}),opp=ev.filter(function(e){return e.direction!==t});
       if(!same.length||!opp.length)return r;
-      if(Math.min.apply(null,opp.map(rank))<Math.min.apply(null,same.map(rank)))return r;
-      set(t,'tone-tiebreak');r.evidence=same.concat([luckEvidence('T-tone','T-tone',t,(kind==='annual'?'这一年':'这步运')+'好坏两面分量相当，五行上是'+tone.label+'，所以整体'+(t==='positive'?'偏顺':'偏难')+'。','结构两面同层相持，以干支喜忌定向（《子平真诠·论行运》以运之干支配命中喜忌）：'+tone.professional)],r.evidence.filter(function(e){return e.direction!=='positive'&&e.direction!=='negative'}));r.reservations=opp.concat(r.reservations||[]);return r;
+      var highest=Math.min.apply(null,ev.map(rank));
+      var reservedOpp=(r.reservations||[]).filter(function(e){return confirmed(e)&&e.direction!==t});
+      var matched=new Set(),pairs=[];
+      function inverse(a,b){
+        var x=a.causalChange,y=b.causalChange;
+        return x&&y&&x.verifiedCompleteTransition&&y.verifiedCompleteTransition&&
+          x.family&&x.family===y.family&&Array.isArray(x.source)&&x.source.length>0&&JSON.stringify(x.source.slice().sort())===JSON.stringify((y.source||[]).slice().sort())&&
+          Number.isFinite(x.beforeRank)&&Number.isFinite(x.afterRank)&&x.beforeRank!==x.afterRank&&
+          (x.afterRank>x.beforeRank)===(a.direction==='positive')&&
+          (y.afterRank>y.beforeRank)===(b.direction==='positive')&&
+          x.beforeRank===y.afterRank&&x.afterRank===y.beforeRank;
+      }
+      if(!opp.concat(reservedOpp).every(function(e){
+        if(rank(e)!==highest)return false;
+        var pair=same.find(function(other){return rank(other)===highest&&!matched.has(other)&&inverse(e,other)});
+        if(!pair)return false;
+        matched.add(pair);
+        pairs.push({withTone:pair.causalChange,againstTone:e.causalChange});
+        return true;
+      }))return r;
+      r.review=Object.assign({},r.review,{toneCancellation:pairs});
+      set(t,'tone-tiebreak');r.evidence=same.concat([luckEvidence('T-tone','T-tone',t,(kind==='annual'?'这一年':'这步运')+'同一关键条件的助阻已核实相抵，五行上是'+tone.label+'，所以整体'+(t==='positive'?'偏顺':'偏难')+'。','同一关键条件正反变化相抵，以干支喜忌定向（《子平真诠·论行运》以运之干支配命中喜忌）：'+tone.professional)],r.evidence.filter(function(e){return !confirmed(e)}));r.reservations=opp.concat(r.reservations||[]);return r;
     }
-    function splitEv(){var role=luckToneRoles(analysis.useful),good=[],bad=[];[[gz[0],STEM_WX[gz[0]]],[gz[1],BRANCH_WX[gz[1]]]].forEach(function(x){var ro=role(x[1]);if(ro==='忌')bad.push(x);else if(ro!=='中')good.push(x.concat(ro))});
+    function splitEv(){var good=[],bad=[];[[gz[0],STEM_WX[gz[0]],tone.stemRole],[gz[1],BRANCH_WX[gz[1]],tone.branchRole]].forEach(function(x){var ro=x[2];if(ro==='忌')bad.push(x);else if(ro!=='中')good.push(x.concat(ro))});
       return [luckEvidence('T-tone','T-tone','positive','五行上'+good.map(function(x){return x[0]+x[1]}).join('、')+'帮到了你需要的力量。',good.map(function(x){return x[0]+x[1]+'为'+x[2]}).join('、')+'。'),luckEvidence('T-tone','T-tone','negative','五行上'+bad.map(function(x){return x[0]+x[1]}).join('、')+'是你怕的力量。',bad.map(function(x){return x[0]+x[1]+'为忌'}).join('、')+'。')]}
-    if(!t){if(tone.split&&(d==='neutral'||d==='pending')){set('mixed','tone-split');r.evidence=splitEv().concat(r.evidence.filter(function(e){return e.direction==='neutral'}));}return r;}
-    if(d==='neutral'||d==='pending'){
-      if(d==='pending'&&r.tendency&&r.tendency!==t&&r.tendency!=='mixed'){set('mixed','tone-vs-tendency');r.evidence.push(toneEv);return r;}
+    if(!t){
+      if(tone.split&&d==='neutral'){set('mixed','tone-split');r.evidence=splitEv().concat(r.evidence.filter(function(e){return e.direction==='neutral'}));}
+      return r;
+    }
+    if(d==='neutral'){
       set(t,'tone');r.evidence=[toneEv].concat(r.evidence.filter(function(e){return e.direction===t}));return r;
     }
     if(d==='mixed')return toneTiebreak();
     if(d===t)return r;
-    var act=luckActions(analysis.useful,natal,gz),shift=kind==='natal'?luckPatternShift(analysis,natal,gz):null,reasons;
-    if(t==='positive'){reasons=act.bad.slice();if(shift&&shift.kind==='变格')reasons.push(shift.text);}
-    else{reasons=act.good.slice();if((r.evidence||[]).some(function(e){return e.ruleId==='Y3-medicine'&&e.direction==='positive'}))reasons.push('病药：对应药路接通');if(shift&&shift.kind==='成格')reasons.push(shift.text);}
+    var shift=kind==='natal'?luckPatternShift(analysis,natal,gz,context):null;
+    var reasons=independent.filter(function(e){return e.natalContact&&e.direction===d}).map(function(e){return e.text});
+    if(t==='positive'){if(shift&&shift.kind==='变格')reasons.push(shift.text);}
+    else{if(r.evidence.some(function(e){return e.ruleId==='Y3-medicine'&&e.direction==='positive'}))reasons.push('病药：对应药路接通');if(shift&&shift.kind==='成格')reasons.push(shift.text);}
     if(reasons.length){
       var look=t==='positive'?'看着是喜运，实际不利，因为':'看着是忌运，实际有利，因为';
       r.evidence.unshift(luckEvidence('T-seeming','T-tone',d,(kind==='annual'?'这一年':'这步运')+look+reasons.join('、')+'。',(t==='positive'?'似喜实忌':'似忌实喜')+'：'+reasons.join('；')+'（《子平真诠·论行运》）。'));
@@ -3714,8 +4488,8 @@
   // 第三批：岁运关系（《滴天髓阐微·岁运》战冲和好；《三命通会》岁运并临；《渊海子平》日犯岁君只提示）。
   function seatScore(stem,branch){var wx=STEM_WX[stem],b=BRANCH_WX[branch];return b===wx||gen[b]===wx?1:ctrl[b]===wx?-1:0}
   function partyScore(natal,gz,wx){var n=0;['year','month','day','hour'].forEach(function(k){var p=natal[k];if(STEM_WX[p[0]]===wx)n++;if(BRANCH_WX[p[1]]===wx)n++});if(STEM_WX[gz[0]]===wx||gen[STEM_WX[gz[0]]]===wx)n++;return n}
-  function yearLuckRelations(analysis,natal,luckGz,yearGz,causeEntries){
-    var role=luckToneRoles(analysis.useful),day=natal.day[0],items=[],weak=/弱/.test(analysis.strength||'');
+  function yearLuckRelations(analysis,natal,luckGz,yearGz,causeEntries,context){
+    var role=luckToneRoles(analysis.useful,context),day=natal.day[0],items=[],weak=/弱/.test(analysis.strength||'');
     function sign(r){return r==='忌'?-1:r==='中'?0:1}
     function hurt(loserWx,label,prof){var s=sign(role(loserWx));if(!s)return;items.push(luckEvidence('T-year-'+label,'T-year',s>0?'negative':'positive',prof[0],prof[1]))}
     var ls=luckGz[0],ys=yearGz[0],lb=luckGz[1],yb=yearGz[1],stemFight=ctrl[STEM_WX[ls]]===STEM_WX[ys]||ctrl[STEM_WX[ys]]===STEM_WX[ls],branchClash=BRANCH_CLASH[lb]===yb;
@@ -3734,46 +4508,625 @@
     }
     if(stemFight&&branchClash)items.push(luckEvidence('T-year-tkdc','T-year',weak?'negative':'neutral',weak?'这一年和大运天干相克、地支相冲，自身根基偏弱，这样的年份更要稳着来。':'这一年和大运天干相克、地支相冲，好在自身根基不弱，影响有限。','岁运天克地冲，日主'+(weak?'休囚必凶':'旺相虽凶无碍')+'（《滴天髓阐微·岁运》任注）。'));
     var sc=LUCK_STEM_COMBINE[ls][0]===ys?LUCK_STEM_COMBINE[ls][1]:null,bc=LUCK_BRANCH_COMBINE[lb]&&LUCK_BRANCH_COMBINE[lb][0]===yb?LUCK_BRANCH_COMBINE[lb][1]:null;
-    [sc,bc].forEach(function(wx,i){if(!wx)return;var s=sign(role(wx));if(s){var item=luckEvidence('T-year-harmony','T-year',s>0?'positive':'negative','这一年和大运'+(i?'地支':'天干')+'相合，合出来的'+wx+'是'+role(wx)+(s>0?'，对你有利。':'，对你不利。'),'岁运'+(i?lb+yb:ls+ys)+'合化'+wx+'（'+role(wx)+'）（《滴天髓阐微·岁运·和》）。');items.push(item);if(causeEntries)causeEntries.push({evidence:item,causeKey:'T-year-harmony:'+(i?'branch:luck:'+lb+'|flowYear:'+yb:'stem:luck:'+ls+'|flowYear:'+ys)})}});
+    [sc,bc].forEach(function(wx,i){
+      if(!wx)return;
+      var interactions=context&&context.interactions;
+      var proven=interactions&&(i?interactions.branchPairs:interactions.stemCombines).some(function(x){
+        return x.leftKey==='luck'&&x.rightKey==='flowYear'&&x.active!==false&&x.effect==='transform'&&!x.blockedTransformation&&x.target===wx;
+      });
+      if(!proven){
+        items.push(luckEvidence('T-year-combine-clue','T-year','neutral','岁运见合，保留合绊与合化条件。','岁运'+(i?lb+yb:ls+ys)+'见合，合化条件未证。'));
+        return;
+      }
+      var s=sign(role(wx));if(s){var item=luckEvidence('T-year-harmony','T-year',s>0?'positive':'negative','这一年和大运'+(i?'地支':'天干')+'相合，合出来的'+wx+'是'+role(wx)+(s>0?'，对你有利。':'，对你不利。'),'岁运'+(i?lb+yb:ls+ys)+'合化'+wx+'（'+role(wx)+'）（《滴天髓阐微·岁运·和》）。');item.taskId=i?'branch:'+lb+yb:'stem:'+ls+ys;items.push(item);if(causeEntries)causeEntries.push({evidence:item,causeKey:outlookTaskKey(item)})}});
     if(ctrl[STEM_WX[day]]===STEM_WX[ys])items.push(luckEvidence('T-year-dayhit','T-year','neutral','提示：日主'+day+'克流年'+ys+'（古书叫“日犯岁君”），做事宜收敛，不单独改判。','日犯岁君（《渊海子平·继善篇》），仅作提示。'));
     return items;
   }
-  function applyYearLuck(result,analysis,natal,luckGz,yearGz){
+  function applyYearLuck(result,analysis,natal,luckGz,yearGz,context){
     if(!result||!analysis.useful||result.assessment==='input-error')return result;
-    var causeEntries=[],items=yearLuckRelations(analysis,natal,luckGz,yearGz,causeEntries);if(!items.length)return result;
+    var causeEntries=[],items=yearLuckRelations(analysis,natal,luckGz,yearGz,causeEntries,context);
     var r=Object.assign({},result,{evidence:(result.evidence||[]).slice(),reservations:(result.reservations||[]).concat(items.filter(function(e){return e.direction==='neutral'}))}),strong=items.filter(function(e){return /same|clash|tkdc/.test(e.ruleId)&&e.direction!=='neutral'}),weakItems=items.filter(function(e){return /fight|harmony/.test(e.ruleId)});
     function dirOf(list){var p=list.some(function(e){return e.direction==='positive'}),n=list.some(function(e){return e.direction==='negative'});return p&&n?'mixed':p?'positive':n?'negative':null}
     var ds=dirOf(strong),dw=dirOf(weakItems),d=r.direction;
     function set(dir){r.direction=dir;r.assessment='determined';r.possibleDirections=[dir];r.tendency=null;}
-    if(ds&&ds!=='mixed'){if(d==='neutral'||d==='pending'){set(ds);r.evidence=strong.slice();}else if(d!==ds&&d!=='mixed'){set('mixed');r.evidence=r.evidence.concat(strong);}else r.evidence=r.evidence.concat(strong);}
-    else if(dw&&dw!=='mixed'&&(d==='neutral'||d==='pending')){set(dw);r.evidence=weakItems.filter(function(e){return e.direction===dw});}
+    if(r.assessment==='unsupported'||hasDecisiveOutlookUncertainty(r)||d==='pending'){
+      r.direction='pending';
+      r.evidence=r.evidence.concat(strong);
+      r.reservations=r.reservations.concat(weakItems);
+      r.amplitude=computeOutlookAmplitude(r,{causeEntries:causeEntries});
+      return r;
+    }
+    if(d==='neutral'){
+      if(ds||dw){set(ds||dw);r.evidence=r.evidence.concat(ds?strong:weakItems);}
+    }else if(ds){
+      if(d!==ds&&d!=='mixed')set('mixed');
+      r.evidence=r.evidence.concat(strong);
+    }
     var dir=r.direction,keep=function(e){return dir==='mixed'||e.direction===dir};
     r.evidence=r.evidence.concat(strong.concat(weakItems).filter(function(e){return r.evidence.indexOf(e)<0&&keep(e)}));
     r.reservations=r.reservations.concat(strong.concat(weakItems).filter(function(e){return r.evidence.indexOf(e)<0}));
     r.amplitude=computeOutlookAmplitude(r,{causeEntries:causeEntries});
     return r;
   }
-  function evaluateLuckOutlook(bazi,luckGz,previousGz,flowYears){
+  function annualActorKey(actor){
+    if(!actor||!actor.pillar)return '';
+    var hidden=actor.kind==='支'||actor.kind==='根'||!!actor.branch;
+    var text=actor.text||'',stem=actor.stem||(hidden?text.split('藏')[1]||'':text)[0];
+    var branch=hidden&&(actor.branch||text[0]);
+    return STEM_WX[stem]?[actor.pillar,hidden?branch+'藏'+stem:stem,STEM_WX[stem]].join(':'):'';
+  }
+  function qualifiedActorLabel(actor){
+    var key=annualActorKey(actor),place=actor&&PILLAR_META[actor.pillar];
+    return key&&place?(key.includes('藏')?place.branchLabel:place.stemLabel)+key.split(':')[1]:'';
+  }
+  function outlookTargetPairs(context,from,to,action,profiles){
+    var pairs=[];
+    interactionFlowAnalysis('',profiles||context.profiles,context.interactions,[],[{from:from,to:to,action:action}],{
+      capture:function(found){pairs=found;}
+    });
+    return pairs;
+  }
+  function annualRouteKey(route){
+    return route.map(function(x){return annualActorKey(x.left)+'>'+x.action+'>'+annualActorKey(x.right)}).join('|');
+  }
+  function annualEntry(rule,task,direction,text,magnitude,action){
+    return {ruleId:rule,taskId:task,direction:direction,text:text,plainText:text,level:'Y3',
+      annualMagnitude:magnitude,action:action,conditions:[],counterEvidence:[],life:''};
+  }
+  function annualWealthActions(natal,luck,current,analysis){
+    var a=natal.wealthChannel,l=luck.wealthChannel,b=current.wealthChannel;
+    if(!a||!l||!b){
+      var special=evaluateWealthOutlook(natal,current,analysis,natal.pillars,current.pillars.luck,current.pillars.flowYear);
+      return {entries:special.reasons.filter(function(e){return e.direction!=='neutral'}).map(function(e){
+        return Object.assign({},e,{taskId:e.ruleId,annualMagnitude:e.ruleId==='W-root'?1:2});
+      }),notes:special.reasons.filter(function(e){return e.direction==='neutral'}),uncertainty:special.uncertainty,
+        missing:!!special.missingFields.length};
+    }
+    var entries=[],notes=[];
+    var oldRoute=a.bridge.length?a.bridge:a.food;
+    var route=b.bridge.length?b.bridge:b.food,priorRoute=l.bridge.length?l.bridge:l.food;
+    function routeMagnitude(steps){
+      var mediation=steps.length===2?[steps[0].right,steps[1].left]:steps.map(function(x){return x.right});
+      return mediation.some(function(x){return x.kind==='干'})?2:1;
+    }
+    function routeAction(steps,kind,source){
+      var tail=steps[steps.length-1],middle=steps.length===2?[steps[0].right,tail.left]:[tail.right];
+      return {sourceKeys:unique((source||[]).concat(annualActorKey(steps[0].left))),
+        mediatorKeys:unique(middle.map(annualActorKey)),targetKeys:[annualActorKey(tail.right)],
+        effect:kind,route:annualRouteKey(steps)};
+    }
+    function describe(steps){
+      return steps.map(function(s){return qualifiedActorLabel(s.left)+s.action+qualifiedActorLabel(s.right)}).join('、');
+    }
+    if(route.length){
+      var bridge=b.bridge.length>0,kind=bridge?'officer-transmission':'wealth-outlet',rule=bridge?'W-bridge':'W-food';
+      var peers=l.blockedBy.peer,control=[];
+      if(!priorRoute.length&&peers.length&&bridge){
+        var officer=route[route.length-1].right,attacker=peers[0].left;
+        control=interactionFlowAnalysis('',current.profiles,current.interactions,[],[{
+          from:[officer.god],to:[attacker.god],action:'制',leftActor:annualActorKey(officer),rightActor:annualActorKey(attacker)
+        }]).steps.filter(function(x){return x.active});
+      }
+      var mediator=route[0].right,oldTier=oldRoute.length?routeMagnitude(oldRoute):0,tier=routeMagnitude(route);
+      var temporalRoute=route.some(function(s){return s.left.temporal||s.right.temporal});
+      var sameOld=oldRoute.length&&oldRoute.length===route.length&&annualActorKey(oldRoute[0].right)===annualActorKey(mediator);
+      var flowYearInRoute=route.some(function(s){return s.left.pillar==='flowYear'||s.right.pillar==='flowYear';});
+      var flowYearControl=control.some(function(s){return s.left.pillar==='flowYear';});
+      var recovery=control.length&&mediator.kind==='支'&&(flowYearInRoute||flowYearControl)&&
+        !b.natalPeerAttack.length&&sameOld;
+      if(recovery||tier>oldTier||!priorRoute.length&&temporalRoute&&!oldRoute.length){
+        var evidence=describe(route);
+        if(recovery){
+          var check=control[0],controller=annualActorKey(check.left).split(':')[1],controlled=annualActorKey(check.right).split(':')[1];
+          evidence=current.pillars.luck+'运中，'+controller+'制运'+controlled+'，原来藏在'+current.pillars[mediator.pillar][1]+'中的'+annualActorKey(mediator).split('藏')[1].split(':')[0]+'接通财路。恢复局部通关：'+evidence;
+        }
+        var action=routeAction(route,kind,control.flatMap(function(x){return [annualActorKey(x.left),annualActorKey(x.right)]}));
+        var e=annualEntry(rule,bridge?'财星通关':'食伤生财','positive',evidence,tier,action);
+        if(recovery)e.recovery=true;
+        entries.push(e);
+      }else if(oldRoute.length&&annualRouteKey(oldRoute)!==annualRouteKey(route)){
+        notes.push({ruleId:rule+'-replacement',direction:'neutral',
+          text:'同一财路保留，替代路径为 '+describe(route)+'；原路径 '+describe(oldRoute)});
+      }
+    }
+    if(oldRoute.length&&!route.length){
+      var bridgeLost=a.bridge.length>0,lost=oldRoute[0].right;
+      var knownRootBlock=!b.known&&Object.keys(current.profiles).some(function(god){
+        return (current.profiles[god].branchEntries||[]).some(function(r){return annualActorKey(r)===annualActorKey(lost)&&
+          (outlookRootRestricted(r)||r.transformedAway);});
+      });
+      var protectedGone=bridgeLost&&!b.officerAttacks.some(function(x){return annualActorKey(x.right)===annualActorKey(oldRoute[1].right)});
+      var actorAvailable=(current.profiles[lost.god]&&current.profiles[lost.god].stemEntries||[]).some(function(x){return annualActorKey(x)===annualActorKey(lost)&&x.usable!==false});
+      if(knownRootBlock||b.blocked||!protectedGone&&(b.bridgeReady||b.outputReady)||lost.kind==='干'&&!actorAvailable){
+        var lostText=(bridgeLost?'财星通关受限：':'食伤生财受限：')+describe(oldRoute)+(knownRootBlock?'；'+qualifiedActorLabel(lost)+'受冲绊，未见足量替代':'');
+        entries.push(annualEntry(bridgeLost?'W-bridge':'W-food','财路受限','negative',lostText,routeMagnitude(oldRoute),
+          routeAction(oldRoute,bridgeLost?'officer-transmission':'wealth-outlet')));
+      }
+    }
+    function pressure(id,label,oldSteps,newSteps){
+      var oldKeys=new Set(oldSteps.map(function(x){return annualActorKey(x.right)}));
+      var newKeys=new Set(newSteps.map(function(x){return annualActorKey(x.right)}));
+      [[oldSteps,newKeys,'positive'],[newSteps,oldKeys,'negative']].forEach(function(pair){
+        pair[0].filter(function(x){return !pair[1].has(annualActorKey(x.right));}).forEach(function(step){
+          var action={sourceKeys:[annualActorKey(step.left)],mediatorKeys:[],targetKeys:[annualActorKey(step.right)],effect:id};
+          entries.push(annualEntry('W-'+id,label,pair[2],qualifiedActorLabel(step.left)+'制'+qualifiedActorLabel(step.right)+(pair[2]==='negative'?'，当前路径受牵制':'，原有牵制解除'),2,action));
+        });
+      });
+    }
+    // A peer attack already booked as the cause of this same broken outlet
+    // stays in the evidence of that outlet.
+    var blockedRoute=entries.find(function(e){return e.direction==='negative'&&/^(W-bridge|W-food)$/.test(e.ruleId);});
+    var causalAttack=blockedRoute&&b.natalPeerAttack.find(function(x){return blockedRoute.action.mediatorKeys.includes(annualActorKey(x.right));});
+    if(causalAttack){
+      blockedRoute.annualMagnitude=Math.max(2,blockedRoute.annualMagnitude);
+      blockedRoute.action.sourceKeys.push(annualActorKey(causalAttack.left));
+      blockedRoute.text+='；'+qualifiedActorLabel(causalAttack.left)+'制'+qualifiedActorLabel(causalAttack.right);
+      blockedRoute.plainText=blockedRoute.text;
+    }
+    pressure('peer','比劫分财',a.natalPeerAttack,b.natalPeerAttack.filter(function(x){return x!==causalAttack;}));
+    if(a.food.length||b.food.length)pressure('seal','印夺食',a.sealDamage,b.sealDamage);
+    if(!route.length&&!oldRoute.length&&a.effective!==b.effective){
+      var use=b.effective?b:a,contacts=natalLuckContacts(current);
+      var candidates=use.stems.concat(use.roots).map(function(actor){
+        if(b.effective)return actor.temporal?{actor:actor,source:annualActorKey(actor)}:null;
+        var changed=contacts.find(function(contact){
+          return contact.target===actor.pillar&&contact.branch===!!actor.branch&&contact.transform!==STEM_WX[actor.stem];
+        });
+        var persists=b.stems.concat(b.roots).some(function(x){return annualActorKey(x)===annualActorKey(actor);});
+        if(!changed||persists)return null;
+        var gz=current.pillars[changed.source],branch=changed.branch?gz[1]:null;
+        return {actor:actor,source:annualActorKey({pillar:changed.source,branch:branch,stem:branch?HIDDEN[branch][0]:gz[0]})};
+      }).filter(Boolean);
+      if(candidates.length){
+        var affected=candidates.map(function(x){return qualifiedActorLabel(x.actor);}).join('、');
+        entries.push(annualEntry('W-root','财星有效根透',b.effective?'positive':'negative',
+          b.effective?'当前岁运提供可用财星：'+affected:'原可用财星受冲绊：'+affected+'，未见同等财路接手',1,
+          {sourceKeys:unique(candidates.map(function(x){return x.source;})),mediatorKeys:[],
+            targetKeys:candidates.map(function(x){return annualActorKey(x.actor);}),effect:'wealth-outlet'}));
+      }
+    }
+    var partial=b.bridge.length?b.bridgeRoutes.filter(function(steps){return routeMagnitude(steps)===1;}):[];
+    if(b.uncoveredOfficerAttacks.length||partial.length){
+      var unprotected=b.uncoveredOfficerAttacks.length?'未接通：'+describe(b.uncoveredOfficerAttacks):'';
+      var limitedBridge=partial.length?'藏财只局部接通，残余官伤未足量化解：'+describe(partial[0]):'';
+      notes.push({ruleId:'W-uncovered-officer',direction:'neutral',text:[unprotected,limitedBridge].filter(Boolean).join('；')});
+    }
+    var limited=b.uncertain?['财星有效根透待核：'+b.wealthFacts.join('；')]:[];
+    return {entries:entries,notes:notes,uncertainty:limited,missing:!!(limited.length&&!entries.length&&!route.length)};
+  }
+  function annualSealContinuity(natal,current){
+    var day=natal.pillars.day[0],wx=STEM_WX[day],officer=godNamesForElement(day,officerElement(wx)),seals=godNamesForElement(day,resourceElement(wx));
+    var binding=current.interactions.stemCombines.filter(function(x){return x.involvesTemporal&&x.active!==false&&/^(bind|contest|transform)$/.test(x.effect);});
+    if(!binding.length)return [];
+    var old=outlookTargetPairs(natal,officer,seals,'生'),rows=[];
+    function route(ctx,source,recipient){
+      var chains=[{from:officer,to:seals,action:'生',leftActor:source,rightActor:recipient},{from:seals,to:['日主'],action:'生'}];
+      var steps=interactionFlowAnalysis('',ctx.profiles,ctx.interactions,[],chains,{exactMediator:true}).steps;
+      return steps.every(function(x){return x.active})?steps:[];
+    }
+    var currentSources=outlookTargetPairs(current,officer,seals,'生');
+    var used=new Set();
+    old.forEach(function(pair){
+      var mediator=pair.right,actor=annualActorKey(mediator),source=annualActorKey(pair.left);
+      var relation=mediator.kind==='干'&&binding.find(function(x){return x.leftKey===mediator.pillar||x.rightKey===mediator.pillar;});
+      if(!relation||used.has(actor)||!route(natal,source,actor).length)return;
+      var alternatives=currentSources.filter(function(x){
+        return annualActorKey(x.left)===source;
+      }).sort(function(a,b){return Number(b.right.kind==='干')-Number(a.right.kind==='干');});
+      var replacements=[];
+      alternatives.some(function(candidate){
+        replacements=route(current,source,annualActorKey(candidate.right));
+        return replacements.length>0;
+      });
+      if(!replacements.length&&route(natal,source).length&&
+        annualActorKey(route(natal,source)[0].right)!==actor)return;
+      used.add(actor);
+      var substituting=replacements[0]&&replacements[0].right;
+      var text=qualifiedActorLabel(mediator)+'受'+relation.text+'；'+qualifiedActorLabel(pair.left)+
+        (substituting?'仍由'+qualifiedActorLabel(substituting)+'接手生印，继续印生'+day+'。':'原来经此生印并及日主，未见可达的替代。');
+      var sourcePillar=relation.leftKey===mediator.pillar?relation.rightKey:relation.leftKey;
+      var replacementMagnitude=substituting?(substituting.kind===mediator.kind?0:1):3;
+      rows.push(annualEntry('Y3-seal-continuity','印至日主的承接',replacementMagnitude?'negative':'neutral',text,replacementMagnitude,{
+        sourceKeys:[annualActorKey({pillar:sourcePillar,stem:current.pillars[sourcePillar][0]}),source],mediatorKeys:[actor],
+        targetKeys:[annualActorKey({pillar:'day',stem:day})],effect:'seal-support',replacement:annualActorKey(substituting)
+      }));
+    });
+    return rows;
+  }
+  function annualMagnitude(e){
+    if(Number.isInteger(e.annualMagnitude))return e.annualMagnitude;
+    if(e.causalChange){
+      var rank=e.causalChange;
+      return Math.max(rank.beforeRank,rank.afterRank)>=2?2:1;
+    }
+    if(e.ruleId==='T-year-tkdc')return 3;
+    if(e.natalContact||e.ruleId==='Y5-role-root'||e.ruleId==='Y5-role-action'||e.ruleId==='Y6-natal-climate'||e.ruleId==='Y3-earth-wood')return 1;
+    return 2;
+  }
+  function annualCauseCovered(owners,cause){
+    if(owners.has(cause))return true;
+    var sep=cause.indexOf('>');
+    if(sep<0)return false;
+    var colon=cause.indexOf(':');
+    var prefix=colon>=0?cause.slice(0,colon+1):'';
+    var parts=cause.slice(prefix.length).split('>');
+    return parts.length===3&&owners.has(prefix+parts[0])&&owners.has(prefix+parts[2]);
+  }
+  function annualRulePriority(e){
+    var r=e.ruleId||'';
+    if(/^T-year-/.test(r))return 1;
+    if(/^W-/.test(r))return 2;
+    if(/^Y2-/.test(r))return 3;
+    if(r==='Y3-seal-continuity')return 4;
+    if(e.medicineTransmissionLoss)return 5.5;
+    if(/^Y3-|^Y4-/.test(r))return 5;
+    if(/^LK-/.test(r))return 6;
+    if(e.natalContact||/^T-natal-/.test(r))return 7;
+    if(r==='Y5-role-root')return 8;
+    if(/^Y5-|^Y6-/.test(r))return 9;
+    return 10;
+  }
+  function annualCapacityAction(e){
+    return e.causeFamily==='daymaster-carrying'||e.causeFamily==='daymaster-carrying-support'||
+      /^(carry-|Y3-carry)/.test(e.taskId||'')||/^Y3-carry-/.test(e.ruleId);
+  }
+  function annualReplacementGroups(candidates){
+    var pairs=new Map(),groups=new Map();
+    candidates.forEach(function(e){
+      if(!e.mixedReplacement)return;
+      var subject=e.replacementSubject||((e.taskId||'').replace(/·(增强条件|减弱条件)$/,''));
+      if(!pairs.has(subject))pairs.set(subject,[]);
+      pairs.get(subject).push(e);
+    });
+    var capacitySignatures=new Set();
+    var signatures=Array.from(pairs,function(pair){
+      var subject=pair[0],rows=pair[1];
+      var causes=['positive','negative'].map(function(side){
+        return unique(rows.filter(function(e){return e.direction===side;}).flatMap(function(e){return e.physicalCauses||[];})).sort();
+      });
+      var signature=causes.some(function(side){return side.length;})?'physical:'+JSON.stringify(causes):null;
+      var capacity=rows.some(function(e){return annualCapacityAction(e)||e.action&&e.action.effect==='daymaster-capacity';});
+      if(capacity&&signature)capacitySignatures.add(signature);
+      return {subject:subject,rows:rows,signature:signature,capacity:capacity};
+    });
+    signatures.forEach(function(pair){
+      // A label may describe a separate disease while both branches refer
+      // to the same carrying function or to the same changed actors.
+      var group=pair.capacity||capacitySignatures.has(pair.signature)?'daymaster-capacity':pair.signature||'subject:'+pair.subject;
+      pair.rows.forEach(function(e){groups.set(e,group);});
+    });
+    return groups;
+  }
+  function settleAnnualLedger(annual,wealth,extra,current,options){
+    var modes=options&&options.replacementModes||null;
+    var candidates=extra.concat(wealth.entries,(annual.evidence||[]),(annual.reservations||[])).slice().sort(function(a,b){
+      var pa=annualRulePriority(a),pb=annualRulePriority(b);
+      if(pa!==pb)return pa-pb;
+      var ma=annualMagnitude(a),mb=annualMagnitude(b);
+      if(ma!==mb)return mb-ma;
+      var ca=(a.physicalCauses||[]).length,cb=(b.physicalCauses||[]).length;
+      if(ca!==cb)return ca-cb;
+      return ((a.ruleId||'')+':'+(a.taskId||'')+':'+(a.text||'')).localeCompare((b.ruleId||'')+':'+(b.taskId||'')+':'+(b.text||''));
+    });
+    var replacementGroups=annualReplacementGroups(candidates);
+    var uncertainReplacements=unique(candidates.filter(function(e){
+      return e.mixedReplacement&&(e.direction==='positive'||e.direction==='negative')&&!e.legacyReference&&!pendingOutlookEvidence(e);
+    }).map(function(e){return replacementGroups.get(e);}));
+    var identities=new Map(),ledger=[],ownedActors={positive:new Set(),negative:new Set()},medicineLossOwners=new Set();
+    var wealthRoutes=wealth.entries.filter(function(e){return e.action&&/^(officer-transmission|wealth-outlet)$/.test(e.action.effect);});
+    var replacement=extra.filter(function(e){return e.ruleId==='Y3-seal-continuity';});
+    candidates.forEach(function(e){
+      var side=e.direction,rule=e.ruleId,task=e.taskId||rule;
+      var causes=unique((e.physicalCauses||[]).map(function(cause){
+        var owner=e.routeOwners&&e.routeOwners[cause];
+        return owner&&medicineLossOwners.has(owner)?owner:cause;
+      })).sort();
+      var eligible=(side==='positive'||side==='negative')&&!e.legacyReference&&!pendingOutlookEvidence(e);
+      var action=e.action,wealthMember=/^W-/.test(rule),exclusion=null,magnitude=eligible?annualMagnitude(e):0;
+      var changed=causes.map(function(x){return x.replace(/^(gain|loss):/,'');});
+      var keys=unique(changed.flatMap(function(x){return x.split('>').filter(function(k){return k.includes(':');});}));
+      if(!action){
+        var routes=changed.filter(function(x){return x.includes('>');}).map(function(x){return x.split('>');});
+        var sourceKeys=unique(routes.map(function(x){return x[0];}).concat(keys.filter(function(x){return /^(luck|flowYear):/.test(x);})));
+        var targetKeys=unique(routes.map(function(x){return x[2];}).concat(
+          changed.filter(function(x){return !x.includes('>')&&!/^(luck|flowYear):/.test(x);})));
+        if(e.natalContact){
+          var c=e.natalContact,gz=current.pillars[c.target],driver=current.pillars[c.source];
+          if(gz&&driver){
+            var roots=c.branch?HIDDEN[gz[1]]:[gz[0]],stem=roots.find(function(x){return STEM_WX[x]===e.natalRoleElement;});
+            targetKeys.push(annualActorKey({pillar:c.target,stem:stem,branch:c.branch?gz[1]:null}));
+            sourceKeys.push(annualActorKey({pillar:c.source,stem:c.branch?HIDDEN[driver[1]][0]:driver[0],branch:c.branch?driver[1]:null}));
+          }
+        }
+        action={sourceKeys:unique(sourceKeys.filter(Boolean)),mediatorKeys:[],targetKeys:unique(targetKeys.filter(Boolean)),effect:task};
+      }
+      if(annualCapacityAction(e)){
+        action=Object.assign({},action,{effect:'daymaster-capacity',targetKeys:[annualActorKey({pillar:'day',stem:current.pillars.day[0][0]})]});
+      }
+      if(rule==='T-year-tkdc'){
+        var participants=['luck','flowYear'].flatMap(function(pillar){
+          var gz=current.pillars[pillar],branch=gz[1];
+          return [annualActorKey({pillar:pillar,stem:gz[0]}),annualActorKey({pillar:pillar,branch:branch,stem:HIDDEN[branch][0]})];
+        });
+        action={sourceKeys:participants,mediatorKeys:[],targetKeys:[annualActorKey({pillar:'day',stem:current.pillars.day[0][0]})],effect:'joint-clash'};
+      }
+      if(!e.action&&!wealthMember&&!causes.length&&!e.natalContact&&rule!=='T-year-tkdc'){
+        magnitude=0;
+        exclusion='no-verified-temporal-action';
+      }
+      if(!e.action&&wealthRoutes.some(function(x){
+        if(x.direction!==side)return false;
+        var mediator=x.action.mediatorKeys;
+        var matches=mediator.some(function(k){return keys.includes(k);});
+        return matches&&(task==='官伤冲战'||task==='hurt-officer'||rule==='Y5-role-root'||
+          rule==='Y5-role-action'&&(action.targetKeys.some(function(k){return mediator.includes(k);})||
+            changed.every(function(k){return mediator.includes(k);})&&task.includes('生喜用')));
+
+      })){
+        magnitude=0;
+        exclusion='duplicate-wealth-route';
+      }
+      if(!e.action&&side==='negative'&&replacement.some(function(x){
+        return x.action.mediatorKeys.some(function(k){return keys.includes(k);})&&
+          (/^Y3-(medicine|required-path|replacement-medicine|earth-metal|carry-support)$/.test(rule)||rule==='Y5-role-root');
+      })){
+        magnitude=0;
+        exclusion='duplicate-seal-continuity';
+      }
+      if(eligible&&magnitude>0&&causes.length>0&&(e.medicineTransmissionLoss||/^(LK-|T-natal-|Y5-)/.test(rule))&&
+        causes.every(function(c){return annualCauseCovered(ownedActors[side],c);})){
+        magnitude=0;
+        exclusion='duplicate-cause';
+      }
+      var rowStatus='confirmed';
+      var replacementGroup=replacementGroups.get(e);
+      if(e.mixedReplacement){
+        var mode=modes?modes[replacementGroup]:undefined;
+        if(mode===undefined)rowStatus='potential';
+        if(mode===undefined||mode===0||(mode===1&&side!=='positive')||(mode===-1&&side!=='negative')){
+          magnitude=0;
+          exclusion='uncertain-replacement-strength';
+        }
+      }
+      if(!magnitude&&!exclusion)exclusion=eligible?'equivalent-substitution':'explanation';
+      var key=JSON.stringify([side,action.effect,action.effect==='daymaster-capacity'?[]:keys,action.sourceKeys.slice().sort(),
+        action.mediatorKeys.slice().sort(),action.targetKeys.slice().sort()]);
+      if(action.effect==='daymaster-capacity')key=side+':'+action.effect;
+      var row={ruleId:rule,taskId:task,side:side,text:e.text,causeKey:key,action:action,physicalCauses:causes,
+        magnitude:magnitude,contribution:magnitude,wealth:wealthMember,status:rowStatus,exclusion:exclusion,
+        recovery:!!e.recovery};
+      if(replacementGroup)row.replacementGroup=replacementGroup;
+      ledger.push(row);
+      if(!magnitude)return;
+      var old=identities.get(key);
+      if(!old||row.magnitude>old.magnitude){
+        if(old){old.exclusion='duplicate-cause';old.contribution=0;row.wealth=row.wealth||old.wealth;}
+        identities.set(key,row);
+      }else{
+        row.exclusion='duplicate-cause';row.contribution=0;old.wealth=old.wealth||row.wealth;
+      }
+      if(row.contribution>0&&ownedActors[side])causes.forEach(function(c){
+        ownedActors[side].add(c);
+        if(side==='negative'&&/^Y3-/.test(rule))medicineLossOwners.add(c);
+      });
+    });
+    var sums={B:0,W:0,positive:0,negative:0};
+    identities.forEach(function(row){
+      var signed=row.side==='positive'?row.contribution:-row.contribution;
+      sums.B+=signed;
+      if(row.wealth)sums.W+=signed;
+      sums[row.side]+=row.contribution;
+    });
+    return {ledger:ledger,sums:sums,uncertainReplacements:uncertainReplacements};
+  }
+  function annualRange(values,missing,strictSignOnly){
+    var min=Math.min.apply(null,values),max=Math.max.apply(null,values),directions=Array.from(new Set(values.map(Math.sign))).sort();
+    var pending=!!missing||(strictSignOnly?min<0&&max>0:directions.length>1);
+    var guaranteed=pending?null:min>0?min:max<0?max:0;
+    return {min:min,max:max,guaranteed:guaranteed,direction:pending?'pending':guaranteed>0?'positive':guaranteed<0?'negative':'neutral',
+      possibleDirections:directions.map(function(x){return x>0?'positive':x<0?'negative':'neutral';}),
+      pending:pending,reason:missing?'missing-evidence':pending?'direction-varies':min!==max?'bounded-magnitude':'verified'};
+  }
+  function settleScenarioWealthMerge(B,W,scenarios,weight){
+    var extraWeight=Number.isFinite(weight)?weight:DEFAULT_WEALTH_EXTRA_WEIGHT;
+    var list=(scenarios||[]).map(function(s,idx){
+      var ok=Number.isFinite(s.B)&&Number.isFinite(s.W);
+      return {idx:idx,B:s.B,W:s.W,total:ok?s.B+extraWeight*s.W:null};
+    });
+    if(!list.length){
+      var b0=B&&Number.isFinite(B.guaranteed)?B.guaranteed:0,w0=W&&Number.isFinite(W.guaranteed)?W.guaranteed:0;
+      list=[{idx:0,B:b0,W:w0,total:b0+extraWeight*w0}];
+    }
+    var totals=list.map(function(s){return s.total;});
+    var wealthPending=!!(W&&W.pending);
+    var baseMissing=!!(B&&B.pending&&B.reason==='missing-evidence');
+    var validTotals=totals.every(Number.isFinite);
+    var wealthSkipped=wealthPending||extraWeight===0;
+    var mergeTotals=!baseMissing&&!wealthSkipped&&validTotals;
+    var reversalRisk=mergeTotals&&totals.some(function(t){return t>0;})&&totals.some(function(t){return t<0;});
+    var combinedRange=mergeTotals?annualRange(totals,false,true):
+      B&&(baseMissing||wealthSkipped)?Object.assign({},B):
+        {min:null,max:null,guaranteed:null,direction:'pending',possibleDirections:[],pending:true,reason:'missing-evidence'};
+    if(reversalRisk)combinedRange.reason='reversal-risk';
+    var chosen=mergeTotals&&!combinedRange.pending
+      ? list.filter(function(s){return s.total===combinedRange.guaranteed;}).reduce(function(best,s){return Math.abs(s.W)<Math.abs(best.W)?s:best;})
+      : list.find(function(s){return B&&s.B===B.guaranteed;})||list[0];
+    var appliedDelta=mergeTotals&&!combinedRange.pending?extraWeight*chosen.W:0;
+    var wealthApplied=appliedDelta!==0;
+    return {weight:extraWeight,appliedDelta:appliedDelta,appliedBase:chosen.B,appliedTotal:combinedRange.guaranteed,
+      selectedIndex:chosen.idx,
+      wealthApplied:wealthApplied,wealthPending:wealthPending,wealthSkipped:wealthSkipped,
+      reversalRisk:reversalRisk,wealthDirection:W?W.direction:'pending',
+      wealthBounded:!wealthPending&&!!(W&&W.min!==W.max),
+      wealthRange:W,baseRange:B,combinedRange:combinedRange,scenarioTotals:totals};
+  }
+  function annualAmplitude(range,rows,extraDelta){
+    var net=range.guaranteed==null?null:range.guaranteed;
+    var pos=0,neg=0;
+    (rows||[]).forEach(function(r){
+      if(r&&r.contribution>0){
+        if(r.side==='positive')pos+=r.contribution;
+        else if(r.side==='negative')neg+=r.contribution;
+      }
+    });
+    if(Number.isFinite(extraDelta)){
+      if(extraDelta>0)pos+=extraDelta;
+      else if(extraDelta<0)neg+=-extraDelta;
+    }
+    return {available:!range.pending,positive:range.pending?0:pos,negative:range.pending?0:neg,
+      rawPositive:pos,rawNegative:neg,net:net,range:range,hasPending:range.pending,
+      missingFields:range.pending?[range.reason]:[],breakdown:rows,
+      strongTrigger:{positive:false,negative:false,sourceKeys:[]}};
+  }
+  function settleAnnualYear(base,luck,current,analysis,year,options){
+    function evaluate(context,modes){
+      if(!analysis.specialPatternQualification)context.wealthChannel=wealthChannelState(context,analysis);
+      var w=annualWealthActions(base,luck,context,analysis);
+      var annual=applyLuckTone(compareOutlookContexts(base,context,analysis,true),analysis,base.pillars,year.gz,'annual',context);
+      annual=applyYearLuck(annual,analysis,base.pillars,luck.pillars.luck,year.gz,context);
+      var extra=annualSealContinuity(base,context);
+      var settlement=settleAnnualLedger(annual,w,extra,context,modes?{replacementModes:modes}:null);
+      return {annual:annual,wealth:w,extra:extra,sums:settlement.sums,ledger:settlement.ledger,
+        uncertainReplacements:settlement.uncertainReplacements};
+    }
+    var first=evaluate(current,null),baseContexts=[{retainedRoots:[],context:current,result:first}],roots=[];
+    var w=current.wealthChannel;
+    if(w&&w.uncertain){
+      var day=current.pillars.day[0],names=['正财','偏财'];
+      roots=unique(names.flatMap(function(name){
+        return ((current.profiles[name]||{}).branchEntries||[]).filter(function(r){
+          return r.usable!==false&&!r.transformedAway&&outlookRootRestricted(r)&&r.rootPower>=0.5&&
+            r.boundByCombine&&!r.attacks.some(function(x){return /冲/.test(x);});
+        }).map(annualActorKey);
+      }));
+      roots.reduce(function(choices,key){return choices.concat(choices.map(function(x){return x.concat(key);}));},[[]]).slice(1).forEach(function(retained){
+        var context=buildTemporalPatternContext(day,current.pillars,analysis,{outlookFlowYear:true,retainedRoots:retained});
+        baseContexts.push({retainedRoots:retained,context:context,result:evaluate(context,null)});
+      });
+    }
+    var hadMixedReplacement=false,contexts=[];
+    baseContexts.forEach(function(item){
+      var groups=item.result.uncertainReplacements||[];
+      if(!groups.length){
+        contexts.push({retainedRoots:item.retainedRoots,replacementStates:{},result:item.result});
+        return;
+      }
+      hadMixedReplacement=true;
+      var combos=groups.reduce(function(acc,group){
+        var next=[];
+        [-1,0,1].forEach(function(val){
+          acc.forEach(function(m){next.push(Object.assign({},m,{[group]:val}));});
+        });
+        return next;
+      },[{}]);
+      combos.forEach(function(modes){
+        var settled=settleAnnualLedger(item.result.annual,item.result.wealth,item.result.extra,item.context,{replacementModes:modes});
+        contexts.push({retainedRoots:item.retainedRoots,replacementStates:modes,
+          result:{annual:item.result.annual,wealth:item.result.wealth,extra:item.result.extra,
+            sums:settled.sums,ledger:settled.ledger,uncertainReplacements:groups}});
+      });
+    });
+    var annual=first.annual;
+    var strongUnresolved=annual.direction==='pending'&&annual.evidence.some(function(e){return e.ruleId==='T-year-tkdc'&&e.direction==='negative';});
+    var hasDecisiveAnnual=contexts.some(function(x){
+      var hasCore=x.result.ledger.some(function(r){return r.contribution>0&&/^(Y2|Y3|Y4|LK|W)-/.test(r.ruleId);});
+      var hasNetMinor=x.result.ledger.some(function(r){return r.contribution>0;})&&x.result.sums.B!==0;
+      return x.result.annual.direction!=='pending'||hasCore||hasNetMinor;
+    });
+    var missingOverall=strongUnresolved||!hasDecisiveAnnual;
+    var missingWealth=contexts.every(function(x){return x.result.wealth.missing;});
+    var B=annualRange(contexts.map(function(x){return x.result.sums.B;}),missingOverall,true);
+    var W=annualRange(contexts.map(function(x){return x.result.sums.W;}),missingWealth);
+    var scenarios=contexts.map(function(x,index){
+      var sum=x.result.sums;
+      var rootStates={};
+      roots.forEach(function(key){rootStates[key]=x.retainedRoots.includes(key)?'residual-usable':'restricted';});
+      return {id:index,rootStates:rootStates,replacementStates:x.replacementStates,retainedRoots:x.retainedRoots,
+        B:sum.B,W:sum.W,totalBase:sum.B,positive:sum.positive,negative:sum.negative,
+        evidenceMissing:{B:missingOverall,W:x.result.wealth.missing}};
+    });
+    var weight=options&&Number.isFinite(options.wealthExtraWeight)?options.wealthExtraWeight:DEFAULT_WEALTH_EXTRA_WEIGHT;
+    var wealthMerge=settleScenarioWealthMerge(B,W,scenarios,weight);
+    scenarios.forEach(function(s,idx){s.appliedTotal=wealthMerge.scenarioTotals[idx];});
+    var relevant=contexts[wealthMerge.selectedIndex]||contexts[0];
+    var selected=relevant.result,rows=selected.ledger;
+    var usableSides=unique(rows.filter(function(r){return r.contribution>0;}).map(function(r){return r.side;}));
+    var detail=selected.annual.evidence.concat(selected.annual.reservations,selected.extra,selected.wealth.entries);
+    var confirmed=detail.filter(function(e){
+      return rows.some(function(r){return r.ruleId===e.ruleId&&r.taskId===(e.taskId||e.ruleId)&&r.side===e.direction&&r.text===e.text&&r.contribution>0;});
+    });
+    var known=detail.filter(function(e){return e.direction==='neutral'&&e.ruleId!=='LK-11';});
+    var reservations=detail.filter(function(e){return confirmed.indexOf(e)<0;});
+    var effectiveRange=wealthMerge.combinedRange;
+    if(!effectiveRange.pending){
+      var side=usableSides.length>1?'mixed':effectiveRange.direction;
+      annual=Object.assign({},annual,{direction:side,assessment:'determined',uncertainty:[],
+        possibleDirections:[side],tendency:null,toneBasis:null,evidence:confirmed.concat(known),reservations:reservations.filter(function(e){return known.indexOf(e)<0;})});
+    }else{
+      var extraReasons=[];
+      if(B.reason==='direction-varies')extraReasons.push(hadMixedReplacement?'替代药路强弱方向存在分歧，足以影响当年涨跌':'可行情景的年度净推动方向不同');
+      if(wealthMerge.reversalRisk)extraReasons.push('可行情景在计入财运加权后出现涨跌反转，该年按综合待判处理');
+      var reasons=unique(annual.uncertainty.concat(extraReasons));
+      annual=Object.assign({},annual,{direction:'pending',uncertainty:reasons.length?reasons:['尚缺实际作用证据'],
+        assessment:annual.assessment==='determined'?'conditional':annual.assessment,possibleDirections:effectiveRange.possibleDirections,
+        evidence:confirmed,reservations:reservations});
+    }
+    annual.amplitude=annualAmplitude(effectiveRange,rows,wealthMerge.wealthApplied?wealthMerge.appliedDelta:0);
+    annual.wealthMerge=wealthMerge;
+    annual.knownRisks=rows.filter(function(x){return x.side==='negative'&&x.contribution>0;});
+    var wSelected=(contexts.find(function(x){return x.result.sums.W===W.guaranteed;})||contexts[0]).result;
+    var wRows=wSelected.ledger.filter(function(x){return x.wealth;});
+    var wSides=unique(wRows.filter(function(r){return r.contribution>0;}).map(function(r){return r.side;}));
+    var wLabels={positive:'财路助益',negative:'财路受限',mixed:'财路利弊并见',neutral:'财路平稳',pending:'财路待判'};
+    var wDir=W.pending?'pending':(wSides.length>1?'mixed':W.direction);
+    var wealth={direction:wDir,label:wLabels[wDir],amplitude:annualAmplitude(W,wRows,0),range:W,
+      reasons:wSelected.wealth.entries.concat(wSelected.wealth.notes),
+      uncertainty:W.pending?unique(wSelected.wealth.uncertainty.concat(W.reason==='direction-varies'?['可行情景的财路方向不同']:[])
+        .concat(W.pending&&!wSelected.wealth.uncertainty.length?['当年财运待判，未纳入财运加权']:[])):[],
+      missingFields:W.pending?[W.reason]:[],
+      note:W.pending?'当年财运待判，未纳入财运加权。':year.gz+'流年随'+luck.pillars.luck+'大运，按当年可核的财路与阻碍结算。'};
+    return {year:year.year,gz:year.gz,annual:labelOutlook(annual,'annual'),wealth:wealth,scenarios:scenarios,
+      actionLedger:rows,wealthRange:W,comprehensiveRange:B,effectiveRange:effectiveRange,wealthMerge:wealthMerge,
+      background:{natalDiseases:(analysis.patternDisease.items||[]).map(function(x){return {family:x.family,status:x.status};}),
+        natalBenefits:(analysis.interactionFlow.steps||[]).filter(function(s){return s.active;}).map(function(s){return s.text;})}};
+  }
+  function unavailableAnnualYear(year,result){
+    var range={min:null,max:null,guaranteed:null,direction:'pending',possibleDirections:[],pending:true,reason:'missing-input'};
+    var annual=labelOutlook(result,'annual');
+    annual.amplitude=annualAmplitude(range,[]);
+    return {year:year.year,gz:year.gz,annual:annual,increment:labelOutlook(result,'increment'),
+      wealth:{direction:'pending',label:'财路待判',amplitude:annualAmplitude(range,[]),range:range,
+        reasons:[],uncertainty:result.uncertainty,missingFields:['missing-input']},
+      scenarios:[],actionLedger:[],comprehensiveRange:range,wealthRange:range};
+  }
+  function evaluateLuckOutlook(bazi,luckGz,previousGz,flowYears,options){
     var valid=function(gz){return getGZ60().indexOf(gz)>=0},years=flowYears||[],out={ruleVersion:LUCK_OUTLOOK_VERSION,luckGz:luckGz,previousGz:previousGz||null,years:[]};
     var complete=bazi&&bazi.pillars&&NATAL_PILLAR_KEYS.every(function(key){return valid(bazi.pillars[key])})&&bazi.dayStem===bazi.pillars.day[0]&&valid(luckGz);
     var pending=outlookPending('四柱、日主或所选大运资料不完整');
     if(!complete){
       out.natal=labelOutlook(pending,'natal');out.previous=previousGz?labelOutlook(pending,'previous'):{label:'无上一柱可比较',direction:'unavailable',evidence:[],reservations:[],uncertainty:[],life:[]};
-      out.years=years.map(function(year){return {year:year.year,gz:year.gz,annual:labelOutlook(pending,'annual'),increment:labelOutlook(pending,'increment')}});return attachOutlookAmplitudes(out);
+      out.years=years.map(function(year){return unavailableAnnualYear(year,pending);});return attachOutlookAmplitudes(out);
     }
     // Always rederive from the four natal pillars: saved or previous temporal results are not inputs.
     var natalPillars={year:bazi.pillars.year,month:bazi.pillars.month,day:bazi.pillars.day,hour:bazi.pillars.hour};
     var analysis=analyzePattern(Object.assign({},bazi,{pillars:natalPillars,scores:scoreWuxing(natalPillars)}));
     var base=buildTemporalPatternContext(bazi.dayStem,natalPillars,analysis),luckPillars=Object.assign({},natalPillars,{luck:luckGz}),luck=buildTemporalPatternContext(bazi.dayStem,luckPillars,analysis);
-    out.natal=labelOutlook(applyLuckTone(compareOutlookContexts(base,luck,analysis),analysis,natalPillars,luckGz,'natal'),'natal');
-    var shift=luckPatternShift(analysis,natalPillars,luckGz);if(shift)out.natal.patternShift=shift;
+    if(!analysis.specialPatternQualification){
+      base.wealthChannel=wealthChannelState(base,analysis);
+      luck.wealthChannel=wealthChannelState(luck,analysis);
+    }
+    out.wealth=evaluateWealthOutlook(base,luck,analysis,natalPillars,luckGz);
+    var natalOutlook=applyLuckTone(compareOutlookContexts(base,luck,analysis),analysis,natalPillars,luckGz,'natal',luck);
+    out.natal=labelOutlook(natalOutlook,'natal');
+    var shift=luckPatternShift(analysis,natalPillars,luckGz,luck);if(shift)out.natal.patternShift=shift;
     if(previousGz){
       out.previous=valid(previousGz)?labelOutlook(compareOutlookContexts(buildTemporalPatternContext(bazi.dayStem,Object.assign({},natalPillars,{luck:previousGz}),analysis),luck,analysis),'previous'):labelOutlook(outlookPending('上一柱大运干支无效'),'previous');
     }else out.previous={label:'无上一柱可比较',direction:'unavailable',evidence:[],reservations:[],uncertainty:[],life:[]};
     out.years=years.map(function(year){
-      if(!Number.isInteger(year.year)||!valid(year.gz)||year.gz!==getFlowYearGZ(year.year))return {year:year.year,gz:year.gz,annual:labelOutlook(outlookPending('流年年份与干支不一致'),'annual'),increment:labelOutlook(outlookPending('流年年份与干支不一致'),'increment')};
+      if(!Number.isInteger(year.year)||!valid(year.gz)||year.gz!==getFlowYearGZ(year.year))return unavailableAnnualYear(year,outlookPending('流年年份与干支不一致'));
       var current=buildTemporalPatternContext(bazi.dayStem,Object.assign({},luckPillars,{flowYear:year.gz}),analysis,{outlookFlowYear:true});
-      var item={year:year.year,gz:year.gz,annual:labelOutlook(applyYearLuck(applyLuckTone(compareOutlookContexts(base,current,analysis),analysis,natalPillars,year.gz,'annual'),analysis,natalPillars,luckGz,year.gz),'annual'),increment:labelOutlook(compareOutlookContexts(luck,current,analysis),'increment')};
+      var item=settleAnnualYear(base,luck,current,analysis,year,options);
+      item.increment=labelOutlook(compareOutlookContexts(luck,current,analysis),'increment');
       // Optional year-over-year: the previous year read under the decade it belonged to.
       var prev=year.previous;
       if(prev)item.previousYear=Number.isInteger(prev.year)&&valid(prev.gz)&&prev.gz===getFlowYearGZ(prev.year)&&valid(prev.luckGz)?
@@ -4462,7 +5815,7 @@
     return data;
   }
 
-  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,CLASSICAL_PATTERN_POTENTIAL_RULES:CLASSICAL_PATTERN_POTENTIAL_RULES,SPECIAL_PATTERN_RULES:SPECIAL_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,STRUCTURE_SCORE_LEVEL_BANDS:STRUCTURE_SCORE_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS,PATTERN_LEVEL_AUDIT_VERSION:PATTERN_LEVEL_AUDIT_VERSION,LEGAL_FOUR_PILLAR_GENERATOR_VERSION:LEGAL_FOUR_PILLAR_GENERATOR_VERSION,PATTERN_LEVEL_AUDIT_WEIGHTS:PATTERN_LEVEL_AUDIT_WEIGHTS},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,buildBirthTime:buildBirthTime,createBaziProfile:createBaziProfile,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,nearestMajorSolarTerm:nearestMajorSolarTerm,scoreWuxing:scoreWuxing,computeNatalEffectiveWeights:computeNatalEffectiveWeights,computeOutlookAmplitude:computeOutlookAmplitude,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,analyzeTemporalInteractions:analyzeTemporalInteractions,evaluateLuckImpact:evaluateLuckImpact,evaluateLuckOutlook:evaluateLuckOutlook,patternStructureRawScore:patternStructureRawScore,reweightPatternScore:reweightPatternScore,percentileFromHistogram:percentileFromHistogram,percentileRangeFromHistogram:percentileRangeFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,structureGradeFromScore:structureGradeFromScore,patternGradeIndexWithinGates:patternGradeIndexWithinGates,forEachLegalFourPillar:forEachLegalFourPillar,buildPatternLevelAudit:buildPatternLevelAudit,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
+  var api={constants:{WUXING:WUXING,STEM_WX:STEM_WX,BRANCH_WX:BRANCH_WX,HIDDEN:HIDDEN,SHENSHA_RULES:SHENSHA_RULES,MAJOR_SOLAR_TERMS:MAJOR_SOLAR_TERMS,AUTHORITY_PATTERN_RULES:AUTHORITY_PATTERN_RULES,CLASSICAL_PATTERN_POTENTIAL_RULES:CLASSICAL_PATTERN_POTENTIAL_RULES,SPECIAL_PATTERN_RULES:SPECIAL_PATTERN_RULES,PHENOMENON_RULES:PHENOMENON_RULES,THEORETICAL_BASELINE_CONFIG:THEORETICAL_BASELINE_CONFIG,THEORETICAL_LEVEL_BANDS:THEORETICAL_LEVEL_BANDS,STRUCTURE_SCORE_LEVEL_BANDS:STRUCTURE_SCORE_LEVEL_BANDS,PATTERN_SCORE_DIMENSION_WEIGHTS:PATTERN_SCORE_DIMENSION_WEIGHTS,PATTERN_LEVEL_AUDIT_VERSION:PATTERN_LEVEL_AUDIT_VERSION,LEGAL_FOUR_PILLAR_GENERATOR_VERSION:LEGAL_FOUR_PILLAR_GENERATOR_VERSION,PATTERN_LEVEL_AUDIT_WEIGHTS:PATTERN_LEVEL_AUDIT_WEIGHTS,DEFAULT_WEALTH_EXTRA_WEIGHT:DEFAULT_WEALTH_EXTRA_WEIGHT},SHENSHA_RULES:SHENSHA_RULES,stemPolarity:stemPolarity,tenGod:tenGod,changsheng:changsheng,kongWang:kongWang,buildPillars:buildPillars,buildBirthTime:buildBirthTime,createBaziProfile:createBaziProfile,getFlowYearNumber:getFlowYearNumber,getFlowYearGZ:getFlowYearGZ,luckDirection:luckDirection,luckStartInfo:luckStartInfo,luckStartAge:luckStartAge,getFlowMonths:getFlowMonths,nearestMajorSolarTerm:nearestMajorSolarTerm,scoreWuxing:scoreWuxing,computeNatalEffectiveWeights:computeNatalEffectiveWeights,computeOutlookAmplitude:computeOutlookAmplitude,settleScenarioWealthMerge:settleScenarioWealthMerge,strengthScore:strengthScore,assessStrength:assessStrength,usefulElements:usefulElements,patternName:patternName,normalizePhenomenonName:normalizePhenomenonName,shenShaForPillar:shenShaForPillar,analyzePattern:analyzePattern,analyzeTemporalInteractions:analyzeTemporalInteractions,evaluateLuckImpact:evaluateLuckImpact,evaluateLuckOutlook:evaluateLuckOutlook,patternStructureRawScore:patternStructureRawScore,reweightPatternScore:reweightPatternScore,percentileFromHistogram:percentileFromHistogram,percentileRangeFromHistogram:percentileRangeFromHistogram,formatPatternPercentile:formatPatternPercentile,theoreticalGradeFromPercentile:theoreticalGradeFromPercentile,structureGradeFromScore:structureGradeFromScore,patternGradeIndexWithinGates:patternGradeIndexWithinGates,forEachLegalFourPillar:forEachLegalFourPillar,buildPatternLevelAudit:buildPatternLevelAudit,buildTheoreticalPatternBaseline:buildTheoreticalPatternBaseline,theoreticalBaseline:{version:THEORETICAL_BASELINE_VERSION,scoreModelVersion:PATTERN_SCORE_MODEL_VERSION,config:THEORETICAL_BASELINE_CONFIG,histogram:THEORETICAL_BASELINE_HISTOGRAM,stats:THEORETICAL_BASELINE_STATS}};
   root.BaziEngine=api;
   if(root.window)root.window.BaziEngine=api; // window.BaziEngine
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -27,6 +27,17 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Outlook Calibration & Single-Line Trend UI — 2026-11-27
+
+- 本轮在 `main`（基线 `8dbe5b8`）完成八字大运流年引擎三阶段改造与走势图交互升级（`bazi-engine.js` `luck-outlook-20261126.4`、`bazi-visuals.js`／`bazi-visuals.css`／`bazi.html` 资源版本 `20261127.1`，新增 `check-bazi-luck-state-change.cjs` 并扩充 `check-bazi-page.js`），不改动原局排盘、历法、AI 与记录契约。
+- 引擎口径：完成上游窄修、完整六柱核验通路但只计岁运当年实际介入作用的存量／流量分离、三档离散力度与同类／同向去重（含 `mixedReplacement` 情景联动与原局未藏乙同年度跨项重复扣分去重）、财运按 `a_t = B + 0.25W` 并入综合主线（支持 `w=0` 逐年还原）以及综合主线严格异号反转才标待判。
+- 走势图展示与交互：移除独立「财运走势」副图，统一为单条综合走势线并常显底部财运与综合明细；展示层新增默认开启的「起步体感淡入」（底层客观分值不变）；「包络」与「起步体感淡入」各自配独立悬停／手机问号气泡说明；总览点击年份自动聚焦近 30 年（前 14 + 当年 + 后 15），横向拖动与底部按钮融合跨年对比；待判年份改为无垂直文字柱的连续平滑包络加轻量水平虚线占位；鼠标滑过不再改写底部明细区，消除页面上下抖动。
+- 验证通过：`node --check`（4 个修改／新增 JS／CJS）、`node check-baselines.js`（18 项奇门基线）、`node check-bazi-page.js`（含 720 组测例）、`node check-bazi-luck-state-change.cjs`（含 600 年状态与 390px 模拟状态）及 `git diff --check`。用户已在本地预览（`http://127.0.0.1:8088/bazi.html`）实测并授权直接在 `main` 提交推送；沙箱无头浏览器截图未跑通，手机气泡与细节待实机试用继续观察。
+- 下一步（用户先试用一天、多看不同命盘后再推进，暂不实现）：
+  1. 大运交接过渡（“换煤”渐进过渡感）；
+  2. 扩展跨盘通用依据以深化／收敛「待判」年份结论，而非只停在「待判」；
+  3. 简化走势图面向普通用户的冗余专业数字（如「助力 6、阻力 5.5、净值 +0.5」等）。
+
 ### Bazi Visual Charts Mobile UX Polish — 2026-11-25
 
 - 针对实机手机体验优化双图谱展示与交互（`bazi.html`、`bazi-visuals.css`、`bazi-visuals.js`，资源缓存更新至 `20261124.4` / `20261124.3`），不改动排盘算法内核与 AI／记录契约：

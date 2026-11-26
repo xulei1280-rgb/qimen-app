@@ -956,7 +956,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <link rel="stylesheet" href="premium-base.css?v=20261101.2">
 <link rel="stylesheet" href="bazi-premium.css?v=20261122.1">
 <link rel="stylesheet" href="birth-date-input.css?v=20261122.2">
-<link rel="stylesheet" href="bazi-visuals.css?v=20261124.4">
+<link rel="stylesheet" href="bazi-visuals.css?v=20261127.1">
 </head>
 <body>
 <a class="skip-link" href="#homeTabs">跳到排盘与记录</a>
@@ -1083,12 +1083,12 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="birth-time.js?v=20261107.1"></script>
 <script src="china-locations.js?v=20261122.1"></script>
 <script src="bazi-shensha.js?v=20261122.1"></script>
-<script src="bazi-engine.js?v=shensha-20261120.1"></script>
+<script src="bazi-engine.js?v=luck-20261126.4"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
 <script src="bazi-glossary.js?v=20261122.3" defer></script>
-<script src="bazi-visuals.js?v=20261124.3" defer></script>
+<script src="bazi-visuals.js?v=20261127.1" defer></script>
 <script>
 var currentBazi=null;
 var currentBaziView='structure';
@@ -3966,6 +3966,13 @@ function outlookCareAreas(result){
 function renderOutlookBox(title,result,professionalTitle,extra){
   var view=outlookDisplayView(result);extra=extra||{};
   function body(technical){var key=technical?'professional':'standard';
+    if(result.direction==='pending'){
+      var risks=(result.evidence||[]).filter(function(e){return e.direction==='negative'&&/^T-year-(same|clash|tkdc)$/.test(e.ruleId)});
+      if(risks.length){
+        return risks.map(function(e){return '<p><b>已知风险：</b>'+esc(technical?e.text:e.plainText||e.text)+'</p>'}).join('')+
+          '<p class="outlook-note"><b>整体待判原因：</b>'+esc((result.uncertainty||[]).join('；')||result.summary||'决定性条件尚未确认。')+'</p>';
+      }
+    }
     if(!technical&&extra.yearCopy&&extra.yearCopy.kind==='plain'){
       var yc=extra.yearCopy,alsoHtml='';
       if(yc.also&&yc.also.length){

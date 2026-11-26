@@ -27,7 +27,12 @@ for (const [prefix, count] of [['A',3],['B',7],['C',6],['D',3],['E',3]]) {
     assert(patternReviewPlan.includes('| ' + id + ' |'), `frozen review plan must retain task ${id}`);
   }
 }
-assert(fs.readFileSync('docs/codex/modules/pattern.md', 'utf8').includes('pattern-review-plan-v1.md') && fs.readFileSync('docs/codex/PROJECT-STATUS.md', 'utf8').includes('pattern-review-plan-v1.md'), 'module and handoff entry points must route future work to the frozen review plan');
+assert(fs.readFileSync('docs/codex/modules/pattern.md', 'utf8').includes('pattern-review-plan-v1.md'), 'pattern module must route future work to the frozen review plan');
+if (process.env.BAZI_CHECK_PROJECT_HANDOFF === '0') {
+  console.log('Project handoff check skipped (BAZI_CHECK_PROJECT_HANDOFF=0)');
+} else {
+  assert(fs.readFileSync('docs/codex/PROJECT-STATUS.md', 'utf8').includes('pattern-review-plan-v1.md'), 'handoff entry point must route future work to the frozen review plan');
+}
 const confirmationBiasPostmortem = fs.readFileSync('docs/codex/modules/pattern-confirmation-bias-postmortem.md', 'utf8');
 assert(confirmationBiasPostmortem.includes('真人反馈只能提出待核') && confirmationBiasPostmortem.includes('不能成为格局、喜用、层次、行为或分数的真值标签') && confirmationBiasPostmortem.includes('食神制杀当前验真口径'), 'pattern module should preserve the confirmation-bias incident and permanent regression rules');
 const patternPercentileDesign = fs.readFileSync('docs/codex/modules/pattern-percentile-design.md', 'utf8');
@@ -298,7 +303,9 @@ const qimen = fs.readFileSync('qimen.js', 'utf8');
 const shensha = fs.readFileSync('bazi-shensha.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
 assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>'), 'bazi page should load the birth-time helper');
-assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=shensha-20261120\.1"/.test(html), 'bazi page should load shared rules before the engine');
+assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261126\.4"/.test(html), 'bazi page should load shared rules before the updated engine');
+assert(html.includes('src="bazi-visuals.js?v=20261127.1" defer') &&
+  html.includes('href="bazi-visuals.css?v=20261127.1"'), 'trend chart and styles use the current cache version');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
 assert(defaultFormMatch && defaultFormMatch[0].includes('var now=new Date()'), 'bazi default form should use open-time date');
 assert(defaultFormMatch && !defaultFormMatch[0].includes('buildBazi()'), 'opening bazi page should not auto-build a chart');
@@ -1859,7 +1866,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261111.1-cross-mixed', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261126.4', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
@@ -1870,7 +1877,7 @@ assert(firstOutlook.previous.label === '无上一柱可比较', 'the first luck 
 // Isolated theoretical ten-god conditions test branches without using personal event labels.
 const coreContext = { GZ60: vm.runInContext('GZ60', scriptContext), BaziShenSha: scriptContext.BaziShenSha };
 vm.createContext(coreContext);
-vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__outlookRules={core:outlookCore,compare:compareOutlookContexts,label:labelOutlook};root.BaziEngine=api;'), coreContext);
+vm.runInContext(engine.replace('root.BaziEngine=api;', 'root.__outlookRules={core:outlookCore,compare:compareOutlookContexts,label:labelOutlook,settle:settleTemporalOutlook,tone:applyLuckTone,season:seasonTune,medicineStrength:medicineRouteStrength,compareMedicine:compareMedicineStrength,actions:luckActions,yearLuck:applyYearLuck,wealth:evaluateWealthOutlook,wealthState:wealthChannelState,seal:annualSealContinuity,condition:conditionalLuckUse,annualLedger:settleAnnualLedger};root.BaziEngine=api;'), coreContext);
 const rules = coreContext.__outlookRules;
 function coreFixture(family, entries, strength='中和', rooted=true) {
   const profiles = {};
@@ -2077,6 +2084,625 @@ assert(mismatchedOutlook.previous.label === '资料需核对' && mismatchedOutlo
 assert(JSON.stringify(outlookConditionChart) === outlookInputSnapshot, 'outlook evaluation must not mutate its chart');
 const staleScoreChart = Object.assign({}, outlookConditionChart, { scores: { 木:100,火:100,土:0,金:0,水:100 }, patternAnalysis: { mainPattern:'stale' } });
 assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅', '庚午', outlookYearRows)) === JSON.stringify(outlookHelp), 'saved scores or saved analysis must not become the natal comparison baseline');
+
+// Isolated temporal mechanisms. Each counterexample removes or reverses one
+// causal input without relying on a chart owner's outcome or trend.
+{
+  const clone = x => JSON.parse(JSON.stringify(x));
+  const ctx = (entries = {}) => {
+    const c = coreFixture('财', entries);
+    c.pillars = { year:'甲子', month:'戊辰', day:'甲寅', hour:'丙午' };
+    c.carryingCapacity = { canCarryWealth:true, canCarryOutputKill:true, tasks:{ officer:{strictFormationEligible:true} } };
+    c.scores = { 木:2, 火:1, 土:2, 金:1, 水:1 };
+    return c;
+  };
+  const qualified = useful => ({ useful, monthCommand:{ambiguous:false} });
+  const legacy = { direction:'pending', assessment:'unsupported', evidence:[], reservations:[], uncertainty:['旧路径把握度有限'], review:{beforeTasks:[],afterTasks:[]} };
+  const settle = (before,after,useful = {},old = legacy) => rules.settle(before,after,qualified(useful),old);
+  const amp = outlookEngine.computeOutlookAmplitude;
+  const evidenceFor = (r, id) => [...r.evidence, ...r.reservations].filter(x => x.ruleId===id);
+
+  const resting = ctx();
+  const pending = settle(resting,resting);
+  for (const useful of [{}, {primaryUse:['木']}]) {
+    const toned = rules.tone(pending,qualified(useful),resting.pillars,'甲子','annual');
+    assert(toned.direction==='pending' && toned.assessment==='unsupported' && toned.tone &&
+      JSON.stringify(toned.uncertainty)===JSON.stringify(legacy.uncertainty) && !amp(toned).available &&
+      !evidenceFor(toned,'Y7-continuity').length && !evidenceFor(toned,'T-tone').length,
+      'A3 unsupported empty evidence survives both settlement and tone');
+  }
+  const conditional = {...legacy,assessment:'conditional',possibleDirections:['neutral','positive'],tendency:'positive'};
+  const withDecisiveUnknown = rules.tone(settle(resting,resting,{},conditional),qualified({primaryUse:['木']}),resting.pillars,'甲子','annual');
+  assert(withDecisiveUnknown.direction==='pending' && withDecisiveUnknown.assessment==='conditional' &&
+    withDecisiveUnknown.possibleDirections.join(',')==='neutral,positive' && !amp(withDecisiveUnknown).available,
+    'A3 decisive uncertainty retains its possible outcomes');
+  const stableContext = ctx({'比肩':{position:2,stem:'甲'}});
+  const neutral = settle(stableContext,stableContext,{primaryUse:['木']},{...legacy,assessment:'conditional',uncertainty:[]});
+  assert(neutral.direction==='neutral' && amp(neutral).available && neutral.evidence.some(x=>x.ruleId==='Y7-continuity'&&x.before.length),
+    'a nonempty verified unchanged path can establish continuity');
+  assert(settle(resting,resting,{},missingOutlook.natal).assessment==='input-error', 'the same settlement entry retains input validation failures');
+
+  const seal = ctx({'正印':{position:0, stem:'癸'}});
+  const peer = ctx({'比肩':{position:1, stem:'甲', roots:2}});
+  const sealPath = [{left:{god:'正印'}}], peerPath = [{left:{god:'比肩'}}];
+  const strength = (c, p) => rules.medicineStrength(c,p);
+  peer.scores.木 = 1;
+  assert(rules.compareMedicine(strength(seal,sealPath),strength(peer,peerPath))==='positive' && rules.compareMedicine(strength(peer,peerPath),strength(seal,sealPath))==='negative', 'one more usable root strengthens the replacement, with the reverse sign when swapped');
+  const samePeer = clone(peer); samePeer.profiles['比肩'].branchEntries[1].attacks = ['冲'];
+  assert(rules.compareMedicine(strength(seal,sealPath),strength(samePeer,peerPath))==='neutral', 'one damaged root removes the replacement advantage');
+  const cloudedPeer = clone(peer); cloudedPeer.profiles['比肩'].stemEntries[0].usable = false;
+  assert(rules.compareMedicine(strength(seal,sealPath),strength(cloudedPeer,peerPath))==='mixed', 'crossed root and visibility changes retain two sides');
+  const forTransform = ctx({'食神':{position:3,stem:'丙'}});
+  const transformed = clone(forTransform);
+  transformed.pillars.luck='癸未';transformed.scores.火=3;
+  transformed.interactions.stemCombines=[{left:1,right:4,leftKey:'month',rightKey:'luck',effect:'transform',active:true,target:'火',text:'戊癸化火：合化有据'}];
+  const transformedOut = settle(forTransform,transformed,{primaryUse:['火']});
+  assert(transformedOut.direction==='positive' && evidenceFor(transformedOut,'Y5-transformed-qi').length===1 && evidenceFor(transformedOut,'Y8-TRANSFORM-CARRY-ACTOR')[0].after.score===3, 'verified transformation uses the adopted qi and documents the actor switch');
+  const bound = clone(transformed);bound.interactions.stemCombines[0].effect='bind';
+  assert(!evidenceFor(settle(forTransform,bound,{primaryUse:['火']}),'Y5-transformed-qi').length, 'binding alone cannot redeclare transformed qi');
+
+  const lk = (ruleId,taskId,direction,level,key,causeFamily) => ({ruleId,taskId,direction,level,after:[{key}],causeFamily,text:taskId});
+  const repeated = lk('LK-05','carry-wealth','negative','Y3','shared-pressure','daymaster-carrying');
+  const splitCauses = {direction:'mixed', evidence:[
+    repeated,lk('LK-04','handle-kill','negative','Y4','other-load','daymaster-carrying'),
+    lk('Y3-carry-load','effective-load','negative','Y3','load','daymaster-carrying'),
+    lk('LK-03','hurt-officer','positive','Y3','remedy')
+  ],reservations:[{...repeated,after:[{key:'alternate-snapshot'}]}]};
+  const grouped = amp(splitCauses);
+  assert(grouped.positive===1.7 && grouped.negative===1.7 && grouped.breakdown.filter(x=>x.exclusion==='duplicate-cause').length===3, 'one carrying owner takes the maximum weight, with a real rescue still counted');
+  const separate = clone(splitCauses); delete separate.evidence[1].causeFamily;
+  assert(amp(separate).negative>grouped.negative && amp(separate).breakdown.some(x=>x.uncappedTotal===2.9), 'changing just the shared cause restores the independent deduction');
+  const saturate = n => amp({direction:'mixed', evidence:[
+    ...Array.from({length:n},(_, i)=>lk('Y4-output','outlet-'+i,'positive','Y4','outlet-'+i)),
+    ...Array.from({length:3},(_, i)=>lk('Y4-load','load-'+i,'negative','Y4','load-'+i))
+  ],reservations:[]});
+  const almost = saturate(3), higher = saturate(4);
+  assert(almost.positive===almost.negative && higher.positive>higher.negative && higher.positive>3.5 &&
+    higher.breakdown.some(x=>x.status==='compressed'&&x.cap===5.6&&x.compressedTotal===higher.positive), 'soft saturation keeps different raw amplitudes distinct beyond the previous cap');
+  const legacyCross = lk('LK-04','handle-kill','negative','Y4','cross');
+  const cross = settle(resting,forTransform,{primaryUse:['火']},{...legacy,direction:'negative',assessment:'determined',evidence:[legacyCross],reservations:[{...legacyCross}]});
+  assert(cross.review.protectedDetermined.decision==='cross-mixed' && cross.evidence.filter(x=>x.ruleId==='LK-04').length===1 && !cross.reservations.some(x=>x.ruleId==='LK-04'), 'cross-mixed takes the conventional task out of reservations');
+
+  const attachPair = (base, gz, rel) => {
+    const c=clone(base);c.pillars.flowYear=gz;c.interactions.branchPairs=[rel]; return c;
+  };
+  const monthClash = {left:1,right:4,leftKey:'month',rightKey:'flowYear',active:true,type:'冲',text:'辰戌冲'};
+  const original = ctx({'正财':{position:1,stem:'戊'},'正印':{position:1,stem:'癸',hiddenIndex:2,clear:false}});
+  const struck = attachPair(original,'丙戌',monthClash);
+  for (const god of ['正财','正印']) struck.profiles[god].branchEntries[0].attacks=['冲'];
+  const mixedRoots = {primaryUse:['土','火'],avoid:['木']};
+  const goodStructure = lk('LK-03','hurt-officer','positive','Y3','remedy');
+  const resolved = {...legacy,direction:'positive',assessment:'determined',uncertainty:[],evidence:[goodStructure],
+    reservations:[{direction:'neutral',text:'次要条件，保留供复核'}]};
+  const determinedWithReservation = rules.tone(settle(original,original,{},resolved),qualified({}),original.pillars,'丙戌','annual');
+  assert(determinedWithReservation.direction==='positive' && determinedWithReservation.assessment==='determined' &&
+    determinedWithReservation.reservations.length===1 && amp(determinedWithReservation).available && !amp(determinedWithReservation).hasPending,
+    'A3 a minor reservation does not unsettle a determined higher-level conclusion');
+  const clashOut = rules.tone(settle(original,struck,mixedRoots,resolved),qualified(mixedRoots),original.pillars,'丙戌','annual');
+  assert(clashOut.direction==='mixed' && evidenceFor(clashOut,'T-natal-clash').some(x=>x.direction==='negative' && x.strongTrigger && x.impactWeight===1.25) && amp(clashOut).negative>=1.25, 'clashing the useful month root stays adverse when structure and tone are both favorable');
+  const suppressed = clone(struck);suppressed.interactions.branchPairs[0].active=false;
+  assert(!evidenceFor(settle(original,suppressed,mixedRoots,resolved),'T-natal-clash').length, 'a suppressed contact provides no natal clash evidence');
+  const contact = (base,next,useful,kind) => rules.actions(qualified(useful),base,next,{kind})[0];
+  const natalMetal = clone(resting); natalMetal.pillars.month='辛酉';
+  const fed = attachPair(natalMetal,'戊辰',{...monthClash,type:'六合',effect:'bind',text:'辰酉合绊'});
+  const healthyCombine = contact(natalMetal,fed,{primaryUse:['金']});
+  assert(healthyCombine.ruleId==='T-natal-combine' && healthyCombine.direction==='positive' && healthyCombine.impactWeight===0.35 && !healthyCombine.strongTrigger, '生合 feeding favorable main qi gives mild support');
+  const feedsAvoid = contact(natalMetal,fed,{avoid:['金']});
+  assert(feedsAvoid.direction==='negative' && feedsAvoid.impactWeight===0.45, '生合 feeding unfavorable main qi gives mild resistance');
+  const natalWater = clone(resting); natalWater.pillars.month='壬子';
+  const restrained = attachPair(natalWater,'己丑',{...monthClash,type:'六合',effect:'bind',text:'子丑合绊'});
+  assert(contact(natalWater,restrained,{secondaryUse:['水']}).impactWeight===0.85 &&
+    contact(natalWater,restrained,{secondaryUse:['水']}).direction==='negative' &&
+    contact(natalWater,restrained,{avoid:['水']}).direction==='positive' &&
+    contact(natalWater,restrained,{avoid:['水']}).impactWeight===0.60, '克合 restrains the targeted main qi according to its natal role');
+  const residualBase = ctx({'正印':{position:1,stem:'癸',hiddenIndex:2,clear:false}});
+  const bindsResidual = attachPair(residualBase,'辛酉',{...monthClash,type:'六合',effect:'bind',text:'辰酉合绊'});
+  bindsResidual.profiles['正印'].branchEntries[0].boundByCombine=true;
+  assert(contact(residualBase,bindsResidual,{primaryUse:['水']}).impactWeight===0.55 &&
+    contact(residualBase,bindsResidual,{primaryUse:['水'],avoid:['土']}).natalRoleElement==='水',
+    'the non-transforming generating combination restricts the sole useful residual root, including with avoid main qi');
+  const unboundResidual = clone(bindsResidual);
+  unboundResidual.profiles['正印'].branchEntries[0].boundByCombine=false;
+  assert(!contact(residualBase,unboundResidual,{primaryUse:['水']}),
+    'the same named generating combination with an actually usable residual root incurs no root penalty');
+  const avoidClash = rules.actions(qualified({primaryUse:['水'],avoid:['土']}),original,struck).find(x=>x.natalRoleElement==='土');
+  const residualClash = rules.actions(qualified({primaryUse:['水'],avoid:['土']}),original,struck).find(x=>x.natalRoleElement==='水');
+  assert(avoidClash.direction==='positive' && avoidClash.impactWeight===0.90 && !avoidClash.strongTrigger &&
+    residualClash.direction==='negative' && residualClash.strongTrigger && residualClash.impactWeight===1.25,
+    'one clash can remove harmful main qi and damage a sole useful residual root through independent slots');
+  const dayStruck = attachPair(original,'壬申',{...monthClash,left:2,leftKey:'day',text:'寅申冲'});
+  assert(rules.actions(qualified({primaryUse:['火'],avoid:['木']}),original,dayStruck).some(x=>x.direction==='positive'&&x.natalRoleElement==='木'), 'day branch follows its avoid main qi as well');
+  assert(contact(original,struck,{}).impactWeight===0.45 && !contact(original,struck,{}).strongTrigger, 'neutral month clash is only mild agitation');
+  const neutralWithRoot = contact(original,struck,{primaryUse:['水']});
+  const waterElsewhere = clone(struck);
+  waterElsewhere.profiles['正印'].branchEntries.push({
+    ...waterElsewhere.profiles['正印'].branchEntries[0],pillar:'year',position:0,branch:'子',hiddenIndex:0,attacks:[]
+  });
+  assert(neutralWithRoot.impactWeight===1.25 && contact(original,waterElsewhere,{primaryUse:['水']}).impactWeight===0.45, 'a second clean root removes the sole primary residual penalty');
+  const luckClash=clone(struck);
+  luckClash.pillars.luck=luckClash.pillars.flowYear;delete luckClash.pillars.flowYear;
+  luckClash.interactions.branchPairs[0].rightKey='luck';
+  assert(contact(original,luckClash,mixedRoots,'natal').impactWeight===1.25 &&
+    contact(original,luckClash,mixedRoots,'annual').impactWeight===1.25 &&
+    contact(original,struck,mixedRoots,'annual').impactWeight===1.25, 'decade and year contacts use the same physical weight in the joint annual state');
+  const clash = contact(original,struck,mixedRoots);
+  const earthLoss = 'loss:month:辰藏戊:土';
+  assert(clash.physicalCauses.includes(earthLoss),'the outcome of the clash identifies the exact affected root');
+  for (const [id,level,weight] of [['Y3-required-path','Y3',1.7],['Y5-role-root','Y5-primary',0.9]]) {
+    const structural = {...lk(id,'same-root','negative',level,'month:根:戊'),physicalCauses:[earthLoss]};
+    const matched = amp({direction:'negative',evidence:[clash,structural],reservations:[]});
+    assert(matched.negative===Math.max(1.25,weight) && matched.breakdown[0].causeKey===matched.breakdown[1].causeKey, 'contact and structural row share one weight for the same verified root loss');
+    const distinct = amp({direction:'negative',evidence:[clash,{...structural,after:[{key:'hour:根:戊'}],physicalCauses:['loss:hour:辰藏戊:土']}],reservations:[]});
+    assert(distinct.negative>matched.negative, 'changing the structural actor to another pillar restores its separate contribution');
+    const { physicalCauses, ...unverifiedMatch } = structural;
+    assert(amp({direction:'negative',evidence:[clash,unverifiedMatch],reservations:[]}).negative>matched.negative,
+      'matching the pillar and element alone cannot establish a shared cause');
+  }
+
+  const earthRoot = {...lk('Y5-role-root','earth-root','negative','Y5-primary','month:根:戊'),physicalCauses:[earthLoss]};
+  const waterStem = lk('Y3-replacement-medicine','water-seal','negative','Y3','month:干:癸水');
+  const earthContact = {...clash,strongTrigger:false,before:{key:'month:支:土'}};
+  const amplitudeFor = evidence => amp({direction:'negative',evidence,reservations:[]});
+  const rawTotal = a => a.breakdown.reduce((sum,x)=>sum+(x.contribution||0),0);
+  const separateBefore = amplitudeFor([earthRoot,waterStem]);
+  const separateAfter = amplitudeFor([earthRoot,waterStem,earthContact]);
+  assert(Math.abs(rawTotal(separateBefore)-2.60)<1e-12 && Math.abs(separateBefore.negative-2.60)<1e-12 &&
+    Math.abs(rawTotal(separateAfter)-2.95)<1e-12 &&
+    Math.abs(separateAfter.negative-(2.8+2.8*0.15/(2.8+0.15)))<1e-12 &&
+    separateAfter.breakdown[1].causeKey!==separateAfter.breakdown[2].causeKey,
+    'C1 only same pillar, position and element share attribution before soft compression');
+  for(const [key,cause] of [['month:干:戊','loss:month:戊:土'],['month:根:癸','loss:month:辰藏癸:水']]) {
+    const other = amplitudeFor([{...earthRoot,after:[{key}],physicalCauses:[cause]},earthContact]);
+    assert(Math.abs(other.negative-2.15)<1e-12,'same element in a different position, or different element at the same position, stays independent');
+  }
+
+  const wealthOnly = {primaryUse:['土']};
+  const gained = ctx({'正财':{position:4,stem:'戊'}});
+  gained.profiles['正财'].branchEntries[0].pillar='luck';gained.profiles['正财'].branchEntries[0].branch='辰';
+  gained.pillars.luck='戊辰';
+  const wealth = (a,b,useful=wealthOnly,extra={}) => rules.wealth(a,b,{...qualified(useful),...extra},a.pillars,b.pillars.luck||'戊辰',b.pillars.flowYear);
+  const assertedWealth = r => r.reasons.some(x=>x.direction==='positive');
+  const gainOut = settle(resting,gained,wealthOnly);
+  const gain = wealth(resting,gained);
+  assert(!evidenceFor(gainOut,'Y4-wealth-channel').length && assertedWealth(gain) && gain.amplitude.breakdown.some(x=>x.ruleId==='W-root' && x.contribution===1.05), 'new usable favorable wealth earns an independent weight');
+  assert(wealth(original,struck).reasons.some(x=>x.direction==='negative'&&x.text.includes('库支')), 'clashing away established wealth inside a treasury identifies the physical loss');
+  const metalWealthBase=ctx({'正财':{position:1,stem:'辛'}});
+  metalWealthBase.pillars.month='辛酉';
+  const metalWealthFed=attachPair(metalWealthBase,'戊辰',{...monthClash,type:'六合',effect:'bind',text:'辰酉合绊'});
+  metalWealthFed.profiles['正财'].branchEntries[0].boundByCombine=true;
+  // A fire day stem takes metal as wealth.
+  metalWealthBase.pillars.day=metalWealthFed.pillars.day='丙寅';
+  const metalBound = wealth(metalWealthBase,metalWealthFed,{primaryUse:['金']});
+  assert(metalBound.direction==='pending' && metalBound.reasons.some(x=>x.ruleId==='W-root'&&x.direction==='negative'),
+    'even a generating non-transforming combination can bind an actual wealth root');
+  assert(!assertedWealth(wealth(resting,gained,{avoid:['土']})), 'changing only the natal wealth role to avoid excludes wealth gain');
+  const pressure = clone(gained);pressure.carryingCapacity.canCarryWealth=false;
+  assert(!assertedWealth(wealth(resting,pressure)) && wealth(gained,pressure).reasons.some(x=>x.ruleId==='W-capacity'&&x.direction==='negative'), 'uncontained wealth pressure is not a gain and a loss of carrying capacity has its own reason');
+  const floating = clone(gained);floating.profiles['正财'].branchEntries=[];
+  assert(!assertedWealth(wealth(resting,floating)), 'removing the new wealth root leaves a floating stem without a gain');
+  const mainRootWealth = ctx({'正财':{position:4,stem:'戊',clear:false}});
+  mainRootWealth.profiles['正财'].branchEntries[0].pillar='luck';mainRootWealth.profiles['正财'].branchEntries[0].branch='辰';
+  mainRootWealth.pillars.luck='戊辰';
+  assert(assertedWealth(wealth(resting,mainRootWealth)) && !assertedWealth(wealth(resting,mainRootWealth,{avoid:['土']})), 'clean main-qi wealth root qualifies when favored and stays excluded when avoid');
+  const followWealth={ruleId:'ZP-SP-04',key:'从财格',name:'从格：从财格',type:'从格',target:'土'};
+  const follows=clone(pressure); follows.currentSpecialDetail=followWealth;
+  assert(assertedWealth(wealth(resting,follows,wealthOnly,{specialPatternQualification:followWealth})), 'strict following wealth uses the qualified route even without ordinary body carrying capacity');
+  assert(!assertedWealth(wealth(resting,pressure,wealthOnly,{specialPatternQualification:followWealth})), 'loss of the current special qualification removes following-wealth support');
+  const heldSpecial=clone(follows);
+  heldSpecial.profiles['正财'].branchEntries[0].boundByCombine=true;
+  const pendingSpecial=wealth(follows,heldSpecial,wealthOnly,{specialPatternQualification:followWealth});
+  assert(pendingSpecial.direction==='pending' && !pendingSpecial.amplitude.available && pendingSpecial.amplitude.hasPending &&
+    pendingSpecial.missingFields.includes('wealth.effectiveActors'), 'an unresolved actual wealth root also gates a qualified special pattern');
+  const absentSpecial=wealth(resting,resting,wealthOnly,{specialPatternQualification:followWealth});
+  assert(absentSpecial.direction==='neutral' && absentSpecial.amplitude.available && !absentSpecial.amplitude.hasPending,
+    'absence of a wealth actor in a special pattern is distinct from unresolved existing wealth');
+  const takeWealth = clone(original);takeWealth.pillars.flowYear='甲寅';takeWealth.scores.木=5;
+  takeWealth.profiles['比肩']=ctx({'比肩':{position:5,stem:'甲',roots:2}}).profiles['比肩'];
+  const peerCost = wealth(original,takeWealth);
+  assert(peerCost.reasons.some(x=>x.direction==='negative' && x.ruleId==='W-peer') && peerCost.amplitude.negative===1.05 &&
+    wealth(takeWealth,original).reasons.some(x=>x.direction==='positive'&&x.ruleId==='W-peer'), 'reachable strong peers harm natal wealth, with the reverse direction on relief');
+  const countedPeer = clone(takeWealth); countedPeer.scores.木=2;
+  assert(!rules.wealthState(countedPeer,qualified(wealthOnly)).natalPeerAttack.length &&
+    !wealth(original,countedPeer).reasons.some(x=>x.ruleId==='W-peer'), 'two main-qi roots alone cannot confirm stronger peers');
+  const weakBefore = clone(original); weakBefore.strength='偏弱'; weakBefore.carryingCapacity.canCarryWealth=false;
+  const newlySupported = clone(takeWealth); newlySupported.strength='偏弱';
+  const pressureBoth = wealth(weakBefore,newlySupported);
+  assert(pressureBoth.reasons.some(x=>x.ruleId==='W-capacity'&&x.direction==='positive') &&
+    pressureBoth.reasons.some(x=>x.ruleId==='W-peer'&&x.direction==='negative') &&
+    !wealth(original,takeWealth).reasons.some(x=>x.ruleId==='W-root'&&x.direction==='negative'),
+    'a weak chart can gain carrying capacity and face peer pressure, without physical wealth damage by association');
+  const sharedRoute = ctx({'正财':{position:1,stem:'戊'},'伤官':{position:0,stem:'丁'},'正官':{position:2,stem:'辛'}});
+  const lostWealth = attachPair(sharedRoute,'丙戌',monthClash);
+  lostWealth.profiles['正财'].branchEntries[0].attacks=['冲'];
+  const sharedLoss = wealth(sharedRoute,lostWealth);
+  const rootAndBridge = sharedLoss.amplitude.breakdown.filter(x=>['W-root','W-bridge','W-food'].includes(x.ruleId)&&x.side==='negative');
+  assert(rootAndBridge.length===3 && new Set(rootAndBridge.map(x=>x.causeKey)).size===1 &&
+    rootAndBridge.reduce((sum,x)=>sum+x.contribution,0)===1.05 &&
+    rootAndBridge.every(x=>x.actorKeys.length&&x.causeFamily),
+    '4B a single financial root loss owns the downstream food and bridge losses once');
+  const independentOutput = clone(lostWealth);
+  independentOutput.profiles['伤官'].stemEntries[0].usable=false;
+  independentOutput.profiles['伤官'].branchEntries[0].usable=false;
+  const separateLoss = wealth(sharedRoute,independentOutput).amplitude.breakdown;
+  assert(separateLoss.find(x=>x.ruleId==='W-root').contribution===1.05 &&
+    separateLoss.find(x=>x.ruleId==='W-food').contribution===0.9 &&
+    separateLoss.find(x=>x.ruleId==='W-bridge').contribution===1.05 &&
+    separateLoss.find(x=>x.ruleId==='W-root').causeKey!==separateLoss.find(x=>x.ruleId==='W-food').causeKey,
+    '4B independent physical output loss keeps its evidence separate from the wealth root');
+  const independentOfficer = clone(lostWealth);
+  independentOfficer.profiles['正官'].stemEntries[0].usable=false;
+  independentOfficer.profiles['正官'].branchEntries[0].usable=false;
+  const officerLoss = wealth(sharedRoute,independentOfficer).amplitude.breakdown;
+  assert(officerLoss.find(x=>x.ruleId==='W-bridge').contribution===1.05 &&
+    officerLoss.find(x=>x.ruleId==='W-bridge').causeKey!==officerLoss.find(x=>x.ruleId==='W-root').causeKey,
+    '4B an independently disabled officer is a separate bridge cause');
+  const remoteBase=ctx({'正财':{position:0,stem:'戊'}});
+  const remotePeer=clone(remoteBase);remotePeer.scores.木=5;
+  remotePeer.profiles['比肩']=ctx({'比肩':{position:3,stem:'甲',roots:1}}).profiles['比肩'];
+  assert(!wealth(remoteBase,remotePeer).reasons.some(x=>x.ruleId==='W-peer'), 'removing actual peer reach excludes the peer deduction');
+  const productive=ctx({'正财':{position:1,stem:'戊'},'食神':{position:3,stem:'丙'}});
+  assert(assertedWealth(wealth(original,productive,{})), 'adding a rooted reachable food-to-wealth chain qualifies without a favorable wealth label');
+  const starved=clone(productive);starved.profiles['食神'].stemEntries[0].usable=false;starved.profiles['食神'].branchEntries[0].usable=false;
+  assert(!assertedWealth(wealth(original,starved,{})), 'a blocked food actor cannot start the wealth chain');
+  const cut=clone(productive);cut.profiles['偏印']=ctx({'偏印':{position:5,stem:'壬',roots:2,command:true}}).profiles['偏印'];
+  cut.scores.水=6;cut.pillars.flowYear='壬子';
+  assert(wealth(productive,cut,{}).reasons.some(x=>x.direction==='negative'&&x.ruleId==='W-seal'), 'strong seal damage identifies the food actor that carried the natal wealth path');
+  const unrelatedSeal=clone(cut);unrelatedSeal.profiles['偏印'].stemEntries[0].usable=false;unrelatedSeal.profiles['偏印'].branchEntries.forEach(x=>{x.usable=false;});
+  assert(!wealth(productive,unrelatedSeal,{}).reasons.some(x=>x.direction==='negative'), 'a seal with no usable actors cannot cut the wealth path');
+  const protectSeal=ctx({'偏印':{position:0,stem:'壬'}});
+  const sealAndWealth=clone(protectSeal);sealAndWealth.profiles['正财']=gained.profiles['正财'];sealAndWealth.pillars.luck='戊辰';
+  assert(!assertedWealth(wealth(protectSeal,sealAndWealth,{primaryUse:['水','土']})), 'an otherwise favored wealth actor cannot earn a gain while it reaches and breaks the primary seal');
+
+  const weakClash = clone(starved); weakClash.pillars.flowYear='丙戌'; weakClash.interactions.branchPairs=[monthClash];
+  const prioritized = rules.settle(productive,weakClash,{...qualified({avoid:['土']}),interactionFlow:{steps:[{from:['食神'],to:['正财'],action:'生',active:true}]}},legacy);
+  assert(prioritized.direction==='negative' && prioritized.evidence.some(x=>x.ruleId==='Y3-required-path') &&
+    prioritized.reservations.some(x=>x.ruleId==='T-natal-clash') && amp(prioritized).breakdown.some(x=>x.ruleId==='T-natal-clash'&&x.contribution===0.90),
+    'weak favorable contact keeps its physical weight beside a required-chain loss');
+  const tied = {...legacy,direction:'mixed',assessment:'determined',uncertainty:[],evidence:[
+    lk('Y3-medicine','gain','positive','Y3','gain'),lk('Y3-medicine','loss','negative','Y3','loss'),avoidClash
+  ]};
+  const tie = rules.tone(tied,qualified({primaryUse:['火','土']}),original.pillars,'丙戌','annual');
+  assert(tie.direction==='mixed'&&!tie.toneBasis, 'same-layer counts and a weak contact cannot establish cancellation');
+
+  const verified = (direction, beforeRank, afterRank, key, family='官伤冲战') => ({
+    ...lk('Y3-medicine', key, direction, 'Y3', key),
+    causalChange: { family, source:['month:伤官','year:正官'], beforeRank, afterRank, verifiedCompleteTransition:true }
+  });
+  const medicineGain=verified('positive',0,2,'药路甲'), medicineLoss=verified('negative',2,0,'药路乙');
+  const paired={...tied,evidence:[medicineGain,medicineLoss]};
+  for(const [direction,useful] of [['positive',{primaryUse:['火','土']}],['negative',{avoid:['火','土']}]]) {
+    const assess = r => rules.tone(r,qualified(useful),original.pillars,'丙戌','annual');
+    const verdict = assess(paired);
+    assert(verdict.direction===direction&&verdict.toneBasis==='tone-tiebreak'&&verdict.review.toneCancellation.length===1,
+      'verified inverse transitions of the same decisive condition allow tone in either direction');
+    const opposite = direction==='positive'?'negative':'positive';
+    const independent = verified(opposite,opposite==='positive'?0:2,opposite==='positive'?2:0,'独立作用','枭夺食');
+    const other = direction==='positive'?medicineGain:medicineLoss;
+    assert(assess({...paired,evidence:[other,independent]}).direction==='mixed' &&
+      assess({...paired,reservations:[independent]}).direction==='mixed',
+      'distinct conditions with matching layer and counts, or an uncanceled reservation, remain mixed on either side');
+    assert(assess({...paired,evidence:[medicineGain,{...medicineLoss,causalChange:{...medicineLoss.causalChange,verifiedCompleteTransition:false}}]}).direction==='mixed',
+      'a transition without verification cannot certify cancellation');
+  }
+
+  const underControl = ctx({'七杀':{position:0,stem:'庚'},'劫财':{position:1,stem:'乙'}});
+  const relieved = clone(underControl);
+  relieved.profiles['七杀'].stemEntries[0].usable=false;
+  relieved.profiles['七杀'].branchEntries[0].usable=false;
+  const woodOutcome = settle(underControl,relieved,{primaryUse:['木']});
+  const validatedRelief = evidenceFor(woodOutcome,'Y5-role-action').find(x=>x.taskId==='金制喜用木');
+  assert(validatedRelief?.direction==='positive' && validatedRelief.before.some(step=>step.right.text.includes('乙')) &&
+    !validatedRelief.after.length &&
+    woodOutcome.review.checked.some(x=>x.subject==='喜用木可用根透'&&x.after.some(actor=>actor.stem==='乙')),
+    'effective 乙 still survives and receives genuine relief when the verified controller is disabled');
+  const failedWood = clone(underControl);
+  failedWood.profiles['劫财'].stemEntries[0].usable=false;
+  failedWood.profiles['劫财'].branchEntries[0].usable=false;
+  assert(!evidenceFor(settle(underControl,failedWood,{primaryUse:['木']}),'Y5-role-action').some(x=>x.taskId==='金制喜用木'&&x.direction==='positive'),
+    'loss of the recipient alone is not relief');
+
+  const connectedWood = ctx({'正印':{position:0,stem:'癸'},'劫财':{position:1,stem:'乙'}});
+  const disable = (graph,god) => {
+    const actor=graph.profiles[god];
+    actor.stemEntries[0].usable=false;
+    actor.branchEntries[0].usable=false;
+  };
+  const onlyWoodLost = clone(connectedWood);
+  disable(onlyWoodLost,'劫财');
+  const bothLost = clone(onlyWoodLost);
+  disable(bothLost,'正印');
+  const waterWood = after => amp(settle(connectedWood,after,{primaryUse:['木']})).breakdown.find(x=>x.taskId==='水生喜用木');
+  assert(waterWood(onlyWoodLost)?.exclusion==='duplicate-cause'&&waterWood(bothLost)?.contribution===0.90&&
+    waterWood(bothLost).physicalCauses.every(x=>x.includes('>生>')),
+    'an unchanged counterparty leaves a root echo, and independent loss at both ends retains the verified path change');
+
+  const summer = ctx();
+  summer.pillars.month='庚午';
+  const humidified = clone(summer);humidified.profiles['偏印']=ctx({'偏印':{position:5,stem:'壬'}}).profiles['偏印'];
+  const climate = rules.season('甲','午',{木:2,火:2,土:2,金:1,水:1},summer.pillars);
+  assert(climate.climateTier==='secondary' && climate.priority==='参考' && !climate.avoid.length && climate.use.includes('水'), 'ordinary summer exposure adds a temporal tier while keeping natal climate role fields');
+  const summerUseful={layers:{tiaohou:climate}};
+  const cooling = settle(summer,humidified,summerUseful);
+  const drying = settle(humidified,summer,summerUseful);
+  assert(!evidenceFor(cooling,'Y6-natal-climate').length && !evidenceFor(drying,'Y6-natal-climate').length, 'presence or loss of cooling without a verified obstruction stays a seasonal reference');
+  const winter = rules.season('甲','子',{木:1,火:0,土:1,金:1,水:6},{year:'壬子',month:'壬子',day:'甲子',hour:'癸亥'});
+  assert(winter.climateTier==='primary' && winter.priority==='主用' && winter.avoid.includes('水'), 'extreme winter retains the existing natal and primary climate gate');
+
+  for(const front of [
+    {...neutral,direction:'neutral',assessment:'unsupported',uncertainty:[]},
+    {...neutral,direction:'neutral',assessment:'conditional',uncertainty:['决定性缺口']},
+    {...neutral,direction:'pending',assessment:'conditional',uncertainty:[]}
+  ]){
+    const checked = rules.yearLuck(front,{...qualified({}),strength:'偏弱'},original.pillars,'戊子','壬午');
+    assert(checked.direction==='pending' && checked.assessment===front.assessment && checked.uncertainty===front.uncertainty &&
+      checked.evidence.some(x=>x.ruleId==='T-year-tkdc' && x.direction==='negative') && !checked.amplitude.available,
+      'all three preconditions preserve pending with the known risk and original assessment');
+  }
+
+  const joint = rules.yearLuck(neutral,qualified({}),original.pillars,'甲子','乙亥');
+  assert(joint.direction==='neutral' && joint.amplitude.available && joint.amplitude.positive===0 && joint.amplitude.negative===0,
+    'verified continuity in the joint state contributes zero without a duplicate decade tone');
+}
+
+// Stage 1/2 annual engine contracts. Legacy comparative operators above keep
+// their own separate diagnostics and weights.
+{
+  const calendar = (year,month,day,hour) => outlookEngine.createBaziProfile({input:{year,month,day,hour,minute:0},useTrueSolar:false});
+  const row = year => ({year,gz:outlookEngine.getFlowYearGZ(year)});
+  const entry = (chart,luck,year) => outlookEngine.evaluateLuckOutlook(chart,luck,null,[row(year)]).years[0];
+  const fixture = (year,month,day,hour) => ({dayStem:day[0],pillars:{year,month,day,hour}});
+  const counted = result => result.actionLedger.filter(x=>x.contribution>0);
+  const byRule = (result,rule) => counted(result).filter(x=>x.ruleId===rule);
+  const allEvidence = verdict => [...verdict.evidence,...verdict.reservations];
+  const summer = calendar(1993,7,14,8), years = Array.from({length:9},(_,i)=>row(2018+i));
+  const annual = outlookEngine.evaluateLuckOutlook(summer,'丙辰','丁巳',years).years;
+  const [y2018,y2019,y2020,y2021,y2022,,,y2025] = annual;
+  assert(y2018.wealthRange.guaranteed<0 && y2019.wealthRange.guaranteed===1 &&
+    y2020.wealthRange.guaranteed===2, 'hidden recovery and rooted visible mediation have different, verified tiers');
+  const recovery = byRule(y2019,'W-bridge')[0];
+  assert(recovery.recovery&&recovery.text.includes('丙辰运中，癸制运丙，原来藏在申中的庚接通财路')&&
+    recovery.action.mediatorKeys.includes('day:申藏庚:金'), '2019 must name the precise existing mediator and the released obstruction');
+  assert(byRule(y2020,'W-bridge').length===1&&byRule(y2020,'W-bridge')[0].action.mediatorKeys.includes('flowYear:庚:金')&&
+    y2020.actionLedger.some(x=>x.exclusion==='duplicate-wealth-route')&&
+    counted(y2020).some(x=>x.side==='negative'&&!x.wealth), '2020 books the common route once while retaining other verified pressure');
+  assert(annual.filter(x=>counted(x).some(r=>r.recovery)).length===2&&
+    byRule(annual[5],'W-bridge')[0]?.recovery&&annual[5].wealthRange.guaranteed===1&&
+    annual[5].wealth.reasons.some(x=>x.ruleId==='W-uncovered-officer')&&
+    !counted(annual[6]).some(r=>r.recovery)&&
+    y2021.wealth.reasons.some(x=>x.ruleId==='W-uncovered-officer'),
+    'recovery triggers only when the flow year clears blockage (2019 & 2023) without repeating in 2024');
+  for(const y of [y2022,y2025]) {
+    assert(y.wealthRange.direction==='negative'&&y.scenarios.every(s=>s.W<0),
+      'a confirmed obstruction in all feasible states is a known financial risk');
+  }
+  assert(!annual.some(x=>counted(x).some(r=>r.ruleId==='Y6-natal-climate'&&r.text.includes('次级调候')&&r.text.includes('助长偏性'))),
+    'seasonal presence alone does not charge the opposite water/fire action');
+
+  for(const y of annual) {
+    const direct = entry(summer,'丙辰',y.year);
+    assert(JSON.stringify(direct.scenarios)===JSON.stringify(y.scenarios)&&
+      JSON.stringify(direct.actionLedger)===JSON.stringify(y.actionLedger)&&
+      direct.annual.amplitude.net===y.annual.amplitude.net, 'same-year settlement is independent of query years and comparison inputs');
+    assert(y.scenarios.every(s=>s.B===s.totalBase&&s.B===s.positive-s.negative&&Number.isInteger(s.W)),
+      'scenarios expose paired base and wealth results for any future weight');
+    const rows=counted(y);
+    assert(rows.every(x=>[1,2,3].includes(x.contribution))&&new Set(rows.map(x=>x.causeKey)).size===rows.length,
+      'a booked cause has one owner and a discrete symmetric magnitude');
+    if(y.annual.amplitude.available)assert(Math.abs(y.annual.amplitude.positive-y.annual.amplitude.negative-y.annual.amplitude.net)<1e-10&&
+      y.annual.amplitude.rawPositive===y.annual.amplitude.positive&&y.annual.amplitude.rawNegative===y.annual.amplitude.negative,
+      'bilateral positive and negative totals reconcile to net for display');
+  }
+  assert(y2021.annual.amplitude.positive>0&&y2021.annual.amplitude.negative>0&&y2021.annual.amplitude.net===0,
+    '2021 records equal active positive and negative forces even when net impulse is 0');
+
+  const owl = fixture('丁巳','己酉','己巳','庚午');
+  const medicine = year => byRule(entry(owl,'辛亥',year),'Y3-medicine').find(x=>x.taskId==='枭夺食');
+  assert(medicine(1997)?.contribution===1&&medicine(1997).text.includes('丑藏癸')&&
+    medicine(2003)?.contribution===2&&medicine(2003).text.includes('癸偏财制丁偏印'),
+    'hidden and visible treatment must differ against the same pathogen');
+  const sole = entry(fixture('乙丑','戊寅','壬午','庚戌'),'己卯',1995);
+  assert(byRule(sole,'Y3-seal-continuity').some(x=>x.contribution===3&&x.action.mediatorKeys.includes('hour:庚:金')&&
+    x.text.includes('戌藏戊')&&!x.action.replacement), 'loss of the exact sole mediator gets the heavy tier after alternative search');
+
+  const dry = outlookEngine.analyzePattern(fixture('己巳','丁卯','乙巳','丙戌'));
+  const water = dry.useful.decision.routes.find(x=>x.id==='phenomenon-remedy').effectiveness.水;
+  assert(water.candidate&&!water.reachable&&!water.local&&!water.sufficient&&
+    !dry.useful.decision.elements.find(x=>x.element==='水').benefitEntries.some(x=>x.status==='local'), 'missing water remains a remedy candidate');
+  const heavyEarth = outlookEngine.analyzePattern(fixture('戊戌','丙辰','辛丑','戊戌'));
+  assert(heavyEarth.elementPhenomena.some(x=>x.name==='土厚埋金'), 'the restricted middle root alone cannot veto earth burying metal');
+  const child = entry(fixture('甲午','丙寅','癸未','乙卯'),'戊申',2000);
+  assert(child.annual.review.afterTasks.some(x=>x.id==='special-flow'&&x.state===1&&x.reason.includes('食伤生财仍可达'))&&
+    !counted(child).some(x=>x.taskId==='special-reversal'||/承载/.test(x.taskId)), 'rooted follow-child keeps a verified food-to-wealth outlet without the ordinary carrying echo');
+
+
+  const plant=fixture('戊寅','戊午','辛丑','壬辰'), plantAnalysis=outlookEngine.analyzePattern(plant);
+  const plantNatal=scriptContext.__patternReview.context(plant.dayStem,plant.pillars,plantAnalysis);
+  const tiedPlant=JSON.parse(JSON.stringify(plantNatal));
+  tiedPlant.pillars.flowYear='癸巳';
+  tiedPlant.interactions.stemCombines.push({left:1,right:5,leftKey:'month',rightKey:'flowYear',effect:'bind',
+    active:true,involvesTemporal:true,text:'戊癸合绊'});
+  const substitute=rules.seal(plantNatal,tiedPlant).find(x=>x.action.mediatorKeys.includes('month:戊:土'));
+  assert(substitute?.annualMagnitude===0&&substitute.action.replacement==='year:戊:土'&&substitute.text.includes('午藏丁'),
+    'the year-stem 戊 can receive the exact same 午藏丁 and carry the original function after month-stem 戊 is bound');
+
+  const bridgeActors={
+    伤官:{stemEntries:[{pillar:'year',position:0,stem:'己'}]},
+    正财:{stemEntries:[{pillar:'luck',position:4,stem:'辛',temporal:true}],branchEntries:[{pillar:'month',position:1,branch:'酉',stem:'辛',rootPower:1}]},
+    正官:{stemEntries:[{pillar:'day',position:2,stem:'癸'}]}
+  };
+  const clashes={branchPairs:[{left:1,right:5,type:'冲',active:true,text:'卯酉冲'}]};
+  const bridgeThrough=key=>scriptContext.__patternReview.flow('',bridgeActors,clashes,[],[
+    {from:['伤官'],to:['正财'],action:'生',rightActor:key},{from:['正财'],to:['正官'],action:'生',leftActor:key}
+  ],{exactMediator:true}).steps;
+  assert(bridgeThrough('luck:辛:金').every(x=>x.active)&&bridgeThrough('month:酉藏辛:金').every(x=>!x.active),
+    'a clear 辛 in the Luck stem cannot supply evidence on behalf of a blocked 辛 in the natal month branch');
+
+  const gated=coreFixture('印',{正印:{position:0,stem:'癸'},劫财:{position:1,stem:'乙'}});
+  const conditional={primaryUse:['水'],secondaryUse:[],decision:{
+    conclusion:{primary:['水'],secondary:[],conditional:['水'],avoid:[]},
+    elements:[{element:'水',riskEntries:[]}],
+    routes:[{id:'formed-pattern',elements:['水'],steps:[{from:['正印'],to:['劫财'],action:'生'}]}]
+  }};
+  assert(rules.condition(gated,conditional,'水','year:癸:水'), 'a promoted primary can be verified through its exact active route');
+  gated.profiles['正印'].stemEntries[0].usable=false;
+  gated.profiles['正印'].branchEntries[0].usable=false;
+  assert(!rules.condition(gated,conditional,'水','year:癸:水'), 'promotion does not bypass conditional reach or actor availability');
+
+  const muted=rules.annualLedger({evidence:[{ruleId:'Y3-medicine',taskId:'静态病点',direction:'negative',text:'背景病点'}]},
+    {entries:[]},[],plantNatal);
+  assert(muted.sums.B===0&&muted.ledger.every(x=>x.contribution===0), 'an unchanged natal condition is background only');
+
+  const priorRisk = entry(calendar(1961,10,17,14),'戊子',2062).annual;
+  assert(priorRisk.direction==='pending'&&!priorRisk.amplitude.available&&priorRisk.uncertainty.length&&
+    priorRisk.evidence.some(x=>x.ruleId==='T-year-tkdc'&&x.direction==='negative'), '2062 preserves its verified joint clash and decisive evidence gap');
+  const formatted = scriptContext.renderOutlookBox('本年',priorRisk);
+  assert(formatted.includes('已知风险')&&formatted.includes('整体待判原因'), 'both readouts show the known risk and the unresolved condition');
+  const lossOfOfficer = y2018.annual;
+  assert(!allEvidence(lossOfOfficer).some(x=>x.taskId==='hurt-officer'&&x.direction==='positive')&&
+    byRule(y2018,'W-bridge').some(x=>x.side==='negative'), 'a missing protected officer earns no rescue');
+  for(const [chart,luck,year] of [[summer,'己酉',2086],[calendar(1984,4,13,8),'己巳',1996]]){
+    const y=entry(chart,luck,year);
+    assert(y.annual.direction==='mixed'&&counted(y).some(x=>x.side==='positive')&&counted(y).some(x=>x.side==='negative'),
+      'legacy reference preserves the two independently verified sides at '+year);
+  }
+  const opening=Array.from({length:10},(_,i)=>entry(summer,'戊午',1996+i));
+  const [y1996,,,y1999]=opening;
+  assert(counted(y1996).filter(x=>x.ruleId==='Y3-replacement-medicine'&&/^承载不足·/.test(x.taskId)).length<=1&&
+    y1996.scenarios.every(s=>s.B<=0)&&y1996.annual.amplitude.net===0,
+    '1996 never books both sides of the same uncertain replacement and settles [-2,0] after shared medicine loss is removed');
+  for(const y of opening) {
+    assert(!counted(y).some(x=>x.taskId==='官杀去留'&&x.side==='negative'),
+      'first-decade officer selection does not charge the already-owned seal loss in '+y.year);
+    assert(counted(y).some(x=>x.side==='negative'), 'deduplication retains verified temporal pressure in '+y.year);
+  }
+  const officerSelection=y1999.actionLedger.find(x=>x.taskId==='官杀去留');
+  assert(officerSelection?.exclusion==='duplicate-cause'&&officerSelection.physicalCauses.join()==='loss:month:未藏乙:木'&&
+    y1999.comprehensiveRange.guaranteed===-2&&y1999.wealthRange.guaranteed===-1&&y1999.effectiveRange.guaranteed===-2.25,
+    '1999 books carrying, wealth and adverse earth once apiece, with separate relief from reduced fire feed');
+  for(const y of opening.filter(y=>[1998,2001,2004].includes(y.year))) {
+    for(const task of ['木制忌土','水生喜用木']) {
+      const action=y.actionLedger.find(x=>x.ruleId==='Y5-role-action'&&x.taskId===task&&x.side==='negative');
+      assert(action?.exclusion==='duplicate-cause'&&action.physicalCauses.join()==='loss:month:未藏乙:木',
+        'lost wood owns its broken restraint and incoming support at '+y.year);
+    }
+  }
+  const y2022Child=entry(calendar(2000,1,1,12),'甲戌',2022);
+  assert(y2022Child.scenarios.map(s=>s.B).join()==='0,2,3'&&y2022Child.annual.amplitude.available&&
+    y2022Child.effectiveRange.direction==='neutral'&&y2022Child.effectiveRange.guaranteed===0&&
+    y2022Child.effectiveRange.reason==='bounded-magnitude',
+    '2022 flat-to-positive replacement settles at neutral with a bounded magnitude');
+  for(const year of [2026,2033]) {
+    const y=entry(summer,'乙卯',year), states=y.scenarios.map(s=>Object.values(s.replacementStates));
+    assert(states.map(s=>s.join()).join()==='-1,0,1'&&states.every(s=>s.length===1)&&
+      new Set(y.actionLedger.filter(r=>r.replacementGroup).map(r=>r.replacementGroup)).size===1&&
+      y.scenarios.map(s=>s.B).join()==='0,1,3'&&y.comprehensiveRange.min===0&&y.comprehensiveRange.max===3&&
+      y.effectiveRange.direction==='neutral'&&y.effectiveRange.guaranteed===0&&y.annual.amplitude.available&&
+      y.effectiveRange.reason==='bounded-magnitude', 'same replacement has three consistent scenarios at '+year);
+  }
+  for(const [luck,year] of [['丁巳',2010],['甲寅',2037],['甲寅',2039],['甲寅',2043],['辛亥',2073]]) {
+    const y=entry(summer,luck,year), m=y.wealthMerge;
+    assert(!y.comprehensiveRange.pending&&y.comprehensiveRange.guaranteed===0&&
+      m.wealthApplied&&m.combinedRange.direction==='negative'&&m.combinedRange.guaranteed===-0.25&&
+      m.combinedRange.reason==='bounded-magnitude'&&y.scenarios[m.selectedIndex].appliedTotal===-0.25,
+      'a one-sided base range merges to the least-negative realized total at '+year);
+  }
+  for(const [luck,year] of [['甲寅',2040],['辛亥',2070]]) {
+    assert(entry(summer,luck,year).wealth.direction==='pending', 'wealth still treats a neutral/nonzero split as pending at '+year);
+  }
+  const cured=entry(summer,'甲寅',2038).annual,stillActive=entry(summer,'甲寅',2011).annual;
+  const anchor=r=>r.review.checked.find(x=>x.subject==='官伤冲战');
+  assert(anchor(cured).after.conflictResolved&&!anchor(stillActive).after.conflictResolved&&
+    !cured.amplitude.breakdown.some(x=>x.ruleId==='Y3-medicine'&&x.taskId==='官伤冲战'&&x.contribution>0)&&
+    stillActive.amplitude.breakdown.some(x=>x.side==='negative'&&(x.ruleId==='W-bridge'||x.ruleId==='Y3-medicine'&&x.taskId==='官伤冲战')&&x.contribution>0),
+    'disappearance alone is not rescue; a surviving conflict and weaker medicine remain separate');
+
+  // Stage 2 bug fixes + Stage 3 backend wealth merge contracts (BOT Rules #1-#3).
+  assert(y2018.comprehensiveRange.guaranteed===0 && y2018.wealthRange.guaranteed===-2 &&
+    y2018.annual.amplitude.net===-0.5, '2018 folds confirmed -2 wealth at 25% onto base 0');
+  const zeroWeightAnnual = outlookEngine.evaluateLuckOutlook(summer,'丙辰','丁巳',years,{wealthExtraWeight:0}).years;
+  assert(zeroWeightAnnual[0].annual.amplitude.net===0 && zeroWeightAnnual.every((yr,idx)=>
+    yr.annual.amplitude.net===annual[idx].comprehensiveRange.guaranteed),
+    'setting wealthExtraWeight to 0 recovers base comprehensive impulse identically year by year');
+  const y2029 = entry(summer,'乙卯',2029);
+  assert(y2029.annual.amplitude.net<=0 && byRule(y2029,'T-year-tkdc')[0]?.contribution===3 &&
+    y2029.wealthRange.guaranteed===0 && y2029.wealth.reasons.some(x=>x.ruleId==='W-bridge-replacement') &&
+    y2029.actionLedger.some(x=>(x.ruleId==='LK-02'||x.ruleId==='LK-04'||x.ruleId==='Y5-role-root')&&x.exclusion==='duplicate-cause'),
+    '2029 scores joint clash tier 3, deduplicates stacked wood, and keeps path-swap replacement neutral');
+  const y2030 = entry(summer,'乙卯',2030);
+  assert(y2030.annual.direction==='pending' && !y2030.annual.amplitude.available &&
+    y2030.comprehensiveRange.reason==='missing-evidence' && y2030.effectiveRange.reason==='missing-evidence',
+    '2030 stays pending when core judgment is undecided and minor clashes cancel out');
+
+  const merge = outlookEngine.settleScenarioWealthMerge;
+  const rng = (vals, pend=false) => ({
+    min: pend?null:Math.min(...vals), max: pend?null:Math.max(...vals),
+    guaranteed: pend?null:(Math.min(...vals)>0?Math.min(...vals):Math.max(...vals)<0?Math.max(...vals):0),
+    direction: pend?'pending':(Math.min(...vals)>0?'positive':Math.max(...vals)<0?'negative':'neutral'),
+    possibleDirections: [], pending: pend, reason: pend?'missing-evidence':(Math.min(...vals)!==Math.max(...vals)?'bounded-magnitude':'verified')
+  });
+  const mNeg = merge(rng([2,2]), rng([-3,-1]), [{B:2,W:-1},{B:2,W:-3}], 0.25);
+  assert(mNeg.wealthRange.guaranteed===-1&&mNeg.wealthBounded&&mNeg.appliedDelta===-0.75&&mNeg.appliedTotal===1.25,
+    'standalone wealth keeps its guaranteed -1 while the all-positive merged range settles at its realized minimum 1.25');
+  const mPos = merge(rng([1,1]), rng([1,3]), [{B:1,W:1},{B:1,W:3}], 0.25);
+  assert(mPos.appliedDelta===0.25 && mPos.appliedTotal===1.25 && mPos.wealthBounded===true,
+    'BOT #2 bounded positive wealth uses minimum guaranteed magnitude');
+  const mReal = merge(rng([1,2]), rng([1,2]), [{B:1,W:2},{B:2,W:1}], 0.25);
+  assert(mReal.appliedTotal===1.5 && mReal.appliedTotal>=mReal.combinedRange.min && mReal.appliedTotal<=mReal.combinedRange.max,
+    'BOT #2 picks a realized scenario within combined [min, max]');
+  const mCons = merge(rng([1,2]), rng([1,8]), [{B:1,W:8},{B:2,W:1}], 0.25);
+  assert(mCons.selectedIndex===1 && mCons.appliedBase===2 && mCons.appliedDelta===0.25 && mCons.appliedTotal===2.25,
+    'Codex #3 picks the lowest-total conservative same-sign scenario when both B and W vary');
+  const mRev = merge(rng([0.5,0.5]), rng([-3,-1]), [{B:0.5,W:-1},{B:0.5,W:-3}], 0.25);
+  assert(mRev.reversalRisk===true && mRev.combinedRange.pending===true && mRev.appliedTotal===null,
+    'BOT #3 flips sign reversal within feasible scenarios into pending instead of solid minimum');
+  const mPendW = merge(rng([2,2]), rng([],true), [{B:2,W:0}], 0.25);
+  assert(mPendW.wealthSkipped===true && mPendW.appliedDelta===0 && mPendW.appliedTotal===2 && mPendW.combinedRange.pending===false,
+    'wealth pending skips extra weight without blocking determined comprehensive B');
+  const shift = merge(rng([-2,0]), rng([-1,-1]), [{B:-2,W:-1},{B:0,W:-1}], 0.25);
+  assert(shift.selectedIndex===1&&shift.wealthApplied&&shift.appliedTotal===-0.25&&
+    shift.combinedRange.min===-2.25&&shift.combinedRange.max===-0.25&&shift.combinedRange.reason==='bounded-magnitude',
+    'settled flat-to-negative base and negative wealth choose the closest total to zero');
+  const revBase = {...rng([-1,1]),pending:true,reason:'direction-varies',guaranteed:null,direction:'pending'};
+  const resolved = merge(revBase, rng([4,8]), [{B:-1,W:4},{B:1,W:8}], 0.25);
+  assert(!resolved.combinedRange.pending&&resolved.appliedTotal===0&&resolved.appliedDelta===1&&resolved.selectedIndex===0,
+    'a known base reversal can settle once same-scenario wealth removes the negative end');
+  for(const skipped of [merge(revBase,rng([],true),[{B:-1,W:0},{B:1,W:0}],0.25),
+    merge(revBase,rng([4,8]),[{B:-1,W:4},{B:1,W:8}],0)]) {
+    assert(skipped.wealthSkipped&&skipped.combinedRange.pending&&skipped.combinedRange.reason==='direction-varies'&&
+      skipped.appliedDelta===0&&skipped.appliedTotal===null, 'skipping wealth restores the settled base range');
+  }
+}
+
+// Calendar-generated weak regular chart with a reachable wealth bridge.
+{
+  const chart = outlookEngine.createBaziProfile({input:{year:1914,month:10,day:24,hour:13,minute:30},useTrueSolar:false});
+  assertLegalReviewPillars(chart.pillars);
+  const luckGz='乙亥', year=1926, gz=outlookEngine.getFlowYearGZ(year);
+  const analysis=outlookEngine.analyzePattern(chart);
+  assert(/弱/.test(analysis.strength)&&!analysis.specialPatternQualification &&
+    analysis.useful.secondaryUse.includes('火'), 'calendar fixture must have weak body and wealth as secondary use');
+  const pillars={...chart.pillars,luck:luckGz,flowYear:gz};
+  const state=scriptContext.__patternReview.context(chart.dayStem,pillars,analysis,{outlookFlowYear:true});
+  const channel=rules.wealthState(state,analysis);
+  assert(!channel.canCarry&&!channel.blocked&&channel.bridge.length===2&&channel.effective, 'effective wealth bridge remains open without ordinary carrying capacity, despite rooted killing pressure');
+  const noBridge=JSON.parse(JSON.stringify(state));
+  delete noBridge.profiles['正官'];
+  const blocked=rules.wealthState(noBridge,analysis);
+  assert(blocked.blocked&&!blocked.effective&&blocked.bridge.length===0, 'without the officer outlet, sufficiently strong killing pressure blocks the wealth route');
+  assert(chart.dayStem==='癸', 'in this fixture earth is official/killing and water is the body');
+  noBridge.scores.土=noBridge.scores.水;
+  const weakerKill=rules.wealthState(noBridge,analysis);
+  assert(!weakerKill.blocked&&!weakerKill.effective&&weakerKill.bridge.length===0, 'with the same rooted actors but reduced earth strength, the missing bridge alone does not establish a killing block');
+  const out=outlookEngine.evaluateLuckOutlook(chart,luckGz,'甲戌',[{year,gz}]);
+  const entry=out.years[0];
+  assert(out.wealth.amplitude.available&&entry.wealth.amplitude.available&&entry.wealth.amplitude.positive>0 &&
+    entry.wealth.reasons.some(x=>x.ruleId==='W-bridge'&&x.direction==='positive'), 'integrated annual wealth returns a separate bridge reason');
+  for (const verdict of [out.natal,out.previous,entry.annual,entry.increment]) {
+    assert(![...verdict.evidence,...verdict.reservations].some(x=>x.ruleId==='Y4-wealth-channel') &&
+      !verdict.amplitude.breakdown.some(x=>x.ruleId==='Y4-wealth-channel'), 'ordinary verdicts never score the dedicated wealth channel');
+  }
+}
+
 const natalBeforeOutlook = JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart));
 const realChartOutlook = outlookEngine.evaluateLuckOutlook(wenZhenLuckChart, '甲子', '癸亥', outlookYearRows);
 assert(realChartOutlook.years.length === 10 && JSON.stringify(outlookEngine.analyzePattern(wenZhenLuckChart)) === natalBeforeOutlook, 'a real calendar reference should expose ten annual results without changing its natal analysis');
