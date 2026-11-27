@@ -27,6 +27,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Outlook Stage 2 Rule 1 Dynamic Useful Arbitration — 2026-11-28
+
+- 本轮在自用版 `main`（基线 `bb71472`，仅改 `qimen-app`，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 1「动态喜用仲裁与药过成毒」（`bazi-engine.js` `luck-outlook-20261128.3`、`bazi.html?v=luck-20261128.3`、更新 `check-bazi-page.js` 并新增 `check-bazi-dynamic-use.cjs`）。原局排盘展示、历法、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩与 AI／记录契约均保持不变。
+- 岁运规则口径：当年六柱按「格局核心护神 ＞ 极端调候 ＞ 体能旺衰」动态仲裁；纳入全部 10 类过旺病象（`ZP-QX-001`～`ZP-QX-010`，含 `金多土变`）且仅在比例触发后实证有效路径与受害对象才入账；弱转强扶助满溢仅抵消普通扶身加分而不倒扣承载不足，强转弱承泄失守须有真实根源受损且保留出口失守；原局主调候解除即退场，反向极端偏枯须独立实证；护格防误伤仅保护主制方与非过旺／非忌神对象，且不把针对伤格施害方的救应反判为伤格；泄身反伤病象生效或缓解时统筹整条 `日主→食伤` 轴避免与 `Y4-output` 重复或反向对冲；真特殊格受损沿用第一阶段复核。
+- 验证与审计全通过：`node --check bazi-engine.js`、`git diff --check -- . ":(exclude)八字古籍参考/**"`、`check-baselines.js`（18 项）、`check-bazi-page.js`（含 720 组结构与页面回归）、`check-bazi-luck-state-change.cjs`（600 年状态校验），以及 `check-bazi-dynamic-use.cjs`（10 类病象、3 组对照、20 个复核探针、老王 2037 净 `0`／小蔓 2024 `+3`／香肠 2024 `−1` 三盘各 100 年单年与批量完全一致，固定 2,400 年综合待判 `142 → 145`、正负互换 `47` 年、主账变化 `311` 年、`changedWealth=0`、`changedSpecial=0`、`outputDoubleBooked=0`、`sameEventCoreConflict=0`）。
+- 下一步：在共同白板（`I:\白板工作目录\奇门起盘分析协作板.commonboard`）与 Codex 开展第二阶段规则 2「辰戌丑未墓库开闭」（先对齐经典问题与口径、白板预审，再进入实现与 2,400 年复核）；规则 3～5 及第三阶段展示文案优化按序推进。
+
 ### Bazi Luck Outlook Stage 1 Ledger Calibration — 2026-11-27
 
 - 本轮在自用版 `main`（基线 `db0f3978`，仅改 `qimen-app`，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第一阶段年度账本校准（`bazi-engine.js` `luck-outlook-20261127.3`、`bazi.html?v=luck-20261127.3`、扩充 `check-bazi-page.js` 与 `check-bazi-luck-state-change.cjs`）。继续冻结近合保留系数 `0.5`、三档离散力度、原有曲线压缩、`a_t = B + 0.25W`（含 `w=0` 还原）及严格跨零待判门闩，不改原局排盘、历法、喜用展示、AI 与记录契约。

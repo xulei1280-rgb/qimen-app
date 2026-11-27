@@ -303,7 +303,7 @@ const qimen = fs.readFileSync('qimen.js', 'utf8');
 const shensha = fs.readFileSync('bazi-shensha.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
 assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>'), 'bazi page should load the birth-time helper');
-assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261127\.3"/.test(html), 'bazi page should load shared rules before the updated engine');
+assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261128\.3"/.test(html), 'bazi page should load shared rules before the updated engine');
 assert(html.includes('src="bazi-visuals.js?v=20261127.1" defer') &&
   html.includes('href="bazi-visuals.css?v=20261127.1"'), 'trend chart and styles use the current cache version');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
@@ -1866,7 +1866,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261127.3', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261128.3', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
