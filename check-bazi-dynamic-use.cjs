@@ -1,4 +1,4 @@
-// Compare the fixed Rule 1 cohort with the phase-one commit.
+// Reproduce the signed Rule 1 acceptance, in isolation from later annual rules.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -9,7 +9,9 @@ const { load } = require('./check-bazi-luck-state-change.cjs');
 const baseline = 'bb71472e6a5ff4bc9283bacd5a80e14006975ce1';
 const original = load();
 const current = load();
-const currentSource = fs.readFileSync(path.join(__dirname, 'bazi-engine.js'), 'utf8');
+const currentSource = execFileSync('git', ['show', '07e2a96976d6b2532a0e2ef289672f51c342d848:bazi-engine.js'], {
+  cwd: __dirname, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024
+});
 vm.runInContext(currentSource.replace('root.BaziEngine=api;', 'root.testRule1={context:buildTemporalPatternContext,compare:compareOutlookContexts};root.BaziEngine=api;'), current);
 vm.runInContext(execFileSync('git', ['show', baseline + ':bazi-engine.js'], {
   cwd: __dirname, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024

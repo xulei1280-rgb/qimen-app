@@ -649,12 +649,12 @@ async function run() {
 
   const outlook = (person, luck, years) => c.BaziEngine.evaluateLuckOutlook(person, luck, null,
     years.map(year => ({ year, gz: c.BaziEngine.getFlowYearGZ(year) }))).years;
-  const sameRoute=outlook({dayStem:'乙',pillars:{year:'丁卯',month:'壬寅',day:'乙酉',hour:'丙戌'}},'甲辰',[2009])[0];
+  const sameRoute=outlook({dayStem:'乙',pillars:{year:'丁卯',month:'壬寅',day:'乙酉',hour:'丙戌'}},'甲寅',[2009])[0];
   const wealthStep=sameRoute.wealth.amplitude.breakdown.find(r=>r.ruleId==='W-food');
   assert.equal(wealthStep.contribution,1);
   assert.equal(wealthStep.baseContribution,0);
   close(level(sameRoute.wealth).level,0.55/(1+0.12),'wealth compression uses the route’s own tier');
-  close(level(sameRoute.annual).level,0.55*2.25/(1+0.12*2.25),'combined compression uses the deduplicated B and weighted W');
+  close(level(sameRoute.annual).level,0.55*5.25/(1+0.12*5.25),'combined compression uses the deduplicated B and weighted W');
   const coreRow = (year, side) => year.actionLedger.find(r => r.ruleId==='Y3-core-gate'&&r.side===side&&r.contribution>0);
   const killing = chart(c,1988,11,3,19);
   const [opened, continuing, interrupted] = outlook(killing,'壬申',[1995,1996,1997]);

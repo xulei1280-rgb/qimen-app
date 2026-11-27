@@ -2186,7 +2186,7 @@
     function entries(names){
       return (names||[]).reduce(function(out,name){
         var item=profiles[name]||(name==='日主'&&interactions.dayMaster?{stemEntries:[interactions.dayMaster]}:{});
-         return out.concat((item.stemEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'干',stem:x.stem,retention:x.retention==null?1:x.retention,usable:x.usable!==false,effect:x.effect||'none',text:x.stem+name}}),(item.branchEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'支',stem:x.stem,branch:x.branch,rootPower:x.rootPower,scenarioRetained:!!x.scenarioRetained,usable:x.usable!==false,transformedAway:!!x.transformedAway,boundByCombine:!!x.boundByCombine,branchChange:x.branchChange||'',text:x.branch+'藏'+x.stem+name}}));
+         return out.concat((item.stemEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'干',stem:x.stem,retention:x.retention==null?1:x.retention,usable:x.usable!==false,effect:x.effect||'none',text:x.stem+name}}),(item.branchEntries||[]).map(function(x){return {god:name,position:x.position,pillar:x.pillar||NATAL_PILLAR_KEYS[x.position],temporal:!!x.temporal,kind:'支',stem:x.stem,branch:x.branch,rootPower:x.rootPower,scenarioRetained:!!x.scenarioRetained,...(x.annualTombClashes?{annualTombClashes:x.annualTombClashes}:{}),usable:x.usable!==false,transformedAway:!!x.transformedAway,boundByCombine:!!x.boundByCombine,branchChange:x.branchChange||'',text:x.branch+'藏'+x.stem+name}}));
       },[]);
     }
     function describePair(best,from,to,action){
@@ -2203,7 +2203,7 @@
           return actor.kind==='干'&&relevantCombines.some(function(x){return x.partialBind&&(x.left===actor.position||x.right===actor.position);});
         }
         var leftRestrained=isRestrained(a),rightRestrained=isRestrained(b),restrained=leftRestrained||rightRestrained;
-        var damageRelations=(interactions.branchPairs||[]).filter(function(x){return x.active!==false&&/^(冲|刑|害|破)$/.test(x.type)&&((a.kind==='支'&&!a.scenarioRetained&&(x.left===a.position||x.right===a.position))||(b.kind==='支'&&!b.scenarioRetained&&(x.left===b.position||x.right===b.position)))});
+        var damageRelations=(interactions.branchPairs||[]).filter(function(x){return x.active!==false&&/^(冲|刑|害|破)$/.test(x.type)&&[a,b].some(function(actor){return actor.kind==='支'&&!actor.scenarioRetained&&(x.left===actor.position||x.right===actor.position)&&!(x.type==='冲'&&(actor.annualTombClashes||[]).includes(tombPairKey(x)));})});
         var entryBlocked=a.usable===false||b.usable===false||a.transformedAway||b.transformedAway,entryCombined=!!(a.boundByCombine&&!a.scenarioRetained||b.boundByCombine&&!b.scenarioRetained),bound=boundRelations.length>0||entryBlocked||entryCombined,damaged=damageRelations.some(function(relation){return relation.type==='冲'});
         var remote=distance>2,sameHidden=physicalDistance===0&&a.kind==='支'&&b.kind==='支';
         var entryTransformed=a.transformedAway||b.transformedAway||a.effect==='transform'||b.effect==='transform';
@@ -2241,7 +2241,7 @@
         var root=left.kind==='支'?left:right,stem=left.kind==='干'?left:right;
         return (root.temporal||stem.temporal||Math.abs(root.position-stem.position)<=1)&&
           (profiles[root.god].branchEntries||[]).some(function(x){
-            return annualActorKey(x)===annualActorKey(root)&&x.usable!==false&&!x.transformedAway&&!outlookRootRestricted(x)&&x.rootPower>=0.5;
+            return annualActorKey(x)===annualActorKey(root)&&x.usable!==false&&!x.transformedAway&&!outlookRootRestricted(x)&&(x.rootPower>=0.5||(x.annualTombClashes||[]).length);
           });
       }
       // Same actor, or the same ten god's usable stem/root within the existing
@@ -2754,10 +2754,12 @@
     var monthCommand=analysis.monthCommand,monthGod=monthCommand&&monthCommand.primaryGod;
     var rawCounts=tenGodCounts(dayStem,pillars),profiles=tenGodProfiles(dayStem,pillars,monthCommand,interactions,fullOptions),counts={},rootDetails=weightedStrength.dimensions.roots.items||[];
     Object.keys(profiles).forEach(function(god){counts[god]=profiles[god].count||0});
-    var retained=options&&options.retainedRoots||[];
-    if(retained.length)Object.keys(profiles).forEach(function(god){
+    var tomb=options&&options.annualTomb,retained=options&&options.retainedRoots||[];
+    if(retained.length||tomb)Object.keys(profiles).forEach(function(god){
       profiles[god].branchEntries.forEach(function(root){
-        if(retained.indexOf(annualActorKey(root))>=0)root.scenarioRetained=true;
+        var key=annualActorKey(root);
+        if(retained.indexOf(key)>=0)root.scenarioRetained=true;
+        if(tomb&&tomb.open[key])root.annualTombClashes=tomb.open[key];
       });
     });
     var carryingCapacity=carryingCapacityFeedback(strength,weightedStrength,profiles,pillars),officerAssessment=assessOfficerMixture(profiles,interactions,pillars,carryingCapacity),regular=regularPatternAssessment(dayStem,pillars,monthGod,profiles,strength,monthCommand,interactions,carryingCapacity);
@@ -2918,7 +2920,7 @@
     var activationStatus=recheck&&recheck.specialLost.length?'特殊格运中受损':(recheck&&recheck.strictFormation&&(statusImproved||fromMain!==toMain)?'运中补格':(statusImproved?'条件改善':(statusWorsened||delta<0?'当前受阻':(delta>0?'发挥提升':'平运维持'))));
     return {gz:luckGz,ruleVersion:LUCK_RECHECK_VERSION,score:score,scoreLedger:scoreLedger,delta:delta,action:action,grade:current,natalGrade:analysis.patternLevelGrade,currentGrade:current,activationStatus:activationStatus,scope:'只调整当前大运发挥，不改写原局结构层次',fromStatus:fromStatus,toStatus:toStatus,fromMain:fromMain,toMain:toMain,conditionReview:recheck,text:'当前大运'+luckGz+'（'+activationStatus+'）：格局状态'+(fromStatus===toStatus?'维持'+fromStatus:'由'+fromStatus+'转为'+toStatus)+mainText+'，层次'+action+'为'+current+'；'+(reasons.length?unique(reasons).join('、'):'第五柱完整复核后未直接补足或破坏主格条件')+'。 原局层次保持'+analysis.patternLevelGrade+'不变。'};
   }
-  var LUCK_OUTLOOK_VERSION='luck-outlook-20261128.3';
+  var LUCK_OUTLOOK_VERSION='luck-outlook-20261128.5';
   var DEFAULT_WEALTH_EXTRA_WEIGHT=0.25;
   function outlookPending(reason){
     return {direction:'pending',assessment:'input-error',summary:reason,evidence:[],reservations:[],uncertainty:[reason],life:[],basis:'资料校验未通过'};
@@ -2928,7 +2930,7 @@
     if(root.scenarioRetained)return false;
     var attacks=root.attacks||[];
     // 刑害破 names alone do not establish loss of a usable root (任氏地支注).
-    return !!root.boundByCombine||attacks.some(function(x){return /冲/.test(x)})||!!root.attacked&&!attacks.length;
+    return !!root.boundByCombine||!(root.annualTombClashes||[]).length&&attacks.some(function(x){return /冲/.test(x)})||!!root.attacked&&!attacks.length;
   }
   function outlookGod(context,names){
     var stems=[],roots=[],rawStems=[],rawRoots=[],command=false;
@@ -3278,14 +3280,15 @@
   function wealthChannelState(context,analysis){
     var day=context.pillars.day[0],wx=ctrl[STEM_WX[day]],role=luckToneRoles(analysis.useful);
     var W=['正财','偏财'],U=['食神','伤官'],I=['正印','偏印'],B=['比肩','劫财'],O=['正官'],K=['七杀'],profiles={};
-    function clean(root){return root.usable!==false&&!root.transformedAway&&root.rootPower>0&&!outlookRootRestricted(root)}
+    function clean(root){return root.usable!==false&&!root.transformedAway&&root.rootPower>0&&!outlookRootRestricted(root)&&
+      !(root.annualTombClashes&&!context.carryingCapacity.canCarryWealth&&STEM_WX[root.stem]===wx);}
     Object.keys(context.profiles).forEach(function(name){
       var p=context.profiles[name];
       profiles[name]={stemEntries:p.stemEntries||[],branchEntries:(p.branchEntries||[]).filter(clean)};
     });
     function group(names){return outlookGod(context,names)}
     function established(g){return g.clear&&!g.uncertain&&g.roots.some(clean)}
-    function wealthKnown(g){return established(g)||!g.uncertain&&g.roots.some(function(r){return clean(r)&&r.rootPower>=0.8})}
+    function wealthKnown(g){return established(g)||!g.uncertain&&g.roots.some(function(r){return clean(r)&&(r.rootPower>=0.8||(r.annualTombClashes||[]).length);});}
     function stronger(source,target,sourceWx,targetWx){
       var sourceScore=context.scores[sourceWx]||0,targetScore=context.scores[targetWx]||0;
       var commandEdge=source.command&&!target.command;
@@ -4658,6 +4661,13 @@
           return roots.find(function(root){return root.pillar===c.target&&STEM_WX[root.stem]===wx});
         }
         function record(element,weight,trigger,description){
+          if(c.branch&&ctx.annualTomb&&ctx.annualTomb.groups.some(function(group){
+            return group.contacts.some(function(contact){
+              return contact.type===(c.clash?'冲':'六合')&&contact.keys.includes(c.source)&&contact.keys.includes(c.target);
+            })&&(c.clash&&element==='土'||group.parts.some(function(p){
+              return p.key[3]!=='藏干未决'&&p.key[0]===c.source&&p.key[1].startsWith(c.target+':')&&p.key[1].endsWith(':'+element);
+            }));
+          }))return;
           var rule=c.clash?'T-natal-clash':'T-natal-combine',label=PILLAR_META[c.target][c.branch?'branchLabel':'stemLabel'];
           var reason=c.text+'，'+label+gz[c.branch?1:0]+(c.branch?'本气':'')+mainWx+'为'+mainRole+'，'+description;
           var key=[c.target,c.branch?'branch':'stem',element].join(':'),old=winners.get(key);
@@ -4823,7 +4833,10 @@
       var att=ctrl[STEM_WX[ls]]===STEM_WX[ys]?'luck':'year',a=att==='luck'?[ls,lb]:[ys,yb],b=att==='luck'?[ys,yb]:[ls,lb];
       if(seatScore(a[0],a[1])>seatScore(b[0],b[1]))hurt(STEM_WX[b[0]],'fight',[sign(role(STEM_WX[b[0]]))>0?((att==='luck'?'大运的'+a[0]+'压住了流年'+b[0]:'流年'+a[0]+'压住了大运的'+b[0])+'（'+role(STEM_WX[b[0]])+'），这层帮助打了折扣。'):('你更扛得住事：'+(att==='luck'?'大运的'+a[0]+'把流年'+b[0]:'流年'+a[0]+'把大运的'+b[0])+'这层不利的力量收住了。'),(att==='luck'?'运伐岁':'岁伐运')+'：'+a[0]+'克'+b[0]+'，'+b[0]+'坐'+b[1]+'力弱而降（《滴天髓阐微·岁运·战》）。']);
     }
-    if(branchClash){
+    var tombOwnsClash=branchClash&&context&&context.annualTomb&&context.annualTomb.groups.some(function(group){
+      return group.contacts.some(function(c){return c.type==='冲'&&c.keys.includes('luck')&&c.keys.includes('flowYear');});
+    });
+    if(branchClash&&!tombOwnsClash){
       var pl=partyScore(natal,luckGz,BRANCH_WX[lb]),py=partyScore(natal,yearGz,BRANCH_WX[yb]);
       if(pl!==py){var win=pl>py?lb:yb,lose=pl>py?yb:lb;hurt(BRANCH_WX[lose],'clash',[(lose===yb?'大运的'+win+'冲倒了流年'+lose:'流年'+win+'冲动了大运的'+lose)+'（'+role(BRANCH_WX[lose])+'）。',(lose===yb?'运冲岁':'岁冲运')+'：'+win+'党多胜，'+lose+'受冲（《滴天髓阐微·岁运·冲》）。'])}
     }
@@ -4894,7 +4907,7 @@
     return {ruleId:rule,taskId:task,direction:direction,text:text,plainText:text,level:'Y3',
       annualMagnitude:magnitude,action:action,conditions:[],counterEvidence:[],life:''};
   }
-  function annualWealthActions(natal,luck,current,analysis){
+  function annualWealthActions(natal,luck,current,analysis,plainWealth){
     var a=natal.wealthChannel,l=luck.wealthChannel,b=current.wealthChannel;
     if(!a||!l||!b){
       var special=evaluateWealthOutlook(natal,current,analysis,natal.pillars,current.pillars.luck,current.pillars.flowYear);
@@ -4904,6 +4917,10 @@
         missing:!!special.missingFields.length};
     }
     var entries=[],notes=[];
+    var openWealth=current.annualTomb&&b.canCarry&&b.effective&&!b.blocked?
+      current.annualTomb.groups.flatMap(function(group){return group.parts.filter(function(p){
+        return p.key[3]==='冲开'&&p.value>0&&b.roots.some(function(root){return annualActorKey(root)===p.key[1];});
+      });}):[];
     var oldRoute=a.bridge.length?a.bridge:a.food;
     var route=b.bridge.length?b.bridge:b.food,priorRoute=l.bridge.length?l.bridge:l.food;
     function routeMagnitude(steps){
@@ -4918,6 +4935,25 @@
     }
     function describe(steps){
       return steps.map(function(s){return qualifiedActorLabel(s.left)+s.action+qualifiedActorLabel(s.right)}).join('、');
+    }
+    function attributeTombRoute(entry,steps){
+      if(!current.annualTomb)return;
+      var positive=entry.direction==='positive',mediator=annualActorKey(steps[0].right);
+      var groups=current.annualTomb.groups.filter(function(group){
+        return group.parts.some(function(part){
+          return part.key[1]===mediator&&(positive?part.key[3]==='冲开':/^(暗伤|合绊|合化)$/.test(part.key[3]));
+        });
+      });
+      if(!groups.length)return;
+      // W keeps the verified route. A distinct route still reachable without the
+      // released root, or a separately confirmed obstruction, retains its own B.
+      if(positive&&plainWealth){
+        var alternative=plainWealth[entry.ruleId==='W-bridge'?'bridge':'food'];
+        if(alternative.length&&annualActorKey(alternative[0].left)===annualActorKey(steps[0].left)&&
+          (steps.length===1||annualActorKey(alternative[1].right)===annualActorKey(steps[1].right)))return;
+      }
+      if(!positive&&(b.blocked||b.sealDamage.length))return;
+      entry.tombRouteOwners=groups.map(function(group){return group.id;});
     }
     if(route.length){
       var bridge=b.bridge.length>0,kind=bridge?'officer-transmission':'wealth-outlet',rule=bridge?'W-bridge':'W-food';
@@ -4943,6 +4979,7 @@
         }
         var action=routeAction(route,kind,control.flatMap(function(x){return [annualActorKey(x.left),annualActorKey(x.right)]}));
         var e=annualEntry(rule,bridge?'财星通关':'食伤生财','positive',evidence,tier,action);
+        attributeTombRoute(e,route);
         if(recovery)e.recovery=true;
         entries.push(e);
       }else if(oldRoute.length&&annualRouteKey(oldRoute)!==annualRouteKey(route)){
@@ -4960,8 +4997,10 @@
       var actorAvailable=(current.profiles[lost.god]&&current.profiles[lost.god].stemEntries||[]).some(function(x){return annualActorKey(x)===annualActorKey(lost)&&x.usable!==false});
       if(knownRootBlock||b.blocked||!protectedGone&&(b.bridgeReady||b.outputReady)||lost.kind==='干'&&!actorAvailable){
         var lostText=(bridgeLost?'财星通关受限：':'食伤生财受限：')+describe(oldRoute)+(knownRootBlock?'；'+qualifiedActorLabel(lost)+'受冲绊，未见足量替代':'');
-        entries.push(annualEntry(bridgeLost?'W-bridge':'W-food','财路受限','negative',lostText,routeMagnitude(oldRoute),
-          routeAction(oldRoute,bridgeLost?'officer-transmission':'wealth-outlet')));
+        var lostRoute=annualEntry(bridgeLost?'W-bridge':'W-food','财路受限','negative',lostText,routeMagnitude(oldRoute),
+          routeAction(oldRoute,bridgeLost?'officer-transmission':'wealth-outlet'));
+        attributeTombRoute(lostRoute,oldRoute);
+        entries.push(lostRoute);
       }
     }
     function pressure(id,label,oldSteps,newSteps){
@@ -4986,10 +5025,10 @@
     }
     pressure('peer','比劫分财',a.natalPeerAttack,b.natalPeerAttack.filter(function(x){return x!==causalAttack;}));
     if(a.food.length||b.food.length)pressure('seal','印夺食',a.sealDamage,b.sealDamage);
-    if(!route.length&&!oldRoute.length&&a.effective!==b.effective){
+    if(!route.length&&!oldRoute.length&&a.effective!==b.effective&&!(openWealth.length&&plainWealth&&!plainWealth.effective)){
       var use=b.effective?b:a,contacts=natalLuckContacts(current);
       var candidates=use.stems.concat(use.roots).map(function(actor){
-        if(b.effective)return actor.temporal?{actor:actor,source:annualActorKey(actor)}:null;
+        if(b.effective)return actor.temporal&&!actor.annualTombClashes?{actor:actor,source:annualActorKey(actor)}:null;
         var changed=contacts.find(function(contact){
           return contact.target===actor.pillar&&contact.branch===!!actor.branch&&contact.transform!==STEM_WX[actor.stem];
         });
@@ -5005,6 +5044,18 @@
           {sourceKeys:unique(candidates.map(function(x){return x.source;})),mediatorKeys:[],
             targetKeys:candidates.map(function(x){return annualActorKey(x.actor);}),effect:'wealth-outlet'}));
       }
+    }
+    if(openWealth.length){
+      current.annualTomb.groups.forEach(function(group){
+        var opened=group.parts.filter(function(p){
+          return openWealth.includes(p)&&!entries.some(function(e){return e.direction==='positive'&&e.action.mediatorKeys.includes(p.key[1]);});
+        });
+        if(!opened.length)return;
+        entries.push(annualEntry('W-root','冲开财库','positive','承财与通道已核：'+opened.map(function(p){return p.key[1];}).join('、'),1,{
+          sourceKeys:unique(opened.map(function(p){return p.key[0];})),mediatorKeys:[],targetKeys:opened.map(function(p){return p.key[1];}),
+          effect:'wealth-outlet',events:[[group.id,group.id,'tomb-net']]
+        }));
+      });
     }
     var partial=b.bridge.length?b.bridgeRoutes.filter(function(steps){return routeMagnitude(steps)===1;}):[];
     if(b.uncoveredOfficerAttacks.length||partial.length){
@@ -5318,7 +5369,26 @@
     var uncertainReplacements=unique(candidates.filter(function(e){
       return e.mixedReplacement&&(e.direction==='positive'||e.direction==='negative')&&!e.legacyReference&&!pendingOutlookEvidence(e);
     }).map(function(e){return replacementGroups.get(e);}));
-    var owners=new Map(),wealthOwners=new Set(),ledger=[];
+    var owners=new Map(),wealthOwners=new Set(),ledger=[],tombGroups=current.annualTomb&&current.annualTomb.groups||[];
+    function matchesTombPart(part,event){
+      var k=part.key,actor=k[1];
+      if(k[3]==='藏干未决')return false;
+      if(event[2]==='daymaster-capacity')return event[0]===actor&&/^(冲开|土动)$/.test(k[3]);
+      if(event[1]!==actor)return false;
+      if(event[2]==='actor-availability')return event[0]===actor;
+      if(event[2]==='earth-buildup')return k[3]==='土动'&&event[0]===actor;
+      return event[2]==='branch-'+k[2]&&String(event[0]).split(':')[0]===k[0];
+    }
+    function tombOwner(entry,event){
+      if(event[2]==='tomb-net'&&
+        (entry.ruleId==='W-root'&&entry.taskId==='冲开财库'||/^W-(food|bridge)$/.test(entry.ruleId)&&entry.tombRouteOwners)){
+        return tombGroups.find(function(group){return event[0]===group.id;});
+      }
+      if(!/^(T-natal-(clash|combine)|Y5-role-root)$/.test(entry.ruleId))return null;
+      return tombGroups.find(function(group){
+        return group.parts.some(function(part){return matchesTombPart(part,event);});
+      });
+    }
     var gateOwners=new Map();
     function wealthRouteSteps(entry){
       return /^W-(food|bridge)$/.test(entry.ruleId)&&entry.action&&entry.action.route?entry.action.route.split('|'):[];
@@ -5370,7 +5440,7 @@
       });
       return !matches.length?'none':matches.length===paths.length?'full':'partial';
     }
-    candidates.forEach(function(e){
+    function book(e){
       var side=e.direction,rule=e.ruleId,task=e.taskId||rule;
       var causes=unique(e.physicalCauses||[]).sort();
       var eligible=(side==='positive'||side==='negative')&&!e.legacyReference&&!pendingOutlookEvidence(e);
@@ -5441,7 +5511,10 @@
         }));
       }
       function eventKey(event){return JSON.stringify([side].concat(event));}
-      var eventKeys=unique(events.map(eventKey)).sort();
+      if(e.tombRouteOwners)events=e.tombRouteOwners.map(function(id){return [id,id,'tomb-net'];});
+      var tombEvents=events.map(function(event){return {event:event,owner:tombOwner(e,event)};});
+      var mergedTomb=unique(tombEvents.filter(function(item){return item.owner;}).map(function(item){return item.owner.id;}));
+      var eventKeys=unique(tombEvents.filter(function(item){return !item.owner;}).map(function(item){return eventKey(item.event);})).sort();
       var wealthEvents=ownWealthRoute.length?ownWealthRoute.map(function(step){return ['wealth-route-step',step];}):ownEvents;
       var wealthKeys=wealthMember&&magnitude?wealthEvents.map(eventKey):[];
       var wealthContribution=wealthKeys.some(function(k){return !wealthOwners.has(k);})?magnitude:0;
@@ -5451,23 +5524,63 @@
         magnitude:magnitude,contribution:magnitude,wealth:wealthMember,wealthContribution:wealthContribution,
         wealthExclusion:wealthKeys.length&&!wealthContribution?'duplicate-cause':null,status:rowStatus,exclusion:exclusion,
         recovery:!!e.recovery,mergedItems:[],mergedInto:[],coreGate:e.coreGate||null};
+      if(e.tomb)row.tomb=e.tomb;
+      if(mergedTomb.length){
+        row.mergedTomb=mergedTomb;
+        row.tombMergedEvents=tombEvents.filter(function(item){return item.owner;}).map(function(item){return item.event;});
+        if(!eventKeys.length&&magnitude){row.contribution=0;row.exclusion='tomb-event-owned';}
+      }
       if(replacementGroup)row.replacementGroup=replacementGroup;
       ledger.push(row);
-       if(!magnitude){
-         if(action.resolvedSide){
-           events.forEach(function(event){owners.set(JSON.stringify([action.resolvedSide].concat(event)),row);});
-         }
-         return;
-       }
+      if(!magnitude){
+        if(action.resolvedSide){
+          events.forEach(function(event){owners.set(JSON.stringify([action.resolvedSide].concat(event)),row);});
+        }
+        return;
+      }
       var uncovered=eventKeys.filter(function(event){return !owners.has(event);});
       unique(eventKeys.map(function(event){return owners.get(event);}).filter(Boolean)).forEach(function(owner){
         owner.mergedItems.push({ruleId:rule,taskId:task,text:row.text,causeKey:key});
         row.mergedInto.push({ruleId:owner.ruleId,taskId:owner.taskId,causeKey:owner.causeKey});
       });
       row.ownedEventKeys=uncovered;
-      if(!uncovered.length){row.exclusion='duplicate-cause';row.contribution=0;}
+      if(!uncovered.length){if(!row.exclusion)row.exclusion='duplicate-cause';row.contribution=0;}
       uncovered.forEach(function(event){owners.set(event,row);});
-    });
+    }
+    // Settle regular B owners before pricing overlapping tomb parts in this scenario.
+    candidates.forEach(book);
+    var tombEntries=[];
+    if(tombGroups.length){
+      var tkdc=ledger.some(function(row){return row.ruleId==='T-year-tkdc'&&row.side==='negative'&&row.contribution===3;});
+      var stoppedEarth=new Set((annual.review?.dynamicUse?.stoppedSupport||[]).map(function(hit){return hit.source;}));
+      var occupied=ledger.filter(function(row){return row.contribution>0;}).flatMap(function(row){
+        return row.ownedEventKeys.map(function(key){return {row:row,event:JSON.parse(key).slice(1)};});
+      });
+      tombEntries=tombGroups.map(function(group){
+        var parts=group.parts.map(function(part){
+          if(!part.value)return part;
+          var k=part.key,pillar=k[1].split(':')[0];
+          if(tkdc&&part.value<0&&k[2]==='冲'&&
+            (k[0]==='luck'&&pillar==='flowYear'||k[0]==='flowYear'&&pillar==='luck')){
+            return Object.assign({},part,{value:0,coveredBy:'T-year-tkdc',reason:part.reason+'，岁运天克地冲已计'});
+          }
+          var owner=occupied.find(function(item){return matchesTombPart(part,item.event);});
+          if(owner)return Object.assign({},part,{value:0,coveredBy:owner.row.ruleId,reason:part.reason+'，同一作用已入主账'});
+          if(k[3]==='土动'&&part.value>0&&stoppedEarth.has(k[1])){
+            return Object.assign({},part,{value:0,reason:'当年该来源已停记普通扶身'});
+          }
+          return part;
+        });
+        var net=tombNet(parts);
+        var entry=annualEntry('Y3-tomb',group.id,net>0?'positive':net<0?'negative':'neutral',
+          '墓库冲合净结算：'+parts.map(function(p){return p.key[0]+' → '+p.key[1]+' '+p.key[3]+' '+p.reason;}).concat(group.punishment||[]).join('；'),
+          Math.abs(net),{sourceKeys:group.keys,mediatorKeys:[],targetKeys:unique(parts.map(function(p){return p.key[1];})),
+            effect:'tomb-net',events:[[group.id,group.id,'tomb-net']]});
+        entry.tomb=Object.assign({},group,{parts:parts,net:net});
+        book(entry);
+        return entry;
+      });
+    }
     var sums={B:0,W:0,positive:0,negative:0};
     ledger.forEach(function(row){
       var sign=row.side==='positive'?1:-1;
@@ -5475,7 +5588,7 @@
       sums.W+=sign*row.wealthContribution;
       if(row.contribution>0)sums[row.side]+=row.contribution;
     });
-    return {ledger:ledger,sums:sums,uncertainReplacements:uncertainReplacements};
+    return {ledger:ledger,sums:sums,tombEntries:tombEntries,uncertainReplacements:uncertainReplacements};
   }
   function annualRange(values,missing,strictSignOnly){
     var min=Math.min.apply(null,values),max=Math.max.apply(null,values),directions=Array.from(new Set(values.map(Math.sign))).sort();
@@ -5539,30 +5652,223 @@
   function annualCaveatText(task){
     return !task.auxiliary&&task.applicable!==false?task.label+'：'+task.reason:'';
   }
+  function tombPairKey(pair){
+    return [pair.leftKey||pair.left,pair.rightKey||pair.right].sort().join('/');
+  }
+  function tombNet(parts){
+    var values=parts.map(function(p){return p.value;});
+    return Math.max(0,...values)+Math.min(0,...values);
+  }
+  function annualTombDecision(base,current,analysis){
+    if(analysis.specialPatternQualification||!current.pillars.luck||!current.pillars.flowYear)return null;
+    var interactions=current.interactions,pillars=current.pillars,day=pillars.day[0],dayWx=STEM_WX[day];
+    var branches=interactions.branchPairs||[],groups=[],open={},rootIndex=new Map(),oldRoots=new Map();
+    var role=luckToneRoles(analysis.useful,current),canCarry=current.carryingCapacity.canCarryWealth;
+    var primaryActors=new Set((base.interactionFlow.steps||[]).filter(function(step){return step.active;}).flatMap(function(step){
+      return (step.action==='制'?[step.left]:[step.left,step.right]).map(annualActorKey);
+    }));
+    function rootsOf(context,index){
+      Object.keys(context.profiles).forEach(function(god){
+        (context.profiles[god].branchEntries||[]).forEach(function(root){
+          index.set(annualActorKey(root),Object.assign({god:god},root));
+        });
+      });
+    }
+    rootsOf(base,oldRoots);rootsOf(current,rootIndex);
+    function rootsAt(key){return (HIDDEN[pillars[key][1]]||[]).map(function(stem){
+      return rootIndex.get(annualActorKey({pillar:key,branch:pillars[key][1],stem:stem}));
+    }).filter(Boolean);}
+    function isTomb(key){return !!pillars[key]&&'辰戌丑未'.includes(pillars[key][1]);}
+    function clean(root){return root&&root.usable!==false&&!root.transformedAway&&!outlookRootRestricted(root);}
+    function clashes(root){return branches.filter(function(pair){return pair.active!==false&&pair.type==='冲'&&
+      (pair.leftKey===root.pillar||pair.rightKey===root.pillar);});}
+    function grantable(root){
+      var hits=clashes(root);
+      return root.usable!==false&&!root.transformedAway&&!root.boundByCombine&&hits.length>=1&&
+        hits.every(function(h){return isTomb(h.leftKey)&&isTomb(h.rightKey);});
+    }
+    function backing(root,excluded){
+      var wx=STEM_WX[root.stem],other=Array.from(rootIndex.values());
+      var revealed=Object.values(current.profiles).some(function(p){
+        return (p.stemEntries||[]).some(function(s){return STEM_WX[s.stem]===wx&&s.usable!==false&&
+          s.effect!=='bind'&&s.effect!=='contest'&&s.effect!=='transform';});
+      });
+      var independent=other.some(function(r){return !excluded.includes(r.pillar)&&r.hiddenIndex===0&&STEM_WX[r.stem]===wx&&clean(r);});
+      var monthHasElement=BRANCH_WX[pillars.month[1]]===wx||
+        (analysis.monthCommand.selectedStems||[]).some(function(st){return STEM_WX[st]===wx;});
+      var command=monthHasElement&&other.some(function(r){
+        return r.pillar==='month'&&STEM_WX[r.stem]===wx&&clean(r);
+      });
+      return [Number(revealed),Number(independent),Number(command)];
+    }
+    function dominates(a,b){return a.some(function(n,i){return n>b[i];})&&a.every(function(n,i){return n>=b[i];});}
+    function reach(a,b,chains){
+      var profiles=Object.assign({},current.profiles);
+      [a,b].filter(Boolean).forEach(function(root){
+        var p=profiles[root.god];
+        profiles[root.god]=Object.assign({},p,{branchEntries:p.branchEntries.map(function(item){
+          return annualActorKey(item)===annualActorKey(root)?Object.assign({},item,{annualTombClashes:clashes(root).map(tombPairKey)}):item;
+        })});
+      });
+      return interactionFlowAnalysis('',profiles,interactions,[],chains).steps.every(function(step){return step.active;});
+    }
+    function towardDay(root){
+      var wx=STEM_WX[root.stem],mine=['日主'],its=[root.god],key=annualActorKey(root);
+      if(wx===dayWx||gen[wx]===dayWx||ctrl[wx]===dayWx)return reach(root,null,[{
+        from:its,to:mine,action:wx===dayWx?'扶':gen[wx]===dayWx?'生':'制',leftActor:key
+      }]);
+      return reach(root,null,[{from:mine,to:its,action:gen[dayWx]===wx?'生':'制',rightActor:key}]);
+    }
+    function component(keys){
+      var existing=groups.filter(function(g){return keys.some(function(k){return g.keys.includes(k);});});
+      var group={keys:unique(keys.concat(existing.flatMap(function(g){return g.keys;}))),parts:existing.flatMap(function(g){return g.parts;}),contacts:existing.flatMap(function(g){return g.contacts;})};
+      groups=groups.filter(function(g){return !existing.includes(g);});
+      groups.push(group);
+      return group;
+    }
+    function part(group,source,root,relation,effect,value,why){
+      var actor=annualActorKey(root),key=[source,actor,relation,effect];
+      if(!group.parts.some(function(p){return JSON.stringify(p.key)===JSON.stringify(key);}))
+        group.parts.push({key:key,value:value,reason:why});
+    }
+    branches.filter(function(pair){return pair.active!==false&&pair.type==='冲'&&pair.involvesTemporal&&isTomb(pair.leftKey)&&isTomb(pair.rightKey);}).forEach(function(pair){
+      var keys=[pair.leftKey,pair.rightKey],a=rootsAt(keys[0]),b=rootsAt(keys[1]),group=component(keys);
+      group.contacts.push({keys:keys,type:'冲'});
+      [a,b].forEach(function(side,index){
+        var source=keys[1-index],soil=side[0];
+        if(!soil||soil.hiddenIndex!==0)return;
+        if(!soil.temporal||!grantable(soil)||!backing(soil,keys).some(Boolean)||!towardDay(soil)){
+          part(group,source,soil,'冲','土动',0,'土冲已见，当期本气增力未验实');
+          return;
+        }
+        var earthRole=role('土'),over=current.elementPhenomena.some(function(p){
+          return ['ZP-QX-001','ZP-QX-003','ZP-QX-009'].includes(p.ruleId);
+        });
+        var wasOver=base.elementPhenomena.some(function(p){return ['ZP-QX-001','ZP-QX-003','ZP-QX-009'].includes(p.ruleId);});
+        var fire=outlookGod(current,godNamesForElement(day,'火'));
+        var scorched=current.elementPhenomena.some(function(p){return p.ruleId==='ZP-QX-003';});
+        var excess=over&&!wasOver&&(!scorched||fire.clear&&fire.roots.some(clean));
+        var saturated=/弱/.test(base.strength)&&/强/.test(current.strength)&&canCarry;
+        var soilValue=earthRole==='忌'||excess?-1:!saturated&&!over&&earthRole!=='中'?1:0;
+        part(group,source,soil,'冲','土动',soilValue,soilValue?'有效土气进入实际作用':'土动未证净助害');
+      });
+      a.slice(1).forEach(function(left){b.slice(1).forEach(function(right){
+        var l=STEM_WX[left.stem],r=STEM_WX[right.stem];
+        if(!['木金','水火'].includes([l,r].sort().join('')))return;
+        if(!grantable(left)||!grantable(right)){
+          part(group,right.pillar,left,'冲','藏干未决',0,'仍有其他冲、合绊或改气约束');
+          return;
+        }
+        var attacker=ctrl[l]===r?left:right,receiver=attacker===left?right:left;
+        if(!reach(left,right,[{from:[attacker.god],to:[receiver.god],action:'制',leftActor:annualActorKey(attacker),rightActor:annualActorKey(receiver)}]))return;
+        var ls=backing(left,keys),rs=backing(right,keys);
+        var winner=dominates(ls,rs)?left:dominates(rs,ls)?right:null;
+        if(!winner){
+          part(group,right.pillar,left,'冲','藏干未决',0,'实透、清根与司令无明确一边倒优势');
+          return;
+        }
+        var loser=winner===left?right:left,key=annualActorKey(winner),lost=annualActorKey(loser);
+        if(towardDay(winner)){
+          var wx=STEM_WX[winner.stem],use=role(wx),wasClean=clean(oldRoots.get(key));
+          if(wasClean&&wx===ctrl[dayWx]){
+            // A natal hidden wealth root can be physically present while its
+            // receiving route is still unavailable.
+            var oldWealth=base.wealthChannel||wealthChannelState(base,analysis);
+            wasClean=oldWealth.effective&&oldWealth.roots.some(function(root){return annualActorKey(root)===key;});
+          }
+          var load=wx===ctrl[dayWx]&&!canCarry||ctrl[wx]===dayWx&&!current.carryingCapacity.tasks.officer.strictFormationEligible;
+          if(wx!==ctrl[dayWx]||canCarry)open[key]=clashes(winner).map(tombPairKey);
+          var full=backing(winner,keys).every(Boolean);
+          part(group,loser.pillar,winner,'冲','冲开',use==='忌'||load?-1:!wasClean&&use!=='中'?(full?2:1):0,
+            '藏干获独立根透支持，核对通道及承载');
+        }
+        if(clean(oldRoots.get(lost))&&(role(STEM_WX[loser.stem])!=='中'||primaryActors.has(lost))){
+          var hurtRole=role(STEM_WX[loser.stem]);
+          part(group,winner.pillar,loser,'冲','暗伤',hurtRole==='忌'&&!primaryActors.has(lost)?1:-1,'原有有效根在冲克中失用');
+        }
+      });});
+    });
+    Object.keys(pillars).filter(isTomb).forEach(function(key){
+      var change=branchInteractionChange(key,interactions,true);
+      if(!change||!change.relation.involvesTemporal)return;
+      var keys=change.kind==='group'?change.relation.positions.map(function(i){return interactions.pillarKeys[i];}):
+        [change.relation.leftKey,change.relation.rightKey];
+      var source=keys.find(function(k){return k!==key&&PILLAR_META[k].temporal;})||keys.find(function(k){return k!==key;});
+      var affected=rootsAt(key).filter(function(root){
+        return clean(oldRoots.get(annualActorKey(root)))&&
+          (root.boundByCombine||root.transformedAway)&&!open[annualActorKey(root)];
+      });
+      if(!affected.length)return;
+      var group=component(keys);
+      group.contacts.push({keys:keys,type:change.kind==='group'?'会局':'六合'});
+      affected.forEach(function(root){
+        var r=role(STEM_WX[root.stem]),essential=primaryActors.has(annualActorKey(root));
+        if(r==='中'&&!essential)return;
+        part(group,source,root,change.kind==='group'?'会局':'六合',root.transformedAway?'合化':'合绊',
+          r==='忌'&&!essential?1:-1,change.status+(root.boundByCombine?'，按已折半根力':'，原根改气'));
+      });
+    });
+    groups=groups.filter(function(g){return g.parts.length||g.contacts.some(function(c){return c.type==='冲';});});
+    if(!groups.length)return null;
+    groups.forEach(function(group){
+      group.id=group.keys.slice().sort().join('/')+'|'+unique(group.contacts.map(function(c){return c.type;})).sort().join('/');
+      var punishmentBranches=['丑','未','戌'];
+      if(punishmentBranches.every(function(branch){return Object.values(pillars).some(function(gz){return gz[1]===branch;});})&&
+        branches.some(function(pair){
+          return pair.active!==false&&pair.involvesTemporal&&pair.type==='刑'&&
+            punishmentBranches.includes(pillars[pair.leftKey][1])&&punishmentBranches.includes(pillars[pair.rightKey][1])&&
+            (group.keys.includes(pair.leftKey)||group.keys.includes(pair.rightKey));
+        }))group.punishment='丑未戌刑只核其实际土动或根损，沿用同一冲合净账';
+    });
+    return {groups:groups,open:open};
+  }
   function settleAnnualYear(base,luck,current,analysis,year,options,previousLuck){
+    function project(context,retained){
+      var tomb=annualTombDecision(base,context,analysis);
+      if(!tomb)return context;
+      var projected=Object.keys(tomb.open).length?buildTemporalPatternContext(base.pillars.day[0],context.pillars,analysis,
+        {outlookFlowYear:true,annualTomb:tomb,retainedRoots:retained}):Object.assign({},context);
+      projected.annualTomb=tomb;
+      projected.tombPlain=context;
+      return projected;
+    }
     var previousContext;
     function priorContext(){
       if(!previousContext){
         if(previousLuck===null)previousContext=base;
         else{
           var pillars=Object.assign({},luck.pillars,{luck:previousLuck,flowYear:getFlowYearGZ(year.year-1)});
-          previousContext=buildTemporalPatternContext(base.pillars.day[0],pillars,analysis,{outlookFlowYear:true});
+          previousContext=project(buildTemporalPatternContext(base.pillars.day[0],pillars,analysis,{outlookFlowYear:true}));
         }
       }
       return previousContext;
     }
     function evaluate(context,modes){
       if(!analysis.specialPatternQualification)context.wealthChannel=wealthChannelState(context,analysis);
-      var w=annualWealthActions(base,luck,context,analysis);
+      var channel=context.wealthChannel,plainWealth=context.tombPlain&&wealthChannelState(context.tombPlain,analysis);
+      // Even neutral wealth can help when the released root is what completes a usable channel.
+      if(plainWealth&&channel.canCarry&&channel.effective&&!plainWealth.effective){
+        var wealthRoots=new Set(channel.roots.map(annualActorKey)),tomb=context.annualTomb;
+        context.annualTomb=Object.assign({},tomb,{groups:tomb.groups.map(function(group){
+          var parts=group.parts.map(function(p){
+            if(p.key[3]==='冲开'&&p.value===0&&tomb.open[p.key[1]]&&wealthRoots.has(p.key[1])){
+              return Object.assign({},p,{value:1,reason:p.reason+'，开库接通可承接财路'});
+            }
+            return p;
+          });
+          return Object.assign({},group,{parts:parts});
+        })});
+      }
+      var w=annualWealthActions(base,luck,context,analysis,plainWealth);
       var annual=applyLuckTone(compareOutlookContexts(base,context,analysis,true),analysis,base.pillars,year.gz,'annual',context);
       annual=applyYearLuck(annual,analysis,base.pillars,luck.pillars.luck,year.gz,context);
       var extra=annualCoreChange(base,context,priorContext,annual).concat(annualSealContinuity(base,context));
       var settlement=settleAnnualLedger(annual,w,extra,context,modes?{replacementModes:modes}:null);
-      return {annual:annual,wealth:w,extra:extra,sums:settlement.sums,ledger:settlement.ledger,
+      return {annual:annual,wealth:w,extra:extra,sums:settlement.sums,ledger:settlement.ledger,tombEntries:settlement.tombEntries,
         uncertainReplacements:settlement.uncertainReplacements};
     }
-    var first=evaluate(current,null),baseContexts=[{retainedRoots:[],context:current,result:first}],roots=[];
-    var w=current.wealthChannel;
+    var projected=project(current),first=evaluate(projected,null),baseContexts=[{retainedRoots:[],context:projected,result:first}],roots=[];
+    var w=projected.wealthChannel;
     if(w&&w.uncertain){
       var day=current.pillars.day[0],names=['正财','偏财'];
       roots=unique(names.flatMap(function(name){
@@ -5573,6 +5879,7 @@
       }));
       roots.reduce(function(choices,key){return choices.concat(choices.map(function(x){return x.concat(key);}));},[[]]).slice(1).forEach(function(retained){
         var context=buildTemporalPatternContext(day,current.pillars,analysis,{outlookFlowYear:true,retainedRoots:retained});
+        context=project(context,retained);
         baseContexts.push({retainedRoots:retained,context:context,result:evaluate(context,null)});
       });
     }
@@ -5595,7 +5902,7 @@
         var settled=settleAnnualLedger(item.result.annual,item.result.wealth,item.result.extra,item.context,{replacementModes:modes});
         contexts.push({retainedRoots:item.retainedRoots,replacementStates:modes,
           result:{annual:item.result.annual,wealth:item.result.wealth,extra:item.result.extra,
-            sums:settled.sums,ledger:settled.ledger,uncertainReplacements:groups}});
+            sums:settled.sums,ledger:settled.ledger,tombEntries:settled.tombEntries,uncertainReplacements:groups}});
       });
     });
     var annual=first.annual;
@@ -5623,7 +5930,7 @@
     var relevant=contexts[wealthMerge.selectedIndex]||contexts[0];
     var selected=relevant.result,rows=selected.ledger;
     var usableSides=unique(rows.filter(function(r){return r.contribution>0;}).map(function(r){return r.side;}));
-    var detail=selected.annual.evidence.concat(selected.annual.reservations,selected.extra,selected.wealth.entries);
+    var detail=selected.annual.evidence.concat(selected.annual.reservations,selected.extra,selected.tombEntries,selected.wealth.entries);
     var confirmed=detail.filter(function(e){
       return rows.some(function(r){return r.ruleId===e.ruleId&&r.taskId===(e.taskId||e.ruleId)&&r.side===e.direction&&r.text===e.text&&r.contribution>0;});
     });

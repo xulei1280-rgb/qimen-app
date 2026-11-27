@@ -27,6 +27,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Outlook Stage 2 Rule 2 Four-Tomb Opening & Closing — 2026-11-28
+
+- 本轮在自用版 `main`（基线 `07e2a96`，仅改 `qimen-app`，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 2「辰戌丑未墓库开闭」（`bazi-engine.js` `luck-outlook-20261128.5`、`bazi.html?v=luck-20261128.5`、更新 `check-bazi-page.js`／`check-bazi-luck-state-change.cjs`／`check-bazi-dynamic-use.cjs` 并新增 `check-bazi-luck-rule2.cjs`）。原局排盘展示、历法、原局 720 组逐字段值、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩与 AI／记录契约均保持不变。
+- 岁运规则口径：仅在年度六柱结算（`settleAnnualYear`／`annualTombDecision`）逐根裁定四库冲开、暗伤、土动与合闭，仅豁免获准开库的那一类冲而不改原局与普通大运／流月；土冲土按激旺而非冲去，结合当期喜忌与规则 1 过旺病象／停记普通扶助实证记账；藏干开库支持同类多对墓库冲放行与同五行（`STEM_WX`）阳干透出／月令司令核验，未决状态不再误撤原有 `T-natal-clash`；常规高优先级主账优先于 `Y3-tomb` 结算，保留 `T-year-tkdc` 与 2/3 档主账并仅在重叠子项去重；身弱不任财的财库不写 `open[key]`（保 `W-peer`），移除 `ZP-QX-003` 冗余死代码；合绊沿用 `0.5` 不二次折减，丑未戌三刑不凭名扣分。
+- 验证与审计全通过：`node --check bazi-engine.js`、`git diff --check -- . ":(exclude)八字古籍参考/**"`、`check-baselines.js`（18 项）、`check-bazi-page.js`（含 720 组结构与页面回归）、`check-bazi-luck-state-change.cjs`、`check-bazi-dynamic-use.cjs`（实时校验当前代码规则 1 不变量全归零），以及 `check-bazi-luck-rule2.cjs`（四组正反例、720 组原局零变动、老王 2037 `0`／2030 `−5`、小蔓 2024 `+3`、香肠 2024 `−1`／2030 `+2.5` 三盘各 100 年单年与批量完全一致；固定 2,400 年有墓库事件 `660` 年、无墓库事件 `1,740` 年零漂移，`changedB=369`、`changedW=5`、`changedPending=21`、`changedDirection=104`、`flips=13`［正转负 `4`、负转正 `9`］、正向开财库 `3` 例［`#68 1981`、`#92 2003`、`#94 1988`］，全部不变量 `outputDoubleBooked`／`sameEventCoreConflict`／`tombSwallowedHigh`／`tkdcErased`／`tombUnsignedDuplicates`／`tombOppositeSigns`／`nonTombYearDrift`／`erasedY4`／`satNeg`／`changedSpecial` 均为 `0`）。
+- 下一步：在共同白板（`I:\白板工作目录\奇门起盘分析协作板.commonboard`）完成第二阶段规则 3「伏吟与反吟」（岁运并临、原局伏吟、原局反吟、岁运反吟 `T-year-tkdc` 校准）的 Codex 只读预审并定稿，再进入实现与 2,400 年复核；规则 4～5 及第三阶段展示文案优化按序推进。
+
 ### Bazi Luck Outlook Stage 2 Rule 1 Dynamic Useful Arbitration — 2026-11-28
 
 - 本轮在自用版 `main`（基线 `bb71472`，仅改 `qimen-app`，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 1「动态喜用仲裁与药过成毒」（`bazi-engine.js` `luck-outlook-20261128.3`、`bazi.html?v=luck-20261128.3`、更新 `check-bazi-page.js` 并新增 `check-bazi-dynamic-use.cjs`）。原局排盘展示、历法、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩与 AI／记录契约均保持不变。

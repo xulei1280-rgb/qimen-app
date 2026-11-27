@@ -303,7 +303,7 @@ const qimen = fs.readFileSync('qimen.js', 'utf8');
 const shensha = fs.readFileSync('bazi-shensha.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
 assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>'), 'bazi page should load the birth-time helper');
-assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261128\.3"/.test(html), 'bazi page should load shared rules before the updated engine');
+assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261128\.5"/.test(html), 'bazi page should load shared rules before the updated engine');
 assert(html.includes('src="bazi-visuals.js?v=20261127.1" defer') &&
   html.includes('href="bazi-visuals.css?v=20261127.1"'), 'trend chart and styles use the current cache version');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
@@ -1866,7 +1866,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261128.3', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261128.5', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
@@ -2455,23 +2455,23 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   const byRule = (result,rule) => counted(result).filter(x=>x.ruleId===rule);
   const allEvidence = verdict => [...verdict.evidence,...verdict.reservations];
   const sharedChart=fixture('丁卯','壬寅','乙酉','丙戌');
-  const sharedYear=entry(sharedChart,'甲辰',2009);
+  const sharedYear=entry(sharedChart,'甲寅',2009);
   const sharedGate=byRule(sharedYear,'Y3-core-gate')[0];
   const sharedFood=sharedYear.actionLedger.find(r=>r.ruleId==='W-food');
   assert(sharedGate?.contribution===3&&sharedFood?.contribution===0&&sharedFood.wealthContribution===1&&
-    sharedFood.action.route==='hour:丙:火>生>flowYear:丑藏己:土'&&sharedFood.exclusion==='duplicate-cause'&&
+    sharedFood.action.route==='hour:丙:火>生>luck:寅藏戊:土'&&sharedFood.exclusion==='duplicate-cause'&&
     sharedFood.mergedInto.some(x=>x.causeKey===sharedGate.causeKey)&&
     sharedGate.mergedItems.some(x=>x.ruleId==='W-food'),
     'the exact wealth step has one tier-3 B owner while keeping its original tier-1 W ownership');
-  assert(sharedYear.scenarios.every(s=>s.B===2&&s.W===1&&s.appliedTotal===s.B+0.25*s.W)&&
-    sharedYear.annual.amplitude.net===2.25&&sharedYear.wealth.amplitude.net===1&&
+  assert(sharedYear.scenarios.every(s=>s.B===5&&s.W===1&&s.appliedTotal===s.B+0.25*s.W)&&
+    sharedYear.annual.amplitude.net===5.25&&sharedYear.wealth.amplitude.net===1&&
     sharedYear.wealth.amplitude.breakdown.some(r=>r.ruleId==='W-food'&&r.contribution===1&&r.baseContribution===0&&!r.exclusion),
     'both axis breakdowns and the blended scenario reconcile to the correct magnitudes');
-  const baseOnlyShared=outlookEngine.evaluateLuckOutlook(sharedChart,'甲辰',null,[row(2009)],{wealthExtraWeight:0}).years[0];
-  assert(baseOnlyShared.annual.amplitude.net===sharedYear.comprehensiveRange.guaranteed&&baseOnlyShared.annual.amplitude.net===2,
+  const baseOnlyShared=outlookEngine.evaluateLuckOutlook(sharedChart,'甲寅',null,[row(2009)],{wealthExtraWeight:0}).years[0];
+  assert(baseOnlyShared.annual.amplitude.net===sharedYear.comprehensiveRange.guaranteed&&baseOnlyShared.annual.amplitude.net===5,
     'w=0 recovers the deduplicated B exactly');
   const gateCause='gain:'+sharedFood.action.route, supportCause='gain:luck:甲:木>扶>day:乙:木';
-  const gateEvent=['hour:丙:火','flowYear:丑藏己:土','生'], supportEvent=['luck:甲:木','day:乙:木','扶'];
+  const gateEvent=['hour:丙:火','luck:寅藏戊:土','生'], supportEvent=['luck:甲:木','day:乙:木','扶'];
   for(const fields of [
     {physicalCauses:[gateCause,supportCause]},
     {action:{events:[gateEvent,supportEvent]}},
@@ -2541,8 +2541,10 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   const caveats=['官杀去留','救应可达，但尚不能确认足以制去破坏'];
   const unresolved=y2030.annual.reservations.filter(e=>e.unresolvedCaveat);
   assert(y2030.gz==='庚戌'&&y2030.annual.assessment==='determined'&&y2030.annual.uncertainty.length===0&&
-    !y2030.effectiveRange.pending&&y2030.comprehensiveRange.guaranteed===5&&y2030.wealthRange.guaranteed===-1&&
-    y2030.effectiveRange.guaranteed===4.75,'Shizong 2030 keeps the settled upward step and the exact B/W blend');
+    !y2030.effectiveRange.pending&&y2030.comprehensiveRange.guaranteed===4&&y2030.wealthRange.guaranteed===-1&&
+    y2030.effectiveRange.guaranteed===3.75&&byRule(y2030,'Y3-carry-support').some(x=>x.contribution===2)&&
+    byRule(y2030,'LK-02').some(x=>x.contribution===2)&&y2030.actionLedger.some(x=>x.tomb?.net===0),
+    'Shizong 2030 retains both Tier 2 actions and scores the unverified soil movement at zero');
   assert(caveats.every(c=>unresolved.some(e=>e.text.includes(c))&&y2030.annual.unresolvedNotes.some(s=>s.includes(c)))&&
     unresolved.some(e=>e.taskId==='hurt-officer'&&e.text.includes(caveats[1]))&&
     !y2030.annual.evidence.some(e=>e.unresolvedCaveat||e.direction==='neutral'&&e.text.includes('轻重、任用或救应尚未确认'))&&
@@ -2783,9 +2785,12 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   }
   const opening=Array.from({length:10},(_,i)=>entry(summer,'戊午',1996+i));
   const [y1996,,,y1999]=opening;
-  assert(counted(y1996).filter(x=>x.ruleId==='Y3-replacement-medicine'&&/^承载不足·/.test(x.taskId)).length<=1&&
-    y1996.scenarios.every(s=>s.B<=0)&&y1996.annual.amplitude.net===0,
-    '1996 never books both sides of the same uncertain replacement and settles [-2,0] after shared medicine loss is removed');
+  const capacity1996=byRule(y1996,'Y3-replacement-medicine').filter(x=>/^承载不足·/.test(x.taskId));
+  assert(capacity1996.length===1&&capacity1996[0].side==='negative'&&capacity1996[0].contribution===2&&
+    y1996.scenarios.map(s=>s.B).join()==='0,0,2'&&y1996.effectiveRange.guaranteed===0&&
+    y1996.actionLedger.some(x=>x.tomb?.parts.some(p=>p.key[1]==='month:未藏乙:木'&&
+      p.value===0&&p.coveredBy==='Y3-replacement-medicine')),
+    '1996 keeps the Tier 2 root loss and separately settles the relief of earth binding');
   for(const y of opening) {
     assert(!counted(y).some(x=>x.taskId==='官杀去留'&&x.side==='negative'),
       'first-decade officer selection does not charge the already-owned seal loss in '+y.year);
@@ -2793,24 +2798,35 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   }
   const officerSelection=y1999.actionLedger.find(x=>x.taskId==='官杀去留');
   assert(officerSelection?.exclusion==='duplicate-cause'&&officerSelection.mergedInto.some(x=>x.taskId==='承载不足')&&
+    y1999.effectiveRange.guaranteed===-3&&y1999.actionLedger.some(x=>x.tomb?.net===0)&&
     y1999.scenarios.every(s=>s.B<0)&&counted(y1999).some(x=>x.taskId==='忌土可用根透'&&x.side==='negative')&&
     counted(y1999).some(x=>x.taskId==='火生忌土'&&x.side==='positive'),
     '1999 books the shared root obstruction once and preserves independent earth and fire changes');
   for(const task of ['木制忌土','水生喜用木']) {
     const shared=y1999.actionLedger.find(x=>x.ruleId==='Y5-role-action'&&x.taskId===task&&x.side==='negative');
     const separate=opening[2].actionLedger.find(x=>x.ruleId==='Y5-role-action'&&x.taskId===task&&x.side==='negative');
-    assert(shared?.contribution===0&&shared.mergedInto.length&&separate?.contribution>0,
+    assert(shared?.contribution===0&&shared.mergedInto.some(x=>x.taskId==='承载不足')&&separate?.contribution>0,
       'one lost wood root can own duplicate explanations, while additional changed paths remain eligible');
   }
   for(const year of [2026,2033]) {
     const y=entry(summer,'乙卯',year), states=y.scenarios.map(s=>Object.values(s.replacementStates));
     assert(states.map(s=>s.join()).join()==='-1,0,1'&&states.every(s=>s.length===1)&&
       new Set(y.actionLedger.filter(r=>r.replacementGroup).map(r=>r.replacementGroup)).size===1&&
-      y.effectiveRange.guaranteed===Math.min(...y.scenarios.map(s=>s.B))&&y.annual.amplitude.available&&
-      y.effectiveRange.reason==='bounded-magnitude', 'same replacement has three consistent scenarios at '+year);
+      y.effectiveRange.min===Math.min(...y.scenarios.map(s=>s.B))&&y.effectiveRange.max===Math.max(...y.scenarios.map(s=>s.B))&&
+      !y.annual.amplitude.available&&y.effectiveRange.reason==='reversal-risk',
+      'same replacement has three consistent scenarios at '+year);
   }
-  assert(entry(summer,'乙卯',2026).effectiveRange.guaranteed===0,
-    'the existing flat-to-positive feasible range remains confirmed flat');
+  const y2026=entry(summer,'乙卯',2026);
+  assert(y2026.scenarios.map(s=>s.B).join()==='-1,0,2'&&
+    y2026.actionLedger.some(x=>x.tomb?.net===0&&x.tomb.parts.some(p=>
+      p.key[1]==='month:未藏己:土'&&p.coveredBy==='Y5-role-action')),
+    '2026 keeps the actual transmission loss and settles the shared binding once');
+  const y2033=entry(summer,'乙卯',2033);
+  assert(y2033.scenarios.map(s=>s.B).join()==='-1,-1,1'&&
+    byRule(y2033,'Y3-replacement-medicine').some(x=>x.side==='negative'&&x.contribution===2)&&
+    byRule(y2033,'Y3-medicine').some(x=>x.side==='positive'&&x.contribution===2)&&
+    y2033.actionLedger.some(x=>x.tomb?.parts.some(p=>p.key[1]==='flowYear:丑藏己:土'&&p.value===-1)),
+    '2033 keeps both Tier 2 actions and the independent negative soil movement');
   for(const [luck,year] of [['辛亥',2073]]) {
     const y=entry(summer,luck,year), m=y.wealthMerge;
     assert(!y.comprehensiveRange.pending&&y.comprehensiveRange.guaranteed===0&&
