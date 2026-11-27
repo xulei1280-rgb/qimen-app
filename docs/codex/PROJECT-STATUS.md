@@ -27,6 +27,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Outlook Stage 1 Ledger Calibration — 2026-11-27
+
+- 本轮在自用版 `main`（基线 `db0f3978`，仅改 `qimen-app`，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第一阶段年度账本校准（`bazi-engine.js` `luck-outlook-20261127.3`、`bazi.html?v=luck-20261127.3`、扩充 `check-bazi-page.js` 与 `check-bazi-luck-state-change.cjs`）。继续冻结近合保留系数 `0.5`、三档离散力度、原有曲线压缩、`a_t = B + 0.25W`（含 `w=0` 还原）及严格跨零待判门闩，不改原局排盘、历法、喜用展示、AI 与记录契约。
+- 年度账本口径：同因按物理事件／路径逐项归并（`Y3-core-gate` 与 `W-food`／`W-bridge` 同路食伤生财只在 `B` 轴合并记一次重档并保留 `W` 原档位；混合条目只并重合事件、保留独立扶身等其余事件），六柱承载优先于原局偏弱，未触动旧病旧药对称归零，`Y3-core-gate` 新增「紧贴牵制减力」后余力／制约足量判据（不足降为 `Y3-core-partial` 1 档），并在已定实线年份保留非阻塞待核提示于 `annual.reservations`、`annual.unresolvedNotes` 与年度折叠详情（保持 `annual.uncertainty` 为空以兼容曲线渲染）。
+- 验证与审计全通过：`node --check`、`git diff --check`、`check-baselines.js`（18 项基线）、`check-bazi-page.js`（含 720 组结构复查及新增正反例）、`check-bazi-luck-state-change.cjs`（600 年综合待判 `21`、财运待判 `144`），以及 120 盘 2,400 年固定样本审计（重档补足 `69` 次、原局已成误补 `0` 次、重档破坏 `3` 次、同路财路 `B` 轴重计 `4 → 0`）；老王／小蔓／香肠三盘复算与 2030 庚戌最坏情景稳健性（`+4.75`，压力测试最低仍 `+0.75`）已归档于本阶段验收对照报告，香肠 2024（`−1`）按阶段边界如实保留。
+- 下一步：在共同白板（`I:\白板工作目录\奇门起盘分析协作板.commonboard`）与 Codex 协作稳步开展第二阶段，按单条规则先定口径、再落代码与反例核验（动态喜用仲裁与药过成毒、辰戌丑未墓库开闭、伏吟／反吟、假从格双情景严格跨零待判、阳刃／建禄缺口补齐）；第三阶段展示与多维文案优化仍暂缓。
+
 ### Bazi Luck Outlook Calibration & Single-Line Trend UI — 2026-11-27
 
 - 本轮在 `main`（基线 `8dbe5b8`）完成八字大运流年引擎三阶段改造与走势图交互升级（`bazi-engine.js` `luck-outlook-20261126.4`、`bazi-visuals.js`／`bazi-visuals.css`／`bazi.html` 资源版本 `20261127.1`，新增 `check-bazi-luck-state-change.cjs` 并扩充 `check-bazi-page.js`），不改动原局排盘、历法、AI 与记录契约。

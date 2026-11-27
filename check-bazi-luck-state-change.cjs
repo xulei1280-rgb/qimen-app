@@ -637,13 +637,57 @@ async function run() {
     }
   }
   const y18m = merged1993.allYears.find(y => y.y === 2018), y18b = baseOnly1993.allYears.find(y => y.y === 2018);
-  assert(y18b.annualImpulse === 0 && y18m.annualImpulse < 0, '2018 wealth turns net zero base into downward step under +25% weight');
+  assert.equal(y18m.amplitude.net, y18b.amplitude.net - 0.5, '2018 applies the verified wealth loss at +25% weight');
   const y21m = merged1993.allYears.find(y => y.y === 2021);
-  assert(y21m.annualImpulse === 0 && y21m.bandUp > 0 && y21m.bandDown > 0, '2021 net zero keeps bilateral gold band width');
+  assert(y21m.bandUp > 0 && y21m.bandDown > 0, '2021 keeps both verified forces in the gold band');
   const r93Box = mockChart(c);
   visuals._state.selectedYear = 2021;
   visuals.renderLuckSection(r93Box, real1993);
-  assert.match(r93Box.querySelector('#bzvAmplitudeDetail').innerHTML, /助力 3\.00 \/ 阻力 3\.00 · 净值 \+0\.00/);
+  assert(r93Box.querySelector('#bzvAmplitudeDetail').innerHTML.includes(
+    '助力 '+y21m.amplitude.positive.toFixed(2)+' / 阻力 '+y21m.amplitude.negative.toFixed(2)),
+  'the curve detail reconciles to the booked positive and negative totals');
+
+  const outlook = (person, luck, years) => c.BaziEngine.evaluateLuckOutlook(person, luck, null,
+    years.map(year => ({ year, gz: c.BaziEngine.getFlowYearGZ(year) }))).years;
+  const sameRoute=outlook({dayStem:'乙',pillars:{year:'丁卯',month:'壬寅',day:'乙酉',hour:'丙戌'}},'甲辰',[2009])[0];
+  const wealthStep=sameRoute.wealth.amplitude.breakdown.find(r=>r.ruleId==='W-food');
+  assert.equal(wealthStep.contribution,1);
+  assert.equal(wealthStep.baseContribution,0);
+  close(level(sameRoute.wealth).level,0.55/(1+0.12),'wealth compression uses the route’s own tier');
+  close(level(sameRoute.annual).level,0.55*2.25/(1+0.12*2.25),'combined compression uses the deduplicated B and weighted W');
+  const coreRow = (year, side) => year.actionLedger.find(r => r.ruleId==='Y3-core-gate'&&r.side===side&&r.contribution>0);
+  const killing = chart(c,1988,11,3,19);
+  const [opened, continuing, interrupted] = outlook(killing,'壬申',[1995,1996,1997]);
+  assert.equal(coreRow(opened,'positive')?.contribution,3);
+  assert.equal(coreRow(continuing,'positive')?.contribution,3);
+  assert(coreRow(opened,'positive').recovery && !coreRow(continuing,'positive').recovery);
+  assert.match(coreRow(opened,'positive').text,/恢复/);
+  assert.doesNotMatch(coreRow(continuing,'positive').text,/恢复/);
+  assert.equal(coreRow(interrupted,'positive'),undefined);
+  assert.equal(continuing.actionLedger.filter(r=>r.contribution>0&&r.recovery).length,0,
+    'a continuing rescue does not pay a second recovery bonus');
+  assert.deepEqual(JSON.parse(JSON.stringify(coreRow(outlook(killing,'壬申',[1996])[0],'positive'))),
+    JSON.parse(JSON.stringify(coreRow(continuing,'positive'))), 'isolated year and full-window recovery use the same clock');
+  const broken=outlook(chart(c,1996,2,7,4),'辛亥',[2024])[0];
+  assert.equal(coreRow(broken,'negative')?.contribution,3,'verified control-path loss earns symmetric tier 3');
+  assert(level(opened.annual).level>0 && level(continuing.annual).level>0 && level(broken.annual).level<0);
+
+  const [untouched]=outlook(chart(c,2000,1,1,12),'甲戌',[2005]);
+  const [unconfirmed]=outlook(chart(c,1961,10,17,14),'戊子',[2002]);
+  const touches=outlook(chart(c,1984,4,13,8),'己巳',[1996,1998]);
+  assert(untouched.background.natalDiseases.length&&untouched.actionLedger.every(r=>r.contribution===0)&&
+    level(untouched.annual).available);
+  assert.equal(level(untouched.annual).level,0);
+  assert.equal(unconfirmed.effectiveRange.reason,'missing-evidence');
+  assert.equal(level(unconfirmed.annual).level,null);
+  assert.deepEqual(touches.map(y=>y.actionLedger.find(r=>r.ruleId==='Y3-path-touch'&&r.contribution>0)?.contribution),[1,2]);
+  for(const sign of [1,-1]){
+    const slopes=[1,2,3].map(n=>level(result(sign>0?'positive':'negative',
+      [row(sign>0?'positive':'negative',n)] )).level);
+    assert(slopes.every(x=>Math.sign(x)===sign));
+    assert(Math.abs(slopes[0])<Math.abs(slopes[1])&&Math.abs(slopes[1])<Math.abs(slopes[2]),
+      'the existing compression preserves ordered, symmetric slope tiers');
+  }
 
   const s3Ctx = load(), s3Chart = chart(s3Ctx, 1993, 7, 14, 8);
   const mergeFn = s3Ctx.BaziEngine.settleScenarioWealthMerge;

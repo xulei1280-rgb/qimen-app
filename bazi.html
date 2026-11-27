@@ -1083,7 +1083,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="birth-time.js?v=20261107.1"></script>
 <script src="china-locations.js?v=20261122.1"></script>
 <script src="bazi-shensha.js?v=20261122.1"></script>
-<script src="bazi-engine.js?v=luck-20261126.4"></script>
+<script src="bazi-engine.js?v=luck-20261127.3"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -2136,16 +2136,16 @@ function outlookDisplayView(result){
   var lowItem=tiebreak&&items.find(function(x){return x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==direction});
   if(lowItem)selected=[selected[0],lowItem].concat(selected.slice(1,2).filter(function(x){return x!==lowItem}));
   else if(lower&&items.length&&selected.indexOf(items[items.length-1])<0)selected=selected.slice(0,2).concat([items[items.length-1]]);
-  var unresolved=(result.review&&result.review.afterTasks||[]).find(function(t){return t.state===null&&t.applicable!==false&&!t.auxiliary});
-  if(unresolved){
-    var bottleneck={'carry-wealth':'资源负担与自身根基的衔接','carry-output':'产出消耗与自身根基的衔接','carry-officer':'规则要求与自身根基的衔接','carry-kill':'外部压力与自身根基的衔接','handle-kill':'处理外部压力的化解路径','food-kill':'产出对外部压力的约束力度','hurt-seal':'靠山对表达产出的约束力度','kill-seal':'外部压力转成靠山的路径'}[unresolved.id]||'这项配合的实际承接力度';
-    selected=selected.slice(0,2).concat([{standard:'',professional:'未计入作用：'+outlookTaskMeaning(unresolved.id)+'本期不参与升降结算，结论按上列已采用证据。',direction:'neutral',taskId:unresolved.id}]);
+  var unresolvedNotes=result.assessment==='determined'?(result.unresolvedNotes||[]):[];
+  if(!Array.isArray(result.unresolvedNotes)){
+    var legacyNote=(result.review&&result.review.afterTasks||[]).find(function(t){return t.state===null&&t.applicable!==false&&!t.auxiliary});
+    if(legacyNote)selected=selected.slice(0,2).concat([{standard:'',professional:'未计入作用：'+outlookTaskMeaning(legacyNote.id)+'本期不参与升降结算，结论按上列已采用证据。',direction:'neutral',taskId:legacyNote.id}]);
   }
   selected=selected.map(function(x,i){return x.standard&&selected.slice(0,i).some(function(y){return y.standard===x.standard})?Object.assign({},x,{standard:''}):x});
   if(direction==='positive'||direction==='negative')selected=selected.map(function(x){return x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==direction?Object.assign({},x,{standard:'另一方面，'+x.standard}):x});
   var mixed=direction==='mixed'?mixedOutlookReadout(result):null;
   if(mixed)label='助：'+mixed.benefit.short.standard+'；牵：'+mixed.cost.short.standard;
-  return {direction:direction,assessment:result.assessment,label:label,professionalLabel:mixed?'助：'+mixed.benefit.short.professional+'；牵：'+mixed.cost.short.professional:label,mixed:mixed,items:selected};
+  return {direction:direction,assessment:result.assessment,label:label,professionalLabel:mixed?'助：'+mixed.benefit.short.professional+'；牵：'+mixed.cost.short.professional:label,mixed:mixed,items:selected,unresolvedNotes:unresolvedNotes};
 }
 
 function renderCoreCards(data){
@@ -3965,6 +3965,10 @@ function outlookCareAreas(result){
 }
 function renderOutlookBox(title,result,professionalTitle,extra){
   var view=outlookDisplayView(result);extra=extra||{};
+  function disclosure(label,lines){
+    var notes=Array.from(new Set(lines.concat(view.unresolvedNotes)));
+    return notes.length?'<details class="outlook-details"><summary>'+label+'</summary><ul>'+notes.map(function(text){return '<li>'+esc(text)+'</li>';}).join('')+'</ul></details>':'';
+  }
   function body(technical){var key=technical?'professional':'standard';
     if(result.direction==='pending'){
       var risks=(result.evidence||[]).filter(function(e){return e.direction==='negative'&&/^T-year-(same|clash|tkdc)$/.test(e.ruleId)});
@@ -3978,7 +3982,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       if(yc.also&&yc.also.length){
         alsoHtml=yc.also.map(function(x){return '<p class="outlook-note" data-mixed-effect="'+x.direction+'"><b>'+(x.direction==='positive'?'也有一点好处':'也有一点不利')+'：</b>'+esc(x.text)+'</p>';}).join('');
       }
-      return '<p>'+esc(yc.main||'')+'</p>'+alsoHtml+(yc.rest&&yc.rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+yc.rest.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul></details>':'');
+      return '<p>'+esc(yc.main||'')+'</p>'+alsoHtml+disclosure('查看判断依据',yc.rest||[]);
     }
     if(view.mixed){var mixed=view.mixed,main=mixed.focus==='positive'?mixed.benefit:mixed.cost,other=mixed.focus==='positive'?mixed.cost:mixed.benefit;
       var remaining=view.items.filter(function(x){return x.direction==='neutral'&&x[key]});
@@ -3992,7 +3996,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       return '<p data-mixed-effect="'+main.direction+'"><b>'+(technical?'说明重点（'+(main.direction==='positive'?'助力':'代价')+'）':'主要变化')+'：</b>'+esc(mainText)+'</p>'+
         (otherText?'<p data-mixed-effect="'+other.direction+'"><b>'+(technical?(other.direction==='negative'?'同时的代价':'同时的助力'):(other.direction==='negative'?'同时也有的不利':'同时也有的好处'))+'：</b>'+esc(otherText)+'</p>':'')+
         '<p class="outlook-note">'+esc(mixed.provenance[key])+'</p>'+
-        (remaining.length?'<details class="outlook-details"><summary>查看保留限制</summary>'+remaining.map(function(x){return '<p>'+esc(x[key])+'</p>'}).join('')+'</details>':'');
+        disclosure('查看保留限制',remaining.map(function(x){return x[key];}));
     }
     var items=view.items;
     if(!technical){
@@ -4008,7 +4012,7 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       rest=rest.filter(function(x){return !x.direction||x.direction==='neutral'||x.direction===view.direction});
     }
     var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+outlookMergeSides(opposite.map(function(x){return {direction:x.direction,text:outlookShareCause(items[0].standard,outlookSideCost(items[0].standard,x.standard.replace(/^另一方面，/,'')))}})).map(function(x){return esc(x.text)}).join('')+'</p>':'';
-    return '<p>'+esc(items[0][key])+'</p>'+also+(rest.length?'<details class="outlook-details"><summary>查看判断依据</summary><ul>'+rest.map(function(x){return '<li>'+esc(x[key])+'</li>'}).join('')+'</ul></details>':'')}
+    return '<p>'+esc(items[0][key])+'</p>'+also+disclosure('查看判断依据',rest.map(function(x){return x[key];}));}
   var standardBody=body(false),care=!extra.compare&&/^(多留心|稍需留心)$/.test(outlookPlainResult(view))?outlookCareAreas(result):[];
   var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{更难:'费力一些',稍难:'稍费力一些'})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+(care.length?'<div class="mode-copy standard-only" data-standard-copy><p class="outlook-note" data-care-areas>多照顾的方面：'+esc(care.join('、'))+'</p></div>':'')+modeCopy(outlookGlossOnce(standardBody),body(true))+outlookToneRow(result,standardBody)+(extra.trendHtml?extra.trend:(extra.standardTrend?'<div class="mode-copy standard-only" data-standard-copy>'+outlookNoteRow(extra.standardTrend)+'</div>':'')+outlookNoteRow(extra.trend))+'</div>';
   return extra.professionalOnly&&(!document.body||document.body.getAttribute('data-display-mode')!=='professional')?modeCopy('',box):box;

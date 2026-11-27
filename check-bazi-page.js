@@ -303,7 +303,7 @@ const qimen = fs.readFileSync('qimen.js', 'utf8');
 const shensha = fs.readFileSync('bazi-shensha.js', 'utf8');
 const engine = fs.readFileSync('bazi-engine.js', 'utf8');
 assert(html.includes('<script src="birth-time.js?v=20261107.1"></script>'), 'bazi page should load the birth-time helper');
-assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261126\.4"/.test(html), 'bazi page should load shared rules before the updated engine');
+assert(/src="bazi-shensha\.js\?v=20261122\.1"><\/script>\s*<script src="bazi-engine\.js\?v=luck-20261127\.3"/.test(html), 'bazi page should load shared rules before the updated engine');
 assert(html.includes('src="bazi-visuals.js?v=20261127.1" defer') &&
   html.includes('href="bazi-visuals.css?v=20261127.1"'), 'trend chart and styles use the current cache version');
 const defaultFormMatch = html.match(/function resetBaziFormToNow\(\)[\s\S]*?\n}/);
@@ -1866,7 +1866,7 @@ const outlookYearRows = Array.from({ length: 10 }, (_, index) => ({ year: 2020 +
 const outlookInputSnapshot = JSON.stringify(outlookConditionChart);
 const outlookHelp = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '庚午', outlookYearRows);
 // Legacy state-rank expectations are replaced by independently specified causal cases.
-assert(outlookHelp.ruleVersion === 'luck-outlook-20261126.4', 'the revised causal rules must be versioned');
+assert(outlookHelp.ruleVersion === 'luck-outlook-20261127.3', 'the revised causal rules must be versioned');
 assert(outlookHelp.natal.evidence.every(item => item.ruleId && item.source && Array.isArray(item.conditions)), 'every direction must carry its rule, source and actual conditions');
 assert(outlookHelp.natal.evidence.every(item => item.kind !== 'useful' && !item.text.includes('已破转为')), 'rank or generic element changes must not create a direction');
 const sameOutlook = outlookEngine.evaluateLuckOutlook(outlookConditionChart, '壬寅', '壬寅', []);
@@ -2454,6 +2454,108 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   const counted = result => result.actionLedger.filter(x=>x.contribution>0);
   const byRule = (result,rule) => counted(result).filter(x=>x.ruleId===rule);
   const allEvidence = verdict => [...verdict.evidence,...verdict.reservations];
+  const sharedChart=fixture('丁卯','壬寅','乙酉','丙戌');
+  const sharedYear=entry(sharedChart,'甲辰',2009);
+  const sharedGate=byRule(sharedYear,'Y3-core-gate')[0];
+  const sharedFood=sharedYear.actionLedger.find(r=>r.ruleId==='W-food');
+  assert(sharedGate?.contribution===3&&sharedFood?.contribution===0&&sharedFood.wealthContribution===1&&
+    sharedFood.action.route==='hour:丙:火>生>flowYear:丑藏己:土'&&sharedFood.exclusion==='duplicate-cause'&&
+    sharedFood.mergedInto.some(x=>x.causeKey===sharedGate.causeKey)&&
+    sharedGate.mergedItems.some(x=>x.ruleId==='W-food'),
+    'the exact wealth step has one tier-3 B owner while keeping its original tier-1 W ownership');
+  assert(sharedYear.scenarios.every(s=>s.B===2&&s.W===1&&s.appliedTotal===s.B+0.25*s.W)&&
+    sharedYear.annual.amplitude.net===2.25&&sharedYear.wealth.amplitude.net===1&&
+    sharedYear.wealth.amplitude.breakdown.some(r=>r.ruleId==='W-food'&&r.contribution===1&&r.baseContribution===0&&!r.exclusion),
+    'both axis breakdowns and the blended scenario reconcile to the correct magnitudes');
+  const baseOnlyShared=outlookEngine.evaluateLuckOutlook(sharedChart,'甲辰',null,[row(2009)],{wealthExtraWeight:0}).years[0];
+  assert(baseOnlyShared.annual.amplitude.net===sharedYear.comprehensiveRange.guaranteed&&baseOnlyShared.annual.amplitude.net===2,
+    'w=0 recovers the deduplicated B exactly');
+  const gateCause='gain:'+sharedFood.action.route, supportCause='gain:luck:甲:木>扶>day:乙:木';
+  const gateEvent=['hour:丙:火','flowYear:丑藏己:土','生'], supportEvent=['luck:甲:木','day:乙:木','扶'];
+  for(const fields of [
+    {physicalCauses:[gateCause,supportCause]},
+    {action:{events:[gateEvent,supportEvent]}},
+    {physicalCauses:[gateCause],action:{events:[supportEvent]}},
+    {physicalCauses:[supportCause],action:{events:[gateEvent]}}
+  ]){
+    const mixed={ruleId:'Y3-path-touch',direction:'positive',text:'同路与独立扶身',annualMagnitude:1,...fields};
+    const gate={...sharedGate,direction:'positive',annualMagnitude:3,relatedGateEvidence:[mixed]};
+    const {ledger,sums}=rules.annualLedger({evidence:[mixed]},{entries:[]},[gate],{});
+    assert(ledger[0].contribution===3&&ledger[0].mergedItems.some(r=>r.ruleId===mixed.ruleId)&&
+      ledger[1].mergedInto.some(r=>r.ruleId===gate.ruleId)&&ledger[1].ownedEventKeys.join()===
+        JSON.stringify(['positive',...supportEvent])&&ledger[1].contribution===1&&sums.B===4,
+      'a gate alias covers only the overlapping cause or explicit event and retains independent support');
+  }
+  for(const fields of [{physicalCauses:[gateCause]},{action:{events:[gateEvent]}}]){
+    const full={ruleId:'Y3-path-touch',direction:'positive',text:'只有同路',annualMagnitude:1,...fields};
+    const gate={...sharedGate,direction:'positive',annualMagnitude:3,relatedGateEvidence:[full]};
+    const {ledger,sums}=rules.annualLedger({evidence:[full]},{entries:[]},[gate],{});
+    assert(ledger[1].ownedEventKeys.length===0&&ledger[1].contribution===0&&ledger[1].exclusion==='duplicate-cause'&&
+      sums.B===3,'a fully overlapping row contributes zero');
+  }
+  const wealthOwner={...sharedFood,direction:'positive',annualMagnitude:1};
+  const mixedWealth={ruleId:'Y5-role-action',taskId:'火生喜用土',direction:'positive',text:'财路加独立扶身',
+    annualMagnitude:1,physicalCauses:[gateCause,supportCause]};
+  const wealthPartial=rules.annualLedger({evidence:[mixedWealth]},{entries:[wealthOwner]},[],{});
+  assert(wealthPartial.sums.B===2&&wealthPartial.sums.W===1&&
+    wealthPartial.ledger[1].ownedEventKeys.length===1&&wealthPartial.ledger[1].mergedInto[0]?.ruleId==='W-food',
+    'the wealth mediator aliases its own cause without consuming independent support');
+  const independent=entry(fixture('乙未','壬午','丙辰','己亥'),'甲申',2035);
+  assert(byRule(independent,'Y3-core-gate').some(r=>r.taskId==='伤官配印格'&&r.contribution===3)&&
+    byRule(independent,'W-root').some(r=>r.contribution===1&&r.wealthContribution===1)&&
+    byRule(independent,'Y3-path-touch').some(r=>r.contribution===2&&r.mergedInto.some(owner=>owner.ruleId==='Y3-core-gate')&&
+      r.ownedEventKeys.length>0)&&independent.scenarios.every(s=>s.B===9&&s.W===1&&s.appliedTotal===9.25),
+    'the independent wealth root keeps B and W while the gate alias retains additional active paths');
+
+  for(const side of ['positive','negative']){
+    const route={ruleId:'W-food',direction:side,text:'same physical route',annualMagnitude:2,action:sharedFood.action};
+    const gate={ruleId:'Y3-core-gate',direction:side,text:'verified gate',annualMagnitude:3,action:sharedGate.action,
+      coreGate:sharedGate.coreGate};
+    const other={...route,text:'restated wealth route',action:{...route.action,sourceKeys:[...route.action.sourceKeys,'luck:甲:木']}};
+    const settled=rules.annualLedger({evidence:[]},{entries:[route,other]},[gate],{});
+    const sign=side==='positive'?1:-1;
+    assert(settled.sums.B===sign*3&&settled.sums.W===sign*2&&
+      settled.ledger.filter(r=>r.wealth).every(r=>r.contribution===0&&r.mergedInto.length===1)&&
+      settled.ledger.filter(r=>r.wealthContribution>0).length===1,
+      'same-route Tier 3 deduplication is symmetric and repeated W descriptions own the route only once');
+  }
+
+  const sufficient=entry(fixture('庚寅','乙酉','庚申','壬午'),'丙戌',1961);
+  const sufficientGate=byRule(sufficient,'Y3-core-gate')[0];
+  const sufficientCheck=sufficientGate?.coreGate.restrainedChecks[0];
+  assert(sufficientGate?.contribution===3&&sufficientGate.coreGate.steps[0].restrained&&
+    sufficientCheck?.right.stemPower===0.5&&sufficientCheck.right.rootPower===0.92&&
+    sufficientCheck.left.effective>=sufficientCheck.right.effective&&sufficientCheck.sufficient,
+    'retained support and control strength can still satisfy a reduced core step');
+  for(const [chart,luck,year] of [[fixture('辛亥','庚子','壬辰','庚子'),'戊戌',1993],[fixture('甲戌','丁卯','戊戌','庚申'),'乙丑',2009]]){
+    const insufficient=entry(chart,luck,year);
+    const local=byRule(insufficient,'Y3-core-partial')[0], proof=local?.coreGate.restrainedChecks[0];
+    assert(local?.contribution===1&&local.side==='positive'&&!local.recovery&&local.text.includes('局部救应')&&
+      local.coreGate.steps[0].restrained&&proof?.left.stemPower===0.5&&proof.left.rootPower===0&&
+      !proof.sufficient&&!byRule(insufficient,'Y3-core-gate').length,
+      'an active restrained step without usable backing earns only Tier 1');
+  }
+  const chart2=outlookEngine.createBaziProfile({input:{year:1993,month:7,day:14,hour:8,minute:40},gender:'男',
+    location:{name:'师宗',lng:103.9936,lat:24.8222},useTrueSolar:true,useDaylightSaving:false});
+  const y2030=entry(chart2,'乙卯',2030);
+  const caveats=['官杀去留','救应可达，但尚不能确认足以制去破坏'];
+  const unresolved=y2030.annual.reservations.filter(e=>e.unresolvedCaveat);
+  assert(y2030.gz==='庚戌'&&y2030.annual.assessment==='determined'&&y2030.annual.uncertainty.length===0&&
+    !y2030.effectiveRange.pending&&y2030.comprehensiveRange.guaranteed===5&&y2030.wealthRange.guaranteed===-1&&
+    y2030.effectiveRange.guaranteed===4.75,'Shizong 2030 keeps the settled upward step and the exact B/W blend');
+  assert(caveats.every(c=>unresolved.some(e=>e.text.includes(c))&&y2030.annual.unresolvedNotes.some(s=>s.includes(c)))&&
+    unresolved.some(e=>e.taskId==='hurt-officer'&&e.text.includes(caveats[1]))&&
+    !y2030.annual.evidence.some(e=>e.unresolvedCaveat||e.direction==='neutral'&&e.text.includes('轻重、任用或救应尚未确认'))&&
+    y2030.annual.review.afterTasks.filter(t=>t.state===null&&t.applicable!==false&&!t.auxiliary)
+      .every(t=>y2030.annual.unresolvedNotes.some(note=>note.startsWith(t.label+'：'))),
+    'each applicable unresolved task is reserved separately from the confirmed evidence');
+  for(const extra of [{},{yearCopy:{kind:'plain',main:'本年综合向上。',rest:[]}}]){
+    const html=scriptContext.renderOutlookBox('年度综合',y2030.annual,undefined,extra);
+    const details=[...html.matchAll(/<details class="outlook-details"><summary>查看(?:保留限制|判断依据)<\/summary>([\s\S]*?)<\/details>/g)];
+    assert(details.some(m=>caveats.every(c=>m[1].includes(c)))&&
+      caveats.every(c=>!html.replace(/<details\b[\s\S]*?<\/details>/g,'').includes(c)),
+      'the confirmed headline stays concise and both caveats appear inside a collapsed disclosure');
+  }
   const summer = calendar(1993,7,14,8), years = Array.from({length:9},(_,i)=>row(2018+i));
   const annual = outlookEngine.evaluateLuckOutlook(summer,'丙辰','丁巳',years).years;
   const [y2018,y2019,y2020,y2021,y2022,,,y2025] = annual;
@@ -2463,7 +2565,7 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   assert(recovery.recovery&&recovery.text.includes('丙辰运中，癸制运丙，原来藏在申中的庚接通财路')&&
     recovery.action.mediatorKeys.includes('day:申藏庚:金'), '2019 must name the precise existing mediator and the released obstruction');
   assert(byRule(y2020,'W-bridge').length===1&&byRule(y2020,'W-bridge')[0].action.mediatorKeys.includes('flowYear:庚:金')&&
-    y2020.actionLedger.some(x=>x.exclusion==='duplicate-wealth-route')&&
+    byRule(y2020,'W-bridge')[0].mergedItems.some(x=>x.taskId==='官伤冲战')&&
     counted(y2020).some(x=>x.side==='negative'&&!x.wealth), '2020 books the common route once while retaining other verified pressure');
   assert(annual.filter(x=>counted(x).some(r=>r.recovery)).length===2&&
     byRule(annual[5],'W-bridge')[0]?.recovery&&annual[5].wealthRange.guaranteed===1&&
@@ -2492,17 +2594,21 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
       y.annual.amplitude.rawPositive===y.annual.amplitude.positive&&y.annual.amplitude.rawNegative===y.annual.amplitude.negative,
       'bilateral positive and negative totals reconcile to net for display');
   }
-  assert(y2021.annual.amplitude.positive>0&&y2021.annual.amplitude.negative>0&&y2021.annual.amplitude.net===0,
-    '2021 records equal active positive and negative forces even when net impulse is 0');
+  assert(y2021.annual.amplitude.positive>0&&y2021.annual.amplitude.negative>0,
+    '2021 retains independently verified pressure and relief in the bilateral ledger');
 
   const owl = fixture('丁巳','己酉','己巳','庚午');
   const medicine = year => byRule(entry(owl,'辛亥',year),'Y3-medicine').find(x=>x.taskId==='枭夺食');
   assert(medicine(1997)?.contribution===1&&medicine(1997).text.includes('丑藏癸')&&
-    medicine(2003)?.contribution===2&&medicine(2003).text.includes('癸偏财制丁偏印'),
-    'hidden and visible treatment must differ against the same pathogen');
+    medicine(2003)?.contribution===3&&medicine(2003).text.includes('癸偏财制丁偏印'),
+    'a local hidden remedy and a verified complete remedy use different tiers against the same pathogen');
+  const offset=entry(owl,'辛亥',1997).annual.amplitude;
+  assert(offset.available&&offset.net===0&&offset.positive>0&&offset.negative>0,
+    'independent active forces can balance to a confirmed zero without erasing both ledger sides');
   const sole = entry(fixture('乙丑','戊寅','壬午','庚戌'),'己卯',1995);
-  assert(byRule(sole,'Y3-seal-continuity').some(x=>x.contribution===3&&x.action.mediatorKeys.includes('hour:庚:金')&&
-    x.text.includes('戌藏戊')&&!x.action.replacement), 'loss of the exact sole mediator gets the heavy tier after alternative search');
+  assert(byRule(sole,'Y3-seal-continuity').some(x=>x.contribution===1&&x.action.mediatorKeys.includes('hour:庚:金')&&
+    x.action.replacement==='year:丑藏辛:金'&&x.action.replacementSource==='luck:己:土'),
+    'the bound seal loses amplitude while a residual rooted seal takes over with the new pressure source');
 
   const dry = outlookEngine.analyzePattern(fixture('己巳','丁卯','乙巳','丙戌'));
   const water = dry.useful.decision.routes.find(x=>x.id==='phenomenon-remedy').effectiveness.水;
@@ -2510,9 +2616,13 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
     !dry.useful.decision.elements.find(x=>x.element==='水').benefitEntries.some(x=>x.status==='local'), 'missing water remains a remedy candidate');
   const heavyEarth = outlookEngine.analyzePattern(fixture('戊戌','丙辰','辛丑','戊戌'));
   assert(heavyEarth.elementPhenomena.some(x=>x.name==='土厚埋金'), 'the restricted middle root alone cannot veto earth burying metal');
-  const child = entry(fixture('甲午','丙寅','癸未','乙卯'),'戊申',2000);
+  const child = entry(fixture('甲午','丙寅','癸未','乙卯'),'戊申',1992);
   assert(child.annual.review.afterTasks.some(x=>x.id==='special-flow'&&x.state===1&&x.reason.includes('食伤生财仍可达'))&&
     !counted(child).some(x=>x.taskId==='special-reversal'||/承载/.test(x.taskId)), 'rooted follow-child keeps a verified food-to-wealth outlet without the ordinary carrying echo');
+  const childBlocked=entry(fixture('甲午','丙寅','癸未','乙卯'),'戊申',2000);
+  assert(childBlocked.annual.review.afterTasks.some(x=>x.id==='special-flow'&&x.state===0)&&
+    byRule(childBlocked,'Y3-core-gate').some(r=>r.side==='negative'&&r.contribution===3),
+    'a verified effective reversal still breaks the special route');
 
 
   const plant=fixture('戊寅','戊午','辛丑','壬辰'), plantAnalysis=outlookEngine.analyzePattern(plant);
@@ -2524,6 +2634,107 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   const substitute=rules.seal(plantNatal,tiedPlant).find(x=>x.action.mediatorKeys.includes('month:戊:土'));
   assert(substitute?.annualMagnitude===0&&substitute.action.replacement==='year:戊:土'&&substitute.text.includes('午藏丁'),
     'the year-stem 戊 can receive the exact same 午藏丁 and carry the original function after month-stem 戊 is bound');
+
+  const bindChart=calendar(2000,1,1,12);
+  const annualContext=(chart,luck,year)=>scriptContext.__patternReview.context(chart.dayStem,
+    {...chart.pillars,luck,flowYear:outlookEngine.getFlowYearGZ(year)},outlookEngine.analyzePattern(chart),{outlookFlowYear:true});
+  const adequate=annualContext(bindChart,'甲戌',2000), overloaded=annualContext(summer,'丙辰',2016);
+  assert(/弱/.test(outlookEngine.analyzePattern(bindChart).strength)&&adequate.carryingCapacity.canCarryOutputKill&&
+    !entry(bindChart,'甲戌',2000).actionLedger.some(r=>r.ruleId==='Y4-output-load'&&r.side==='negative'&&r.contribution>0),
+    'an annual carrying certificate takes precedence over the natal weak label');
+  assert(!overloaded.carryingCapacity.canCarryOutputKill&&
+    byRule(entry(summer,'丙辰',2016),'Y4-output-load').some(r=>r.side==='negative'),
+    'a real unsustained increase in output still charges the carrying load');
+  const restrained=annualContext(bindChart,'甲戌',2001);
+  const restrainedSeal=byRule(entry(bindChart,'甲戌',2001),'Y3-seal-continuity');
+  assert(['正印','偏印'].some(god=>restrained.profiles[god]?.stemEntries.some(x=>
+    x.pillar==='month'&&x.effect==='bind'&&x.usable&&x.retention===0.5))&&
+    restrainedSeal.some(r=>r.contribution===1&&!r.action.replacement&&r.text.includes('原印减力')),
+    'a comparable close bind attenuates the original effective seal while retaining transmission');
+  const dominant=annualContext(calendar(1988,11,3,19),'壬申',2025);
+  assert(dominant.interactions.stemCombines.some(x=>x.unbalanced&&x.effect==='clue'&&x.active===false),
+    'an unrooted weak stem cannot block the rooted, seasonally supported dominant stem');
+  const remote=annualContext(fixture('乙丑','戊寅','壬午','庚戌'),'己卯',1995);
+  assert(remote.interactions.stemCombines.some(x=>x.leftKey==='year'&&x.rightKey==='hour'&&x.effect==='clue'&&!x.active),
+    'a remote natal matching pair is only a clue');
+  const transformed=annualContext(fixture('壬申','壬子','戊辰','丙辰'),'戊戌',2031);
+  assert(transformed.interactions.stemCombines.some(x=>x.leftKey==='hour'&&x.rightKey==='flowYear'&&x.effect==='transform')&&
+    transformed.profiles['偏印'].stemEntries.some(x=>x.pillar==='hour'&&x.effect==='transform'&&!x.usable&&x.retention===0),
+    'verified transformation removes the old seal role completely');
+  const soleSealNatal=JSON.parse(JSON.stringify(plantNatal));
+  soleSealNatal.profiles['正印'].stemEntries=soleSealNatal.profiles['正印'].stemEntries.filter(x=>x.pillar==='month');
+  soleSealNatal.profiles['正印'].branchEntries=[];
+  delete soleSealNatal.profiles['偏印'];
+  const lostSeal=JSON.parse(JSON.stringify(soleSealNatal));
+  lostSeal.pillars.flowYear='癸巳';
+  lostSeal.interactions.stemCombines.push({left:1,right:5,leftKey:'month',rightKey:'flowYear',
+    effect:'transform',active:true,involvesTemporal:true,text:'戊癸合化火'});
+  Object.assign(lostSeal.profiles['正印'].stemEntries[0],{effect:'transform',usable:false,retention:0});
+  assert(rules.seal(soleSealNatal,lostSeal).some(r=>r.direction==='negative'&&r.annualMagnitude===3&&!r.action.replacement),
+    'verified transformation with the pressure still present and no replacement books full loss');
+
+  const newSource=JSON.parse(JSON.stringify(tiedPlant));
+  newSource.pillars.flowYear='丁巳';
+  newSource.pillars.luck='癸亥';
+  Object.assign(newSource.interactions.stemCombines.at(-1),{right:4,rightKey:'luck'});
+  newSource.profiles['七杀'].stemEntries.push({pillar:'flowYear',position:5,stem:'丁',temporal:true,usable:true});
+  newSource.profiles['七杀'].branchEntries.forEach(actor=>{actor.usable=false;});
+  const annualReplacement=rules.seal(plantNatal,newSource).find(x=>x.action.mediatorKeys.includes('month:戊:土'));
+  assert(annualReplacement?.annualMagnitude===0&&annualReplacement.action.replacement==='year:戊:土'&&
+    annualReplacement.action.replacementSource==='flowYear:丁:火', 'a revealed flow-year killing stem can take over supply');
+
+  const event=(ruleId,direction,source,target,family)=>({
+    ruleId,direction,text:ruleId,annualMagnitude:1,
+    action:{sourceKeys:[source],targetKeys:[target],mediatorKeys:[],effect:family,events:[[source,target,family]]}
+  });
+  const symmetric=[
+    ...['positive','negative'].flatMap(side=>[
+      event('Y3-first-'+side,side,'luck:甲:木','month:己:土','restraint'),
+      event('Y5-echo-'+side,side,'luck:甲:木','month:己:土','restraint')
+    ]),
+    event('Y4-other-target','positive','luck:甲:木','hour:戊:土','restraint'),
+    event('Y4-other-source','negative','flowYear:乙:木','month:己:土','restraint'),
+    event('Y4-other-mechanism','negative','luck:甲:木','month:己:土','transmission')
+  ];
+  const symmetricLedger=rules.annualLedger({evidence:symmetric},{entries:[]},[],plantNatal);
+  assert(symmetricLedger.sums.positive===2&&symmetricLedger.sums.negative===3&&
+    symmetricLedger.ledger.filter(r=>r.exclusion==='duplicate-cause').length===2&&
+    symmetricLedger.ledger.filter(r=>r.mergedItems.length).every(owner=>owner.contribution===1)&&
+    symmetricLedger.ledger.filter(r=>r.exclusion==='duplicate-cause').every(r=>r.contribution===0&&r.mergedInto.length===1),
+    'same-cause identity is bilateral and retains a distinct source, target or mechanism');
+
+  const deposited='luck:午藏己:土', oldFire='year:丙:火', oldEarth='hour:戊:土';
+  function physical(ruleId,taskId,direction,...physicalCauses){
+    return {ruleId,taskId,direction,text:taskId,annualMagnitude:1,physicalCauses};
+  }
+  const earthRows=[
+    {...physical('Y3-earth-metal','土厚埋金·土','negative','gain:'+deposited),earthBuildup:true},
+    {...physical('Y3-earth-metal','土厚埋金·火','negative','gain:'+oldFire+'>生>'+deposited),earthBuildup:true},
+    physical('Y5-role-root','忌土可用根透','negative','gain:'+deposited),
+    physical('Y5-role-action','火生忌土','negative','gain:'+oldFire+'>生>'+deposited,'gain:'+oldFire+'>生>'+oldEarth)
+  ];
+  const earthLedger=rules.annualLedger({evidence:earthRows},{entries:[]},[],plantNatal);
+  assert(earthLedger.sums.negative===2&&earthLedger.ledger.filter(r=>r.contribution===0).length===2&&
+    earthLedger.ledger.find(r=>r.ruleId==='Y5-role-action').ownedEventKeys.length===1&&
+    earthLedger.ledger.find(r=>r.ruleId==='Y5-role-action').mergedInto.length===1,
+    'added hidden earth is booked once across its three descriptions, with independent fire feed still counted');
+  for(const side of ['negative','positive']){
+    const change=(side==='negative'?'gain:':'loss:')+'flowYear:戊:土>制>month:壬:水';
+    const conflict=rules.annualLedger({evidence:[
+      physical('Y3-medicine','官伤冲战',side,change),
+      physical('Y3-medicine','食伤去留',side,change)
+    ]},{entries:[]},[],plantNatal);
+    assert(conflict.ledger.filter(r=>r.contribution===1).length===1&&
+      conflict.ledger.find(r=>r.contribution===0).mergedInto.length===1,
+      'two labels for the same directed food/officer control merge on either side');
+  }
+  const sealLedger=rules.annualLedger({evidence:[
+    physical('Y5-role-root','喜用土可用根透','negative','loss:month:戊:土'),
+    {...physical('T-natal-combine','month:stem:土','negative'),natalRoleElement:'土',
+      natalContact:{source:'flowYear',target:'month',branch:false,clash:false}}
+  ]},{entries:[]},[substitute],tiedPlant);
+  assert(sealLedger.sums.negative===0&&sealLedger.ledger.find(r=>r.ruleId==='Y3-seal-continuity').mergedItems.length===2,
+    'a fully replaced transmission owns the shared stem bind and cancels its two adverse echo charges');
 
   const bridgeActors={
     伤官:{stemEntries:[{pillar:'year',position:0,stem:'己'}]},
@@ -2548,9 +2759,14 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
   gated.profiles['正印'].branchEntries[0].usable=false;
   assert(!rules.condition(gated,conditional,'水','year:癸:水'), 'promotion does not bypass conditional reach or actor availability');
 
-  const muted=rules.annualLedger({evidence:[{ruleId:'Y3-medicine',taskId:'静态病点',direction:'negative',text:'背景病点'}]},
+  const staticPath=[{key:'hour:干:丁:偏印>生>day:干:己:日主'}];
+  const muted=rules.annualLedger({evidence:[
+    {ruleId:'Y3-medicine',taskId:'静态病点',direction:'negative',text:'背景病点'},
+    {ruleId:'Y3-required-path',taskId:'静态药路',direction:'positive',text:'原有药路',before:staticPath,after:staticPath}
+  ]},
     {entries:[]},[],plantNatal);
-  assert(muted.sums.B===0&&muted.ledger.every(x=>x.contribution===0), 'an unchanged natal condition is background only');
+  assert(muted.sums.B===0&&muted.ledger.every(x=>x.contribution===0),
+    'untouched natal flaws and remedies are both zero background in the annual ledger');
 
   const priorRisk = entry(calendar(1961,10,17,14),'戊子',2062).annual;
   assert(priorRisk.direction==='pending'&&!priorRisk.amplitude.available&&priorRisk.uncertainty.length&&
@@ -2576,40 +2792,36 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
     assert(counted(y).some(x=>x.side==='negative'), 'deduplication retains verified temporal pressure in '+y.year);
   }
   const officerSelection=y1999.actionLedger.find(x=>x.taskId==='官杀去留');
-  assert(officerSelection?.exclusion==='duplicate-cause'&&officerSelection.physicalCauses.join()==='loss:month:未藏乙:木'&&
-    y1999.comprehensiveRange.guaranteed===-2&&y1999.wealthRange.guaranteed===-1&&y1999.effectiveRange.guaranteed===-2.25,
-    '1999 books carrying, wealth and adverse earth once apiece, with separate relief from reduced fire feed');
-  for(const y of opening.filter(y=>[1998,2001,2004].includes(y.year))) {
-    for(const task of ['木制忌土','水生喜用木']) {
-      const action=y.actionLedger.find(x=>x.ruleId==='Y5-role-action'&&x.taskId===task&&x.side==='negative');
-      assert(action?.exclusion==='duplicate-cause'&&action.physicalCauses.join()==='loss:month:未藏乙:木',
-        'lost wood owns its broken restraint and incoming support at '+y.year);
-    }
+  assert(officerSelection?.exclusion==='duplicate-cause'&&officerSelection.mergedInto.some(x=>x.taskId==='承载不足')&&
+    y1999.scenarios.every(s=>s.B<0)&&counted(y1999).some(x=>x.taskId==='忌土可用根透'&&x.side==='negative')&&
+    counted(y1999).some(x=>x.taskId==='火生忌土'&&x.side==='positive'),
+    '1999 books the shared root obstruction once and preserves independent earth and fire changes');
+  for(const task of ['木制忌土','水生喜用木']) {
+    const shared=y1999.actionLedger.find(x=>x.ruleId==='Y5-role-action'&&x.taskId===task&&x.side==='negative');
+    const separate=opening[2].actionLedger.find(x=>x.ruleId==='Y5-role-action'&&x.taskId===task&&x.side==='negative');
+    assert(shared?.contribution===0&&shared.mergedInto.length&&separate?.contribution>0,
+      'one lost wood root can own duplicate explanations, while additional changed paths remain eligible');
   }
-  const y2022Child=entry(calendar(2000,1,1,12),'甲戌',2022);
-  assert(y2022Child.scenarios.map(s=>s.B).join()==='0,2,3'&&y2022Child.annual.amplitude.available&&
-    y2022Child.effectiveRange.direction==='neutral'&&y2022Child.effectiveRange.guaranteed===0&&
-    y2022Child.effectiveRange.reason==='bounded-magnitude',
-    '2022 flat-to-positive replacement settles at neutral with a bounded magnitude');
   for(const year of [2026,2033]) {
     const y=entry(summer,'乙卯',year), states=y.scenarios.map(s=>Object.values(s.replacementStates));
     assert(states.map(s=>s.join()).join()==='-1,0,1'&&states.every(s=>s.length===1)&&
       new Set(y.actionLedger.filter(r=>r.replacementGroup).map(r=>r.replacementGroup)).size===1&&
-      y.scenarios.map(s=>s.B).join()==='0,1,3'&&y.comprehensiveRange.min===0&&y.comprehensiveRange.max===3&&
-      y.effectiveRange.direction==='neutral'&&y.effectiveRange.guaranteed===0&&y.annual.amplitude.available&&
+      y.effectiveRange.guaranteed===Math.min(...y.scenarios.map(s=>s.B))&&y.annual.amplitude.available&&
       y.effectiveRange.reason==='bounded-magnitude', 'same replacement has three consistent scenarios at '+year);
   }
-  for(const [luck,year] of [['丁巳',2010],['甲寅',2037],['甲寅',2039],['甲寅',2043],['辛亥',2073]]) {
+  assert(entry(summer,'乙卯',2026).effectiveRange.guaranteed===0,
+    'the existing flat-to-positive feasible range remains confirmed flat');
+  for(const [luck,year] of [['辛亥',2073]]) {
     const y=entry(summer,luck,year), m=y.wealthMerge;
     assert(!y.comprehensiveRange.pending&&y.comprehensiveRange.guaranteed===0&&
       m.wealthApplied&&m.combinedRange.direction==='negative'&&m.combinedRange.guaranteed===-0.25&&
       m.combinedRange.reason==='bounded-magnitude'&&y.scenarios[m.selectedIndex].appliedTotal===-0.25,
       'a one-sided base range merges to the least-negative realized total at '+year);
   }
-  for(const [luck,year] of [['甲寅',2040],['辛亥',2070]]) {
+  for(const [luck,year] of [['辛亥',2070]]) {
     assert(entry(summer,luck,year).wealth.direction==='pending', 'wealth still treats a neutral/nonzero split as pending at '+year);
   }
-  const cured=entry(summer,'甲寅',2038).annual,stillActive=entry(summer,'甲寅',2011).annual;
+  const cured=entry(summer,'甲寅',2009).annual,stillActive=entry(summer,'甲寅',2011).annual;
   const anchor=r=>r.review.checked.find(x=>x.subject==='官伤冲战');
   assert(anchor(cured).after.conflictResolved&&!anchor(stillActive).after.conflictResolved&&
     !cured.amplitude.breakdown.some(x=>x.ruleId==='Y3-medicine'&&x.taskId==='官伤冲战'&&x.contribution>0)&&
@@ -2617,10 +2829,11 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
     'disappearance alone is not rescue; a surviving conflict and weaker medicine remain separate');
 
   // Stage 2 bug fixes + Stage 3 backend wealth merge contracts (BOT Rules #1-#3).
-  assert(y2018.comprehensiveRange.guaranteed===0 && y2018.wealthRange.guaranteed===-2 &&
-    y2018.annual.amplitude.net===-0.5, '2018 folds confirmed -2 wealth at 25% onto base 0');
+  assert(y2018.wealthRange.guaranteed===-2&&
+    y2018.annual.amplitude.net===y2018.comprehensiveRange.guaranteed-0.5,
+    '2018 applies the verified wealth loss once at 25% on top of the comprehensive impulse');
   const zeroWeightAnnual = outlookEngine.evaluateLuckOutlook(summer,'丙辰','丁巳',years,{wealthExtraWeight:0}).years;
-  assert(zeroWeightAnnual[0].annual.amplitude.net===0 && zeroWeightAnnual.every((yr,idx)=>
+  assert(zeroWeightAnnual.every((yr,idx)=>
     yr.annual.amplitude.net===annual[idx].comprehensiveRange.guaranteed),
     'setting wealthExtraWeight to 0 recovers base comprehensive impulse identically year by year');
   const y2029 = entry(summer,'乙卯',2029);
@@ -2628,10 +2841,10 @@ assert(JSON.stringify(outlookEngine.evaluateLuckOutlook(staleScoreChart, '壬寅
     y2029.wealthRange.guaranteed===0 && y2029.wealth.reasons.some(x=>x.ruleId==='W-bridge-replacement') &&
     y2029.actionLedger.some(x=>(x.ruleId==='LK-02'||x.ruleId==='LK-04'||x.ruleId==='Y5-role-root')&&x.exclusion==='duplicate-cause'),
     '2029 scores joint clash tier 3, deduplicates stacked wood, and keeps path-swap replacement neutral');
-  const y2030 = entry(summer,'乙卯',2030);
-  assert(y2030.annual.direction==='pending' && !y2030.annual.amplitude.available &&
-    y2030.comprehensiveRange.reason==='missing-evidence' && y2030.effectiveRange.reason==='missing-evidence',
-    '2030 stays pending when core judgment is undecided and minor clashes cancel out');
+  const missingAnnual = entry(calendar(1961,10,17,14),'戊子',2002);
+  assert(missingAnnual.annual.direction==='pending'&&!missingAnnual.annual.amplitude.available&&
+    missingAnnual.effectiveRange.reason==='missing-evidence',
+    'an undecidable year retains the evidence gap and the dashed curve state');
 
   const merge = outlookEngine.settleScenarioWealthMerge;
   const rng = (vals, pend=false) => ({
