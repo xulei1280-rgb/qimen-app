@@ -27,6 +27,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Outlook Stage 2 Rule 3 Fuyin & Fanyin — 2026-11-28
+
+- 本轮在自用版 `main`（基线 `0d38b68`，仅改自用版，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 3「伏吟与反吟」（`bazi-engine.js` `luck-outlook-20261128.6`、`bazi.html?v=luck-20261128.6`、更新 `check-bazi-page.js`／`check-bazi-luck-state-change.cjs`／`check-bazi-luck-rule2.cjs` 并新增 `check-bazi-luck-rule3.cjs`）。原局排盘展示、历法、原局 720 组逐字段值、四／五柱与无新事件年份、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩与 AI／记录契约均保持不变。
+- 岁运规则口径：严格隔离在年度六柱结算（`annualRecurrence`／`settleAnnualLedger`／`settleAnnualYear`），生产引擎零硬编码锁档；解耦「已知风险提示」与「账本新入账」，以当期六柱可核作用、根透与承载取代原局静态强弱标签与伏吟「力量倍增」表述；天干双向相克均独立核验地支冲伤（天干合绊不误挡地支实伤），统一识别用根新受限、旧冲加深与二冲一并按实证后果（根损 1／通路失用 2／核心破坏或承载失守 3）分档；弱盘反吟去忌须核清忌病对象、实际解除且护神与承载无损；岁运并临取消见七杀／羊刃无条件判负，闲神伏吟与未引动大运伏吟／反吟仅中性提示且不污染账本与波动明细；单边 `T-year-fight`／`T-year-clash`／`T-year-harmony`／`T-year-dayhit` 冻结为提示；按无方向逐作用者归并，常规高优先级主账与规则 2 优先，仅实际入账的二档及以上岁运反吟接管重叠的岁运冲库负项并严格保留全部正向墓库开库。
+- 验证与审计全通过：`node --check bazi-engine.js`、`git diff --check -- . ":(exclude)八字古籍参考/**"`、`check-baselines.js`（18 项）、`check-bazi-page.js`（含 720 组与 2062／2029 回归）、`check-bazi-luck-state-change.cjs`（含 2062 待判无实点校验）、`check-bazi-dynamic-use.cjs`、`check-bazi-luck-rule2.cjs`（含情景账本逐项核对），以及 `check-bazi-luck-rule3.cjs`（5 组正反例与 3 项硬探针、720 组原局零变动、三盘各 100 年单年与批量一致：老王 2037 `0`／2041 `−4`、小蔓 2024 `+3`／2029 待判 `−1～+3`、香肠 2024 `−1`／2034 `−1`／2042 `+0.5` 且 `W=−2` 保留双柱明细；固定 2,400 年年度伏吟／反吟 `507` 年／`544` 柱位、有实证 `84` 年／`89` 柱位、归并入账 `43` 年，`changedB=89`、`changedW=0`、`changedPending=7`、`changedDirection=48`、`flips=21`，规则 1+2+3 十项不变量 `unsignedKeyDup`／`sameEventSignFlip`／`swallowedHighTier`／`erasedPositiveTomb`／`noNewEventDrift`／`changedSpecial`／`outputDoubleBooked`／`sameEventCoreConflict`／`erasedY4`／`satNeg` 均为 `0`）。
+- 下一步：在共同白板（`I:\白板工作目录\奇门起盘分析协作板.commonboard`）完成第二阶段规则 4「假从格双情景严格跨零待判」的 Codex 只读预审并定稿，再进入实现与 2,400 年复核；规则 5 及第三阶段展示文案优化按序推进。
+
 ### Bazi Luck Outlook Stage 2 Rule 2 Four-Tomb Opening & Closing — 2026-11-28
 
 - 本轮在自用版 `main`（基线 `07e2a96`，仅改 `qimen-app`，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 2「辰戌丑未墓库开闭」（`bazi-engine.js` `luck-outlook-20261128.5`、`bazi.html?v=luck-20261128.5`、更新 `check-bazi-page.js`／`check-bazi-luck-state-change.cjs`／`check-bazi-dynamic-use.cjs` 并新增 `check-bazi-luck-rule2.cjs`）。原局排盘展示、历法、原局 720 组逐字段值、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩与 AI／记录契约均保持不变。

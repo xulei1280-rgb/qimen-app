@@ -771,6 +771,15 @@ async function run() {
   assert.match(s3Detail(), /当年财运净力度 -[\d.]+（当年综合待判，未并入主线）/);
   assert.doesNotMatch(s3Detail(), /财路助阻相抵或持平/);
 
+  const riskCtx=load(), riskChart=chart(riskCtx,1961,10,17,14), riskBox=mockChart(riskCtx);
+  riskCtx.getLuckData=()=>({rows:[{index:0,gz:'戊子',from:1,to:10}],currentYear:2062});
+  riskCtx.luckStartYear=()=>2060;
+  riskCtx.BaziVisuals._state.selectedYear=2062;
+  riskCtx.BaziVisuals.renderLuckSection(riskBox,riskChart);
+  const riskSvg=riskBox.querySelector('#bzvLuckMainSvg');
+  pendingAt(riskSvg,2062,riskSvg._bzvCtx.pts.find(p=>p.yr.y===2062));
+  assert(!find(riskBox.querySelector('#bzvLuckDeltaSvg'),'data-year-bar',2062));
+
   console.log('PASS annual accumulation, strict pending, shared ranges, fade on/off, 30-year focus, inline and drag comparison, 390px state, weight=0 recovery, and extension stability');
   console.log('PASS continuous pending envelope, per-switch help, and hover-independent locked details');
 }

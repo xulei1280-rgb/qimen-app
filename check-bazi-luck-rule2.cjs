@@ -6,19 +6,29 @@ const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
 
 const baseline = '07e2a96976d6b2532a0e2ef289672f51c342d848';
-const version = 'luck-outlook-20261128.5';
+const version = 'luck-outlook-20261128.6';
 const baselineVersion = 'luck-outlook-20261128.3';
 const before = load();
 const after = load();
-vm.runInContext(execFileSync('git', ['show', baseline + ':bazi-engine.js'], {
+function withScenarioLedgers(source) {
+  const seam='actionLedger:rows,wealthRange:W,comprehensiveRange:B';
+  assert(source.includes(seam),'Annual scenario audit seam');
+  return source.replace(seam,'scenarioLedgers:contexts.map(function(x){return x.result.ledger;}),'+seam);
+}
+vm.runInContext(withScenarioLedgers(execFileSync('git', ['show', baseline + ':bazi-engine.js'], {
   cwd: __dirname, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024
-}), before);
-vm.runInContext(fs.readFileSync(path.join(__dirname, 'bazi-engine.js'), 'utf8').replace(
+})), before);
+vm.runInContext(withScenarioLedgers(fs.readFileSync(path.join(__dirname, 'bazi-engine.js'), 'utf8')).replace(
   'root.BaziEngine=api;', 'root.rule2={decision:annualTombDecision,context:buildTemporalPatternContext,branch:branchInteractionChange,ledger:settleAnnualLedger,wealth:wealthChannelState};root.BaziEngine=api;'
 ), after);
 const E = after.BaziEngine;
 const same = (a, b, label) => assert.equal(JSON.stringify(a), JSON.stringify(b), label);
 const baselineJson = item => JSON.stringify(item)?.replaceAll(version, baselineVersion);
+function withoutOngoingHint({annual,recurrence,...row}) {
+  const withoutHints=list=>list.filter(x=>x.ruleId!=='T-luck-recurrence');
+  return {...row,annual:{...annual,evidence:withoutHints(annual.evidence),
+    reservations:withoutHints(annual.reservations)}};
+}
 
 let seed = 20261126;
 function rand(n) {
@@ -215,16 +225,48 @@ console.log('PASS 720 exact natal comparisons and three reference charts (300 si
 const stats = { years:0, withEvent:0, withoutEvent:0, changedB:0, changedW:0, changedPending:0,
   changedDirection:0, flips:0, positiveToNegative:0, negativeToPositive:0, netEntries:0, neutralEntries:0,
   wealthOpenPos:0, changedSpecial:0, outputDoubleBooked:0, sameEventCoreConflict:0, tombSwallowedHigh:0,
-  tkdcErased:0, tombUnsignedDuplicates:0, tombOppositeSigns:0, nonTombYearDrift:0, erasedY4:0, satNeg:0 };
+  tombUnsignedDuplicates:0, tombOppositeSigns:0, nonTombYearDrift:0, erasedY4:0, satNeg:0 };
 const highRule = /^(Y3-(core-|medicine$|replacement-medicine$|carry-|dynamic-phenomenon$|earth-)|Y4-output|LK-)/;
+const recurrenceRule = /^T-year-(?:natal-)?(?:same|tkdc)$/;
+const unilateral = /^T-year-(?:fight|clash|harmony|dayhit)$/;
+function checkNonTombRecurrence({before,after}, label) {
+  same(after.wealthRange,before.wealthRange,label+' non-tomb wealth range');
+  const regular=rows=>rows.filter(x=>!recurrenceRule.test(x.ruleId)&&
+    (!unilateral.test(x.ruleId)||x.contribution||x.wealthContribution));
+  const score=rows=>rows.filter(x=>recurrenceRule.test(x.ruleId))
+    .reduce((n,x)=>n+(x.side==='negative'?-1:1)*x.contribution,0);
+  same(after.scenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),
+    before.scenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),label+' scenario assumptions and W');
+  const expected=before.scenarioLedgers.map((old,i)=>{
+    const current=after.scenarioLedgers[i];
+    same(regular(current),regular(old),label+' regular ledger, scenario '+i);
+    return before.scenarios[i].B+score(current)-score(old);
+  });
+  same(after.scenarios.map(s=>s.B),expected,label+' non-tomb scenario B');
+  const B=after.comprehensiveRange;
+  same([B.min,B.max],[Math.min(...expected),Math.max(...expected)],label+' non-tomb B range');
+  const values=after.scenarios.map(s=>s.B+(after.wealthRange.pending?0:0.25*s.W));
+  const missing=B.reason==='missing-evidence';
+  if(missing&&before.comprehensiveRange.reason!=='missing-evidence') {
+    assert(after.annual.evidence.some(x=>x.recurrenceHint&&x.direction==='negative')||
+      before.scenarioLedgers.some((old,i)=>score(old)!==score(after.scenarioLedgers[i])),
+    label+' new missing evidence needs a risk hint or a changed recurrence action');
+  }
+  assert.equal(B.pending,missing||B.min<0&&B.max>0,label+' non-tomb B pending');
+  assert.equal(after.effectiveRange.pending,missing||Math.min(...values)<0&&Math.max(...values)>0,
+    label+' non-tomb combined pending');
+}
 const outputExcess = /^(水多金沉|木盛水缩|火多木焚|土多火晦|金多土变)$/;
 const probes = new Map([
   ['3/1970', row => {
-    assert(counted(row,'T-year-tkdc','negative',3));
-    assert(parts(row).some(p=>p.coveredBy==='T-year-tkdc'&&p.value===0));
+    assert(!row.recurrence.preMerge.length);
+    assert(counted(row,'Y3-tomb','negative',1));
+    assert(parts(row).some(p=>p.value<0&&p.key[0]==='flowYear'&&p.key[1]==='luck:辰藏乙:木'));
+    assert.equal(row.effectiveRange.guaranteed,1);
   }],
   ['14/2024', row => {
     assert(counted(row,'T-year-tkdc','negative',3));
+    assert(counted(row,'Y3-tomb','positive',1));
     assert(parts(row).some(p=>p.coveredBy==='T-year-tkdc'&&p.value===0));
   }],
   ...['11/2023','20/1979','107/1970'].map(key => [key,row => {
@@ -287,8 +329,6 @@ for (let index=1; index<=120; index++) {
     stats.erasedY4 += swallowed.filter(x=>/^Y4-output/.test(x.ruleId)).length;
     if (row.after.annual.review?.dynamicUse?.capacity?.saturated&&booked.some(x=>x.side==='negative'&&
       (x.rule==='Y3-carry-support'||x.rule==='Y3-replacement-medicine'&&/^承载不足/.test(x.task)||/满溢/.test(x.task)))) stats.satNeg++;
-    const tkdc = x=>x.rule==='T-year-tkdc'&&x.side==='negative'&&x.B===3;
-    if (old.ledger.some(tkdc)&&!booked.some(tkdc)) stats.tkdcErased++;
     const wonWealth = next.ledger.filter(x=>x.W>0&&x.side==='positive'&&x.mergedTomb?.length&&
       (x.task==='冲开财库'||/^W-(food|bridge)$/.test(x.rule)));
     if (wonWealth.length) {
@@ -318,10 +358,6 @@ for (let index=1; index<=120; index++) {
               type==='daymaster-capacity'&&from===actor&&/^(冲开|土动)$/.test(effect);
           })) own(key,r.side);
         }
-        if (booked.some(tkdc)&&p.value<0&&relation==='冲'&&
-          (source==='luck'&&actor.startsWith('flowYear:')||source==='flowYear'&&actor.startsWith('luck:'))) {
-          own(key,'negative');
-        }
       }
       if (t.B) {
         const netKey=JSON.stringify([t.tomb.id,t.tomb.id,'tomb-net']);
@@ -333,7 +369,12 @@ for (let index=1; index<=120; index++) {
     }
     if (!ledger.length) {
       stats.withoutEvent++;
-      if (baselineJson(row.after)!==JSON.stringify(row.before)) stats.nonTombYearDrift++;
+      if (!row.after.recurrence?.scenes.length) {
+        if (baselineJson(withoutOngoingHint(row.after))!==baselineJson(withoutOngoingHint(row.before)))
+          stats.nonTombYearDrift++;
+      } else {
+        checkNonTombRecurrence(row,label);
+      }
     } else stats.withEvent++;
     stats.years++;
     stats.netEntries += ledger.length;
@@ -350,7 +391,7 @@ for (let index=1; index<=120; index++) {
 assert.equal(stats.years,2400);
 assert.equal(checkedProbes.length,probes.size);
 stats.flips=stats.positiveToNegative+stats.negativeToPositive;
-for (const key of ['changedSpecial','outputDoubleBooked','sameEventCoreConflict','tombSwallowedHigh','tkdcErased',
+for (const key of ['changedSpecial','outputDoubleBooked','sameEventCoreConflict','tombSwallowedHigh',
   'tombUnsignedDuplicates','tombOppositeSigns','nonTombYearDrift','erasedY4','satNeg']) assert.equal(stats[key],0,key);
 assert(stats.wealthOpenPos>0,'The live cohort must book a qualified wealth-tomb opening');
 console.log('PASS live Rule 1 and Rule 2 invariants across 2,400 years, including ' + checkedProbes.join(', '));
