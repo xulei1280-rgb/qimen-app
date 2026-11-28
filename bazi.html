@@ -1083,7 +1083,7 @@ body.keyboard-input .result-area,body.keyboard-input .editor-panel{animation:non
 <script src="birth-time.js?v=20261107.1"></script>
 <script src="china-locations.js?v=20261122.1"></script>
 <script src="bazi-shensha.js?v=20261122.1"></script>
-<script src="bazi-engine.js?v=luck-20261128.6"></script>
+<script src="bazi-engine.js?v=luck-20261128.7"></script>
 <script src="deepseek-client.js?v=20260817.1"></script>
 <script src="premium-base.js?v=20261101.2" defer></script>
 <script src="bazi-premium.js?v=20261108.6-standard-copy" defer></script>
@@ -2082,6 +2082,7 @@ function outlookTaskMeaning(id){
 
 function outlookDisplayView(result){
   var direction=result.direction,tendency=result.tendency,possible=result.possibleDirections||[];
+  var dualBranch=/双情景/.test(result.basis||'');
   if(direction==='pending'&&!tendency&&possible.length===2&&possible.indexOf('neutral')>=0)tendency=possible.find(function(x){return x==='positive'||x==='negative'});
   var label={positive:'助力增加',negative:'牵制增加',mixed:'利弊并见',neutral:'主线延续',unavailable:'无上一运可比较'}[direction];
   if(result.assessment==='engine-error')label='刷新后重试';
@@ -2145,7 +2146,15 @@ function outlookDisplayView(result){
   if(direction==='positive'||direction==='negative')selected=selected.map(function(x){return x.standard&&x.direction&&x.direction!=='neutral'&&x.direction!==direction?Object.assign({},x,{standard:'另一方面，'+x.standard}):x});
   var mixed=direction==='mixed'?mixedOutlookReadout(result):null;
   if(mixed)label='助：'+mixed.benefit.short.standard+'；牵：'+mixed.cost.short.standard;
-  return {direction:direction,assessment:result.assessment,label:label,professionalLabel:mixed?'助：'+mixed.benefit.short.professional+'；牵：'+mixed.cost.short.professional:label,mixed:mixed,items:selected,unresolvedNotes:unresolvedNotes};
+  var professionalLabel=mixed?'助：'+mixed.benefit.short.professional+'；牵：'+mixed.cost.short.professional:label;
+  if(dualBranch&&direction==='pending'){
+    label='待判';
+    professionalLabel=result.label||'待判';
+  }else if(dualBranch){
+    var branch=result.basis.split('｜')[0];
+    if(!professionalLabel.includes(branch))professionalLabel+=' · '+branch;
+  }
+  return {direction:direction,assessment:result.assessment,label:label,professionalLabel:professionalLabel,mixed:mixed,items:selected,unresolvedNotes:unresolvedNotes};
 }
 
 function renderCoreCards(data){
@@ -3965,6 +3974,7 @@ function outlookCareAreas(result){
 }
 function renderOutlookBox(title,result,professionalTitle,extra){
   var view=outlookDisplayView(result);extra=extra||{};
+  var dualBranch=/双情景/.test(result.basis||'');
   function disclosure(label,lines){
     var notes=Array.from(new Set(lines.concat(view.unresolvedNotes)));
     return notes.length?'<details class="outlook-details"><summary>'+label+'</summary><ul>'+notes.map(function(text){return '<li>'+esc(text)+'</li>';}).join('')+'</ul></details>':'';
@@ -3975,6 +3985,9 @@ function renderOutlookBox(title,result,professionalTitle,extra){
       if(risks.length){
         return risks.map(function(e){return '<p><b>已知风险：</b>'+esc(technical?e.text:e.plainText||e.text)+'</p>'}).join('')+
           '<p class="outlook-note"><b>整体待判原因：</b>'+esc((result.uncertainty||[]).join('；')||result.summary||'决定性条件尚未确认。')+'</p>';
+      }else if(dualBranch&&(result.uncertainty||[]).length){
+        return '<p class="outlook-note"><b>整体待判原因：</b>'+esc(result.uncertainty.join('；'))+'</p>'+
+          disclosure('查看所选情景账本依据',view.items.map(function(x){return x[key];}).filter(Boolean));
       }
     }
     if(!technical&&extra.yearCopy&&extra.yearCopy.kind==='plain'){
@@ -4014,7 +4027,8 @@ function renderOutlookBox(title,result,professionalTitle,extra){
     var also=opposite.length?'<p class="outlook-note" data-mixed-effect="'+opposite[0].direction+'"><b>'+(result.toneBasis==='tone-tiebreak'?(opposite[0].direction==='positive'?'也有一点好处':'也有一点不利'):(opposite[0].direction==='positive'?'同时也有的好处':'同时也有的不利'))+'：</b>'+outlookMergeSides(opposite.map(function(x){return {direction:x.direction,text:outlookShareCause(items[0].standard,outlookSideCost(items[0].standard,x.standard.replace(/^另一方面，/,'')))}})).map(function(x){return esc(x.text)}).join('')+'</p>':'';
     return '<p>'+esc(items[0][key])+'</p>'+also+disclosure('查看判断依据',rest.map(function(x){return x[key];}));}
   var standardBody=body(false),care=!extra.compare&&/^(多留心|稍需留心)$/.test(outlookPlainResult(view))?outlookCareAreas(result):[];
-  var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{更难:'费力一些',稍难:'稍费力一些'})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+(care.length?'<div class="mode-copy standard-only" data-standard-copy><p class="outlook-note" data-care-areas>多照顾的方面：'+esc(care.join('、'))+'</p></div>':'')+modeCopy(outlookGlossOnce(standardBody),body(true))+outlookToneRow(result,standardBody)+(extra.trendHtml?extra.trend:(extra.standardTrend?'<div class="mode-copy standard-only" data-standard-copy>'+outlookNoteRow(extra.standardTrend)+'</div>':'')+outlookNoteRow(extra.trend))+'</div>';
+  var branchBasis=dualBranch&&result.direction!=='pending'?'<p class="outlook-note" data-branch-basis><b>情景归属：</b>'+esc(result.basis)+'</p>':'';
+  var box='<div class="analysis-box" data-direction="'+esc(view.direction)+'" data-assessment="'+esc(view.assessment||'unavailable')+'"><strong>'+modeCopy(esc(title),esc(professionalTitle||title))+'</strong><span class="outlook-tag outlook-'+view.direction+'">'+modeCopy(esc(extra.compare?(extra.compareWords||{更难:'费力一些',稍难:'稍费力一些'})[outlookCompareWord(view)]||outlookCompareWord(view):outlookPlainResult(view)),esc(view.professionalLabel))+'</span>'+(care.length?'<div class="mode-copy standard-only" data-standard-copy><p class="outlook-note" data-care-areas>多照顾的方面：'+esc(care.join('、'))+'</p></div>':'')+modeCopy(outlookGlossOnce(standardBody),body(true))+branchBasis+outlookToneRow(result,standardBody)+(extra.trendHtml?extra.trend:(extra.standardTrend?'<div class="mode-copy standard-only" data-standard-copy>'+outlookNoteRow(extra.standardTrend)+'</div>':'')+outlookNoteRow(extra.trend))+'</div>';
   return extra.professionalOnly&&(!document.body||document.body.getAttribute('data-display-mode')!=='professional')?modeCopy('',box):box;
 }
 function renderProfessionalLuckPanel(data){

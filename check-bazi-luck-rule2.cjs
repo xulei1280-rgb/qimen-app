@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
 
 const baseline = '07e2a96976d6b2532a0e2ef289672f51c342d848';
-const version = 'luck-outlook-20261128.6';
+const version = 'luck-outlook-20261128.7';
 const baselineVersion = 'luck-outlook-20261128.3';
 const before = load();
 const after = load();
@@ -230,20 +230,35 @@ const highRule = /^(Y3-(core-|medicine$|replacement-medicine$|carry-|dynamic-phe
 const recurrenceRule = /^T-year-(?:natal-)?(?:same|tkdc)$/;
 const unilateral = /^T-year-(?:fight|clash|harmony|dayhit)$/;
 function checkNonTombRecurrence({before,after}, label) {
-  same(after.wealthRange,before.wealthRange,label+' non-tomb wealth range');
+  const dual=Boolean(after.fakeFollow);
+  const regularScenarios=dual?after.scenarios.filter(s=>s.branch==='A'):after.scenarios;
+  const suppressed=x=>dual&&x.coreGate&&/^从格：/.test(x.coreGate.name);
+  if (!dual) same(after.wealthRange,before.wealthRange,label+' non-tomb wealth range');
   const regular=rows=>rows.filter(x=>!recurrenceRule.test(x.ruleId)&&
-    (!unilateral.test(x.ruleId)||x.contribution||x.wealthContribution));
-  const score=rows=>rows.filter(x=>recurrenceRule.test(x.ruleId))
-    .reduce((n,x)=>n+(x.side==='negative'?-1:1)*x.contribution,0);
-  same(after.scenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),
+    (!unilateral.test(x.ruleId)||x.contribution||x.wealthContribution)&&!suppressed(x));
+  const sum=rows=>rows.reduce((n,x)=>n+(x.side==='negative'?-1:1)*x.contribution,0);
+  const score=rows=>sum(rows.filter(x=>recurrenceRule.test(x.ruleId)));
+  same(regularScenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),
     before.scenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),label+' scenario assumptions and W');
   const expected=before.scenarioLedgers.map((old,i)=>{
-    const current=after.scenarioLedgers[i];
+    const current=after.scenarioLedgers[dual?regularScenarios[i].id:i];
     same(regular(current),regular(old),label+' regular ledger, scenario '+i);
-    return before.scenarios[i].B+score(current)-score(old);
+    return before.scenarios[i].B+score(current)-score(old)-sum(old.filter(suppressed))+sum(current.filter(suppressed));
   });
-  same(after.scenarios.map(s=>s.B),expected,label+' non-tomb scenario B');
+  same(regularScenarios.map(s=>s.B),expected,label+' non-tomb scenario B');
   const B=after.comprehensiveRange;
+  if (dual) {
+    const missingB=after.scenarios.some(s=>s.missingB), missingW=after.scenarios.some(s=>s.missingW);
+    const proved=after.scenarios.filter(s=>!s.missingB);
+    const combined=after.effectiveRange;
+    for (const [range,values] of [[B,proved.map(s=>s.B)],
+      [combined,proved.map(s=>s.B+(missingB||missingW?0:0.25*s.W))]]) {
+      const min=values.length?Math.min(...values):null, max=values.length?Math.max(...values):null;
+      same([range.min,range.max],[min,max],label+' dual-scenario bounds');
+      assert.equal(range.pending,missingB||min<0&&max>0,label+' dual-scenario pending');
+    }
+    return;
+  }
   same([B.min,B.max],[Math.min(...expected),Math.max(...expected)],label+' non-tomb B range');
   const values=after.scenarios.map(s=>s.B+(after.wealthRange.pending?0:0.25*s.W));
   const missing=B.reason==='missing-evidence';
@@ -370,7 +385,7 @@ for (let index=1; index<=120; index++) {
     if (!ledger.length) {
       stats.withoutEvent++;
       if (!row.after.recurrence?.scenes.length) {
-        if (baselineJson(withoutOngoingHint(row.after))!==baselineJson(withoutOngoingHint(row.before)))
+        if (!row.after.fakeFollow&&baselineJson(withoutOngoingHint(row.after))!==baselineJson(withoutOngoingHint(row.before)))
           stats.nonTombYearDrift++;
       } else {
         checkNonTombRecurrence(row,label);

@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
 
 const baseline = '0d38b68';
-const version = 'luck-outlook-20261128.6';
+const version = 'luck-outlook-20261128.7';
 const oldVersion = 'luck-outlook-20261128.5';
 const before = load();
 const after = load();
@@ -269,8 +269,8 @@ function count(name,items) {
 }
 const signature=x=>JSON.stringify([x.ruleId,x.taskId,x.side,x.text]);
 const unsigned=k=>JSON.stringify(JSON.parse(k).slice(1));
-const positiveTomb=r=>r.actionLedger.flatMap(x=>(x.tomb?.parts||[]).filter(p=>p.value>0).map(p=>[p.key,p.value]));
-const wealthOpening=r=>r.actionLedger.filter(x=>x.wealthContribution&&x.side==='positive'&&x.mergedTomb?.length)
+const positiveTomb=rows=>rows.flatMap(x=>(x.tomb?.parts||[]).filter(p=>p.value>0).map(p=>[p.key,p.value]));
+const wealthOpening=rows=>rows.filter(x=>x.wealthContribution&&x.side==='positive'&&x.mergedTomb?.length)
   .map(x=>[x.ruleId,x.taskId,x.wealthContribution]);
 const high=/^(Y[234]-|W-|LK-)/;
 const recurrenceRule=/^T-year-(?:natal-)?(?:same|tkdc)$/;
@@ -278,6 +278,11 @@ const regularPaid=rows=>rows.filter(x=>!x.tomb&&!recurrenceRule.test(x.ruleId)&&
   .map(x=>[x.ruleId,x.taskId,x.side,x.magnitude,x.contribution,x.wealthContribution,x.ownedEventKeys]);
 const outputExcess=/^(水多金沉|木盛水缩|火多木焚|土多火晦|金多土变)$/;
 function auditYear(old,r,pillars,luck,label) {
+  const dual=Boolean(r.fakeFollow);
+  const regularScenarios=dual?r.scenarios.filter(s=>s.branch==='A'):r.scenarios;
+  const suppressed=x=>dual&&x.coreGate&&/^从格：/.test(x.coreGate.name);
+  const tombChanged=(before,after)=>JSON.stringify(positiveTomb(after))!==JSON.stringify(positiveTomb(before))||
+    JSON.stringify(wealthOpening(after))!==JSON.stringify(wealthOpening(before));
   const scenes=r.recurrence?.scenes||[], ongoing=r.recurrence?.ongoing||[], post=r.recurrence?.postMerge||[];
   const bookedRows=ledgers(r);
   const raw=Object.entries({...pillars,luck}).flatMap(([pillar,gz])=>{
@@ -309,12 +314,12 @@ function auditYear(old,r,pillars,luck,label) {
   stats.changedPending+=Number(old.effectiveRange.pending!==r.effectiveRange.pending);
   stats.changedDirection+=Number(old.effectiveRange.direction!==r.effectiveRange.direction);
   stats.flips+=Number(net(old)*net(r)<0);
-  if (!scenes.length&&(changed('effectiveRange')||changed('comprehensiveRange')||changed('wealthRange')||
+  if (!dual&&!scenes.length&&(changed('effectiveRange')||changed('comprehensiveRange')||changed('wealthRange')||
     changed('scenarios')||changed('actionLedger')||changed('scenarioLedgers')||
     JSON.stringify(old.annual.amplitude.breakdown)!==JSON.stringify(r.annual.amplitude.breakdown))) stats.noNewEventDrift++;
   if (r.annual.review?.dynamicUse?.special&&JSON.stringify(ledgers(old))!==JSON.stringify(bookedRows)) stats.changedSpecial++;
-  if (JSON.stringify(positiveTomb(r))!==JSON.stringify(positiveTomb(old))||
-    JSON.stringify(wealthOpening(r))!==JSON.stringify(wealthOpening(old))) stats.erasedPositiveTomb++;
+  if (dual?regularScenarios.some((s,i)=>tombChanged(old.scenarioLedgers[i],s.ledger)):
+    tombChanged(old.actionLedger,r.actionLedger)) stats.erasedPositiveTomb++;
   const owners=new Map();
   for (const row of bookedRows) {
     if (!row.contribution&&!row.wealthContribution) continue;
@@ -324,19 +329,27 @@ function auditYear(old,r,pillars,luck,label) {
       owners.get(u).push(row);
     }
   }
-  same(r.scenarios.map(x=>[x.retainedRoots,x.replacementStates]),old.scenarios.map(x=>[x.retainedRoots,x.replacementStates]),
+  same(regularScenarios.map(x=>[x.retainedRoots,x.replacementStates]),old.scenarios.map(x=>[x.retainedRoots,x.replacementStates]),
     label+' scenario assumptions');
-  old.scenarioLedgers.forEach((rows,i)=>{
-    const settlement=r.scenarioLedgers[i];
-    same(regularPaid(settlement),regularPaid(rows),label+' regular paid rows, scenario '+i);
+  r.scenarioLedgers.forEach((settlement,i)=>{
+    const followBranch=dual&&r.scenarios[i].branch==='B';
     const paid=settlement.filter(x=>x.contribution);
-    for (const action of paid.filter(x=>x.action.effect==='recurrence')) {
+    for (const action of paid.filter(x=>followBranch||x.action.effect==='recurrence')) {
       const keys=action.ownedEventKeys.map(unsigned);
       const duplicates=paid.filter(x=>x!==action&&x.ownedEventKeys.some(k=>keys.includes(unsigned(k))));
-      stats.unsignedKeyDup+=Number(keys.length!==1||duplicates.length>0);
+      stats.unsignedKeyDup+=Number((action.action.effect==='recurrence'?keys.length!==1:new Set(keys).size!==keys.length)||duplicates.length>0);
       stats.sameEventSignFlip+=Number(duplicates.some(x=>x.side!==action.side));
       assert([1,2,3].includes(action.contribution),label+' tier');
     }
+    if (dual) {
+      assert(!paid.some(x=>/^T-year-(fight|clash|harmony|dayhit)$/.test(x.ruleId)),label+' scenario hints only');
+      assert(!settlement.some(x=>x.ruleId==='T-luck-recurrence'),label+' ongoing hint stays out of scenario ledger');
+    }
+  });
+  old.scenarioLedgers.forEach((oldRows,i)=>{
+    const rows=oldRows.filter(x=>!suppressed(x));
+    const settlement=r.scenarioLedgers[dual?regularScenarios[i].id:i];
+    same(regularPaid(settlement.filter(x=>!suppressed(x))),regularPaid(rows),label+' regular paid rows, scenario '+i);
     for (const x of rows.filter(x=>high.test(x.ruleId)&&Math.max(x.contribution,x.wealthContribution)>=2)) {
       const matching=settlement.filter(y=>signature(y)===signature(x));
       if (!matching.some(y=>y.contribution>=x.contribution&&y.wealthContribution>=x.wealthContribution)) {

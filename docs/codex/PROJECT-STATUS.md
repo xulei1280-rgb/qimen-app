@@ -27,6 +27,13 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Luck Outlook Stage 2 Rule 4 Fake-Follow Dual-Scenario Pending — 2026-11-28
+
+- 本轮在自用版 `main`（基线 `87ed85d`，仅改自用版，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 4「假从格双情景严格跨零待判」（`bazi-engine.js` `luck-outlook-20261128.7`、`bazi.html?v=luck-20261128.7`、更新 `check-bazi-page.js`／`check-bazi-luck-rule2.cjs`／`check-bazi-luck-rule3.cjs` 并新增 `check-bazi-luck-rule4.cjs`）。原局排盘展示、历法、原局 720 组逐字段值（`analyzePattern` 零改动）、四／五柱与非入围普通盘／真特殊格（`#116` 20 年）、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩及 AI／记录契约均保持不变，生产引擎零硬编码六柱锁档。
+- 岁运规则口径：严格隔离在年度六柱结算（`annualFakeFollowQualification`／`annualFollowType`／`annualFollowState`／`annualFollowActions`／`annualFollowTomb`／`annualFollowMerge`／`annualCoreQualification`／`settleAnnualYear`）。共用硬门槛要求无真特殊格资格、`弱`、扶身 `< 18`、可用同类根力 `<= 0.35`、最多 1 枚墓库余气或合绊兼受损中气残根，排除同类月令／司令生扶／有效清印生身及假专旺／假化气；四类分型（`假从财`／`假从杀`／`假从势`／`假从儿`）重叠互斥时留「资格未决」不靠顺序盲选。对入围命盘同一六柱并行结算 A 路（常格扶抑，经 `annualFollowRegular` 过滤同一假从假说并可回退普通成格）与 B 路（假从顺势，1/2/3 档离散尺子、无方向物理事件归并、规则 2 物理开闭共享与喜忌符号分路、规则 3 同口径核验、强根冲胜实助日主纳入 `助起微根` 及 `usableRootPower` 增益复核）；禁止 `A+B` 直接相加，经 `annualFollowMerge` 显式传递分路 `missingB`／`missingW`（任一路缺 B 在 `w=0` 与 `0.25W` 下均待判，缺 W 跳过加权按 B 裁定并标明分路），仅严格异号 `min < 0 && max > 0` 判待判、带零同侧保守取 `0`；`bazi.html`（`outlookDisplayView`／`renderOutlookBox`）在双情景待判或定格时披露 `待判`、`整体待判原因` 与 `情景归属`（非假从年份展示零改动）。
+- 验证与审计全通过：8 项原生命令全部退 0 跑通——`git diff --check -- . ":(exclude)八字古籍参考/**"`、`check-baselines.js`（18 项）、`check-bazi-page.js`（含 720 组及页面／记录／AI 动作）、`check-bazi-luck-state-change.cjs`（600 年图表与交互）、`check-bazi-dynamic-use.cjs`、`check-bazi-luck-rule2.cjs`（9 项不变量均 0，分支严格按 `Boolean(after.fakeFollow)` 对齐 A 路与双情景区间）、`check-bazi-luck-rule3.cjs`（10 项不变量均 0，分支严格按 `Boolean(r.fakeFollow)` 对齐 A 路并双向校对事件去重），以及 `check-bazi-luck-rule4.cjs`（120 盘入围 4 盘 `#9`／`#89` 假从财、`#53` 假从势、`#73` 假从儿共 80 年，综合待判 38 年、缺 B 2 年、缺 W 2 年；720 组原局零变动、入围 `儿 19／财 5／杀 3`；老王／小蔓／香肠 300 年单年与批量一致；`#116` 20 年一致；`nonFakeFollowDrift`／`fakeFollowLeakA`／`abSummedError`／`missingSwallowed`／`w0Mismatch` 等 15 项不变量全部为 `0`）。
+- 下一步：在共同白板（`I:\白板工作目录\奇门起盘分析协作板.commonboard`）与 Codex 开展第二阶段规则 5「阳刃／建禄／食伤覆盖缺口补齐」只读预审并定稿，再进入实现与跨盘复核，随后进入第三阶段展示文案优化。
+
 ### Bazi Luck Outlook Stage 2 Rule 3 Fuyin & Fanyin — 2026-11-28
 
 - 本轮在自用版 `main`（基线 `0d38b68`，仅改自用版，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 3「伏吟与反吟」（`bazi-engine.js` `luck-outlook-20261128.6`、`bazi.html?v=luck-20261128.6`、更新 `check-bazi-page.js`／`check-bazi-luck-state-change.cjs`／`check-bazi-luck-rule2.cjs` 并新增 `check-bazi-luck-rule3.cjs`）。原局排盘展示、历法、原局 720 组逐字段值、四／五柱与无新事件年份、财运 `0.25W` 权重与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩与 AI／记录契约均保持不变。
