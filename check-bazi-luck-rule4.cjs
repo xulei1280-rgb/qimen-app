@@ -3,10 +3,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
+const { historicalYear } = require('./check-bazi-luck-calibration1.cjs');
 
 const baseline = '87ed85d';
 const previousVersion = 'luck-outlook-20261128.6';
-const version = 'luck-outlook-20261128.8';
+const version = 'luck-outlook-20261128.9';
 const root = __dirname;
 const read = filename => fs.readFileSync(path.join(root, filename), 'utf8');
 const source = read('bazi-engine.js');
@@ -32,6 +33,7 @@ function load(code, auditNames) {
 }
 const before = load(baselineSource);
 const after = load(source, audit);
+const batch1Reference = historicalYear(source => load(source).BaziEngine);
 const E = after.BaziEngine;
 const rule = after.rule4;
 assert(rule);
@@ -43,7 +45,7 @@ const pillars = '[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉
 assert(!new RegExp("['\"]" + pillars + '(?:[ ,/|·]*' + pillars + '){5}' + "['\"]").test(source),
   'Production must contain no six-pillar fixture strings');
 assert(!/\b(?:cohortIndex|fakeFollowLocks|birthDateLock)\b/i.test(source));
-assert(read('bazi.html').includes('bazi-engine.js?v=luck-20261128.8'));
+assert(read('bazi.html').includes('bazi-engine.js?v=luck-20261128.9'));
 
 function profile(context, [year, month, day, hour, minute, gender], solar) {
   return context.BaziEngine.createBaziProfile({ input: { year, month, day, hour, minute }, gender,
@@ -108,14 +110,14 @@ function checkLedger(ledger, branch, review, label) {
     (row.ruleId === 'Y3-carry-support' || row.ruleId === 'Y3-replacement-medicine' && /^承载不足/.test(row.taskId) ||
       /满溢/.test(row.taskId))), label);
 }
-function inspect(old, next, zero, q, label) {
+function inspect(old, next, historical, zero, q, label) {
   count('w0Mismatch', !frozen(zero.effectiveRange, next.comprehensiveRange), label);
   const active = !!q.evidence.type;
   if (!active) {
     const enabled=rule.annualRule5Enabled(q.base,q.analysis,q.evidence)&&!['#5/2039','#5/2049'].includes(label);
-    count('nonFakeFollowDrift', !enabled&&!frozen(next, old), label);
+    count('nonFakeFollowDrift', !enabled&&!frozen(historical, old), label);
     count('changedSpecial', q.analysis.specialPatternQualification && !frozen(next, old), label);
-    count('noNewEventDrift', !enabled&&!old.recurrence?.scenes?.length && !frozen(next, old), label);
+    count('noNewEventDrift', !enabled&&!old.recurrence?.scenes?.length && !frozen(historical, old), label);
   } else {
     assert.equal(next.fakeFollow.type, q.evidence.type, label);
     const { byBranch, missingB, missingW, selectedBranch, selectedIndex } = next.wealthMerge;
@@ -205,7 +207,9 @@ function compare(input, decades, label, solar = false, singles = false) {
     return b.years.map((row, j) => {
       if (singles) same(row, E.evaluateLuckOutlook(p, cycle.gz, preceding, [years[j]]).years[0], label + ' single/batch ' + row.year);
       for (const field of ['increment', 'previousYear']) assert(frozen(row[field], a.years[j][field]), label + ' ' + field);
-      inspect(a.years[j], row, zero.years[j], q, label + '/' + row.year);
+      const key = label + '/' + row.year;
+      const historical = batch1Reference(key, row, p, cycle.gz, preceding, years[j]);
+      inspect(a.years[j], row, historical, zero.years[j], q, key);
       return { year: row.year, gz: row.gz, luck: cycle.gz, before: summary(a.years[j]), after: summary(row), w0: zero.years[j].effectiveRange };
     });
   });

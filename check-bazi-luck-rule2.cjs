@@ -4,9 +4,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
+const batch1Reference = require('./check-bazi-luck-calibration1.cjs').historicalYear();
 
 const baseline = '07e2a96976d6b2532a0e2ef289672f51c342d848';
-const version = 'luck-outlook-20261128.8';
+const version = 'luck-outlook-20261128.9';
 const baselineVersion = 'luck-outlook-20261128.3';
 const before = load();
 const after = load();
@@ -46,7 +47,7 @@ function rowYear(e, year, previous) {
     year:year - 1, gz:e.getFlowYearGZ(year - 1), luckGz:previous
   }};
 }
-function compareChart(input, decades, solar = false, singles = false) {
+function compareChart(input, decades, solar = false, singles = false, label) {
   const oldProfile = profile(before, input, solar);
   const newProfile = profile(after, input, solar);
   const analysis=E.analyzePattern(newProfile);
@@ -68,7 +69,8 @@ function compareChart(input, decades, solar = false, singles = false) {
       for (const field of ['increment','previousYear']) {
         assert.equal(baselineJson(year[field]), JSON.stringify(old.years[i][field]), 'Other comparison view: '+field);
       }
-      return { before:old.years[i], after:year, luck:row.gz, pillars:newProfile.pillars, eligible };
+      const historical = label ? batch1Reference(label + '/' + year.year, year, newProfile, row.gz, previous, inputs[i]) : year;
+      return { before:old.years[i], after:year, historical, luck:row.gz, pillars:newProfile.pillars, eligible };
     });
   });
 }
@@ -232,26 +234,27 @@ const stats = { years:0, withEvent:0, withoutEvent:0, changedB:0, changedW:0, ch
 const highRule = /^(Y3-(core-|medicine$|replacement-medicine$|carry-|dynamic-phenomenon$|earth-)|Y4-output|LK-)/;
 const recurrenceRule = /^T-year-(?:natal-)?(?:same|tkdc)$/;
 const unilateral = /^T-year-(?:fight|clash|harmony|dayhit)$/;
-function checkNonTombRecurrence({before,after}, label, rule5Enabled) {
+function checkNonTombRecurrence({before,after,historical}, label, rule5Enabled) {
   const dual=Boolean(after.fakeFollow);
   const regularScenarios=dual?after.scenarios.filter(s=>s.branch==='A'):after.scenarios;
+  const historicalScenarios=dual?historical.scenarios.filter(s=>s.branch==='A'):historical.scenarios;
   const suppressed=x=>dual&&x.coreGate&&/^从格：/.test(x.coreGate.name);
   if (!dual&&!rule5Enabled) same(after.wealthRange,before.wealthRange,label+' non-tomb wealth range');
   const regular=rows=>rows.filter(x=>!recurrenceRule.test(x.ruleId)&&
     (!unilateral.test(x.ruleId)||x.contribution||x.wealthContribution)&&!suppressed(x));
   const sum=rows=>rows.reduce((n,x)=>n+(x.side==='negative'?-1:1)*x.contribution,0);
   const score=rows=>sum(rows.filter(x=>recurrenceRule.test(x.ruleId)));
-  same(regularScenarios.map(s=>[s.replacementStates,s.retainedRoots]),
+  same(historicalScenarios.map(s=>[s.replacementStates,s.retainedRoots]),
     before.scenarios.map(s=>[s.replacementStates,s.retainedRoots]),label+' scenario assumptions');
   const expected=regularScenarios.map(s=>s.B);
   if(!rule5Enabled){
-    same(regularScenarios.map(s=>s.W),before.scenarios.map(s=>s.W),label+' scenario W');
-    const historical=before.scenarioLedgers.map((old,i)=>{
-      const current=after.scenarioLedgers[dual?regularScenarios[i].id:i];
+    same(historicalScenarios.map(s=>s.W),before.scenarios.map(s=>s.W),label+' scenario W');
+    const priorScores=before.scenarioLedgers.map((old,i)=>{
+      const current=historical.scenarioLedgers[dual?historicalScenarios[i].id:i];
       same(regular(current),regular(old),label+' regular ledger, scenario '+i);
       return before.scenarios[i].B+score(current)-score(old)-sum(old.filter(suppressed))+sum(current.filter(suppressed));
     });
-    same(expected,historical,label+' non-tomb scenario B');
+    same(historicalScenarios.map(s=>s.B),priorScores,label+' non-tomb scenario B');
   }
   const B=after.comprehensiveRange;
   if (dual) {
@@ -323,7 +326,7 @@ const wealthOpenings = [];
 const rows = [];
 for (let index=1; index<=120; index++) {
   const input = [1940 + rand(85), 1 + rand(12), 1 + rand(28), rand(24), rand(60), index % 2 ? '男' : '女'];
-  for (const row of compareChart(input, 2)) {
+  for (const row of compareChart(input, 2, false, false, '#' + index)) {
     const old = detail(row.before), next = detail(row.after);
     const ledger = next.ledger.filter(x => x.tomb);
     const ids = ledger.map(x => x.tomb.id);
@@ -394,7 +397,7 @@ for (let index=1; index<=120; index++) {
     if (!ledger.length) {
       stats.withoutEvent++;
       if (!row.after.recurrence?.scenes.length) {
-        if (!rule5Enabled&&!row.after.fakeFollow&&baselineJson(withoutOngoingHint(row.after))!==baselineJson(withoutOngoingHint(row.before)))
+        if (!rule5Enabled&&!row.after.fakeFollow&&baselineJson(withoutOngoingHint(row.historical))!==baselineJson(withoutOngoingHint(row.before)))
           stats.nonTombYearDrift++;
       } else {
         checkNonTombRecurrence(row,label,rule5Enabled);

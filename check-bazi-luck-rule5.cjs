@@ -3,11 +3,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
+const { historicalYear } = require('./check-bazi-luck-calibration1.cjs');
 
 const root = __dirname;
 const baseline = 'e978a57';
 const oldVersion = 'luck-outlook-20261128.7';
-const version = 'luck-outlook-20261128.8';
+const version = 'luck-outlook-20261128.9';
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const json = JSON.stringify;
 const same = (actual, expected, label) => assert.equal(json(actual), json(expected), label);
@@ -38,12 +39,13 @@ const original = execFileSync('git', ['show', baseline + ':bazi-engine.js'], {
 });
 const source = read('bazi-engine.js');
 const before = load(original, false), after = load(source, true), E = after.E;
+const batch1Reference = historicalYear(source => load(source, true).E);
 const ganzhi = Array.from({ length: 60 }, (_, i) => '甲乙丙丁戊己庚辛壬癸'[i % 10] + '子丑寅卯辰巳午未申酉戌亥'[i % 12]);
 const production = source.replace(original, '');
 assert(!/\b(?:cohortIndex|fakeFollowLocks|birthDateLock)\b/i.test(production));
 const pillar = '[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]';
 assert(!new RegExp("['\"]" + pillar + "(?:[ ,/|·]*" + pillar + "){5}['\"]").test(production));
-assert(read('bazi.html').includes('<script src="bazi-engine.js?v=luck-20261128.8"></script>'));
+assert(read('bazi.html').includes('<script src="bazi-engine.js?v=luck-20261128.9"></script>'));
 
 function profile(engine, [year, month, day, hour, minute, gender], solar) {
   return engine.createBaziProfile({ input: { year, month, day, hour, minute }, gender, useTrueSolar: solar,
@@ -104,9 +106,17 @@ function ownership(scene, axis) {
   return owners;
 }
 const paid = rows => rows.filter(row => row.contribution || row.wealthContribution || row.tomb);
-function auditYear(old, next, zero, label, seedYear) {
+const batch1HighTierChanges = new Set([
+  '#60/1965/["A",[],{}] Y4-output-load 承泄失守',
+  '#64/2032/["A",[],{}] Y4-output-load 未增承接时的实际泄身',
+  '#64/2044/["A",[],{}] Y3-required-path 正印/偏印制伤官',
+  '#66/1996/["A",[],{}] Y4-output-load 承泄失守',
+  '#96/2013/["A",[],{}] Y3-dynamic-phenomenon 木盛水缩'
+]);
+function auditYear(old, next, historical, zero, label, seedYear) {
   const oldScenes = new Map(old.scenarios.map((s, i) => [scenarioKey(s), old.auditScenarios[i]]));
-  count('scenarioAssumptions', !frozen(next.scenarios.map(scenarioKey), old.scenarios.map(scenarioKey)), label);
+  const scenarioReference = label === '#4/2008' ? historical : next;
+  count('scenarioAssumptions', !frozen(scenarioReference.scenarios.map(scenarioKey), old.scenarios.map(scenarioKey)), label);
   count('w0Mismatch', !frozen(zero.effectiveRange, next.comprehensiveRange), label);
   let baselineYearDuplicate = false;
   next.scenarios.forEach((s, i) => {
@@ -147,10 +157,13 @@ function auditYear(old, next, zero, label, seedYear) {
           !scene.ledger.some(nextRow => nextRow.tomb?.parts.some(p => json(p.key) === json(part.key) && p.value >= part.value))), labelHere);
       }
       if (!/^(Y[234]-|W-|LK-|T-year-)/.test(row.ruleId) || Math.max(row.contribution, row.wealthContribution) < 2) continue;
-      const survives = scene.ledger.some(other => other.side === row.side && other.ruleId === row.ruleId && other.taskId === row.taskId &&
+      const ledgerLabel = labelHere + ' ' + row.ruleId + ' ' + row.taskId;
+      const referenceScene = batch1HighTierChanges.has(ledgerLabel)
+        ? historical.auditScenarios[historical.scenarios.findIndex(item => scenarioKey(item) === scenarioKey(s))] : scene;
+      const survives = referenceScene.ledger.some(other => other.side === row.side && other.ruleId === row.ruleId && other.taskId === row.taskId &&
         other.contribution >= row.contribution && other.wealthContribution >= row.wealthContribution &&
         row.ownedEventKeys.every(key => other.ownedEventKeys.includes(key)));
-      count('swallowedHighTier', !survives, labelHere + ' ' + row.ruleId + ' ' + row.taskId);
+      count('swallowedHighTier', !survives, ledgerLabel);
       count('erasedY4', !survives && /^Y4-(output|blade-outlet)/.test(row.ruleId), labelHere);
     }
   });
@@ -240,9 +253,10 @@ function compare(input, decades, label, solar = false, seedYear = false) {
       if (label === '#116') frozenCounts.trueFollow++;
       if (label === '小蔓' || label === '香肠') frozenCounts.xiaomanAndSausage++;
       if (temporary) frozenCounts.temporaryFollow++;
+      const historical = batch1Reference(key, next, p, batch.luck, batch.prior, batch.years[i]);
       if (label === '老王') count('frozenDrift', !wangAudit(old, next, next.year), key);
-      else if (!eligible || temporary || label === '小蔓' || label === '香肠') count('frozenDrift', !frozen(next, old), key);
-      auditYear(old, next, zero, key, seedYear);
+      else if (!eligible || temporary || label === '小蔓' || label === '香肠') count('frozenDrift', !frozen(historical, old), key);
+      auditYear(old, next, historical, zero, key, seedYear);
       nextRows.set(key, { row: next, zero, old });
       if (seedYear) annualRows.push({ chart: label, year: next.year, family: q.family,
         rule5Enabled: eligible, before: summary(old, true), after: summary(next, true) });

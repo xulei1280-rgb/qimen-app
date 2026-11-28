@@ -27,6 +27,12 @@ Use a dedicated module worktree when work must happen in parallel.
 
 ## Active Handoff
 
+### Bazi Annual Luck Calibration Batch 1 — 2026-11-29
+
+- 自用版基线 `924f029`，引擎版本 `luck-outlook-20261128.9`，八字页面缓存 `luck-20261128.9`。第一批只覆盖年度财坏印与双印断链归并、合中逢冲的年度根气复核，以及替代财路的有效承接。
+- 固定验收锚点：李云茂 2026 由 0 到 −2。秦畅丁巳运十年合计由 −30.25 到 −13.75，出现 3 个正向年份。其余 7 盘与 720 组原局的逐字段对照沿用第一批验收口径。
+- 用户先试用第一批。第二批待统一口径，依次核对藏干与虚透门槛、年度互克双主用分工及假待判收敛。
+
 ### Bazi Luck Outlook Stage 2 Rule 5 Blade/Lu/Output Coverage — 2026-11-28
 
 - 本轮在自用版 `main`（基线 `e978a57`，仅改自用版，打赏版与 `bazi-visuals.js`／`bazi-visuals.css` 未动）完成第二阶段规则 5「阳刃／建禄／食伤覆盖缺口补齐」（`bazi-engine.js` `luck-outlook-20261128.8`、`bazi.html?v=luck-20261128.8`、更新 `check-bazi-page.js` 与断言粒度兼容的 `check-bazi-luck-rule2.cjs`／`check-bazi-luck-rule3.cjs`／`check-bazi-luck-rule4.cjs`，并新增 `check-bazi-luck-rule5.cjs`）。原局排盘展示、历法、原局 720 组逐字段值（`analyzePattern` 零改动）、四／五柱与 `increment`/`previousYear`、2,400 年样本中的 1,420 个非目标格年度（官／财／印／杀）、假从 80 年、`#116` 真从儿 20 年、`#5` `2039/2049` 临时从儿 `+3`、小蔓／香肠 200 年、财运 `0.25W` 与 `w=0` 还原、三档力度、`0.5` 近合系数、曲线压缩及 AI／记录契约均保持不变，生产引擎零硬编码六柱锁档。

@@ -4,9 +4,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
+const batch1Reference = require('./check-bazi-luck-calibration1.cjs').historicalYear();
 
 const baseline = '0d38b68';
-const version = 'luck-outlook-20261128.8';
+const version = 'luck-outlook-20261128.9';
 const oldVersion = 'luck-outlook-20261128.5';
 const before = load();
 const after = load();
@@ -43,7 +44,7 @@ function profile(context,[year,month,day,hour,minute,gender],solar) {
   return context.BaziEngine.createBaziProfile({input:{year,month,day,hour,minute},gender,useTrueSolar:solar,useDaylightSaving:false,
     location:solar?{name:'师宗',lng:103.9936,lat:24.8222}:{name:'北京',lng:116.4074,lat:39.9042}});
 }
-function compareChart(input,decades,solar=false,singles=false) {
+function compareChart(input,decades,solar=false,singles=false,label) {
   const oldProfile = profile(before,input,solar), newProfile = profile(after,input,solar);
   same(newProfile,oldProfile,'Birth chart');
   const analysis=E.analyzePattern(newProfile);
@@ -61,7 +62,8 @@ function compareChart(input,decades,solar=false,singles=false) {
     return next.years.map((current,j) => {
       if (singles) same(current,E.evaluateLuckOutlook(newProfile,row.gz,prior,[years[j]]).years[0],'Single/batch '+current.year);
       for (const field of ['increment','previousYear']) unchanged(current[field],old.years[j][field],field);
-      return {before:old.years[j],after:current,luck:row.gz,pillars:newProfile.pillars,eligible};
+      const historical=label?batch1Reference(label+'/'+current.year,current,newProfile,row.gz,prior,years[j]):current;
+      return {before:old.years[j],after:current,historical,luck:row.gz,pillars:newProfile.pillars,eligible};
     });
   });
 }
@@ -280,7 +282,7 @@ const recurrenceRule=/^T-year-(?:natal-)?(?:same|tkdc)$/;
 const regularPaid=rows=>rows.filter(x=>!x.tomb&&!recurrenceRule.test(x.ruleId)&&(x.contribution||x.wealthContribution))
   .map(x=>[x.ruleId,x.taskId,x.side,x.magnitude,x.contribution,x.wealthContribution,x.ownedEventKeys]);
 const outputExcess=/^(水多金沉|木盛水缩|火多木焚|土多火晦|金多土变)$/;
-function auditYear(old,r,pillars,luck,label,rule5Enabled) {
+function auditYear(old,r,historical,pillars,luck,label,rule5Enabled) {
   const dual=Boolean(r.fakeFollow);
   const regularScenarios=dual?r.scenarios.filter(s=>s.branch==='A'):r.scenarios;
   const suppressed=x=>dual&&x.coreGate&&/^从格：/.test(x.coreGate.name);
@@ -311,15 +313,15 @@ function auditYear(old,r,pillars,luck,label,rule5Enabled) {
     post.some(p=>p.scene===s.pillar)));
   count('provedNatalClash',scenes.filter(s=>s.kind==='clash'&&s.pillar!=='luck'&&
     post.some(p=>p.scene===s.pillar)));
-  function changed(field){return JSON.stringify(old[field])!==JSON.stringify(r[field]);}
+  function changed(field,row=r){return JSON.stringify(old[field])!==JSON.stringify(row[field]);}
   stats.changedB+=Number(changed('comprehensiveRange'));
   stats.changedW+=Number(changed('wealthRange'));
   stats.changedPending+=Number(old.effectiveRange.pending!==r.effectiveRange.pending);
   stats.changedDirection+=Number(old.effectiveRange.direction!==r.effectiveRange.direction);
   stats.flips+=Number(net(old)*net(r)<0);
-  if (!rule5Enabled&&!dual&&!scenes.length&&(changed('effectiveRange')||changed('comprehensiveRange')||changed('wealthRange')||
-    changed('scenarios')||changed('actionLedger')||changed('scenarioLedgers')||
-    JSON.stringify(old.annual.amplitude.breakdown)!==JSON.stringify(r.annual.amplitude.breakdown))) stats.noNewEventDrift++;
+  if (!rule5Enabled&&!dual&&!scenes.length&&(['effectiveRange','comprehensiveRange','wealthRange','scenarios','actionLedger','scenarioLedgers']
+    .some(field=>changed(field,historical))||
+    JSON.stringify(old.annual.amplitude.breakdown)!==JSON.stringify(historical.annual.amplitude.breakdown))) stats.noNewEventDrift++;
   if (r.annual.review?.dynamicUse?.special&&JSON.stringify(ledgers(old))!==JSON.stringify(bookedRows)) stats.changedSpecial++;
   if (dual?regularScenarios.some((s,i)=>tombChanged(old.scenarioLedgers[i],s.ledger)):
     tombChanged(old.actionLedger,r.actionLedger)) stats.erasedPositiveTomb++;
@@ -332,7 +334,8 @@ function auditYear(old,r,pillars,luck,label,rule5Enabled) {
       owners.get(u).push(row);
     }
   }
-  same(regularScenarios.map(x=>[x.retainedRoots,x.replacementStates]),old.scenarios.map(x=>[x.retainedRoots,x.replacementStates]),
+  const historicalScenarios=dual?historical.scenarios.filter(s=>s.branch==='A'):historical.scenarios;
+  same(historicalScenarios.map(x=>[x.retainedRoots,x.replacementStates]),old.scenarios.map(x=>[x.retainedRoots,x.replacementStates]),
     label+' scenario assumptions');
   r.scenarioLedgers.forEach((settlement,i)=>{
     const followBranch=dual&&r.scenarios[i].branch==='B';
@@ -351,10 +354,10 @@ function auditYear(old,r,pillars,luck,label,rule5Enabled) {
   });
   if(!rule5Enabled)old.scenarioLedgers.forEach((oldRows,i)=>{
     const rows=oldRows.filter(x=>!suppressed(x));
-    const settlement=r.scenarioLedgers[dual?regularScenarios[i].id:i];
-    same(regularPaid(settlement.filter(x=>!suppressed(x))),regularPaid(rows),label+' regular paid rows, scenario '+i);
+    const historicalRows=historical.scenarioLedgers[dual?historicalScenarios[i].id:i];
+    same(regularPaid(historicalRows.filter(x=>!suppressed(x))),regularPaid(rows),label+' regular paid rows, scenario '+i);
     for (const x of rows.filter(x=>high.test(x.ruleId)&&Math.max(x.contribution,x.wealthContribution)>=2)) {
-      const matching=settlement.filter(y=>signature(y)===signature(x));
+      const matching=historicalRows.filter(y=>signature(y)===signature(x));
       if (!matching.some(y=>y.contribution>=x.contribution&&y.wealthContribution>=x.wealthContribution)) {
         stats.swallowedHighTier++;
         highTierChanges.push({label,scenario:i,rule:x.ruleId,task:x.taskId,side:x.side,B:x.contribution,W:x.wealthContribution,
@@ -390,9 +393,9 @@ const sampleExpectations={
 };
 for (let index=1;index<=120;index++) {
   const input=[1940+rand(85),1+rand(12),1+rand(28),rand(24),rand(60),index%2?'男':'女'];
-  for (const r of compareChart(input,2)) {
+  for (const r of compareChart(input,2,false,false,'#'+index)) {
     const key=index+'/'+r.after.year;
-    auditYear(r.before,r.after,r.pillars,r.luck,'#'+index+' '+r.after.year,
+    auditYear(r.before,r.after,r.historical,r.pillars,r.luck,'#'+index+' '+r.after.year,
       r.eligible&&!['5/2039','5/2049'].includes(key));
     const record={index,input,pillars:r.pillars,year:r.after.year,luck:r.luck,before:data(r.before),after:data(r.after)};
     rows.push(record);
