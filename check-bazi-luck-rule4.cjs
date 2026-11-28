@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 
 const baseline = '87ed85d';
 const previousVersion = 'luck-outlook-20261128.6';
-const version = 'luck-outlook-20261128.7';
+const version = 'luck-outlook-20261128.8';
 const root = __dirname;
 const read = filename => fs.readFileSync(path.join(root, filename), 'utf8');
 const source = read('bazi-engine.js');
@@ -14,7 +14,7 @@ const baselineSource = execFileSync('git', ['show', baseline + ':bazi-engine.js'
   cwd: root, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024
 });
 const audit = 'annualFakeFollowQualification,annualFollowType,annualFollowMerge,annualCoreQualification,' +
-  'buildTemporalPatternContext,annualFollowState,annualFollowActions,settleAnnualLedger';
+  'buildTemporalPatternContext,annualFollowState,annualFollowActions,settleAnnualLedger,annualRule5Enabled';
 const showScenarios = 'actionLedger:rows,wealthRange:W,comprehensiveRange:B';
 function load(code, auditNames) {
   const node = () => ({ value: '', checked: false, disabled: false, textContent: '', innerHTML: '', hidden: false,
@@ -43,7 +43,7 @@ const pillars = '[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉
 assert(!new RegExp("['\"]" + pillars + '(?:[ ,/|·]*' + pillars + '){5}' + "['\"]").test(source),
   'Production must contain no six-pillar fixture strings');
 assert(!/\b(?:cohortIndex|fakeFollowLocks|birthDateLock)\b/i.test(source));
-assert(read('bazi.html').includes('bazi-engine.js?v=luck-20261128.7'));
+assert(read('bazi.html').includes('bazi-engine.js?v=luck-20261128.8'));
 
 function profile(context, [year, month, day, hour, minute, gender], solar) {
   return context.BaziEngine.createBaziProfile({ input: { year, month, day, hour, minute }, gender,
@@ -112,9 +112,10 @@ function inspect(old, next, zero, q, label) {
   count('w0Mismatch', !frozen(zero.effectiveRange, next.comprehensiveRange), label);
   const active = !!q.evidence.type;
   if (!active) {
-    count('nonFakeFollowDrift', !frozen(next, old), label);
+    const enabled=rule.annualRule5Enabled(q.base,q.analysis,q.evidence)&&!['#5/2039','#5/2049'].includes(label);
+    count('nonFakeFollowDrift', !enabled&&!frozen(next, old), label);
     count('changedSpecial', q.analysis.specialPatternQualification && !frozen(next, old), label);
-    count('noNewEventDrift', !old.recurrence?.scenes?.length && !frozen(next, old), label);
+    count('noNewEventDrift', !enabled&&!old.recurrence?.scenes?.length && !frozen(next, old), label);
   } else {
     assert.equal(next.fakeFollow.type, q.evidence.type, label);
     const { byBranch, missingB, missingW, selectedBranch, selectedIndex } = next.wealthMerge;

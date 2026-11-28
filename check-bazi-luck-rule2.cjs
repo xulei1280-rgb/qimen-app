@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
 
 const baseline = '07e2a96976d6b2532a0e2ef289672f51c342d848';
-const version = 'luck-outlook-20261128.7';
+const version = 'luck-outlook-20261128.8';
 const baselineVersion = 'luck-outlook-20261128.3';
 const before = load();
 const after = load();
@@ -19,7 +19,7 @@ vm.runInContext(withScenarioLedgers(execFileSync('git', ['show', baseline + ':ba
   cwd: __dirname, encoding: 'utf8', maxBuffer: 4 * 1024 * 1024
 })), before);
 vm.runInContext(withScenarioLedgers(fs.readFileSync(path.join(__dirname, 'bazi-engine.js'), 'utf8')).replace(
-  'root.BaziEngine=api;', 'root.rule2={decision:annualTombDecision,context:buildTemporalPatternContext,branch:branchInteractionChange,ledger:settleAnnualLedger,wealth:wealthChannelState};root.BaziEngine=api;'
+  'root.BaziEngine=api;', 'root.rule2={decision:annualTombDecision,context:buildTemporalPatternContext,branch:branchInteractionChange,ledger:settleAnnualLedger,wealth:wealthChannelState,annualRule5Enabled,annualFakeFollowQualification};root.BaziEngine=api;'
 ), after);
 const E = after.BaziEngine;
 const same = (a, b, label) => assert.equal(JSON.stringify(a), JSON.stringify(b), label);
@@ -49,6 +49,9 @@ function rowYear(e, year, previous) {
 function compareChart(input, decades, solar = false, singles = false) {
   const oldProfile = profile(before, input, solar);
   const newProfile = profile(after, input, solar);
+  const analysis=E.analyzePattern(newProfile);
+  const base=after.rule2.context(newProfile.dayStem,newProfile.pillars,analysis);
+  const eligible=after.rule2.annualRule5Enabled(base,analysis,after.rule2.annualFakeFollowQualification(base,analysis));
   const cycles = after.getLuckData(newProfile).rows.slice(0, decades);
   same(cycles, before.getLuckData(oldProfile).rows.slice(0, decades), 'Decade boundaries');
   return cycles.flatMap((row, idx) => {
@@ -65,7 +68,7 @@ function compareChart(input, decades, solar = false, singles = false) {
       for (const field of ['increment','previousYear']) {
         assert.equal(baselineJson(year[field]), JSON.stringify(old.years[i][field]), 'Other comparison view: '+field);
       }
-      return { before:old.years[i], after:year, luck:row.gz, pillars:newProfile.pillars };
+      return { before:old.years[i], after:year, luck:row.gz, pillars:newProfile.pillars, eligible };
     });
   });
 }
@@ -229,23 +232,27 @@ const stats = { years:0, withEvent:0, withoutEvent:0, changedB:0, changedW:0, ch
 const highRule = /^(Y3-(core-|medicine$|replacement-medicine$|carry-|dynamic-phenomenon$|earth-)|Y4-output|LK-)/;
 const recurrenceRule = /^T-year-(?:natal-)?(?:same|tkdc)$/;
 const unilateral = /^T-year-(?:fight|clash|harmony|dayhit)$/;
-function checkNonTombRecurrence({before,after}, label) {
+function checkNonTombRecurrence({before,after}, label, rule5Enabled) {
   const dual=Boolean(after.fakeFollow);
   const regularScenarios=dual?after.scenarios.filter(s=>s.branch==='A'):after.scenarios;
   const suppressed=x=>dual&&x.coreGate&&/^从格：/.test(x.coreGate.name);
-  if (!dual) same(after.wealthRange,before.wealthRange,label+' non-tomb wealth range');
+  if (!dual&&!rule5Enabled) same(after.wealthRange,before.wealthRange,label+' non-tomb wealth range');
   const regular=rows=>rows.filter(x=>!recurrenceRule.test(x.ruleId)&&
     (!unilateral.test(x.ruleId)||x.contribution||x.wealthContribution)&&!suppressed(x));
   const sum=rows=>rows.reduce((n,x)=>n+(x.side==='negative'?-1:1)*x.contribution,0);
   const score=rows=>sum(rows.filter(x=>recurrenceRule.test(x.ruleId)));
-  same(regularScenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),
-    before.scenarios.map(s=>[s.replacementStates,s.retainedRoots,s.W]),label+' scenario assumptions and W');
-  const expected=before.scenarioLedgers.map((old,i)=>{
-    const current=after.scenarioLedgers[dual?regularScenarios[i].id:i];
-    same(regular(current),regular(old),label+' regular ledger, scenario '+i);
-    return before.scenarios[i].B+score(current)-score(old)-sum(old.filter(suppressed))+sum(current.filter(suppressed));
-  });
-  same(regularScenarios.map(s=>s.B),expected,label+' non-tomb scenario B');
+  same(regularScenarios.map(s=>[s.replacementStates,s.retainedRoots]),
+    before.scenarios.map(s=>[s.replacementStates,s.retainedRoots]),label+' scenario assumptions');
+  const expected=regularScenarios.map(s=>s.B);
+  if(!rule5Enabled){
+    same(regularScenarios.map(s=>s.W),before.scenarios.map(s=>s.W),label+' scenario W');
+    const historical=before.scenarioLedgers.map((old,i)=>{
+      const current=after.scenarioLedgers[dual?regularScenarios[i].id:i];
+      same(regular(current),regular(old),label+' regular ledger, scenario '+i);
+      return before.scenarios[i].B+score(current)-score(old)-sum(old.filter(suppressed))+sum(current.filter(suppressed));
+    });
+    same(expected,historical,label+' non-tomb scenario B');
+  }
   const B=after.comprehensiveRange;
   if (dual) {
     const missingB=after.scenarios.some(s=>s.missingB), missingW=after.scenarios.some(s=>s.missingW);
@@ -261,7 +268,8 @@ function checkNonTombRecurrence({before,after}, label) {
   }
   same([B.min,B.max],[Math.min(...expected),Math.max(...expected)],label+' non-tomb B range');
   const values=after.scenarios.map(s=>s.B+(after.wealthRange.pending?0:0.25*s.W));
-  const missing=B.reason==='missing-evidence';
+  const missing=after.scenarios.some(s=>s.evidenceMissing.B);
+  assert.equal(B.reason==='missing-evidence',missing,label+' non-tomb missing B');
   if(missing&&before.comprehensiveRange.reason!=='missing-evidence') {
     assert(after.annual.evidence.some(x=>x.recurrenceHint&&x.direction==='negative')||
       before.scenarioLedgers.some((old,i)=>score(old)!==score(after.scenarioLedgers[i])),
@@ -321,6 +329,7 @@ for (let index=1; index<=120; index++) {
     const ids = ledger.map(x => x.tomb.id);
     const label = '#' + index + ' ' + row.after.year;
     const probeKey = index + '/' + row.after.year;
+    const rule5Enabled = row.eligible && !['5/2039','5/2049'].includes(probeKey);
     if (probes.has(probeKey)) {
       probes.get(probeKey)(row.after);
       checkedProbes.push(label);
@@ -385,10 +394,10 @@ for (let index=1; index<=120; index++) {
     if (!ledger.length) {
       stats.withoutEvent++;
       if (!row.after.recurrence?.scenes.length) {
-        if (!row.after.fakeFollow&&baselineJson(withoutOngoingHint(row.after))!==baselineJson(withoutOngoingHint(row.before)))
+        if (!rule5Enabled&&!row.after.fakeFollow&&baselineJson(withoutOngoingHint(row.after))!==baselineJson(withoutOngoingHint(row.before)))
           stats.nonTombYearDrift++;
       } else {
-        checkNonTombRecurrence(row,label);
+        checkNonTombRecurrence(row,label,rule5Enabled);
       }
     } else stats.withEvent++;
     stats.years++;

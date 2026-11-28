@@ -6,7 +6,7 @@ const { execFileSync } = require('node:child_process');
 const { load } = require('./check-bazi-luck-state-change.cjs');
 
 const baseline = '0d38b68';
-const version = 'luck-outlook-20261128.7';
+const version = 'luck-outlook-20261128.8';
 const oldVersion = 'luck-outlook-20261128.5';
 const before = load();
 const after = load();
@@ -14,7 +14,7 @@ const engine = path.join(__dirname,'bazi-engine.js');
 const oldSource = execFileSync('git',['show',baseline+':bazi-engine.js'],{
   cwd:__dirname,encoding:'utf8',maxBuffer:4*1024*1024
 });
-const audit = 'root.rule3={recurrenceContact,annualRecurrence,yearLuckRelations,settleAnnualLedger,buildTemporalPatternContext};';
+const audit = 'root.rule3={recurrenceContact,annualRecurrence,yearLuckRelations,settleAnnualLedger,buildTemporalPatternContext,annualRule5Enabled,annualFakeFollowQualification};';
 function withScenarioLedgers(source) {
   const seam='actionLedger:rows,wealthRange:W,comprehensiveRange:B';
   assert(source.includes(seam),'Annual scenario audit seam');
@@ -46,6 +46,9 @@ function profile(context,[year,month,day,hour,minute,gender],solar) {
 function compareChart(input,decades,solar=false,singles=false) {
   const oldProfile = profile(before,input,solar), newProfile = profile(after,input,solar);
   same(newProfile,oldProfile,'Birth chart');
+  const analysis=E.analyzePattern(newProfile);
+  const base=after.rule3.buildTemporalPatternContext(newProfile.dayStem,newProfile.pillars,analysis);
+  const eligible=after.rule3.annualRule5Enabled(base,analysis,after.rule3.annualFakeFollowQualification(base,analysis));
   const cycles = after.getLuckData(newProfile).rows.slice(0,decades);
   same(cycles,before.getLuckData(oldProfile).rows.slice(0,decades),'Decades');
   return cycles.flatMap((row,i) => {
@@ -58,7 +61,7 @@ function compareChart(input,decades,solar=false,singles=false) {
     return next.years.map((current,j) => {
       if (singles) same(current,E.evaluateLuckOutlook(newProfile,row.gz,prior,[years[j]]).years[0],'Single/batch '+current.year);
       for (const field of ['increment','previousYear']) unchanged(current[field],old.years[j][field],field);
-      return {before:old.years[j],after:current,luck:row.gz,pillars:newProfile.pillars};
+      return {before:old.years[j],after:current,luck:row.gz,pillars:newProfile.pillars,eligible};
     });
   });
 }
@@ -277,7 +280,7 @@ const recurrenceRule=/^T-year-(?:natal-)?(?:same|tkdc)$/;
 const regularPaid=rows=>rows.filter(x=>!x.tomb&&!recurrenceRule.test(x.ruleId)&&(x.contribution||x.wealthContribution))
   .map(x=>[x.ruleId,x.taskId,x.side,x.magnitude,x.contribution,x.wealthContribution,x.ownedEventKeys]);
 const outputExcess=/^(水多金沉|木盛水缩|火多木焚|土多火晦|金多土变)$/;
-function auditYear(old,r,pillars,luck,label) {
+function auditYear(old,r,pillars,luck,label,rule5Enabled) {
   const dual=Boolean(r.fakeFollow);
   const regularScenarios=dual?r.scenarios.filter(s=>s.branch==='A'):r.scenarios;
   const suppressed=x=>dual&&x.coreGate&&/^从格：/.test(x.coreGate.name);
@@ -314,7 +317,7 @@ function auditYear(old,r,pillars,luck,label) {
   stats.changedPending+=Number(old.effectiveRange.pending!==r.effectiveRange.pending);
   stats.changedDirection+=Number(old.effectiveRange.direction!==r.effectiveRange.direction);
   stats.flips+=Number(net(old)*net(r)<0);
-  if (!dual&&!scenes.length&&(changed('effectiveRange')||changed('comprehensiveRange')||changed('wealthRange')||
+  if (!rule5Enabled&&!dual&&!scenes.length&&(changed('effectiveRange')||changed('comprehensiveRange')||changed('wealthRange')||
     changed('scenarios')||changed('actionLedger')||changed('scenarioLedgers')||
     JSON.stringify(old.annual.amplitude.breakdown)!==JSON.stringify(r.annual.amplitude.breakdown))) stats.noNewEventDrift++;
   if (r.annual.review?.dynamicUse?.special&&JSON.stringify(ledgers(old))!==JSON.stringify(bookedRows)) stats.changedSpecial++;
@@ -346,7 +349,7 @@ function auditYear(old,r,pillars,luck,label) {
       assert(!settlement.some(x=>x.ruleId==='T-luck-recurrence'),label+' ongoing hint stays out of scenario ledger');
     }
   });
-  old.scenarioLedgers.forEach((oldRows,i)=>{
+  if(!rule5Enabled)old.scenarioLedgers.forEach((oldRows,i)=>{
     const rows=oldRows.filter(x=>!suppressed(x));
     const settlement=r.scenarioLedgers[dual?regularScenarios[i].id:i];
     same(regularPaid(settlement.filter(x=>!suppressed(x))),regularPaid(rows),label+' regular paid rows, scenario '+i);
@@ -388,8 +391,9 @@ const sampleExpectations={
 for (let index=1;index<=120;index++) {
   const input=[1940+rand(85),1+rand(12),1+rand(28),rand(24),rand(60),index%2?'男':'女'];
   for (const r of compareChart(input,2)) {
-    auditYear(r.before,r.after,r.pillars,r.luck,'#'+index+' '+r.after.year);
     const key=index+'/'+r.after.year;
+    auditYear(r.before,r.after,r.pillars,r.luck,'#'+index+' '+r.after.year,
+      r.eligible&&!['5/2039','5/2049'].includes(key));
     const record={index,input,pillars:r.pillars,year:r.after.year,luck:r.luck,before:data(r.before),after:data(r.after)};
     rows.push(record);
     const expected=sampleExpectations[key];
